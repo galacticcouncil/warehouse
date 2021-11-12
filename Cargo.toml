@@ -3,6 +3,7 @@ cargo-features = ["resolver"]
 [workspace]
 members = [
 	"traits",
+	"relaychain-info",
 ]
 
 resolver = "2"

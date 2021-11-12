@@ -1,0 +1,25 @@
+[package]
+name = "hydradx-traits"
+description = "Shared traits"
+version = "0.1.0"
+authors = ["GalacticCouncil"]
+edition = "2021"
+repository = "https://github.com/galacticcouncil/warehouse/tree/master/traits"
+
+[dependencies]
+codec = { default-features = false, features = ["derive"], package = "parity-scale-codec", version = "2.3.1" }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+serde = { features = ["derive"], optional = true, version = "1.0.101" }
+
+# Substrate dependencies
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "serde",
+    "codec/std",
+    "frame-support/std",
+    "sp-std/std",
+]

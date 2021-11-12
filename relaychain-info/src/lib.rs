@@ -37,7 +37,7 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(n: T::BlockNumber) -> Weight {
-            Self::deposit_event(Event::Initialized(
+            Self::deposit_event(Event::CurrentBlockNumbers(
                 n,
                 T::RelaychainBlockNumberProvider::current_block_number(),
             ));
@@ -62,9 +62,9 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Block Initialized
+        /// Current block numbers
         /// [ Parachain block number, Relaychain Block number ]
-        Initialized(T::BlockNumber, T::BlockNumber),
+        CurrentBlockNumbers(T::BlockNumber, T::BlockNumber),
     }
 
     #[pallet::call]

@@ -47,20 +47,20 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_relaychain_info.
 pub trait WeightInfo {
-    fn on_initiaaze() -> Weight;
+    fn on_initialize() -> Weight;
 }
 
 pub struct BasiliskWeight<T>(PhantomData<T>);
 
 impl<T: frame_system::Config> WeightInfo for BasiliskWeight<T> {
-    fn on_initiaaze() -> Weight {
+    fn on_initialize() -> Weight {
         (26_000_000 as Weight)
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-    fn on_initiaaze() -> Weight {
+    fn on_initialize() -> Weight {
         (26_000_000 as Weight)
     }
 }

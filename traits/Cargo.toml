@@ -3,7 +3,7 @@ name = "hydradx-traits"
 description = "Shared traits"
 version = "0.1.0"
 authors = ["GalacticCouncil"]
-edition = "2021"
+edition = "2018"
 repository = "https://github.com/galacticcouncil/warehouse/tree/master/traits"
 
 [dependencies]

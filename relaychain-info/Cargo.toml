@@ -1,11 +1,11 @@
 [package]
 name = "pallet-relaychain-info"
 version = "0.1.0"
-description = "Relaychain info pallet provides various support fe4atures for a parachain"
+description = "Relaychain info pallet provides various support features for a parachain"
 authors = ["GalacticCouncil"]
 edition = "2018"
 license = "Apache 2.0"
-repository = "https://github.com/galacticcouncil/Basilisk-node"
+repository = "https://github.com/galacticcouncil/warehouse/tree/master/relaychain-info"
 
 [dependencies]
 codec = { default-features = false, features = ["derive"], package = "parity-scale-codec", version = "2.3.1" }

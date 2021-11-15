@@ -17,17 +17,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod benchmarking;
-mod weights;
-
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
-pub use weights::WeightInfo;
-
 #[frame_support::pallet]
 pub mod pallet {
-    use super::*;
     use frame_support::pallet_prelude::*;
     use frame_support::sp_runtime::traits::BlockNumberProvider;
 
@@ -35,15 +29,7 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        fn on_initialize(n: T::BlockNumber) -> Weight {
-            Self::deposit_event(Event::CurrentBlockNumbers(
-                n,
-                T::RelaychainBlockNumberProvider::current_block_number(),
-            ));
-            T::WeightInfo::on_initialize()
-        }
-    }
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -51,16 +37,12 @@ pub mod pallet {
 
         /// Provider of relay chain block number
         type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
-
-        /// Weights details
-        type WeightInfo: WeightInfo;
     }
 
     #[pallet::error]
     pub enum Error<T> {}
 
     #[pallet::event]
-    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         /// Current block numbers
         /// [ Parachain block number, Relaychain Block number ]

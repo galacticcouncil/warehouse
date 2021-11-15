@@ -17,6 +17,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::sp_runtime::traits::BlockNumberProvider;
+
+use cumulus_primitives_core::PersistedValidationData;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
@@ -43,6 +46,7 @@ pub mod pallet {
     pub enum Error<T> {}
 
     #[pallet::event]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         /// Current block numbers
         /// [ Parachain block number, Relaychain Block number ]
@@ -51,4 +55,15 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
+}
+
+pub struct OnValidationDataHandler<T>(sp_std::marker::PhantomData<T>);
+
+impl<T: Config> cumulus_primitives_core::OnValidationData for OnValidationDataHandler<T> {
+    fn on_validation_data(data: &PersistedValidationData) {
+        crate::Pallet::<T>::deposit_event(crate::Event::CurrentBlockNumbers(
+            frame_system::Pallet::<T>::current_block_number(),
+            data.relay_parent_number.into(),
+        ));
+    }
 }

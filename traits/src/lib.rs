@@ -16,13 +16,21 @@
 // limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+
 #![allow(clippy::upper_case_acronyms)]
 
+use codec::{Decode, Encode};
 use frame_support::dispatch;
+use frame_support::sp_runtime::traits::Zero;
+use frame_support::sp_runtime::RuntimeDebug;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_std::vec::Vec;
 
 /// Hold information to perform amm transfer
 /// Contains also exact amount which will be sold/bought
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(RuntimeDebug, Encode, Decode, Copy, Clone, PartialEq, Eq, Default)]
 pub struct AMMTransfer<AccountId, AssetId, AssetPair, Balance> {
     pub origin: AccountId,
     pub assets: AssetPair,
@@ -34,7 +42,7 @@ pub struct AMMTransfer<AccountId, AssetId, AssetPair, Balance> {
 }
 
 /// Traits for handling AMM Pool trades.
-pub trait AMM<AccountId, AssetId, AssetPair, Amount> {
+pub trait AMM<AccountId, AssetId, AssetPair, Amount: Zero> {
     /// Check if both assets exist in a pool.
     fn exists(assets: AssetPair) -> bool;
 
@@ -97,6 +105,14 @@ pub trait AMM<AccountId, AssetId, AssetPair, Amount> {
         Self::execute_buy(&Self::validate_buy(origin, assets, amount, max_limit, discount)?)?;
         Ok(())
     }
+
+    fn get_min_trading_limit() -> Amount;
+
+    fn get_min_pool_liquidity() -> Amount;
+
+    fn get_max_in_ratio() -> u128;
+
+    fn get_max_out_ratio() -> u128;
 }
 
 pub trait Resolver<AccountId, Intention, E> {
@@ -105,7 +121,7 @@ pub trait Resolver<AccountId, Intention, E> {
 
     /// Resolve intentions by either directly trading with each other or via AMM pool.
     /// Intention ```intention``` must be validated prior to call this function.
-    fn resolve_matched_intentions(pair_account: &AccountId, intention: &Intention, matched: &[Intention]);
+    fn resolve_matched_intentions(pair_account: &AccountId, intention: &Intention, matched: &[&Intention]);
 }
 
 pub trait Registry<AssetId, AssetName, Balance, Error> {

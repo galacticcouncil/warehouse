@@ -2,6 +2,7 @@ cargo-features = ["resolver"]
 
 [workspace]
 members = [
+	"faucet",
 	"traits",
 	"relaychain-info",
 ]

@@ -90,21 +90,11 @@ pub mod pallet {
     pub type MintableCurrencies<T: Config> = StorageValue<_, Vec<AssetId>, ValueQuery>;
 
     #[pallet::genesis_config]
+    #[derive(Default)]
     pub struct GenesisConfig {
         pub mint_limit: u8,
         pub rampage: bool,
         pub mintable_currencies: Vec<AssetId>,
-    }
-
-    #[cfg(feature = "std")]
-    impl Default for GenesisConfig {
-        fn default() -> Self {
-            GenesisConfig {
-                mint_limit: Default::default(),
-                rampage: Default::default(),
-                mintable_currencies: vec![],
-            }
-        }
     }
 
     #[cfg(feature = "std")]

@@ -1,18 +1,14 @@
 [package]
-authors = ['GalacticCouncil']
-description = 'Price Oracle Pallet'
-edition = '2018'
-homepage = 'https://github.com/galacticcouncil/basilisk-node'
-license = 'Apache 2.0'
 name = 'pallet-price-oracle'
-repository = 'https://github.com/galacticcouncil/basilisk-node'
-version = '1.0.0'
+version = '0.1.0'
+description = 'Price oracle for AMM pools'
+authors = ['GalacticCouncil']
+edition = '2018'
+license = 'Apache 2.0'
+repository = 'https://github.com/galacticcouncil/warehouse'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
-
-[build-dependencies]
-substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 
 # alias "parity-scale-code" to "codec"
 [dependencies.codec]
@@ -25,7 +21,8 @@ version = '2.3.1'
 serde = {features = ['derive'], optional = true, version = '1.0.101'}
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
-# Local dependencies
+# TODO remove this dependency once the AssetPair struct is moved to this repository
+# Basilisk dependencies
 primitives = { git = "https://github.com/galacticcouncil/basilisk-node", rev = "c0bf049f0ee91c392f163768ef707c94c7981c46", default-features = false}
 
 # HydraDX dependencies

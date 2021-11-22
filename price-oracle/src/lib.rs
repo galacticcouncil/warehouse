@@ -1,4 +1,4 @@
-// This file is part of Basilisk-node.
+// This file is part of pallet-price-oracle.
 
 // Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
@@ -21,7 +21,7 @@ use frame_support::pallet_prelude::Weight;
 use frame_support::sp_runtime::traits::{CheckedDiv, Zero};
 use frame_support::sp_runtime::FixedPointNumber;
 use hydradx_traits::{AMMTransfer, OnCreatePoolHandler, OnTradeHandler};
-use primitives::{asset::AssetPair, AssetId, Balance};
+use primitives::asset::AssetPair;
 use sp_std::convert::TryInto;
 use sp_std::marker::PhantomData;
 use sp_std::prelude::*;

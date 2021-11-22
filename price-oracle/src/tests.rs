@@ -1,4 +1,4 @@
-// This file is part of Basilisk-node.
+// This file is part of pallet-price-oracle.
 
 // Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0

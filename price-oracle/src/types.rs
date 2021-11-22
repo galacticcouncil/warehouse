@@ -1,4 +1,4 @@
-// This file is part of Basilisk-node.
+// This file is part of pallet-price-oracle.
 
 // Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
@@ -17,8 +17,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero};
-use frame_support::sp_runtime::RuntimeDebug;
-pub use primitives::{Balance, Price};
+use frame_support::sp_runtime::{FixedU128, RuntimeDebug};
 use scale_info::TypeInfo;
 use sp_std::iter::Sum;
 use sp_std::ops::{Add, Index, IndexMut};
@@ -26,6 +25,10 @@ use sp_std::prelude::*;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+
+pub type AssetId = u32;
+pub type Balance = u128;
+pub type Price = FixedU128;
 
 /// A type representing data produced by a trade.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

@@ -194,3 +194,7 @@ impl<AccountId, AssetId, AssetPair, Balance> OnTradeHandler<AccountId, AssetId, 
         Weight::zero()
     }
 }
+
+pub trait CanCreatePool<AssetId> {
+    fn can_create(asset_a: AssetId, asset_b: AssetId) -> bool;
+}

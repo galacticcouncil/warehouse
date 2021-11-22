@@ -49,6 +49,9 @@ pub trait AMM<AccountId, AssetId, AssetPair, Amount: Zero> {
     /// Return pair account.
     fn get_pair_id(assets: AssetPair) -> AccountId;
 
+    /// Return share token for assets.
+    fn get_share_token(assets: AssetPair) -> AssetId;
+
     /// Return list of active assets in a given pool.
     fn get_pool_assets(pool_account_id: &AccountId) -> Option<Vec<AssetId>>;
 

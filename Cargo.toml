@@ -5,6 +5,7 @@ members = [
 	"faucet",
 	"traits",
 	"relaychain-info",
+	"price-oracle",
 ]
 
 resolver = "2"

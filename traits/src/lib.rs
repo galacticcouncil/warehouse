@@ -23,6 +23,7 @@ use frame_support::dispatch;
 use frame_support::sp_runtime::traits::Zero;
 use frame_support::sp_runtime::RuntimeDebug;
 use frame_support::weights::Weight;
+use frame_support::traits::LockIdentifier;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_std::vec::Vec;
@@ -200,4 +201,8 @@ impl<AccountId, AssetId, AssetPair, Balance> OnTradeHandler<AccountId, AssetId, 
 
 pub trait CanCreatePool<AssetId> {
     fn can_create(asset_a: AssetId, asset_b: AssetId) -> bool;
+}
+
+pub trait LockedBalance<AssetId, AccountId, Balance> {
+    fn get_by_lock(lock_id: LockIdentifier, currency_id: AssetId, who: AccountId) -> Balance;
 }

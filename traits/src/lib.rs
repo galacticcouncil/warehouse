@@ -201,5 +201,5 @@ pub trait CanCreatePool<AssetId> {
 }
 
 pub trait LockedBalance<AssetId, AccountId, Balance> {
-    fn get_by_lock(asset: AssetId, account: AccountId, lock: LockIdentifier) -> Balance;
+    fn get_by_lock(lock_id: LockIdentifier, currency_id: AssetId, who: AccountId) -> Balance;
 }

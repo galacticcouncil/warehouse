@@ -17,7 +17,7 @@
 
 use super::*;
 pub use crate::mock::{
-    Event as TestEvent, ExtBuilder, Origin, PriceOracle, System, Test, ASSET_PAIR_A, ASSET_PAIR_B, ASSET_PAIR_C,
+    Event as TestEvent, ExtBuilder, Origin, PriceOracle, System, Test, HDX, DOT, ACA, ETH,
     PRICE_ENTRY_1, PRICE_ENTRY_2,
 };
 use frame_support::{
@@ -49,51 +49,55 @@ fn add_new_asset_pair_should_work() {
         System::set_block_number(3);
         PriceOracle::on_initialize(3);
 
+        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
+        let hdx_aca_pair_name = PriceOracle::name(HDX, ACA);
+        let hdx_eth_pair_name = PriceOracle::name(HDX, ETH);
+
         assert_eq!(PriceOracle::num_of_assets(), 0);
         assert_eq!(PriceOracle::new_assets(), vec![AssetPairId::new(); 0]);
-        assert!(!<PriceDataTen<Test>>::get().contains(&(ASSET_PAIR_A.name(), BucketQueue::default())));
+        assert!(!<PriceDataTen<Test>>::get().contains(&(hdx_dot_pair_name.clone(), BucketQueue::default())));
 
-        PriceOracle::on_create_pool(ASSET_PAIR_A);
+        PriceOracle::on_create_pool(HDX, DOT);
 
         assert_eq!(PriceOracle::num_of_assets(), 0);
-        assert_eq!(PriceOracle::new_assets(), vec![ASSET_PAIR_A.name()]);
-        assert!(!<PriceDataTen<Test>>::get().contains(&(ASSET_PAIR_A.name(), BucketQueue::default())));
+        assert_eq!(PriceOracle::new_assets(), vec![hdx_dot_pair_name.clone()]);
+        assert!(!<PriceDataTen<Test>>::get().contains(&(hdx_dot_pair_name.clone(), BucketQueue::default())));
 
         PriceOracle::on_finalize(3);
         System::set_block_number(4);
         PriceOracle::on_initialize(4);
 
         assert_eq!(PriceOracle::num_of_assets(), 1);
-        assert!(<PriceDataTen<Test>>::get().contains(&(ASSET_PAIR_A.name(), BucketQueue::default())));
+        assert!(<PriceDataTen<Test>>::get().contains(&(hdx_dot_pair_name, BucketQueue::default())));
 
         assert_eq!(PriceOracle::new_assets(), vec![AssetPairId::new(); 0]);
 
-        PriceOracle::on_create_pool(ASSET_PAIR_B);
-        PriceOracle::on_create_pool(ASSET_PAIR_C);
+        PriceOracle::on_create_pool(HDX, ACA);
+        PriceOracle::on_create_pool(HDX, ETH);
 
         assert_eq!(PriceOracle::num_of_assets(), 1);
 
-        let mut vec_assets = vec![ASSET_PAIR_B.name(), ASSET_PAIR_C.name()];
+        let mut vec_assets = vec![hdx_aca_pair_name.clone(), hdx_eth_pair_name.clone()];
         vec_assets.sort_unstable();
 
         assert_eq!(PriceOracle::new_assets(), vec_assets);
-        assert!(!<PriceDataTen<Test>>::get().contains(&(ASSET_PAIR_B.name(), BucketQueue::default())));
-        assert!(!<PriceDataTen<Test>>::get().contains(&(ASSET_PAIR_C.name(), BucketQueue::default())));
+        assert!(!<PriceDataTen<Test>>::get().contains(&(hdx_aca_pair_name.clone(), BucketQueue::default())));
+        assert!(!<PriceDataTen<Test>>::get().contains(&(hdx_eth_pair_name.clone(), BucketQueue::default())));
 
         PriceOracle::on_finalize(4);
         System::set_block_number(5);
         PriceOracle::on_initialize(5);
 
         assert_eq!(PriceOracle::num_of_assets(), 3);
-        assert!(<PriceDataTen<Test>>::get().contains(&(ASSET_PAIR_B.name(), BucketQueue::default())));
-        assert!(<PriceDataTen<Test>>::get().contains(&(ASSET_PAIR_C.name(), BucketQueue::default())));
+        assert!(<PriceDataTen<Test>>::get().contains(&(hdx_aca_pair_name, BucketQueue::default())));
+        assert!(<PriceDataTen<Test>>::get().contains(&(hdx_eth_pair_name, BucketQueue::default())));
 
         assert_eq!(PriceOracle::new_assets(), vec![AssetPairId::new(); 0]);
 
         expect_events(vec![
-            Event::PoolRegistered(ASSET_PAIR_A).into(),
-            Event::PoolRegistered(ASSET_PAIR_B).into(),
-            Event::PoolRegistered(ASSET_PAIR_C).into(),
+            Event::PoolRegistered(HDX, DOT).into(),
+            Event::PoolRegistered(HDX, ACA).into(),
+            Event::PoolRegistered(HDX, ETH).into(),
         ]);
     });
 }
@@ -104,22 +108,24 @@ fn add_existing_asset_pair_should_not_work() {
         System::set_block_number(3);
         PriceOracle::on_initialize(3);
 
-        assert!(!<PriceDataTen<Test>>::get().contains(&(ASSET_PAIR_A.name(), BucketQueue::default())));
-        PriceOracle::on_create_pool(ASSET_PAIR_A);
-        assert_storage_noop!(PriceOracle::on_create_pool(ASSET_PAIR_A));
-        expect_events(vec![Event::PoolRegistered(ASSET_PAIR_A).into()]);
+        assert!(!<PriceDataTen<Test>>::get().contains(&(PriceOracle::name(HDX, DOT), BucketQueue::default())));
+        PriceOracle::on_create_pool(HDX, DOT);
+        assert_storage_noop!(PriceOracle::on_create_pool(HDX, DOT));
+        expect_events(vec![Event::PoolRegistered(HDX, DOT).into()]);
     });
 }
 
 #[test]
 fn on_trade_should_work() {
     new_test_ext().execute_with(|| {
-        assert_eq!(<PriceDataAccumulator<Test>>::try_get(ASSET_PAIR_A.name()), Err(()));
-        PriceOracle::on_trade(ASSET_PAIR_A, PRICE_ENTRY_1);
-        PriceOracle::on_trade(ASSET_PAIR_A, PRICE_ENTRY_2);
+        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
+
+        assert_eq!(<PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()), Err(()));
+        PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_1);
+        PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_2);
         let price_entry = PRICE_ENTRY_1.calculate_new_price_entry(&PRICE_ENTRY_2);
         assert_eq!(
-            <PriceDataAccumulator<Test>>::try_get(ASSET_PAIR_A.name()).ok(),
+            <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name).ok(),
             price_entry
         );
     });
@@ -128,20 +134,13 @@ fn on_trade_should_work() {
 #[test]
 fn on_trade_handler_should_work() {
     new_test_ext().execute_with(|| {
-        assert_eq!(<PriceDataAccumulator<Test>>::try_get(ASSET_PAIR_A.name()), Err(()));
-        let amm_transfer = AMMTransfer {
-            origin: 1,
-            assets: ASSET_PAIR_A,
-            amount: 1_000,
-            amount_out: 500,
-            discount: false,
-            discount_amount: 0,
-            fee: (1, 0),
-        };
+        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
 
-        PriceOracleHandler::<Test>::on_trade(&amm_transfer, 2_000);
+        assert_eq!(<PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()), Err(()));
+
+        PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1_000, 500, 2_000);
         assert_eq!(
-            <PriceDataAccumulator<Test>>::try_get(ASSET_PAIR_A.name()),
+            <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name),
             Ok(PRICE_ENTRY_1)
         );
     });
@@ -150,97 +149,27 @@ fn on_trade_handler_should_work() {
 #[test]
 fn price_normalization_should_work() {
     new_test_ext().execute_with(|| {
-        assert_eq!(<PriceDataAccumulator<Test>>::try_get(ASSET_PAIR_A.name()), Err(()));
+        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
 
-        let amm_transfer = AMMTransfer {
-            origin: 1,
-            assets: ASSET_PAIR_A,
-            amount: Balance::MAX,
-            amount_out: 1,
-            discount: false,
-            discount_amount: 0,
-            fee: (1, 0),
-        };
-        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(&amm_transfer, 2_000));
+        assert_eq!(<PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()), Err(()));
 
-        let amm_transfer = AMMTransfer {
-            origin: 1,
-            assets: ASSET_PAIR_A,
-            amount: 1,
-            amount_out: Balance::MAX,
-            discount: false,
-            discount_amount: 0,
-            fee: (1, 0),
-        };
-        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(&amm_transfer, 2_000));
+        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, Balance::MAX, 1, 2_000));
 
-        let amm_transfer = AMMTransfer {
-            origin: 1,
-            assets: ASSET_PAIR_A,
-            amount: Balance::zero(),
-            amount_out: 1_000,
-            discount: false,
-            discount_amount: 0,
-            fee: (1, 0),
-        };
-        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(&amm_transfer, 2_000));
+        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1, Balance::MAX, 2_000));
 
-        let amm_transfer = AMMTransfer {
-            origin: 1,
-            assets: ASSET_PAIR_A,
-            amount: 1_000,
-            amount_out: Balance::zero(),
-            discount: false,
-            discount_amount: 0,
-            fee: (1, 0),
-        };
-        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(&amm_transfer, 2_000));
+        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, Balance::zero(), 1_000, 2_000));
 
-        let amm_transfer = AMMTransfer {
-            origin: 1,
-            assets: ASSET_PAIR_A,
-            amount: 340282366920938463463,
-            amount_out: 1,
-            discount: false,
-            discount_amount: 0,
-            fee: (1, 0),
-        };
-        PriceOracleHandler::<Test>::on_trade(&amm_transfer, 2_000);
+        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1_000, Balance::zero(), 2_000));
 
-        let amm_transfer = AMMTransfer {
-            origin: 1,
-            assets: ASSET_PAIR_A,
-            amount: 1,
-            amount_out: 340282366920938463463,
-            discount: false,
-            discount_amount: 0,
-            fee: (1, 0),
-        };
-        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(&amm_transfer, 2_000));
+        PriceOracleHandler::<Test>::on_trade(HDX, DOT, 340282366920938463463, 1, 2_000);
 
-        let amm_transfer = AMMTransfer {
-            origin: 1,
-            assets: ASSET_PAIR_A,
-            amount: 2_000_000,
-            amount_out: 1_000,
-            discount: false,
-            discount_amount: 0,
-            fee: (1, 0),
-        };
-        PriceOracleHandler::<Test>::on_trade(&amm_transfer, 2_000);
+        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1, 340282366920938463463, 2_000));
 
-        let amm_transfer = AMMTransfer {
-            origin: 1,
-            assets: ASSET_PAIR_A,
-            amount: 1_000,
-            amount_out: 2_000_000,
-            discount: false,
-            discount_amount: 0,
-            fee: (1, 0),
-        };
-        PriceOracleHandler::<Test>::on_trade(&amm_transfer, 2_000);
+        PriceOracleHandler::<Test>::on_trade(HDX, DOT, 2_000_000, 1_000, 2_000);
 
-        let price_entry = PriceDataAccumulator::<Test>::get(ASSET_PAIR_A.name());
+        PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1_000, 2_000_000, 2_000);
+
+        let price_entry = PriceDataAccumulator::<Test>::get(hdx_dot_pair_name);
         let first_entry = PriceEntry {
             price: Price::from(340282366920938463463),
             trade_amount: 340282366920938463463,
@@ -276,16 +205,16 @@ fn update_data_should_work() {
         System::set_block_number(3);
         PriceOracle::on_initialize(3);
 
-        PriceOracle::on_create_pool(ASSET_PAIR_B);
-        PriceOracle::on_create_pool(ASSET_PAIR_A);
+        PriceOracle::on_create_pool(HDX, ACA);
+        PriceOracle::on_create_pool(HDX, DOT);
 
         PriceOracle::on_finalize(3);
         System::set_block_number(4);
         PriceOracle::on_initialize(4);
 
-        PriceOracle::on_trade(ASSET_PAIR_A, PRICE_ENTRY_1);
-        PriceOracle::on_trade(ASSET_PAIR_A, PRICE_ENTRY_2);
-        PriceOracle::on_trade(ASSET_PAIR_B, PRICE_ENTRY_1);
+        PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_1);
+        PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_2);
+        PriceOracle::on_trade(HDX, ACA, PRICE_ENTRY_1);
 
         PriceOracle::on_finalize(4);
         System::set_block_number(5);
@@ -293,12 +222,12 @@ fn update_data_should_work() {
 
         let data_ten_a = PriceOracle::price_data_ten()
             .iter()
-            .find(|&x| x.0 == ASSET_PAIR_A.name())
+            .find(|&x| x.0 == PriceOracle::name(HDX, DOT))
             .unwrap()
             .1;
         let data_ten_b = PriceOracle::price_data_ten()
             .iter()
-            .find(|&x| x.0 == ASSET_PAIR_B.name())
+            .find(|&x| x.0 == PriceOracle::name(HDX, ACA))
             .unwrap()
             .1;
 
@@ -325,14 +254,14 @@ fn update_data_with_incorrect_input_should_not_work() {
         System::set_block_number(3);
         PriceOracle::on_initialize(3);
 
-        PriceOracle::on_create_pool(ASSET_PAIR_A);
+        PriceOracle::on_create_pool(HDX, DOT);
 
         PriceOracle::on_finalize(3);
         System::set_block_number(4);
         PriceOracle::on_initialize(4);
 
         PriceOracle::on_trade(
-            ASSET_PAIR_A,
+            HDX, DOT,
             PriceEntry {
                 price: Price::from(1),
                 trade_amount: Zero::zero(),
@@ -346,7 +275,7 @@ fn update_data_with_incorrect_input_should_not_work() {
 
         let data_ten = PriceOracle::price_data_ten()
             .iter()
-            .find(|&x| x.0 == ASSET_PAIR_A.name())
+            .find(|&x| x.0 == PriceOracle::name(HDX, DOT))
             .unwrap()
             .1;
         assert_eq!(
@@ -362,7 +291,9 @@ fn update_data_with_incorrect_input_should_not_work() {
 #[test]
 fn update_empty_data_should_work() {
     new_test_ext().execute_with(|| {
-        PriceOracle::on_create_pool(ASSET_PAIR_A);
+        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
+
+        PriceOracle::on_create_pool(HDX, DOT);
 
         for i in 0..1002 {
             PriceOracle::on_initialize(i);
@@ -372,7 +303,7 @@ fn update_empty_data_should_work() {
 
         let data_ten = PriceOracle::price_data_ten()
             .iter()
-            .find(|&x| x.0 == ASSET_PAIR_A.name())
+            .find(|&x| x.0 == hdx_dot_pair_name)
             .unwrap()
             .1;
         assert_eq!(
@@ -383,7 +314,7 @@ fn update_empty_data_should_work() {
             }
         );
 
-        let data_hundred = PriceOracle::price_data_hundred(ASSET_PAIR_A.name());
+        let data_hundred = PriceOracle::price_data_hundred(hdx_dot_pair_name.clone());
         assert_eq!(
             data_hundred.get_last(),
             PriceInfo {
@@ -392,7 +323,7 @@ fn update_empty_data_should_work() {
             }
         );
 
-        let data_thousand = PriceOracle::price_data_thousand(ASSET_PAIR_A.name());
+        let data_thousand = PriceOracle::price_data_thousand(hdx_dot_pair_name);
         assert_eq!(
             data_thousand.get_last(),
             PriceInfo {
@@ -480,14 +411,14 @@ fn bucket_queue_should_work() {
 #[test]
 fn continuous_trades_should_work() {
     ExtBuilder.build().execute_with(|| {
-        PriceOracle::on_create_pool(ASSET_PAIR_A);
+        PriceOracle::on_create_pool(HDX, DOT);
 
         for i in 0..210 {
             System::set_block_number(i);
             PriceOracle::on_initialize(System::block_number());
 
             PriceOracle::on_trade(
-                ASSET_PAIR_A,
+                HDX, DOT,
                 PriceEntry {
                     price: Price::from((i + 1) as u128),
                     trade_amount: (i * 1_000).into(),
@@ -520,23 +451,25 @@ fn continuous_trades_should_work() {
 #[test]
 fn stable_price_should_work() {
     new_test_ext().execute_with(|| {
+        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
+
         let num_of_iters = BucketQueue::BUCKET_SIZE.pow(3);
-        PriceOracle::on_create_pool(ASSET_PAIR_A);
+        PriceOracle::on_create_pool(HDX, DOT);
 
         for i in num_of_iters - 2..2 * num_of_iters + 2 {
             PriceOracle::on_initialize(i.into());
             System::set_block_number(i.into());
-            PriceOracle::on_trade(ASSET_PAIR_A, PRICE_ENTRY_1);
+            PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_1);
             PriceOracle::on_finalize(i.into());
         }
 
         let data_ten = PriceOracle::price_data_ten()
             .iter()
-            .find(|&x| x.0 == ASSET_PAIR_A.name())
+            .find(|&x| x.0 == hdx_dot_pair_name)
             .unwrap()
             .1;
-        let data_hundred = PriceOracle::price_data_hundred(ASSET_PAIR_A.name());
-        let data_thousand = PriceOracle::price_data_thousand(ASSET_PAIR_A.name());
+        let data_hundred = PriceOracle::price_data_hundred(hdx_dot_pair_name.clone());
+        let data_thousand = PriceOracle::price_data_thousand(hdx_dot_pair_name.clone());
 
         assert_eq!(
             data_ten.get_last(),
@@ -568,11 +501,11 @@ fn stable_price_should_work() {
 
         let data_ten = PriceOracle::price_data_ten()
             .iter()
-            .find(|&x| x.0 == ASSET_PAIR_A.name())
+            .find(|&x| x.0 == hdx_dot_pair_name)
             .unwrap()
             .1;
-        let data_hundred = PriceOracle::price_data_hundred(ASSET_PAIR_A.name());
-        let data_thousand = PriceOracle::price_data_thousand(ASSET_PAIR_A.name());
+        let data_hundred = PriceOracle::price_data_hundred(hdx_dot_pair_name.clone());
+        let data_thousand = PriceOracle::price_data_thousand(hdx_dot_pair_name);
 
         assert_eq!(
             data_ten.get_last(),

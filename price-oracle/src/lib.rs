@@ -20,8 +20,7 @@
 use frame_support::pallet_prelude::Weight;
 use frame_support::sp_runtime::traits::{CheckedDiv, Zero};
 use frame_support::sp_runtime::FixedPointNumber;
-use hydradx_traits::{AMMTransfer, OnCreatePoolHandler, OnTradeHandler};
-use primitives::asset::AssetPair;
+use hydradx_traits::{OnCreatePoolHandler, OnTradeHandler};
 use sp_std::convert::TryInto;
 use sp_std::marker::PhantomData;
 use sp_std::prelude::*;
@@ -78,8 +77,8 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Pool was registered. [AssetPair]
-        PoolRegistered(AssetPair),
+        /// Pool was registered. [asset a, asset b]
+        PoolRegistered(AssetId, AssetId),
     }
 
     /// The number of assets registered and handled by this pallet.
@@ -161,16 +160,16 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    pub fn on_create_pool(asset_pair: AssetPair) {
+    pub fn on_create_pool(asset_a: AssetId, asset_b: AssetId) {
         let data = PriceDataTen::<T>::get();
-        if !data.iter().any(|bucket_tuple| bucket_tuple.0 == asset_pair.name()) {
+        if !data.iter().any(|bucket_tuple| bucket_tuple.0 == Self::name(asset_a, asset_b)) {
             let _ = NewAssets::<T>::try_mutate(|new_assets| -> Result<(), ()> {
                 // Keep the NewAssets vector sorted. It makes it easy to find duplicates.
-                match new_assets.binary_search(&asset_pair.name()) {
+                match new_assets.binary_search(&Self::name(asset_a, asset_b)) {
                     Ok(_pos) => Err(()), // new asset is already in vector
                     Err(pos) => {
-                        new_assets.insert(pos, asset_pair.name());
-                        Self::deposit_event(Event::PoolRegistered(asset_pair));
+                        new_assets.insert(pos, Self::name(asset_a, asset_b));
+                        Self::deposit_event(Event::PoolRegistered(asset_a, asset_b));
                         Ok(())
                     }
                 }
@@ -179,8 +178,8 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    pub fn on_trade(asset_pair: AssetPair, price_entry: PriceEntry) {
-        let _ = PriceDataAccumulator::<T>::mutate(asset_pair.name(), |previous_price_entry| {
+    pub fn on_trade(asset_a: AssetId, asset_b: AssetId, price_entry: PriceEntry) {
+        let _ = PriceDataAccumulator::<T>::mutate(Self::name(asset_a, asset_b), |previous_price_entry| {
             let maybe_new_price_entry = previous_price_entry.calculate_new_price_entry(&price_entry);
             // Invalid values are ignored and not added to the queue.
             if let Some(new_price_entry) = maybe_new_price_entry {
@@ -229,13 +228,13 @@ impl<T: Config> Pallet<T> {
 
     /// Calculate price from ordered assets
     pub fn normalize_price(
-        transfer: &AMMTransfer<T::AccountId, AssetId, AssetPair, Balance>,
+        asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance
     ) -> Option<(Price, Balance)> {
-        let ordered_asset_pair = transfer.assets.ordered_pair();
-        let (balance_a, balance_b) = if ordered_asset_pair.0 == transfer.assets.asset_in {
-            (transfer.amount, transfer.amount_out)
+        let ordered_asset_pair = Self::ordered_pair(asset_a, asset_b);
+        let (balance_a, balance_b) = if ordered_asset_pair.0 == asset_a {
+            (amount_in, amount_out)
         } else {
-            (transfer.amount_out, transfer.amount)
+            (amount_out, amount_in)
         };
 
         let price_a = Price::checked_from_integer(balance_a)?;
@@ -243,18 +242,42 @@ impl<T: Config> Pallet<T> {
         let price = price_a.checked_div(&price_b);
         price.map(|p| (p, balance_a))
     }
+
+    /// Return ordered asset tuple (A,B) where A < B
+	/// Used in storage
+    /// The implementation is the same as for AssetPair
+	pub fn ordered_pair(asset_a: AssetId, asset_b: AssetId) -> (AssetId, AssetId) {
+		match asset_a <= asset_b {
+			true => (asset_a, asset_b),
+			false => (asset_b, asset_a),
+		}
+	}
+
+    /// Return share token name
+    /// The implementation is the same as for AssetPair
+	pub fn name(asset_a: AssetId, asset_b: AssetId) -> Vec<u8> {
+		let mut buf: Vec<u8> = Vec::new();
+
+		let (asset_left, asset_right) = Self::ordered_pair(asset_a, asset_b);
+
+		buf.extend_from_slice(&asset_left.to_le_bytes());
+		buf.extend_from_slice(b"HDT");
+		buf.extend_from_slice(&asset_right.to_le_bytes());
+
+		buf
+	}
 }
 
 pub struct PriceOracleHandler<T>(PhantomData<T>);
-impl<T: Config> OnCreatePoolHandler<AssetPair> for PriceOracleHandler<T> {
-    fn on_create_pool(asset_pair: AssetPair) {
-        Pallet::<T>::on_create_pool(asset_pair);
+impl<T: Config> OnCreatePoolHandler<AssetId> for PriceOracleHandler<T> {
+    fn on_create_pool(asset_a: AssetId, asset_b: AssetId) {
+        Pallet::<T>::on_create_pool(asset_a, asset_b);
     }
 }
 
-impl<T: Config> OnTradeHandler<T::AccountId, AssetId, AssetPair, Balance> for PriceOracleHandler<T> {
-    fn on_trade(amm_transfer: &AMMTransfer<T::AccountId, AssetId, AssetPair, Balance>, liq_amount: Balance) {
-        let (price, amount) = if let Some(price_tuple) = Pallet::<T>::normalize_price(amm_transfer) {
+impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
+    fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liq_amount: Balance) {
+        let (price, amount) = if let Some(price_tuple) = Pallet::<T>::normalize_price(asset_a, asset_b, amount_in, amount_out) {
             price_tuple
         } else {
             // We don't want to throw an error here because this method is used in different extrinsics.
@@ -274,7 +297,7 @@ impl<T: Config> OnTradeHandler<T::AccountId, AssetId, AssetPair, Balance> for Pr
             liquidity_amount: liq_amount,
         };
 
-        Pallet::<T>::on_trade(amm_transfer.assets, price_entry);
+        Pallet::<T>::on_trade(asset_a, asset_b, price_entry);
     }
 
     fn on_trade_weight() -> Weight {

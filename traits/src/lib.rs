@@ -171,29 +171,29 @@ pub trait AssetPairAccountIdFor<AssetId, AccountId> {
 }
 
 /// Handler used by AMM pools to perform some tasks when a new pool is created.
-pub trait OnCreatePoolHandler<AssetPair> {
+pub trait OnCreatePoolHandler<AssetId> {
     /// Register an asset to be handled by price-oracle pallet.
     /// If an asset is not registered, calling `on_trade` results in populating the price buffer in the price oracle pallet,
     /// but the entries are ignored and the average price for the asset is not calculated.
-    fn on_create_pool(asset_pair: AssetPair);
+    fn on_create_pool(asset_a: AssetId, asset_b: AssetId);
 }
 
-impl<AssetPair> OnCreatePoolHandler<AssetPair> for () {
-    fn on_create_pool(_asset_pair: AssetPair) {}
+impl<AssetId> OnCreatePoolHandler<AssetId> for () {
+    fn on_create_pool(_asset_a: AssetId, _asset_b: AssetId) {}
 }
 
 /// Handler used by AMM pools to perform some tasks when a trade is executed.
-pub trait OnTradeHandler<AccountId, AssetId, AssetPair, Balance> {
+pub trait OnTradeHandler<AssetId, Balance> {
     /// Include a trade in the average price calculation of the price-oracle pallet.
-    fn on_trade(amm_transfer: &AMMTransfer<AccountId, AssetId, AssetPair, Balance>, liq_amount: Balance);
+    fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liq_amount: Balance);
     /// Known overhead for a trade in `on_initialize/on_finalize`.
     /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
     /// Add this weight to an extrinsic from which you call `on_trade`.
     fn on_trade_weight() -> Weight;
 }
 
-impl<AccountId, AssetId, AssetPair, Balance> OnTradeHandler<AccountId, AssetId, AssetPair, Balance> for () {
-    fn on_trade(_amm_transfer: &AMMTransfer<AccountId, AssetId, AssetPair, Balance>, _liq_amount: Balance) {}
+impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {
+    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {}
     fn on_trade_weight() -> Weight {
         Weight::zero()
     }

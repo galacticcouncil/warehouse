@@ -22,7 +22,6 @@ use frame_support::traits::{Everything, Get};
 use hydradx_traits::AssetPairAccountIdFor;
 use orml_traits::parameter_type_with_key;
 use price_oracle::PriceEntry;
-use primitives::asset::AssetPair;
 use primitives::{fee, AssetId, Balance, Price};
 use sp_core::H256;
 use sp_runtime::{
@@ -37,20 +36,10 @@ pub type AccountId = u64;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-pub const HDX: AssetId = 1000;
-
-pub const ASSET_PAIR_A: AssetPair = AssetPair {
-    asset_in: 1_000,
-    asset_out: 2_000,
-};
-pub const ASSET_PAIR_B: AssetPair = AssetPair {
-    asset_in: 1_000,
-    asset_out: 3_000,
-};
-pub const ASSET_PAIR_C: AssetPair = AssetPair {
-    asset_in: 1_000,
-    asset_out: 4_000,
-};
+pub const HDX: AssetId = 1_000;
+pub const DOT: AssetId = 2_000;
+pub const ACA: AssetId = 3_000;
+pub const ETH: AssetId = 4_000;
 
 pub const PRICE_ENTRY_1: PriceEntry = PriceEntry {
     price: Price::from_inner(2000000000000000000),

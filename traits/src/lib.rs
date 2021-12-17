@@ -118,7 +118,7 @@ pub trait AMM<AccountId, AssetId, AssetPair, Amount: Zero, Fee> {
 
     fn get_max_out_ratio() -> u128;
 
-    fn get_fee(_maybe_pool_account_id: Option<&AccountId>) -> Option<Fee>;
+    fn get_fee(pool_account_id: &AccountId) -> Fee;
 }
 
 pub trait Resolver<AccountId, Intention, E> {

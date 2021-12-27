@@ -43,7 +43,7 @@ pub struct AMMTransfer<AccountId, AssetId, AssetPair, Balance> {
 }
 
 /// Traits for handling AMM Pool trades.
-pub trait AMM<AccountId, AssetId, AssetPair, Amount: Zero, Fee> {
+pub trait AMM<AccountId, AssetId, AssetPair, Amount: Zero> {
     /// Check if both assets exist in a pool.
     fn exists(assets: AssetPair) -> bool;
 
@@ -118,7 +118,7 @@ pub trait AMM<AccountId, AssetId, AssetPair, Amount: Zero, Fee> {
 
     fn get_max_out_ratio() -> u128;
 
-    fn get_fee(pool_account_id: &AccountId) -> Fee;
+    fn get_fee(pool_account_id: &AccountId) -> (u32, u32);
 }
 
 pub trait Resolver<AccountId, Intention, E> {

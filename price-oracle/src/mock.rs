@@ -22,16 +22,19 @@ use frame_support::traits::{Everything, Get};
 use hydradx_traits::AssetPairAccountIdFor;
 use orml_traits::parameter_type_with_key;
 use price_oracle::PriceEntry;
-use primitives::{fee, AssetId, Balance, Price};
+use hydra_dx_math::fee::Fee;
 use sp_core::H256;
-use sp_runtime::{
+use frame_support::sp_runtime::{
+    FixedU128,
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use std::cell::RefCell;
 
 pub type Amount = i128;
-pub type AccountId = u64;
+pub type AssetId = u32;
+pub type Balance = u128;
+pub type Price = FixedU128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -61,7 +64,6 @@ frame_support::construct_runtime!(
          System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
          PriceOracle: price_oracle::{Pallet, Call, Storage, Event<T>},
          Currency: orml_tokens::{Pallet, Event<T>},
-         AssetRegistry: pallet_asset_registry::{Pallet, Storage, Event<T>},
      }
 
 );
@@ -110,31 +112,14 @@ impl AssetPairAccountIdFor<AssetId, u64> for AssetPairAccountIdTest {
 }
 
 thread_local! {
-        static EXCHANGE_FEE: RefCell<fee::Fee> = RefCell::new(fee::Fee::default());
+        static EXCHANGE_FEE: RefCell<Fee> = RefCell::new(Fee {numerator: 2, denominator: 1_000});
 }
 
 struct ExchangeFee;
-impl Get<fee::Fee> for ExchangeFee {
-    fn get() -> fee::Fee {
+impl Get<Fee> for ExchangeFee {
+    fn get() -> Fee {
         EXCHANGE_FEE.with(|v| *v.borrow())
     }
-}
-
-parameter_types! {
-    pub const NativeAssetId: AssetId = HDX;
-    pub ExchangeFeeRate: fee::Fee = ExchangeFee::get();
-    pub RegistryStringLimit: u32 = 100;
-}
-
-impl pallet_asset_registry::Config for Test {
-    type Event = Event;
-    type RegistryOrigin = frame_system::EnsureSigned<AccountId>;
-    type AssetId = AssetId;
-    type Balance = Balance;
-    type AssetNativeLocation = u8;
-    type StringLimit = RegistryStringLimit;
-    type NativeAssetId = NativeAssetId;
-    type WeightInfo = ();
 }
 
 parameter_type_with_key! {

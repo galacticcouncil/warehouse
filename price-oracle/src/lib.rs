@@ -42,7 +42,7 @@ mod benchmarking; // TODO: rebenchmark
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
-use sp_runtime::DispatchError;
+use frame_support::sp_runtime::DispatchError;
 
 /// Unique identifier for an asset pair.
 /// AMM pools derive their own unique identifiers for asset pairs,

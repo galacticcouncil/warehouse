@@ -21,12 +21,9 @@ version = '2.3.1'
 serde = {features = ['derive'], optional = true, version = '1.0.101'}
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
-# TODO remove this dependency once the AssetPair struct is moved to this repository
-# Basilisk dependencies
-primitives = { git = "https://github.com/galacticcouncil/basilisk-node", rev = "c0bf049f0ee91c392f163768ef707c94c7981c46", default-features = false}
-
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/hydradx-math", rev = "ed5182a62741ab6d49b11c85290ddd05413cb666", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false, optional = true }
@@ -34,15 +31,12 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false, optional = true }
 sp-core = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.12", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-pallet-xyk = { git = "https://github.com/galacticcouncil/basilisk-node", rev = "c0bf049f0ee91c392f163768ef707c94c7981c46", default-features = false }
 orml-tokens = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "ee37b76a7a8cf159e6c41851942758746318bb84" }
 orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "ee37b76a7a8cf159e6c41851942758746318bb84" }
-pallet-asset-registry = { git = "https://github.com/galacticcouncil/basilisk-node", rev = "dfa9549a4bc58136ffdd86b6876764268b1a7c06", default-features = false }
 
 [features]
 default = ['std']
@@ -57,10 +51,8 @@ std = [
   'frame-support/std',
   'frame-system/std',
   'frame-benchmarking/std',
-  'sp-runtime/std',
   'sp-core/std',
   'sp-std/std',
-  'primitives/std',
   'hydradx-traits/std',
   'scale-info/std',
 ]

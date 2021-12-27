@@ -22,14 +22,12 @@ use frame_support::traits::{Everything, Get};
 use hydradx_traits::AssetPairAccountIdFor;
 use orml_traits::parameter_type_with_key;
 use price_oracle::PriceEntry;
-use hydra_dx_math::fee::Fee;
 use sp_core::H256;
 use frame_support::sp_runtime::{
     FixedU128,
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use std::cell::RefCell;
 
 pub type Amount = i128;
 pub type AssetId = u32;
@@ -111,14 +109,12 @@ impl AssetPairAccountIdFor<AssetId, u64> for AssetPairAccountIdTest {
     }
 }
 
-thread_local! {
-        static EXCHANGE_FEE: RefCell<Fee> = RefCell::new(Fee {numerator: 2, denominator: 1_000});
-}
+pub const EXCHANGE_FEE: (u32, u32) = (2, 1_000);
 
 struct ExchangeFee;
-impl Get<Fee> for ExchangeFee {
-    fn get() -> Fee {
-        EXCHANGE_FEE.with(|v| *v.borrow())
+impl Get<(u32, u32)> for ExchangeFee {
+    fn get() -> (u32, u32) {
+        EXCHANGE_FEE
     }
 }
 

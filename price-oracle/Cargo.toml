@@ -23,7 +23,6 @@ scale-info = { version = "1.0", default-features = false, features = ["derive"] 
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }
-hydra-dx-math = { git = "https://github.com/galacticcouncil/hydradx-math", rev = "ed5182a62741ab6d49b11c85290ddd05413cb666", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false, optional = true }

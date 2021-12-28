@@ -20,7 +20,6 @@ use crate::Config;
 use frame_support::parameter_types;
 use frame_support::traits::{Everything, Get};
 use hydradx_traits::AssetPairAccountIdFor;
-use orml_traits::parameter_type_with_key;
 use price_oracle::PriceEntry;
 use sp_core::H256;
 use frame_support::sp_runtime::{
@@ -29,9 +28,7 @@ use frame_support::sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
-pub type Amount = i128;
 pub type AssetId = u32;
-pub type Balance = u128;
 pub type Price = FixedU128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -61,7 +58,6 @@ frame_support::construct_runtime!(
      {
          System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
          PriceOracle: price_oracle::{Pallet, Call, Storage, Event<T>},
-         Currency: orml_tokens::{Pallet, Event<T>},
      }
 
 );
@@ -116,24 +112,6 @@ impl Get<(u32, u32)> for ExchangeFee {
     fn get() -> (u32, u32) {
         EXCHANGE_FEE
     }
-}
-
-parameter_type_with_key! {
-    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-        1_000_000
-    };
-}
-
-impl orml_tokens::Config for Test {
-    type Event = Event;
-    type Balance = Balance;
-    type Amount = Amount;
-    type CurrencyId = AssetId;
-    type WeightInfo = ();
-    type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = ();
-    type MaxLocks = ();
-    type DustRemovalWhitelist = Everything;
 }
 
 impl Config for Test {

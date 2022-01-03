@@ -44,7 +44,7 @@ benchmarks! {
 
     on_finalize_one_token {
         let block_num: u32 = 5;
-        let hdx_dot_pair_name = PriceOracle::<T>::name(HDX, DOT);
+        let hdx_dot_pair_name = PriceOracle::<T>::get_name(HDX, DOT);
 
         frame_system::Pallet::<T>::set_block_number((block_num - 1).into());
         PriceOracle::<T>::on_initialize((block_num - 1).into());
@@ -94,13 +94,13 @@ benchmarks! {
             PriceOracle::<T>::on_trade(asset_a, asset_b, PRICE_ENTRY_1);
         }
 
-        let asset_pair_name = PriceOracle::<T>::name(asset_a, asset_b);
+        let asset_pair_name = PriceOracle::<T>::get_name(asset_a, asset_b);
         assert_eq!(PriceDataAccumulator::<T>::try_get(asset_pair_name), Ok(PRICE_ENTRY_1));
         let price_data = PriceOracle::<T>::price_data_ten();
         for i in 0 .. a {
             let asset_a = i * 1_000;
             let asset_b = i * 2_000;
-            let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::name(asset_a, asset_b)).unwrap().1;
+            let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::get_name(asset_a, asset_b)).unwrap().1;
             assert_eq!(bucket_queue.get_last(), PriceInfo{ avg_price: Price::zero(), volume: 0});
         }
 
@@ -115,7 +115,7 @@ benchmarks! {
                 PriceOracle::<T>::on_trade(asset_a, asset_b, PRICE_ENTRY_1);
             }
 
-            assert_eq!(PriceDataAccumulator::<T>::try_get(PriceOracle::<T>::name(asset_a, asset_b)), Ok(PRICE_ENTRY_1));
+            assert_eq!(PriceDataAccumulator::<T>::try_get(PriceOracle::<T>::get_name(asset_a, asset_b)), Ok(PRICE_ENTRY_1));
         }
 
         frame_system::Pallet::<T>::set_block_number(block_num.into());
@@ -124,14 +124,14 @@ benchmarks! {
     verify {
         let asset_a = 1_000;
         let asset_b = 2_000;
-        let asset_pair_name = PriceOracle::<T>::name(asset_a, asset_b);
-        assert!(!PriceDataAccumulator::<T>::contains_key(PriceOracle::<T>::name(asset_a, asset_b)));
+        let asset_pair_name = PriceOracle::<T>::get_name(asset_a, asset_b);
+        assert!(!PriceDataAccumulator::<T>::contains_key(PriceOracle::<T>::get_name(asset_a, asset_b)));
         let price_data = PriceOracle::<T>::price_data_ten();
         for i in 0 .. BucketQueue::BUCKET_SIZE {
             for j in 0 .. a {
                 let asset_a = j * 1_000;
                 let asset_b = j * 2_000;
-                let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::name(asset_a, asset_b)).unwrap().1;
+                let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::get_name(asset_a, asset_b)).unwrap().1;
                 assert_eq!(bucket_queue[i as usize], PriceInfo{ avg_price: Price::from(2), volume: 1_000});
             }
         }
@@ -141,7 +141,7 @@ benchmarks! {
             for j in 0 .. a {
                 let asset_a = j * 1_000;
                 let asset_b = j * 2_000;
-                let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::name(asset_a, asset_b)).unwrap().1;
+                let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::get_name(asset_a, asset_b)).unwrap().1;
                 assert_eq!(bucket_queue[i as usize], PriceInfo{ avg_price: Price::from(2), volume: 1_000});
             }
         }
@@ -151,7 +151,7 @@ benchmarks! {
             for j in 0 .. a {
                 let asset_a = j * 1_000;
                 let asset_b = j * 2_000;
-                let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::name(asset_a, asset_b)).unwrap().1;
+                let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::get_name(asset_a, asset_b)).unwrap().1;
                 assert_eq!(bucket_queue[i as usize], PriceInfo{ avg_price: Price::from(2), volume: 1_000});
             }
         }
@@ -185,7 +185,7 @@ benchmarks! {
         }
 
         let price_data = PriceOracle::<T>::price_data_ten();
-        let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::name(asset_a, asset_b)).unwrap().1;
+        let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::get_name(asset_a, asset_b)).unwrap().1;
         assert_eq!(bucket_queue.get_last(), PriceInfo{ avg_price: Price::zero(), volume: 0});
 
     }: { PriceOracle::<T>::on_finalize(block_num.into()); }
@@ -193,7 +193,7 @@ benchmarks! {
         for i in 0 .. b {
             let asset_a = i * 1_000;
             let asset_a = i * 2_000;
-            let asset_pair_name = PriceOracle::<T>::name(asset_a, asset_b);
+            let asset_pair_name = PriceOracle::<T>::get_name(asset_a, asset_b);
             assert!(!PriceDataAccumulator::<T>::contains_key(asset_pair_name.clone()));
             let price_data = PriceOracle::<T>::price_data_ten();
             let bucket_queue = price_data.iter().find(|&x| x.0 == asset_pair_name).unwrap().1;

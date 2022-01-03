@@ -162,13 +162,13 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
     pub fn on_create_pool(asset_a: AssetId, asset_b: AssetId) {
         let data = PriceDataTen::<T>::get();
-        if !data.iter().any(|bucket_tuple| bucket_tuple.0 == Self::name(asset_a, asset_b)) {
+        if !data.iter().any(|bucket_tuple| bucket_tuple.0 == Self::get_name(asset_a, asset_b)) {
             let _ = NewAssets::<T>::try_mutate(|new_assets| -> Result<(), ()> {
                 // Keep the NewAssets vector sorted. It makes it easy to find duplicates.
-                match new_assets.binary_search(&Self::name(asset_a, asset_b)) {
+                match new_assets.binary_search(&Self::get_name(asset_a, asset_b)) {
                     Ok(_pos) => Err(()), // new asset is already in vector
                     Err(pos) => {
-                        new_assets.insert(pos, Self::name(asset_a, asset_b));
+                        new_assets.insert(pos, Self::get_name(asset_a, asset_b));
                         Self::deposit_event(Event::PoolRegistered(asset_a, asset_b));
                         Ok(())
                     }
@@ -179,7 +179,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn on_trade(asset_a: AssetId, asset_b: AssetId, price_entry: PriceEntry) {
-        let _ = PriceDataAccumulator::<T>::mutate(Self::name(asset_a, asset_b), |previous_price_entry| {
+        let _ = PriceDataAccumulator::<T>::mutate(Self::get_name(asset_a, asset_b), |previous_price_entry| {
             let maybe_new_price_entry = previous_price_entry.calculate_new_price_entry(&price_entry);
             // Invalid values are ignored and not added to the queue.
             if let Some(new_price_entry) = maybe_new_price_entry {
@@ -255,7 +255,7 @@ impl<T: Config> Pallet<T> {
 
     /// Return share token name
     /// The implementation is the same as for AssetPair
-	pub fn name(asset_a: AssetId, asset_b: AssetId) -> Vec<u8> {
+	pub fn get_name(asset_a: AssetId, asset_b: AssetId) -> Vec<u8> {
 		let mut buf: Vec<u8> = Vec::new();
 
 		let (asset_left, asset_right) = Self::ordered_pair(asset_a, asset_b);

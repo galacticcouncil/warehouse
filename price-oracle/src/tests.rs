@@ -49,9 +49,9 @@ fn add_new_asset_pair_should_work() {
         System::set_block_number(3);
         PriceOracle::on_initialize(3);
 
-        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
-        let hdx_aca_pair_name = PriceOracle::name(HDX, ACA);
-        let hdx_eth_pair_name = PriceOracle::name(HDX, ETH);
+        let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
+        let hdx_aca_pair_name = PriceOracle::get_name(HDX, ACA);
+        let hdx_eth_pair_name = PriceOracle::get_name(HDX, ETH);
 
         assert_eq!(PriceOracle::num_of_assets(), 0);
         assert_eq!(PriceOracle::new_assets(), vec![AssetPairId::new(); 0]);
@@ -108,7 +108,7 @@ fn add_existing_asset_pair_should_not_work() {
         System::set_block_number(3);
         PriceOracle::on_initialize(3);
 
-        assert!(!<PriceDataTen<Test>>::get().contains(&(PriceOracle::name(HDX, DOT), BucketQueue::default())));
+        assert!(!<PriceDataTen<Test>>::get().contains(&(PriceOracle::get_name(HDX, DOT), BucketQueue::default())));
         PriceOracle::on_create_pool(HDX, DOT);
         assert_storage_noop!(PriceOracle::on_create_pool(HDX, DOT));
         expect_events(vec![Event::PoolRegistered(HDX, DOT).into()]);
@@ -118,7 +118,7 @@ fn add_existing_asset_pair_should_not_work() {
 #[test]
 fn on_trade_should_work() {
     new_test_ext().execute_with(|| {
-        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
+        let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
 
         assert_eq!(<PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()), Err(()));
         PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_1);
@@ -134,7 +134,7 @@ fn on_trade_should_work() {
 #[test]
 fn on_trade_handler_should_work() {
     new_test_ext().execute_with(|| {
-        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
+        let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
 
         assert_eq!(<PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()), Err(()));
 
@@ -149,7 +149,7 @@ fn on_trade_handler_should_work() {
 #[test]
 fn price_normalization_should_work() {
     new_test_ext().execute_with(|| {
-        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
+        let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
 
         assert_eq!(<PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()), Err(()));
 
@@ -222,12 +222,12 @@ fn update_data_should_work() {
 
         let data_ten_a = PriceOracle::price_data_ten()
             .iter()
-            .find(|&x| x.0 == PriceOracle::name(HDX, DOT))
+            .find(|&x| x.0 == PriceOracle::get_name(HDX, DOT))
             .unwrap()
             .1;
         let data_ten_b = PriceOracle::price_data_ten()
             .iter()
-            .find(|&x| x.0 == PriceOracle::name(HDX, ACA))
+            .find(|&x| x.0 == PriceOracle::get_name(HDX, ACA))
             .unwrap()
             .1;
 
@@ -275,7 +275,7 @@ fn update_data_with_incorrect_input_should_not_work() {
 
         let data_ten = PriceOracle::price_data_ten()
             .iter()
-            .find(|&x| x.0 == PriceOracle::name(HDX, DOT))
+            .find(|&x| x.0 == PriceOracle::get_name(HDX, DOT))
             .unwrap()
             .1;
         assert_eq!(
@@ -291,7 +291,7 @@ fn update_data_with_incorrect_input_should_not_work() {
 #[test]
 fn update_empty_data_should_work() {
     new_test_ext().execute_with(|| {
-        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
+        let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
 
         PriceOracle::on_create_pool(HDX, DOT);
 
@@ -451,7 +451,7 @@ fn continuous_trades_should_work() {
 #[test]
 fn stable_price_should_work() {
     new_test_ext().execute_with(|| {
-        let hdx_dot_pair_name = PriceOracle::name(HDX, DOT);
+        let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
 
         let num_of_iters = BucketQueue::BUCKET_SIZE.pow(3);
         PriceOracle::on_create_pool(HDX, DOT);

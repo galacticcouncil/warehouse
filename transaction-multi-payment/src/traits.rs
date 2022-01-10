@@ -1,10 +1,12 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PaymentSwapResult {
+pub enum PaymentWithdrawResult {
     Native,
-    Swapped,
     Transferred,
 }
 
-pub trait CurrencySwap<AccountId, Balance> {
-    fn swap(who: &AccountId, fee: Balance) -> Result<PaymentSwapResult, frame_support::sp_runtime::DispatchError>;
+pub trait CurrencyWithdraw<AccountId, Balance> {
+    fn withdraw(
+        who: &AccountId,
+        fee: Balance,
+    ) -> Result<PaymentWithdrawResult, frame_support::sp_runtime::DispatchError>;
 }

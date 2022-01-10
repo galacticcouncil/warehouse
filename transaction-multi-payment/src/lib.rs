@@ -51,8 +51,8 @@ use sp_std::marker::PhantomData;
 use frame_support::sp_runtime::FixedPointNumber;
 use frame_support::sp_runtime::FixedPointOperand;
 use frame_support::weights::{Pays, Weight};
-use orml_traits::{MultiCurrency, MultiCurrencyExtended};
 use hydradx_traits::pools::SpotPriceProvider;
+use orml_traits::{MultiCurrency, MultiCurrencyExtended};
 
 use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::SignedExtension;
@@ -61,7 +61,7 @@ use frame_support::traits::IsSubType;
 
 use scale_info::TypeInfo;
 
-use crate::traits::{CurrencySwap, PaymentSwapResult};
+use crate::traits::{CurrencyWithdraw, PaymentWithdrawResult};
 use frame_support::dispatch::DispatchError;
 
 type AssetIdOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
@@ -304,11 +304,14 @@ where
     }
 
     /// Execute a trade to buy HDX and sell selected currency.
-    pub fn withdraw_fee_non_native(who: &T::AccountId, fee: BalanceOf<T>) -> Result<PaymentSwapResult, DispatchError> {
+    pub fn withdraw_fee_non_native(
+        who: &T::AccountId,
+        fee: BalanceOf<T>,
+    ) -> Result<PaymentWithdrawResult, DispatchError> {
         let currency = Self::account_currency(who);
 
         if currency == T::NativeAssetId::get() {
-            Ok(PaymentSwapResult::Native)
+            Ok(PaymentWithdrawResult::Native)
         } else {
             let price = if let Some(maybe_price) = T::SpotPriceProvider::spot_price(currency, T::NativeAssetId::get()) {
                 maybe_price
@@ -328,7 +331,7 @@ where
                 Self::fallback_account(),
             ));
 
-            Ok(PaymentSwapResult::Transferred)
+            Ok(PaymentWithdrawResult::Transferred)
         }
     }
 
@@ -337,12 +340,10 @@ where
         let adjusted_weight_fee = Self::weight_to_fee(T::WeightInfo::set_currency());
         let fee = base_fee.saturating_add(adjusted_weight_fee);
 
-        let result = Self::swap(who, fee)?;
+        let result = Self::withdraw(who, fee)?;
         match result {
-            PaymentSwapResult::Transferred => Ok(()),
-            PaymentSwapResult::Native | PaymentSwapResult::Swapped => {
-                T::Currencies::withdraw(T::NativeAssetId::get(), who, fee)
-            }
+            PaymentWithdrawResult::Transferred => Ok(()),
+            PaymentWithdrawResult::Native => T::Currencies::withdraw(T::NativeAssetId::get(), who, fee),
         }
     }
 
@@ -361,11 +362,11 @@ where
     }
 }
 
-impl<T: Config> CurrencySwap<<T as frame_system::Config>::AccountId, BalanceOf<T>> for Pallet<T>
+impl<T: Config> CurrencyWithdraw<<T as frame_system::Config>::AccountId, BalanceOf<T>> for Pallet<T>
 where
     BalanceOf<T>: FixedPointOperand,
 {
-    fn swap(who: &T::AccountId, fee: BalanceOf<T>) -> Result<PaymentSwapResult, DispatchError> {
+    fn withdraw(who: &T::AccountId, fee: BalanceOf<T>) -> Result<PaymentWithdrawResult, DispatchError> {
         Self::withdraw_fee_non_native(who, fee)
     }
 }
@@ -384,7 +385,7 @@ where
         Imbalance<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance, Opposite = C::PositiveImbalance>,
     OU: OnUnbalanced<NegativeImbalanceOf<C, T>>,
     C::Balance: Into<BalanceOf<T>>,
-    SW: CurrencySwap<T::AccountId, BalanceOf<T>>,
+    SW: CurrencyWithdraw<T::AccountId, BalanceOf<T>>,
     BalanceOf<T>: FixedPointOperand,
 {
     type LiquidityInfo = Option<NegativeImbalanceOf<C, T>>;
@@ -410,10 +411,10 @@ where
             WithdrawReasons::TRANSACTION_PAYMENT | WithdrawReasons::TIP
         };
 
-        if let Ok(detail) = SW::swap(who, fee.into()) {
+        if let Ok(detail) = SW::withdraw(who, fee.into()) {
             match detail {
-                PaymentSwapResult::Transferred => Ok(None),
-                PaymentSwapResult::Native | PaymentSwapResult::Swapped => {
+                PaymentWithdrawResult::Transferred => Ok(None),
+                PaymentWithdrawResult::Native => {
                     match C::withdraw(who, fee, withdraw_reason, ExistenceRequirement::KeepAlive) {
                         Ok(imbalance) => Ok(Some(imbalance)),
                         Err(_) => Err(InvalidTransaction::Payment.into()),

@@ -20,7 +20,7 @@ use frame_support::{assert_noop, assert_ok, assert_storage_noop};
 use pallet_transaction_payment::ChargeTransactionPayment;
 use sp_runtime::traits::SignedExtension;
 
-use crate::traits::{CurrencySwap, PaymentSwapResult};
+use crate::traits::{CurrencyWithdraw, PaymentWithdrawResult};
 use crate::CurrencyBalanceCheck;
 use crate::Price;
 use frame_support::sp_runtime::transaction_validity::{InvalidTransaction, ValidTransaction};
@@ -483,17 +483,20 @@ fn check_balance_should_work() {
 }
 
 #[test]
-fn swap_should_work() {
+fn withdraw_with_price_should_work() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        assert_eq!(PaymentPallet::swap(&ALICE, 1000).unwrap(), PaymentSwapResult::Native);
+        assert_eq!(
+            PaymentPallet::withdraw(&ALICE, 1000).unwrap(),
+            PaymentWithdrawResult::Native
+        );
 
         assert_ok!(PaymentPallet::set_currency(
             Origin::signed(ALICE),
             SUPPORTED_CURRENCY_WITH_PRICE
         ));
         assert_eq!(
-            PaymentPallet::swap(&ALICE, 1000).unwrap(),
-            PaymentSwapResult::Transferred
+            PaymentPallet::withdraw(&ALICE, 1000).unwrap(),
+            PaymentWithdrawResult::Transferred
         );
     });
 }
@@ -504,6 +507,9 @@ fn withdraw_should_not_work() {
         assert_ok!(PaymentPallet::set_currency(Origin::signed(ALICE), SUPPORTED_CURRENCY));
 
         assert_ok!(PaymentPallet::remove_currency(Origin::root(), SUPPORTED_CURRENCY));
-        assert_noop!(PaymentPallet::swap(&ALICE, 1000), Error::<Test>::FallbackPriceNotFound);
+        assert_noop!(
+            PaymentPallet::withdraw(&ALICE, 1000),
+            Error::<Test>::FallbackPriceNotFound
+        );
     });
 }

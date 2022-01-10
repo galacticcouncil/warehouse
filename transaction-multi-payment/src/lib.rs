@@ -313,8 +313,8 @@ where
         if currency == T::NativeAssetId::get() {
             Ok(PaymentWithdrawResult::Native)
         } else {
-            let price = if let Some(maybe_price) = T::SpotPriceProvider::spot_price(currency, T::NativeAssetId::get()) {
-                maybe_price
+            let price = if let Some(spot_price) = T::SpotPriceProvider::spot_price(currency, T::NativeAssetId::get()) {
+                spot_price
             } else {
                 Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?
             };

@@ -52,6 +52,7 @@ use frame_support::sp_runtime::FixedPointNumber;
 use frame_support::sp_runtime::FixedPointOperand;
 use frame_support::weights::{Pays, Weight};
 use orml_traits::{MultiCurrency, MultiCurrencyExtended};
+use hydradx_traits::pools::SpotPriceProvider;
 
 use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::SignedExtension;
@@ -60,7 +61,7 @@ use frame_support::traits::IsSubType;
 
 use scale_info::TypeInfo;
 
-use crate::traits::{CurrencySwap, PaymentSwapResult, SpotPriceProvider};
+use crate::traits::{CurrencySwap, PaymentSwapResult};
 use frame_support::dispatch::DispatchError;
 
 type AssetIdOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
@@ -77,7 +78,6 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use crate::traits::SpotPriceProvider;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
 

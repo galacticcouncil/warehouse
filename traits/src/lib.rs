@@ -18,6 +18,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::upper_case_acronyms)]
 
+pub mod pools;
+
 use codec::{Decode, Encode};
 use frame_support::dispatch;
 use frame_support::sp_runtime::traits::Zero;

@@ -35,6 +35,7 @@ use orml_currencies::BasicCurrencyAdapter;
 use std::cell::RefCell;
 
 use frame_support::traits::{Everything, GenesisBuild, Get};
+use hydradx_traits::pools::SpotPriceProvider;
 
 pub type AccountId = u64;
 pub type Balance = u128;

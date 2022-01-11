@@ -238,6 +238,7 @@ pub struct ExtBuilder {
     base_weight: u64,
     native_balances: Vec<(AccountId, Balance)>,
     endowed_accounts: Vec<(AccountId, AssetId, Balance)>,
+    account_currencies: Vec<(AccountId, AssetId)>,
 }
 
 impl Default for ExtBuilder {
@@ -251,6 +252,8 @@ impl Default for ExtBuilder {
                 (ALICE, SUPPORTED_CURRENCY, INITIAL_BALANCE),  // used for fallback price test
                 (ALICE, SUPPORTED_CURRENCY_WITH_PRICE, INITIAL_BALANCE),
             ],
+
+            account_currencies: vec![],
         }
     }
 }
@@ -266,6 +269,10 @@ impl ExtBuilder {
     }
     pub fn account_tokens(mut self, account: AccountId, asset: AssetId, balance: Balance) -> Self {
         self.endowed_accounts.push((account, asset, balance));
+        self
+    }
+    pub fn with_currencies(mut self, account_currencies: Vec<(AccountId, AssetId)>) -> Self {
+        self.account_currencies = account_currencies;
         self
     }
     fn set_constants(&self) {
@@ -301,6 +308,7 @@ impl ExtBuilder {
                 (SUPPORTED_CURRENCY_WITH_PRICE, Price::from_float(0.5)),
             ],
             fallback_account: FALLBACK_ACCOUNT,
+            account_currencies: self.account_currencies,
         }
         .assimilate_storage(&mut t)
         .unwrap();

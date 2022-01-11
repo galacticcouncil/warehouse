@@ -184,15 +184,11 @@ fn fee_payment_in_non_native_currency() {
         .base_weight(5)
         .account_native_balance(CHARLIE, 0)
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY_WITH_PRICE, 10_000)
+        .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY_WITH_PRICE)])
         .build()
         .execute_with(|| {
             // Make sure Charlie ain't got a penny!
             assert_eq!(Balances::free_balance(CHARLIE), 0);
-
-            assert_ok!(PaymentPallet::set_currency(
-                Origin::signed(CHARLIE),
-                SUPPORTED_CURRENCY_WITH_PRICE
-            ));
 
             let len = 1000;
             let info = DispatchInfo {
@@ -200,7 +196,7 @@ fn fee_payment_in_non_native_currency() {
                 ..Default::default()
             };
 
-            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &CHARLIE), 9898);
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &CHARLIE), 10_000);
 
             assert!(ChargeTransactionPayment::<Test>::from(0)
                 .pre_dispatch(&CHARLIE, CALL, &info, len)
@@ -209,7 +205,7 @@ fn fee_payment_in_non_native_currency() {
             //Native balance check - Charlie should be still broke!
             assert_eq!(Balances::free_balance(CHARLIE), 0);
 
-            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &CHARLIE), 9797);
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &CHARLIE), 9899);
         });
 }
 
@@ -220,11 +216,10 @@ fn fee_payment_non_native_insufficient_balance() {
     ExtBuilder::default()
         .base_weight(5)
         .account_native_balance(CHARLIE, 0)
-        .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 2_000)
+        .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 1_00)
+        .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .build()
         .execute_with(|| {
-            assert_ok!(PaymentPallet::set_currency(Origin::signed(CHARLIE), SUPPORTED_CURRENCY));
-
             let len = 1000;
             let info = DispatchInfo {
                 weight: 5,
@@ -235,7 +230,7 @@ fn fee_payment_non_native_insufficient_balance() {
                 .pre_dispatch(&CHARLIE, CALL, &info, len)
                 .is_err());
 
-            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 457);
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 1_00);
         });
 }
 
@@ -281,19 +276,18 @@ fn removed_accepted_currency() {
 }
 
 #[test]
-fn fee_payment_in_non_native_currency_with_no_pool() {
+fn fee_payment_in_non_native_currency_with_no_price() {
     const CHARLIE: AccountId = 5;
 
     ExtBuilder::default()
         .base_weight(5)
         .account_native_balance(CHARLIE, 0)
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10_000)
+        .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .build()
         .execute_with(|| {
             // Make sure Charlie ain't got a penny!
             assert_eq!(Balances::free_balance(CHARLIE), 0);
-
-            assert_ok!(PaymentPallet::set_currency(Origin::signed(CHARLIE), SUPPORTED_CURRENCY));
 
             let len = 10;
             let info = DispatchInfo {
@@ -301,7 +295,7 @@ fn fee_payment_in_non_native_currency_with_no_pool() {
                 ..Default::default()
             };
 
-            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &FALLBACK_ACCOUNT), 1_543);
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &FALLBACK_ACCOUNT), 0);
 
             assert!(ChargeTransactionPayment::<Test>::from(0)
                 .pre_dispatch(&CHARLIE, CALL, &info, len)
@@ -310,8 +304,8 @@ fn fee_payment_in_non_native_currency_with_no_pool() {
             //Native balance check - Charlie should be still broke!
             assert_eq!(Balances::free_balance(CHARLIE), 0);
 
-            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 8_427);
-            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &FALLBACK_ACCOUNT), 1_573);
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 9970);
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &FALLBACK_ACCOUNT), 30);
         });
 }
 
@@ -322,11 +316,10 @@ fn fee_payment_non_native_insufficient_balance_with_no_pool() {
     ExtBuilder::default()
         .base_weight(5)
         .account_native_balance(CHARLIE, 0)
-        .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 2_000)
+        .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 100)
+        .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .build()
         .execute_with(|| {
-            assert_ok!(PaymentPallet::set_currency(Origin::signed(CHARLIE), SUPPORTED_CURRENCY));
-
             let len = 1000;
             let info = DispatchInfo {
                 weight: 5,
@@ -337,7 +330,7 @@ fn fee_payment_non_native_insufficient_balance_with_no_pool() {
                 .pre_dispatch(&CHARLIE, CALL, &info, len)
                 .is_err());
 
-            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 457);
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 100);
         });
 }
 

@@ -179,6 +179,7 @@ pub mod pallet {
     pub struct GenesisConfig<T: Config> {
         pub currencies: Vec<(AssetIdOf<T>, Price)>,
         pub fallback_account: T::AccountId,
+        pub account_currencies: Vec<(T::AccountId, AssetIdOf<T>)>,
     }
 
     #[cfg(feature = "std")]
@@ -187,6 +188,7 @@ pub mod pallet {
             GenesisConfig {
                 currencies: vec![],
                 fallback_account: Default::default(),
+                account_currencies: vec![],
             }
         }
     }
@@ -202,6 +204,10 @@ pub mod pallet {
 
             for (asset, price) in &self.currencies {
                 AcceptedCurrencies::<T>::insert(asset, price);
+            }
+
+            for (account, asset) in &self.account_currencies {
+                <AccountCurrencyMap<T>>::insert(account, asset);
             }
         }
     }

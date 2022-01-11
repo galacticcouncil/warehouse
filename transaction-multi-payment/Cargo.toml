@@ -30,9 +30,9 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
 
 [dev-dependencies]
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "1c80da43a720d1b957e1ba12238e4d98b2ee8cf9", default-features = false }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "1c80da43a720d1b957e1ba12238e4d98b2ee8cf9", default-features = false, features=["std"]}
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "1c80da43a720d1b957e1ba12238e4d98b2ee8cf9", default-features = false }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false, features=["std"] }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
 
 [features]
@@ -44,9 +44,7 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "sp-runtime/std",
-    "orml-tokens/std",
     "orml-traits/std",
     "hydradx-traits/std",
     "scale-info/std",
-    "pallet-balances/std",
 ]

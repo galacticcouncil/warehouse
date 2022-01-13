@@ -119,6 +119,30 @@ pub mod pallet {
     #[pallet::getter(fn price_data_thousand)]
     pub type PriceDataThousand<T: Config> = StorageMap<_, Twox64Concat, AssetPairId, BucketQueue, ValueQuery>;
 
+    #[pallet::genesis_config]
+    #[derive(Default)]
+	pub struct GenesisConfig {
+        pub price_data: Vec<((AssetId, AssetId), Price, Balance)>,
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+		fn build(&self) {
+            for &(asset_pair, avg_price, volume) in self.price_data.iter() {
+                let pair_id = Pallet::<T>::get_name(asset_pair.0, asset_pair.1);
+
+                let data_ten = PriceDataTen::<T>::get();
+                assert!(!data_ten.iter().any(|bucket_tuple| bucket_tuple.0 == pair_id), "Assets already registered!");
+
+                let mut bucket = BucketQueue::default();
+                bucket.update_last(PriceInfo{ avg_price, volume });
+                PriceDataTen::<T>::append((pair_id, bucket));
+            }
+
+            TrackedAssetsCount::<T>::set(self.price_data.len().try_into().unwrap());
+		}
+	}
+
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(_n: T::BlockNumber) -> Weight {

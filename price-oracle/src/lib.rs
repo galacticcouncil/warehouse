@@ -141,14 +141,13 @@ pub mod pallet {
             // add newly registered assets
             let _ = TrackedAssetsCount::<T>::mutate(|value| {
                 *value = value
-                    .checked_add(
+                    .saturating_add(
                         Self::new_assets()
                             .len()
                             .try_into()
                             // we can use unwraps here because on_create_pool verifies that new_assets returns u32 and we can safely add this value to TrackedAssetsCount
                             .unwrap(),
                     )
-                    .unwrap()
             });
 
             for new_asset in Self::new_assets().iter() {

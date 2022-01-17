@@ -6,6 +6,7 @@ members = [
 	"traits",
 	"relaychain-info",
 	"price-oracle",
+	"transaction-multi-payment",
 ]
 
 resolver = "2"

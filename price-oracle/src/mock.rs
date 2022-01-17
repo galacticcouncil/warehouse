@@ -18,7 +18,7 @@
 use crate as price_oracle;
 use crate::Config;
 use frame_support::parameter_types;
-use frame_support::traits::{Everything, Get};
+use frame_support::traits::{Everything, Get, GenesisBuild};
 use hydradx_traits::AssetPairAccountIdFor;
 use price_oracle::PriceEntry;
 use sp_core::H256;
@@ -29,6 +29,7 @@ use frame_support::sp_runtime::{
 };
 
 pub type AssetId = u32;
+pub type Balance = u128;
 pub type Price = FixedU128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -119,11 +120,20 @@ impl Config for Test {
     type WeightInfo = ();
 }
 
-pub struct ExtBuilder;
+#[derive(Default)]
+pub struct ExtBuilder {
+    pub price_data: Vec<((AssetId, AssetId), Price, Balance)>,
+}
 
 impl ExtBuilder {
+    pub fn with_price_data(mut self, data: Vec<((AssetId, AssetId), Price, Balance)>) -> Self {
+		self.price_data = data;
+		self
+	}
+
     pub fn build(self) -> sp_io::TestExternalities {
-        let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-        sp_io::TestExternalities::from(storage)
+       let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+       GenesisBuild::<Test>::assimilate_storage(&crate::GenesisConfig{ price_data: self.price_data }, &mut t).unwrap();
+       t.into()
     }
 }

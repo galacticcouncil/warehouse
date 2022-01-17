@@ -21,12 +21,12 @@ pub use crate::mock::{
     PRICE_ENTRY_1, PRICE_ENTRY_2,
 };
 use frame_support::{
-    assert_storage_noop,
+    assert_ok, assert_noop, assert_storage_noop,
     traits::{OnFinalize, OnInitialize},
 };
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    ExtBuilder.build()
+    ExtBuilder::default().build()
 }
 
 fn last_events(n: usize) -> Vec<TestEvent> {
@@ -44,6 +44,26 @@ fn expect_events(e: Vec<TestEvent>) {
 }
 
 #[test]
+fn genesis_config_works() {
+    ExtBuilder::default()
+        .with_price_data(vec![
+            ((HDX, DOT), Price::from(1_000_000), 2_000_000),
+            ((HDX, ACA), Price::from(3_000_000), 4_000_000),
+        ])
+        .build()
+        .execute_with(|| {
+            assert_eq!(PriceOracle::num_of_assets(), 2);
+            assert_eq!(PriceOracle::price_data_ten().len(), 2);
+
+            assert_eq!(PriceOracle::price_data_ten()[0].0, PriceOracle::get_name(HDX, DOT));
+            assert_eq!(PriceOracle::price_data_ten()[0].1.get_last(), PriceInfo{ avg_price: Price::from(1_000_000), volume: 2_000_000 });
+
+            assert_eq!(PriceOracle::price_data_ten()[1].0, PriceOracle::get_name(HDX, ACA));
+            assert_eq!(PriceOracle::price_data_ten()[1].1.get_last(), PriceInfo{ avg_price: Price::from(3_000_000), volume: 4_000_000 });
+        });
+}
+
+#[test]
 fn add_new_asset_pair_should_work() {
     new_test_ext().execute_with(|| {
         System::set_block_number(3);
@@ -57,7 +77,7 @@ fn add_new_asset_pair_should_work() {
         assert_eq!(PriceOracle::new_assets(), vec![AssetPairId::new(); 0]);
         assert!(!<PriceDataTen<Test>>::get().contains(&(hdx_dot_pair_name.clone(), BucketQueue::default())));
 
-        PriceOracle::on_create_pool(HDX, DOT);
+        assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
 
         assert_eq!(PriceOracle::num_of_assets(), 0);
         assert_eq!(PriceOracle::new_assets(), vec![hdx_dot_pair_name.clone()]);
@@ -72,8 +92,8 @@ fn add_new_asset_pair_should_work() {
 
         assert_eq!(PriceOracle::new_assets(), vec![AssetPairId::new(); 0]);
 
-        PriceOracle::on_create_pool(HDX, ACA);
-        PriceOracle::on_create_pool(HDX, ETH);
+        assert_ok!(PriceOracle::on_create_pool(HDX, ACA));
+        assert_ok!(PriceOracle::on_create_pool(HDX, ETH));
 
         assert_eq!(PriceOracle::num_of_assets(), 1);
 
@@ -103,15 +123,39 @@ fn add_new_asset_pair_should_work() {
 }
 
 #[test]
-fn add_existing_asset_pair_should_not_work() {
+fn on_create_pool_should_work() {
     new_test_ext().execute_with(|| {
         System::set_block_number(3);
         PriceOracle::on_initialize(3);
 
+        // duplicity in the asset queue
         assert!(!<PriceDataTen<Test>>::get().contains(&(PriceOracle::get_name(HDX, DOT), BucketQueue::default())));
-        PriceOracle::on_create_pool(HDX, DOT);
-        assert_storage_noop!(PriceOracle::on_create_pool(HDX, DOT));
-        expect_events(vec![Event::PoolRegistered(HDX, DOT).into()]);
+        assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
+        assert_noop!(PriceOracle::on_create_pool(HDX, DOT), Error::<Test>::AssetAlreadyAdded);
+
+        PriceOracle::on_finalize(3);
+        System::set_block_number(4);
+        PriceOracle::on_initialize(4);
+
+        // asset already tracked
+        assert_noop!(PriceOracle::on_create_pool(HDX, DOT), Error::<Test>::AssetAlreadyAdded);
+
+        PriceOracle::on_finalize(4);
+        System::set_block_number(5);
+        PriceOracle::on_initialize(5);
+
+        // tracked assets overflow
+        TrackedAssetsCount::<Test>::set(u32::MAX - 1);
+
+        assert_ok!(PriceOracle::on_create_pool(HDX, ACA));
+        assert_noop!(PriceOracle::on_create_pool(HDX, ETH), Error::<Test>::TrackedAssetsOverflow);
+
+        PriceOracle::on_finalize(5);
+
+        expect_events(vec![
+            Event::PoolRegistered(HDX, DOT).into(),
+            Event::PoolRegistered(HDX, ACA).into(),
+        ]);
     });
 }
 
@@ -205,8 +249,8 @@ fn update_data_should_work() {
         System::set_block_number(3);
         PriceOracle::on_initialize(3);
 
-        PriceOracle::on_create_pool(HDX, ACA);
-        PriceOracle::on_create_pool(HDX, DOT);
+        assert_ok!(PriceOracle::on_create_pool(HDX, ACA));
+        assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
 
         PriceOracle::on_finalize(3);
         System::set_block_number(4);
@@ -254,7 +298,7 @@ fn update_data_with_incorrect_input_should_not_work() {
         System::set_block_number(3);
         PriceOracle::on_initialize(3);
 
-        PriceOracle::on_create_pool(HDX, DOT);
+        assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
 
         PriceOracle::on_finalize(3);
         System::set_block_number(4);
@@ -293,7 +337,7 @@ fn update_empty_data_should_work() {
     new_test_ext().execute_with(|| {
         let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
 
-        PriceOracle::on_create_pool(HDX, DOT);
+        assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
 
         for i in 0..1002 {
             PriceOracle::on_initialize(i);
@@ -410,8 +454,8 @@ fn bucket_queue_should_work() {
 
 #[test]
 fn continuous_trades_should_work() {
-    ExtBuilder.build().execute_with(|| {
-        PriceOracle::on_create_pool(HDX, DOT);
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
 
         for i in 0..210 {
             System::set_block_number(i);
@@ -454,7 +498,7 @@ fn stable_price_should_work() {
         let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
 
         let num_of_iters = BucketQueue::BUCKET_SIZE.pow(3);
-        PriceOracle::on_create_pool(HDX, DOT);
+        assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
 
         for i in num_of_iters - 2..2 * num_of_iters + 2 {
             PriceOracle::on_initialize(i.into());

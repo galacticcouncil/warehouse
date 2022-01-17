@@ -179,11 +179,13 @@ pub trait OnCreatePoolHandler<AssetId> {
     /// Register an asset to be handled by price-oracle pallet.
     /// If an asset is not registered, calling `on_trade` results in populating the price buffer in the price oracle pallet,
     /// but the entries are ignored and the average price for the asset is not calculated.
-    fn on_create_pool(asset_a: AssetId, asset_b: AssetId);
+    fn on_create_pool(asset_a: AssetId, asset_b: AssetId) -> dispatch::DispatchResult;
 }
 
 impl<AssetId> OnCreatePoolHandler<AssetId> for () {
-    fn on_create_pool(_asset_a: AssetId, _asset_b: AssetId) {}
+    fn on_create_pool(_asset_a: AssetId, _asset_b: AssetId) -> dispatch::DispatchResult {
+        Ok(())
+    }
 }
 
 /// Handler used by AMM pools to perform some tasks when a trade is executed.

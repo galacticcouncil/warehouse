@@ -48,7 +48,7 @@ benchmarks! {
 
         frame_system::Pallet::<T>::set_block_number((block_num - 1).into());
         PriceOracle::<T>::on_initialize((block_num - 1).into());
-        PriceOracle::<T>::on_create_pool(HDX, DOT);
+        PriceOracle::<T>::on_create_pool(HDX, DOT)?;
         PriceOracle::<T>::on_finalize((block_num - 1).into());
 
         frame_system::Pallet::<T>::set_block_number(block_num.into());
@@ -81,7 +81,7 @@ benchmarks! {
         for i in 0 .. a {
             let asset_a = i * 1_000;
             let asset_b = i * 2_000;
-            PriceOracle::<T>::on_create_pool(asset_a, asset_b);
+            PriceOracle::<T>::on_create_pool(asset_a, asset_b)?;
         }
 
         PriceOracle::<T>::on_finalize(Zero::zero());
@@ -170,7 +170,7 @@ benchmarks! {
         for i in 0 .. b {
             let asset_a = i * 1_000;
             let asset_a = i * 2_000;
-            PriceOracle::<T>::on_create_pool(asset_a, asset_b);
+            PriceOracle::<T>::on_create_pool(asset_a, asset_b)?;
         }
 
         PriceOracle::<T>::on_finalize((block_num - 1).into());

@@ -17,9 +17,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::ensure;
 use frame_support::pallet_prelude::Weight;
 use frame_support::sp_runtime::traits::{CheckedDiv, Zero};
-use frame_support::sp_runtime::FixedPointNumber;
+use frame_support::sp_runtime::{DispatchResult, FixedPointNumber};
 use hydradx_traits::{OnCreatePoolHandler, OnTradeHandler};
 use sp_std::convert::TryInto;
 use sp_std::marker::PhantomData;
@@ -42,7 +43,6 @@ mod benchmarking; // TODO: rebenchmark
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
-use frame_support::sp_runtime::DispatchError;
 
 /// Unique identifier for an asset pair.
 /// AMM pools derive their own unique identifiers for asset pairs,
@@ -72,6 +72,12 @@ pub mod pallet {
 
         /// An unexpected overflow occurred
         UpdateDataOverflow,
+
+        /// Asset has been already added
+        AssetAlreadyAdded,
+
+        /// Overflow
+        TrackedAssetsOverflow,
     }
 
     #[pallet::event]
@@ -157,20 +163,13 @@ pub mod pallet {
             PriceDataAccumulator::<T>::remove_all(None);
 
             // add newly registered assets
-            let _ = TrackedAssetsCount::<T>::try_mutate(|value| -> Result<(), DispatchError> {
+            let _ = TrackedAssetsCount::<T>::mutate(|value| {
                 *value = value
-                    .checked_add(
+                    .saturating_add(
                         Self::new_assets()
-                            .len()
-                            .try_into()
-                            .map_err(|_| Error::<T>::PriceComputationError)?,
+                            .len() as u32
                     )
-                    .ok_or(Error::<T>::PriceComputationError)?;
-                Ok(())
-                // We don't want to throw an error here because this method is used in different extrinsics.
-                // We also do not expect to have more than 2^32 assets registered.
-            })
-            .map_err(|_| panic!("Max number of assets reached!"));
+            });
 
             for new_asset in Self::new_assets().iter() {
                 PriceDataTen::<T>::append((new_asset, BucketQueue::default()));
@@ -184,22 +183,39 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    pub fn on_create_pool(asset_a: AssetId, asset_b: AssetId) {
+    pub fn on_create_pool(asset_a: AssetId, asset_b: AssetId) -> DispatchResult {
         let data = PriceDataTen::<T>::get();
-        if !data.iter().any(|bucket_tuple| bucket_tuple.0 == Self::get_name(asset_a, asset_b)) {
-            let _ = NewAssets::<T>::try_mutate(|new_assets| -> Result<(), ()> {
-                // Keep the NewAssets vector sorted. It makes it easy to find duplicates.
-                match new_assets.binary_search(&Self::get_name(asset_a, asset_b)) {
-                    Ok(_pos) => Err(()), // new asset is already in vector
-                    Err(pos) => {
-                        new_assets.insert(pos, Self::get_name(asset_a, asset_b));
-                        Self::deposit_event(Event::PoolRegistered(asset_a, asset_b));
-                        Ok(())
-                    }
+        ensure!(
+            !data
+                .iter()
+                .any(|bucket_tuple| bucket_tuple.0 == Self::get_name(asset_a, asset_b)),
+            Error::<T>::AssetAlreadyAdded
+        );
+
+        // prevent overflows here so on_finalize doesn't need to
+        NewAssets::<T>::try_mutate(|new_assets| -> DispatchResult {
+            let _ = 1_u32
+                .checked_add(
+                    new_assets
+                        .len()
+                        .try_into()
+                        .map_err(|_| Error::<T>::TrackedAssetsOverflow)?,   // not tested
+                )
+                .ok_or(Error::<T>::TrackedAssetsOverflow)?  // not tested
+                .checked_add(Self::num_of_assets())
+                .ok_or(Error::<T>::TrackedAssetsOverflow)?;
+
+            // Keep the NewAssets vector sorted. It makes it easy to find duplicates.
+            match new_assets.binary_search(&Self::get_name(asset_a, asset_b)) {
+                Ok(_pos) => Err(Error::<T>::AssetAlreadyAdded.into()), // new asset is already in the NewAssets vector
+                Err(pos) => {
+                    new_assets.insert(pos, Self::get_name(asset_a, asset_b));
+                    Self::deposit_event(Event::PoolRegistered(asset_a, asset_b));
+                    Ok(())
                 }
-            })
-            .map_err(|_| {});
-        }
+            }
+        })?;
+        Ok(())
     }
 
     pub fn on_trade(asset_a: AssetId, asset_b: AssetId, price_entry: PriceEntry) {
@@ -252,7 +268,10 @@ impl<T: Config> Pallet<T> {
 
     /// Calculate price from ordered assets
     pub fn normalize_price(
-        asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance
+        asset_a: AssetId,
+        asset_b: AssetId,
+        amount_in: Balance,
+        amount_out: Balance,
     ) -> Option<(Price, Balance)> {
         let ordered_asset_pair = Self::ordered_pair(asset_a, asset_b);
         let (balance_a, balance_b) = if ordered_asset_pair.0 == asset_a {
@@ -268,46 +287,48 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Return ordered asset tuple (A,B) where A < B
-	/// Used in storage
+    /// Used in storage
     /// The implementation is the same as for AssetPair
-	pub fn ordered_pair(asset_a: AssetId, asset_b: AssetId) -> (AssetId, AssetId) {
-		match asset_a <= asset_b {
-			true => (asset_a, asset_b),
-			false => (asset_b, asset_a),
-		}
-	}
+    pub fn ordered_pair(asset_a: AssetId, asset_b: AssetId) -> (AssetId, AssetId) {
+        match asset_a <= asset_b {
+            true => (asset_a, asset_b),
+            false => (asset_b, asset_a),
+        }
+    }
 
     /// Return share token name
     /// The implementation is the same as for AssetPair
-	pub fn get_name(asset_a: AssetId, asset_b: AssetId) -> Vec<u8> {
-		let mut buf: Vec<u8> = Vec::new();
+    pub fn get_name(asset_a: AssetId, asset_b: AssetId) -> Vec<u8> {
+        let mut buf: Vec<u8> = Vec::new();
 
-		let (asset_left, asset_right) = Self::ordered_pair(asset_a, asset_b);
+        let (asset_left, asset_right) = Self::ordered_pair(asset_a, asset_b);
 
-		buf.extend_from_slice(&asset_left.to_le_bytes());
-		buf.extend_from_slice(b"HDT");
-		buf.extend_from_slice(&asset_right.to_le_bytes());
+        buf.extend_from_slice(&asset_left.to_le_bytes());
+        buf.extend_from_slice(b"HDT");
+        buf.extend_from_slice(&asset_right.to_le_bytes());
 
-		buf
-	}
+        buf
+    }
 }
 
 pub struct PriceOracleHandler<T>(PhantomData<T>);
 impl<T: Config> OnCreatePoolHandler<AssetId> for PriceOracleHandler<T> {
-    fn on_create_pool(asset_a: AssetId, asset_b: AssetId) {
-        Pallet::<T>::on_create_pool(asset_a, asset_b);
+    fn on_create_pool(asset_a: AssetId, asset_b: AssetId) -> DispatchResult {
+        Pallet::<T>::on_create_pool(asset_a, asset_b)?;
+        Ok(())
     }
 }
 
 impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
     fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liq_amount: Balance) {
-        let (price, amount) = if let Some(price_tuple) = Pallet::<T>::normalize_price(asset_a, asset_b, amount_in, amount_out) {
-            price_tuple
-        } else {
-            // We don't want to throw an error here because this method is used in different extrinsics.
-            // Invalid prices are ignored and not added to the queue.
-            return;
-        };
+        let (price, amount) =
+            if let Some(price_tuple) = Pallet::<T>::normalize_price(asset_a, asset_b, amount_in, amount_out) {
+                price_tuple
+            } else {
+                // We don't want to throw an error here because this method is used in different extrinsics.
+                // Invalid prices are ignored and not added to the queue.
+                return;
+            };
 
         // We assume that zero values are not valid.
         // Zero values are ignored and not added to the queue.

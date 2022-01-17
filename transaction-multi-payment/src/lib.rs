@@ -85,7 +85,29 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        fn on_initialize(_n: T::BlockNumber) -> Weight {
+            let native_asset = T::NativeAssetId::get();
+
+            let mut weight: Weight = 0;
+
+            for (asset_id, fallback_price) in <AcceptedCurrencies<T>>::iter() {
+                let maybe_price = T::SpotPriceProvider::spot_price(asset_id, native_asset);
+
+                let price = maybe_price.unwrap_or(fallback_price);
+
+                AcceptedCurrencyPrice::<T>::insert(asset_id, price);
+
+                weight += T::WeightInfo::get_spot_price();
+            }
+
+            weight
+        }
+
+        fn on_finalize(_n: T::BlockNumber) {
+            AcceptedCurrencyPrice::<T>::remove_all(None);
+        }
+    }
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
@@ -169,6 +191,11 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn currencies)]
     pub type AcceptedCurrencies<T: Config> = StorageMap<_, Twox64Concat, AssetIdOf<T>, Price, OptionQuery>;
+
+    /// Block storage for accepted currency price
+    #[pallet::storage]
+    #[pallet::getter(fn currency_price)]
+    pub type AcceptedCurrencyPrice<T: Config> = StorageMap<_, Twox64Concat, AssetIdOf<T>, Price, OptionQuery>;
 
     /// Account to use when pool does not exist.
     #[pallet::storage]
@@ -319,10 +346,16 @@ where
         if currency == T::NativeAssetId::get() {
             Ok(PaymentWithdrawResult::Native)
         } else {
-            let price = if let Some(spot_price) = T::SpotPriceProvider::spot_price(currency, T::NativeAssetId::get()) {
+            let price = if let Some(spot_price) = Self::currency_price(currency) {
                 spot_price
             } else {
-                Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?
+                // If not loaded in on_init, let's try first the spot price provider again
+                // This is unlikely scenario as the price would be retrieved in on_init for each block
+                if let Some(spot_price) = T::SpotPriceProvider::spot_price(currency, T::NativeAssetId::get()) {
+                    spot_price
+                } else {
+                    Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?
+                }
             };
 
             let amount = price.checked_mul_int(fee).ok_or(Error::<T>::Overflow)?;

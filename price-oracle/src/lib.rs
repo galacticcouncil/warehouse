@@ -143,10 +143,7 @@ pub mod pallet {
                 *value = value
                     .saturating_add(
                         Self::new_assets()
-                            .len()
-                            .try_into()
-                            // we can use unwraps here because on_create_pool verifies that new_assets returns u32 and we can safely add this value to TrackedAssetsCount
-                            .unwrap(),
+                            .len() as u32
                     )
             });
 

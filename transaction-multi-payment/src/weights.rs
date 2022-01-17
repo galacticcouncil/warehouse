@@ -47,7 +47,7 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_transaction_multi_payment.
 pub trait WeightInfo {
-    fn withdraw_fee_non_native() -> Weight;
+    fn get_spot_price() -> Weight;
     fn set_currency() -> Weight;
     fn add_currency() -> Weight;
     fn remove_currency() -> Weight;
@@ -56,7 +56,7 @@ pub trait WeightInfo {
 pub struct BasiliskWeight<T>(PhantomData<T>);
 
 impl<T: frame_system::Config> WeightInfo for BasiliskWeight<T> {
-    fn withdraw_fee_non_native() -> Weight {
+    fn get_spot_price() -> Weight {
         (87_521_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(9 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
@@ -80,7 +80,7 @@ impl<T: frame_system::Config> WeightInfo for BasiliskWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-    fn withdraw_fee_non_native() -> Weight {
+    fn get_spot_price() -> Weight {
         (87_521_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(9 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))

@@ -26,7 +26,7 @@ use frame_support::{
 };
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    ExtBuilder.build()
+    ExtBuilder::default().build()
 }
 
 fn last_events(n: usize) -> Vec<TestEvent> {
@@ -41,6 +41,26 @@ fn last_events(n: usize) -> Vec<TestEvent> {
 
 fn expect_events(e: Vec<TestEvent>) {
     assert_eq!(last_events(e.len()), e);
+}
+
+#[test]
+fn genesis_config_works() {
+    ExtBuilder::default()
+        .with_price_data(vec![
+            ((HDX, DOT), Price::from(1_000_000), 2_000_000),
+            ((HDX, ACA), Price::from(3_000_000), 4_000_000),
+        ])
+        .build()
+        .execute_with(|| {
+            assert_eq!(PriceOracle::num_of_assets(), 2);
+            assert_eq!(PriceOracle::price_data_ten().len(), 2);
+
+            assert_eq!(PriceOracle::price_data_ten()[0].0, PriceOracle::get_name(HDX, DOT));
+            assert_eq!(PriceOracle::price_data_ten()[0].1.get_last(), PriceInfo{ avg_price: Price::from(1_000_000), volume: 2_000_000 });
+
+            assert_eq!(PriceOracle::price_data_ten()[1].0, PriceOracle::get_name(HDX, ACA));
+            assert_eq!(PriceOracle::price_data_ten()[1].1.get_last(), PriceInfo{ avg_price: Price::from(3_000_000), volume: 4_000_000 });
+        });
 }
 
 #[test]
@@ -434,7 +454,7 @@ fn bucket_queue_should_work() {
 
 #[test]
 fn continuous_trades_should_work() {
-    ExtBuilder.build().execute_with(|| {
+    ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
 
         for i in 0..210 {

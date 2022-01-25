@@ -3,7 +3,7 @@ name = "pallet-transaction-multi-payment"
 version = "7.0.0"
 description = "Transaction multi currency payment support module"
 authors = ["GalacticCoucil"]
-edition = "2018"
+edition = "2021"
 license = "Apache 2.0"
 repository = "https://github.com/galacticcouncil/warehouse"
 

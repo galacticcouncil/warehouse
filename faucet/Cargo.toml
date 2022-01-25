@@ -2,7 +2,7 @@
 name = 'pallet-faucet'
 authors = ['GalacticCouncil']
 description = 'Simple token faucet to dispence resource on dev chain'
-edition = '2018'
+edition = '2021'
 license = 'Apache 2.0'
 repository = "https://github.com/galacticcouncil/warehouse/tree/master/faucet"
 version = '0.1.0'

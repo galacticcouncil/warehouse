@@ -143,6 +143,7 @@ impl system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 impl Config for Test {
@@ -307,7 +308,7 @@ impl ExtBuilder {
                 (SUPPORTED_CURRENCY, Price::from_float(1.5)),
                 (SUPPORTED_CURRENCY_WITH_PRICE, Price::from_float(0.5)),
             ],
-            fallback_account: FALLBACK_ACCOUNT,
+            fallback_account: Some(FALLBACK_ACCOUNT),
             account_currencies: self.account_currencies,
         }
         .assimilate_storage(&mut t)

@@ -128,27 +128,30 @@ pub mod pallet {
 
     #[pallet::genesis_config]
     #[derive(Default)]
-	pub struct GenesisConfig {
+    pub struct GenesisConfig {
         pub price_data: Vec<((AssetId, AssetId), Price, Balance)>,
-	}
+    }
 
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+        fn build(&self) {
             for &(asset_pair, avg_price, volume) in self.price_data.iter() {
                 let pair_id = Pallet::<T>::get_name(asset_pair.0, asset_pair.1);
 
                 let data_ten = PriceDataTen::<T>::get();
-                assert!(!data_ten.iter().any(|bucket_tuple| bucket_tuple.0 == pair_id), "Assets already registered!");
+                assert!(
+                    !data_ten.iter().any(|bucket_tuple| bucket_tuple.0 == pair_id),
+                    "Assets already registered!"
+                );
 
                 let mut bucket = BucketQueue::default();
-                bucket.update_last(PriceInfo{ avg_price, volume });
+                bucket.update_last(PriceInfo { avg_price, volume });
                 PriceDataTen::<T>::append((pair_id, bucket));
             }
 
             TrackedAssetsCount::<T>::set(self.price_data.len().try_into().unwrap());
-		}
-	}
+        }
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
@@ -164,13 +167,8 @@ pub mod pallet {
             PriceDataAccumulator::<T>::remove_all(None);
 
             // add newly registered assets
-            let _ = TrackedAssetsCount::<T>::mutate(|value| {
-                *value = value
-                    .saturating_add(
-                        Self::new_assets()
-                            .len() as u32
-                    )
-            });
+            let _ =
+                TrackedAssetsCount::<T>::mutate(|value| *value = value.saturating_add(Self::new_assets().len() as u32));
 
             for new_asset in Self::new_assets().iter() {
                 PriceDataTen::<T>::append((new_asset, BucketQueue::default()));
@@ -200,9 +198,9 @@ impl<T: Config> Pallet<T> {
                     new_assets
                         .len()
                         .try_into()
-                        .map_err(|_| Error::<T>::TrackedAssetsOverflow)?,   // not tested
+                        .map_err(|_| Error::<T>::TrackedAssetsOverflow)?, // not tested
                 )
-                .ok_or(Error::<T>::TrackedAssetsOverflow)?  // not tested
+                .ok_or(Error::<T>::TrackedAssetsOverflow)? // not tested
                 .checked_add(Self::num_of_assets())
                 .ok_or(Error::<T>::TrackedAssetsOverflow)?;
 

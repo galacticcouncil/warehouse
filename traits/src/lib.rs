@@ -24,8 +24,8 @@ use codec::{Decode, Encode};
 use frame_support::dispatch;
 use frame_support::sp_runtime::traits::Zero;
 use frame_support::sp_runtime::RuntimeDebug;
-use frame_support::weights::Weight;
 use frame_support::traits::LockIdentifier;
+use frame_support::weights::Weight;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_std::vec::Vec;
@@ -199,7 +199,8 @@ pub trait OnTradeHandler<AssetId, Balance> {
 }
 
 impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {
-    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {}
+    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {
+    }
     fn on_trade_weight() -> Weight {
         Weight::zero()
     }

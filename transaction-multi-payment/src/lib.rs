@@ -361,7 +361,12 @@ where
 
             let amount = price.checked_mul_int(fee).ok_or(Error::<T>::Overflow)?;
 
-            T::Currencies::transfer(currency, who, &Self::fallback_account().expect("Fallback account must be set"), amount)?;
+            T::Currencies::transfer(
+                currency,
+                who,
+                &Self::fallback_account().expect("Fallback account must be set"),
+                amount,
+            )?;
 
             Self::deposit_event(Event::FeeWithdrawn(
                 who.clone(),
@@ -544,16 +549,18 @@ where
     }
 
     fn pre_dispatch(
-		self,
-		who: &Self::AccountId,
-		call: &Self::Call,
-		_info: &DispatchInfoOf<Self::Call>,
-		_len: usize,
-	) -> Result<Self::Pre, TransactionValidityError> {
+        self,
+        who: &Self::AccountId,
+        call: &Self::Call,
+        _info: &DispatchInfoOf<Self::Call>,
+        _len: usize,
+    ) -> Result<Self::Pre, TransactionValidityError> {
         match call.is_sub_type() {
             Some(Call::set_currency { currency }) => match Pallet::<T>::check_balance(who, *currency) {
                 Ok(_) => Ok(()),
-                Err(error) => Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(error.as_u8()).into())),
+                Err(error) => Err(TransactionValidityError::Invalid(
+                    InvalidTransaction::Custom(error.as_u8()).into(),
+                )),
             },
             _ => Ok(Default::default()),
         }

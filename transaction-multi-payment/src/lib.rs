@@ -545,12 +545,18 @@ where
 
     fn pre_dispatch(
 		self,
-		_who: &Self::AccountId,
-		_call: &Self::Call,
+		who: &Self::AccountId,
+		call: &Self::Call,
 		_info: &DispatchInfoOf<Self::Call>,
 		_len: usize,
 	) -> Result<Self::Pre, TransactionValidityError> {
-        todo!()
+        match call.is_sub_type() {
+            Some(Call::set_currency { currency }) => match Pallet::<T>::check_balance(who, *currency) {
+                Ok(_) => Ok(()),
+                Err(error) => Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(error.as_u8()).into())),
+            },
+            _ => Ok(Default::default()),
+        }
     }
 }
 

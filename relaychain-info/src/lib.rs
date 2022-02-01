@@ -68,7 +68,5 @@ impl<T: Config> cumulus_pallet_parachain_system::OnSystemEvent for OnValidationD
         ));
     }
 
-    fn on_validation_code_applied() {
-        unimplemented!()
-    }
+    fn on_validation_code_applied(){}
 }

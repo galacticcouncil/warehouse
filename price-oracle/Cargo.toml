@@ -3,7 +3,7 @@ name = 'pallet-price-oracle'
 version = '0.2.1'
 description = 'Price oracle for AMM pools'
 authors = ['GalacticCouncil']
-edition = '2018'
+edition = '2021'
 license = 'Apache 2.0'
 repository = 'https://github.com/galacticcouncil/warehouse'
 

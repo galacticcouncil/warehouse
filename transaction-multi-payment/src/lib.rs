@@ -182,7 +182,7 @@ pub mod pallet {
         /// Math overflow
         Overflow,
 
-        /// Fallback price was not found.
+        /// Fallback account is not set.
         FallbackAccountNotSet,
     }
 

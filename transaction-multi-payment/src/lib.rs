@@ -181,6 +181,9 @@ pub mod pallet {
 
         /// Math overflow
         Overflow,
+
+        /// Fallback price was not found.
+        FallbackAccountNotSet,
     }
 
     /// Account currency map
@@ -364,7 +367,7 @@ where
             T::Currencies::transfer(
                 currency,
                 who,
-                &Self::fallback_account().expect("Fallback account must be set"),
+                &Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
                 amount,
             )?;
 
@@ -373,7 +376,7 @@ where
                 currency,
                 fee,
                 amount,
-                Self::fallback_account().expect("Fallback account must be set"),
+                Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
             ));
 
             Ok(PaymentWithdrawResult::Transferred)
@@ -559,10 +562,10 @@ where
             Some(Call::set_currency { currency }) => match Pallet::<T>::check_balance(who, *currency) {
                 Ok(_) => Ok(()),
                 Err(error) => Err(TransactionValidityError::Invalid(
-                    InvalidTransaction::Custom(error.as_u8()).into(),
+                    InvalidTransaction::Custom(error.as_u8()),
                 )),
             },
-            _ => Ok(Default::default()),
+            _ => Ok(()),
         }
     }
 }

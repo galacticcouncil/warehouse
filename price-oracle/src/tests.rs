@@ -17,11 +17,10 @@
 
 use super::*;
 pub use crate::mock::{
-    Event as TestEvent, ExtBuilder, Origin, PriceOracle, System, Test, HDX, DOT, ACA, ETH,
-    PRICE_ENTRY_1, PRICE_ENTRY_2,
+    Event as TestEvent, ExtBuilder, Origin, PriceOracle, System, Test, ACA, DOT, ETH, HDX, PRICE_ENTRY_1, PRICE_ENTRY_2,
 };
 use frame_support::{
-    assert_ok, assert_noop, assert_storage_noop,
+    assert_noop, assert_ok, assert_storage_noop,
     traits::{OnFinalize, OnInitialize},
 };
 
@@ -56,10 +55,22 @@ fn genesis_config_works() {
             assert_eq!(PriceOracle::price_data_ten().len(), 2);
 
             assert_eq!(PriceOracle::price_data_ten()[0].0, PriceOracle::get_name(HDX, DOT));
-            assert_eq!(PriceOracle::price_data_ten()[0].1.get_last(), PriceInfo{ avg_price: Price::from(1_000_000), volume: 2_000_000 });
+            assert_eq!(
+                PriceOracle::price_data_ten()[0].1.get_last(),
+                PriceInfo {
+                    avg_price: Price::from(1_000_000),
+                    volume: 2_000_000
+                }
+            );
 
             assert_eq!(PriceOracle::price_data_ten()[1].0, PriceOracle::get_name(HDX, ACA));
-            assert_eq!(PriceOracle::price_data_ten()[1].1.get_last(), PriceInfo{ avg_price: Price::from(3_000_000), volume: 4_000_000 });
+            assert_eq!(
+                PriceOracle::price_data_ten()[1].1.get_last(),
+                PriceInfo {
+                    avg_price: Price::from(3_000_000),
+                    volume: 4_000_000
+                }
+            );
         });
 }
 
@@ -148,7 +159,10 @@ fn on_create_pool_should_work() {
         TrackedAssetsCount::<Test>::set(u32::MAX - 1);
 
         assert_ok!(PriceOracle::on_create_pool(HDX, ACA));
-        assert_noop!(PriceOracle::on_create_pool(HDX, ETH), Error::<Test>::TrackedAssetsOverflow);
+        assert_noop!(
+            PriceOracle::on_create_pool(HDX, ETH),
+            Error::<Test>::TrackedAssetsOverflow
+        );
 
         PriceOracle::on_finalize(5);
 
@@ -164,7 +178,10 @@ fn on_trade_should_work() {
     new_test_ext().execute_with(|| {
         let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
 
-        assert_eq!(<PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()), Err(()));
+        assert_eq!(
+            <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()),
+            Err(())
+        );
         PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_1);
         PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_2);
         let price_entry = PRICE_ENTRY_1.calculate_new_price_entry(&PRICE_ENTRY_2);
@@ -180,7 +197,10 @@ fn on_trade_handler_should_work() {
     new_test_ext().execute_with(|| {
         let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
 
-        assert_eq!(<PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()), Err(()));
+        assert_eq!(
+            <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()),
+            Err(())
+        );
 
         PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1_000, 500, 2_000);
         assert_eq!(
@@ -195,19 +215,40 @@ fn price_normalization_should_work() {
     new_test_ext().execute_with(|| {
         let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
 
-        assert_eq!(<PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()), Err(()));
+        assert_eq!(
+            <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()),
+            Err(())
+        );
 
         assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, Balance::MAX, 1, 2_000));
 
         assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1, Balance::MAX, 2_000));
 
-        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, Balance::zero(), 1_000, 2_000));
+        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(
+            HDX,
+            DOT,
+            Balance::zero(),
+            1_000,
+            2_000
+        ));
 
-        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1_000, Balance::zero(), 2_000));
+        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(
+            HDX,
+            DOT,
+            1_000,
+            Balance::zero(),
+            2_000
+        ));
 
         PriceOracleHandler::<Test>::on_trade(HDX, DOT, 340282366920938463463, 1, 2_000);
 
-        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1, 340282366920938463463, 2_000));
+        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(
+            HDX,
+            DOT,
+            1,
+            340282366920938463463,
+            2_000
+        ));
 
         PriceOracleHandler::<Test>::on_trade(HDX, DOT, 2_000_000, 1_000, 2_000);
 
@@ -305,7 +346,8 @@ fn update_data_with_incorrect_input_should_not_work() {
         PriceOracle::on_initialize(4);
 
         PriceOracle::on_trade(
-            HDX, DOT,
+            HDX,
+            DOT,
             PriceEntry {
                 price: Price::from(1),
                 trade_amount: Zero::zero(),
@@ -462,7 +504,8 @@ fn continuous_trades_should_work() {
             PriceOracle::on_initialize(System::block_number());
 
             PriceOracle::on_trade(
-                HDX, DOT,
+                HDX,
+                DOT,
                 PriceEntry {
                     price: Price::from((i + 1) as u128),
                     trade_amount: (i * 1_000).into(),

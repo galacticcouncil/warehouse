@@ -82,6 +82,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::OriginFor;
 
     #[pallet::pallet]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::hooks]
@@ -180,6 +181,9 @@ pub mod pallet {
 
         /// Math overflow
         Overflow,
+
+        /// Fallback account is not set.
+        FallbackAccountNotSet,
     }
 
     /// Account currency map
@@ -200,12 +204,12 @@ pub mod pallet {
     /// Account to use when pool does not exist.
     #[pallet::storage]
     #[pallet::getter(fn fallback_account)]
-    pub type FallbackAccount<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
+    pub type FallbackAccount<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub currencies: Vec<(AssetIdOf<T>, Price)>,
-        pub fallback_account: T::AccountId,
+        pub fallback_account: Option<T::AccountId>,
         pub account_currencies: Vec<(T::AccountId, AssetIdOf<T>)>,
     }
 
@@ -214,7 +218,7 @@ pub mod pallet {
         fn default() -> Self {
             GenesisConfig {
                 currencies: vec![],
-                fallback_account: Default::default(),
+                fallback_account: None,
                 account_currencies: vec![],
             }
         }
@@ -223,11 +227,11 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            if self.fallback_account == Default::default() {
+            if self.fallback_account == None {
                 panic!("Fallback account is not set");
             }
 
-            FallbackAccount::<T>::put(self.fallback_account.clone());
+            FallbackAccount::<T>::put(self.fallback_account.clone().expect("Fallback account is not set"));
 
             for (asset, price) in &self.currencies {
                 AcceptedCurrencies::<T>::insert(asset, price);
@@ -360,14 +364,19 @@ where
 
             let amount = price.checked_mul_int(fee).ok_or(Error::<T>::Overflow)?;
 
-            T::Currencies::transfer(currency, who, &Self::fallback_account(), amount)?;
+            T::Currencies::transfer(
+                currency,
+                who,
+                &Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
+                amount,
+            )?;
 
             Self::deposit_event(Event::FeeWithdrawn(
                 who.clone(),
                 currency,
                 fee,
                 amount,
-                Self::fallback_account(),
+                Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
             ));
 
             Ok(PaymentWithdrawResult::Transferred)
@@ -539,6 +548,24 @@ where
                 Err(error) => InvalidTransaction::Custom(error.as_u8()).into(),
             },
             _ => Ok(Default::default()),
+        }
+    }
+
+    fn pre_dispatch(
+        self,
+        who: &Self::AccountId,
+        call: &Self::Call,
+        _info: &DispatchInfoOf<Self::Call>,
+        _len: usize,
+    ) -> Result<Self::Pre, TransactionValidityError> {
+        match call.is_sub_type() {
+            Some(Call::set_currency { currency }) => match Pallet::<T>::check_balance(who, *currency) {
+                Ok(_) => Ok(()),
+                Err(error) => Err(TransactionValidityError::Invalid(
+                    InvalidTransaction::Custom(error.as_u8()),
+                )),
+            },
+            _ => Ok(()),
         }
     }
 }

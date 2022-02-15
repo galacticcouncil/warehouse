@@ -413,7 +413,10 @@ fn withdraw_currency_should_work() {
 
         assert_eq!(
             1102,
-            Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &PaymentPallet::fallback_account())
+            Currencies::free_balance(
+                SUPPORTED_CURRENCY_WITH_PRICE,
+                &PaymentPallet::fallback_account().unwrap()
+            )
         );
     });
 }
@@ -436,8 +439,10 @@ fn withdraw_set_fee_should_work() {
         ));
 
         let balance_before = Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &ALICE);
-        let fb_acc_balance_before =
-            Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &PaymentPallet::fallback_account());
+        let fb_acc_balance_before = Currencies::free_balance(
+            SUPPORTED_CURRENCY_WITH_PRICE,
+            &PaymentPallet::fallback_account().unwrap(),
+        );
 
         assert_ok!(PaymentPallet::withdraw_set_fee(&ALICE));
         assert_eq!(
@@ -446,7 +451,10 @@ fn withdraw_set_fee_should_work() {
         );
         assert_eq!(
             fb_acc_balance_before + 102,
-            Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &PaymentPallet::fallback_account())
+            Currencies::free_balance(
+                SUPPORTED_CURRENCY_WITH_PRICE,
+                &PaymentPallet::fallback_account().unwrap()
+            )
         );
     });
 }

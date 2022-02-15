@@ -18,15 +18,15 @@
 use crate as price_oracle;
 use crate::Config;
 use frame_support::parameter_types;
-use frame_support::traits::{Everything, Get, GenesisBuild};
+use frame_support::sp_runtime::{
+    testing::Header,
+    traits::{BlakeTwo256, IdentityLookup},
+    FixedU128,
+};
+use frame_support::traits::{Everything, GenesisBuild, Get};
 use hydradx_traits::AssetPairAccountIdFor;
 use price_oracle::PriceEntry;
 use sp_core::H256;
-use frame_support::sp_runtime::{
-    FixedU128,
-    testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
-};
 
 pub type AssetId = u32;
 pub type Balance = u128;
@@ -91,6 +91,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 pub struct AssetPairAccountIdTest();
@@ -127,13 +128,19 @@ pub struct ExtBuilder {
 
 impl ExtBuilder {
     pub fn with_price_data(mut self, data: Vec<((AssetId, AssetId), Price, Balance)>) -> Self {
-		self.price_data = data;
-		self
-	}
+        self.price_data = data;
+        self
+    }
 
     pub fn build(self) -> sp_io::TestExternalities {
-       let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-       GenesisBuild::<Test>::assimilate_storage(&crate::GenesisConfig{ price_data: self.price_data }, &mut t).unwrap();
-       t.into()
+        let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+        GenesisBuild::<Test>::assimilate_storage(
+            &crate::GenesisConfig {
+                price_data: self.price_data,
+            },
+            &mut t,
+        )
+        .unwrap();
+        t.into()
     }
 }

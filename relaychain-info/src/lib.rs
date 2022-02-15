@@ -29,6 +29,7 @@ pub mod pallet {
     use frame_support::sp_runtime::traits::BlockNumberProvider;
 
     #[pallet::pallet]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::hooks]
@@ -59,11 +60,13 @@ pub mod pallet {
 
 pub struct OnValidationDataHandler<T>(sp_std::marker::PhantomData<T>);
 
-impl<T: Config> cumulus_primitives_core::OnValidationData for OnValidationDataHandler<T> {
+impl<T: Config> cumulus_pallet_parachain_system::OnSystemEvent for OnValidationDataHandler<T> {
     fn on_validation_data(data: &PersistedValidationData) {
         crate::Pallet::<T>::deposit_event(crate::Event::CurrentBlockNumbers(
             frame_system::Pallet::<T>::current_block_number(),
             data.relay_parent_number.into(),
         ));
     }
+
+    fn on_validation_code_applied() {}
 }

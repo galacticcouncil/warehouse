@@ -93,7 +93,7 @@ pub mod pallet {
             let mut weight: Weight = 0;
 
             for (asset_id, fallback_price) in <AcceptedCurrencies<T>>::iter() {
-                let maybe_price = T::SpotPriceProvider::spot_price(asset_id, native_asset);
+                let maybe_price = T::SpotPriceProvider::spot_price(native_asset, asset_id);
 
                 let price = maybe_price.unwrap_or(fallback_price);
 
@@ -355,7 +355,7 @@ where
             } else {
                 // If not loaded in on_init, let's try first the spot price provider again
                 // This is unlikely scenario as the price would be retrieved in on_init for each block
-                if let Some(spot_price) = T::SpotPriceProvider::spot_price(currency, T::NativeAssetId::get()) {
+                if let Some(spot_price) = T::SpotPriceProvider::spot_price(T::NativeAssetId::get(), currency) {
                     spot_price
                 } else {
                     Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?

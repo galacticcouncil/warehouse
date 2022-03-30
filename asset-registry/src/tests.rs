@@ -141,7 +141,16 @@ fn location_mapping_works() {
 			AssetRegistryPallet::location_to_asset(asset_location.clone()),
 			Some(asset_id)
 		);
-		assert_eq!(AssetRegistryPallet::asset_to_location(asset_id), Some(asset_location));
+		assert_eq!(AssetRegistryPallet::asset_to_location(asset_id), Some(asset_location.clone()));
+
+		// asset location for the native asset cannot be changed
+		assert_noop!(
+			AssetRegistryPallet::set_location(
+				Origin::root(),
+				<Test as crate::Config>::NativeAssetId::get(),
+				asset_location
+			),
+		Error::<Test>::CannotUpdateLocation);
 	});
 }
 

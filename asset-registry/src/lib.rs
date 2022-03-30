@@ -99,7 +99,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Asset Id is not available. This only happens when it reaches the MAX value of given id type.
+		/// Asset ID is not available. This only happens when it reaches the MAX value of given id type.
 		NoIdAvailable,
 
 		/// Invalid asset name or symbol.
@@ -116,6 +116,9 @@ pub mod pallet {
 
 		/// Incorrect number of assets provided to create shared asset.
 		InvalidSharedAssetLen,
+
+		/// Cannot update asset location
+		CannotUpdateLocation
 	}
 
 	#[pallet::storage]
@@ -340,6 +343,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::RegistryOrigin::ensure_origin(origin)?;
 
+			ensure!(asset_id != T::NativeAssetId::get(), Error::<T>::CannotUpdateLocation);
 			ensure!(Self::assets(asset_id).is_some(), Error::<T>::AssetNotRegistered);
 
 			AssetLocations::<T>::insert(asset_id, &location);

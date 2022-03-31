@@ -7,6 +7,7 @@ members = [
 	"relaychain-info",
 	"price-oracle",
 	"transaction-multi-payment",
+	"nft",
 ]
 
 resolver = "2"

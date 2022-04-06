@@ -32,7 +32,7 @@ mod traits;
 use frame_support::{
     dispatch::DispatchResult,
     ensure,
-    traits::{Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, WithdrawReasons},
+    traits::{Currency, ExistenceRequirement, Get, Imbalance},
     transactional,
     weights::DispatchClass,
     weights::WeightToFeePolynomial,
@@ -61,7 +61,7 @@ use frame_support::traits::IsSubType;
 
 use scale_info::TypeInfo;
 
-use crate::traits::{CurrencyWithdraw, PaymentWithdrawResult};
+use crate::traits::{PaymentInfo, TransactionMultiPaymentDataProvider};
 use frame_support::dispatch::DispatchError;
 
 type AssetIdOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
@@ -69,8 +69,6 @@ type BalanceOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_syst
 
 /// Spot price type
 pub type Price = FixedU128;
-
-type NegativeImbalanceOf<C, T> = <C as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -191,12 +189,12 @@ pub mod pallet {
     #[pallet::getter(fn get_currency)]
     pub type AccountCurrencyMap<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, AssetIdOf<T>, OptionQuery>;
 
-    /// Curated list of currencies which fees can be paid with
+    /// Curated list of currencies which fees can be paid mapped to corresponding fallback price
     #[pallet::storage]
     #[pallet::getter(fn currencies)]
     pub type AcceptedCurrencies<T: Config> = StorageMap<_, Twox64Concat, AssetIdOf<T>, Price, OptionQuery>;
 
-    /// Block storage for accepted currency price
+    /// Asset prices from the spot price provider or the fallback price if the price is not available. Updated at the beginning of every block.
     #[pallet::storage]
     #[pallet::getter(fn currency_price)]
     pub type AcceptedCurrencyPrice<T: Config> = StorageMap<_, Twox64Concat, AssetIdOf<T>, Price, OptionQuery>;
@@ -270,7 +268,7 @@ pub mod pallet {
                 <AccountCurrencyMap<T>>::insert(who.clone(), currency);
 
                 if T::WithdrawFeeForSetCurrency::get() == Pays::Yes {
-                    Self::withdraw_set_fee(&who)?;
+                    Self::transfer_set_fee(&who)?;
                 }
 
                 Self::deposit_event(Event::CurrencySet(who, currency));
@@ -340,59 +338,34 @@ where
         Pallet::<T>::get_currency(who).unwrap_or_else(T::NativeAssetId::get)
     }
 
-    /// Execute a trade to buy HDX and sell selected currency.
-    pub fn withdraw_fee_non_native(
-        who: &T::AccountId,
-        fee: BalanceOf<T>,
-    ) -> Result<PaymentWithdrawResult, DispatchError> {
-        let currency = Self::account_currency(who);
-
-        if currency == T::NativeAssetId::get() {
-            Ok(PaymentWithdrawResult::Native)
-        } else {
-            let price = if let Some(spot_price) = Self::currency_price(currency) {
-                spot_price
-            } else {
-                // If not loaded in on_init, let's try first the spot price provider again
-                // This is unlikely scenario as the price would be retrieved in on_init for each block
-                if let Some(spot_price) = T::SpotPriceProvider::spot_price(T::NativeAssetId::get(), currency) {
-                    spot_price
-                } else {
-                    Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?
-                }
-            };
-
-            let amount = price.checked_mul_int(fee).ok_or(Error::<T>::Overflow)?;
-
-            T::Currencies::transfer(
-                currency,
-                who,
-                &Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
-                amount,
-            )?;
-
-            Self::deposit_event(Event::FeeWithdrawn(
-                who.clone(),
-                currency,
-                fee,
-                amount,
-                Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
-            ));
-
-            Ok(PaymentWithdrawResult::Transferred)
-        }
-    }
-
-    pub fn withdraw_set_fee(who: &T::AccountId) -> DispatchResult {
+    /// Transfer fee without executing an AMM trade
+    pub fn transfer_set_fee(who: &T::AccountId) -> DispatchResult {
         let base_fee = Self::weight_to_fee(T::BlockWeights::get().get(DispatchClass::Normal).base_extrinsic);
         let adjusted_weight_fee = Self::weight_to_fee(T::WeightInfo::set_currency());
         let fee = base_fee.saturating_add(adjusted_weight_fee);
+        let (currency, maybe_price) = Self::get_currency_and_price(who)?;
 
-        let result = Self::withdraw(who, fee)?;
-        match result {
-            PaymentWithdrawResult::Transferred => Ok(()),
-            PaymentWithdrawResult::Native => T::Currencies::withdraw(T::NativeAssetId::get(), who, fee),
-        }
+        let amount = match maybe_price {
+            None => fee,
+            Some(price) => price.checked_mul_int(fee).ok_or(Error::<T>::Overflow)?,
+        };
+
+        T::Currencies::transfer(
+            currency,
+            who,
+            &Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
+            amount,
+        )?;
+
+        Self::deposit_event(Event::FeeWithdrawn(
+            who.clone(),
+            currency,
+            fee,
+            amount,
+            Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
+        ));
+
+        Ok(())
     }
 
     fn weight_to_fee(weight: Weight) -> BalanceOf<T> {
@@ -408,21 +381,47 @@ where
         };
         Ok(())
     }
-}
 
-impl<T: Config> CurrencyWithdraw<<T as frame_system::Config>::AccountId, BalanceOf<T>> for Pallet<T>
-where
-    BalanceOf<T>: FixedPointOperand,
-{
-    fn withdraw(who: &T::AccountId, fee: BalanceOf<T>) -> Result<PaymentWithdrawResult, DispatchError> {
-        Self::withdraw_fee_non_native(who, fee)
+    fn get_currency_and_price(who: &<T as frame_system::Config>::AccountId) -> Result<(AssetIdOf<T>, Option<Price>), DispatchError> {
+        let native_currency = T::NativeAssetId::get();
+        let currency = Self::account_currency(who);
+        if currency == T::NativeAssetId::get() {
+            Ok((native_currency, None))
+        } else {
+            let price = if let Some(spot_price) = Self::currency_price(currency) {
+                spot_price
+            } else {
+                // If not loaded in on_init, let's try first the spot price provider again
+                // This is unlikely scenario as the price would be retrieved in on_init for each block
+                if let Some(spot_price) = T::SpotPriceProvider::spot_price(T::NativeAssetId::get(), currency) {
+                    spot_price
+                } else {
+                    Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?
+                }
+            };
+            Ok((currency, Some(price)))
+        }
     }
 }
 
-/// Implements the transaction payment for native as well as non-native currencies
-pub struct MultiCurrencyAdapter<C, OU, SW>(PhantomData<(C, OU, SW)>);
+impl<T: Config> TransactionMultiPaymentDataProvider<<T as frame_system::Config>::AccountId, AssetIdOf<T>, Price> for Pallet<T>
+where
+    BalanceOf<T>: FixedPointOperand,
+{
+    fn get_currency_and_price(who: &<T as frame_system::Config>::AccountId) -> Result<(AssetIdOf<T>, Option<Price>), DispatchError> {
+        Self::get_currency_and_price(who)
+    }
 
-impl<T, C, OU, SW> OnChargeTransaction<T> for MultiCurrencyAdapter<C, OU, SW>
+    fn get_fallback_account() -> Option<<T as frame_system::Config>::AccountId> {
+        Self::fallback_account()
+    }
+
+}
+
+/// Implements the transaction payment for native as well as non-native currencies
+pub struct MultiCurrencyAdapter<C, MC, DP>(PhantomData<(C, MC, DP)>);
+
+impl<T, C, MC, DP> OnChargeTransaction<T> for MultiCurrencyAdapter<C, MC, DP>
 where
     T: Config,
     T::TransactionByteFee: Get<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance>,
@@ -431,12 +430,13 @@ where
         Imbalance<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance, Opposite = C::NegativeImbalance>,
     C::NegativeImbalance:
         Imbalance<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance, Opposite = C::PositiveImbalance>,
-    OU: OnUnbalanced<NegativeImbalanceOf<C, T>>,
-    C::Balance: Into<BalanceOf<T>>,
-    SW: CurrencyWithdraw<T::AccountId, BalanceOf<T>>,
-    BalanceOf<T>: FixedPointOperand,
+    MC: MultiCurrency<<T as frame_system::Config>::AccountId>,
+    AssetIdOf<T>: Into<MC::CurrencyId>,
+    C::Balance: Into<MC::Balance>,
+    C::Balance: FixedPointOperand,
+    DP: TransactionMultiPaymentDataProvider<T::AccountId, AssetIdOf<T>, Price>,
 {
-    type LiquidityInfo = Option<NegativeImbalanceOf<C, T>>;
+    type LiquidityInfo = Option<PaymentInfo<Self::Balance, AssetIdOf<T>, Price>>;
     type Balance = <C as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     /// Withdraw the predicted fee from the transaction origin.
@@ -447,63 +447,63 @@ where
         _call: &T::Call,
         _info: &DispatchInfoOf<T::Call>,
         fee: Self::Balance,
-        tip: Self::Balance,
+        _tip: Self::Balance,
     ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
         if fee.is_zero() {
             return Ok(None);
         }
+        let fee_receiver = DP::get_fallback_account().ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
-        let withdraw_reason = if tip.is_zero() {
-            WithdrawReasons::TRANSACTION_PAYMENT
-        } else {
-            WithdrawReasons::TRANSACTION_PAYMENT | WithdrawReasons::TIP
-        };
-
-        if let Ok(detail) = SW::withdraw(who, fee.into()) {
-            match detail {
-                PaymentWithdrawResult::Transferred => Ok(None),
-                PaymentWithdrawResult::Native => {
-                    match C::withdraw(who, fee, withdraw_reason, ExistenceRequirement::KeepAlive) {
-                        Ok(imbalance) => Ok(Some(imbalance)),
-                        Err(_) => Err(InvalidTransaction::Payment.into()),
-                    }
+        // get the currency in which fees are paid. In case of non-native currency, the price is required to calculate final fee.
+        let maybe_non_native = DP::get_currency_and_price(who).map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+        match maybe_non_native {
+            (_, None) => {
+                // match C::withdraw(who, fee, withdraw_reason, ExistenceRequirement::KeepAlive) {
+                match C::transfer(who, &fee_receiver, fee, ExistenceRequirement::KeepAlive) {
+                    Ok(()) => Ok(Some(PaymentInfo::Native(fee))),
+                    Err(_) => Err(InvalidTransaction::Payment.into()),
                 }
-            }
-        } else {
-            Err(InvalidTransaction::Payment.into())
+            },
+            (currency, Some(price)) => {
+                let converted_fee = price.checked_mul_int(fee).ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+                match MC::transfer(currency.into(), who, &fee_receiver, converted_fee.into()) {
+                    Ok(()) => Ok(Some(PaymentInfo::NonNative(converted_fee, currency, price))),
+                    Err(_) => Err(InvalidTransaction::Payment.into()),
+                }
+            },
         }
     }
 
-    /// Hand the fee and the tip over to the `[OnUnbalanced]` implementation.
     /// Since the predicted fee might have been too high, parts of the fee may
     /// be refunded.
     ///
     /// Note: The `fee` already includes the `tip`.
-    /// Note: This is the default implementation
     fn correct_and_deposit_fee(
         who: &T::AccountId,
         _dispatch_info: &DispatchInfoOf<T::Call>,
         _post_info: &PostDispatchInfoOf<T::Call>,
         corrected_fee: Self::Balance,
-        tip: Self::Balance,
+        _tip: Self::Balance,
         already_withdrawn: Self::LiquidityInfo,
     ) -> Result<(), TransactionValidityError> {
+        let fee_receiver = DP::get_fallback_account().ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+
         if let Some(paid) = already_withdrawn {
-            // Calculate how much refund we should return
-            let refund_amount = paid.peek().saturating_sub(corrected_fee);
-            // refund to the the account that paid the fees. If this fails, the
-            // account might have dropped below the existential balance. In
-            // that case we don't refund anything.
-            let refund_imbalance =
-                C::deposit_into_existing(who, refund_amount).unwrap_or_else(|_| C::PositiveImbalance::zero());
-            // merge the imbalance caused by paying the fees and refunding parts of it again.
-            let adjusted_paid = paid
-                .offset(refund_imbalance)
-                .same()
-                .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-            // Call someone else to handle the imbalance (fee and tip separately)
-            let imbalances = adjusted_paid.split(tip);
-            OU::on_unbalanceds(Some(imbalances.0).into_iter().chain(Some(imbalances.1)));
+            // Calculate how much refund we should return and transfer the amount to the account that paid the fees
+            match paid {
+                PaymentInfo::Native(paid_fee) => {
+                    let refund_amount = paid_fee.saturating_sub(corrected_fee);
+                    C::transfer(&fee_receiver, who, refund_amount, ExistenceRequirement::KeepAlive)
+                        .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+                },
+                PaymentInfo::NonNative(paid_fee, currency, price) => {
+                    // calculate corrected_fee in the non-native currency
+                    let converted_corrected_fee = price.checked_mul_int(corrected_fee).ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+                    let converted_fee = paid_fee.saturating_sub(converted_corrected_fee);
+                    MC::transfer(currency.into(), &fee_receiver, who, converted_fee.into())
+                        .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+                },
+            };
         }
         Ok(())
     }

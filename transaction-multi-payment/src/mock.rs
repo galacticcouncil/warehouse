@@ -172,7 +172,7 @@ impl pallet_balances::Config for Test {
 }
 
 impl pallet_transaction_payment::Config for Test {
-    type OnChargeTransaction = MultiCurrencyAdapter<Balances, (), PaymentPallet>;
+    type OnChargeTransaction = MultiCurrencyAdapter<Balances, Tokens, PaymentPallet>;
     type TransactionByteFee = TransactionByteFee;
     type OperationalFeeMultiplier = ();
     type WeightToFee = IdentityFee<Balance>;

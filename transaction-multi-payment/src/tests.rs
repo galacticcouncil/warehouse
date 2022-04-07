@@ -24,7 +24,7 @@ use crate::traits::TransactionMultiPaymentDataProvider;
 use crate::{CurrencyBalanceCheck, PaymentInfo};
 use crate::Price;
 use frame_support::sp_runtime::transaction_validity::{InvalidTransaction, ValidTransaction};
-use frame_support::weights::{Pays, DispatchInfo, PostDispatchInfo, Weight};
+use frame_support::weights::{DispatchInfo, PostDispatchInfo, Weight};
 use orml_traits::MultiCurrency;
 use pallet_balances::Call as BalancesCall;
 use sp_runtime::traits::BadOrigin;
@@ -326,10 +326,6 @@ pub fn info_from_weight(w: Weight) -> DispatchInfo {
 
 fn post_info_from_weight(w: Weight) -> PostDispatchInfo {
     PostDispatchInfo { actual_weight: Some(w), pays_fee: Default::default() }
-}
-
-fn post_info_from_pays(p: Pays) -> PostDispatchInfo {
-    PostDispatchInfo { actual_weight: None, pays_fee: p }
 }
 
 fn default_post_info() -> PostDispatchInfo {

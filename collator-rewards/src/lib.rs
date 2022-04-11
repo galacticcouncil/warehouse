@@ -26,7 +26,6 @@ mod tests;
 
 use frame_support::traits::Get;
 
-use frame_support::weights::DispatchClass;
 use orml_traits::MultiCurrency;
 use sp_runtime::RuntimeAppPublic;
 use sp_std::vec::Vec;
@@ -87,7 +86,7 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Account dusted.
+        /// Coallator was rewarded.
         CollatorRewarded {
             who: T::AccountId,
             amount: T::Balance,
@@ -124,8 +123,6 @@ impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
                     amount: T::RewardPerCollator::get(),
                     reward_currency: T::RewardCurrencyId::get(),
                 });
-
-                frame_system::Pallet::<T>::register_extra_weight_unchecked(20_000, DispatchClass::Mandatory);
             }
         }
     }

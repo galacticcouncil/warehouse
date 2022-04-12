@@ -136,7 +136,7 @@ impl Config for Test {
     type Currency = Tokens;
     type RewardPerCollator = RewardPerCollator;
     type RewardCurrencyId = RewardCurrencyId;
-    type NotRewardedCollators = GcCollators;
+    type ExcludedCollators = GcCollators;
     type AuthorityId = AuraId;
 }
 

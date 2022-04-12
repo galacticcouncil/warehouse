@@ -24,7 +24,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use frame_support::traits::Get;
+use frame_support::traits::{Get, OneSessionHandler};
 
 use orml_traits::MultiCurrency;
 use sp_runtime::RuntimeAppPublic;
@@ -74,7 +74,7 @@ pub mod pallet {
         type RewardCurrencyId: Get<Self::CurrencyId>;
 
         /// List of collator which will not be rewarded.
-        type NotRewardedCollators: Get<Vec<Self::AccountId>>;
+        type ExcludedCollators: Get<Vec<Self::AccountId>>;
 
         /// The identifier type for an authority.
         type AuthorityId: Member + Parameter + RuntimeAppPublic + MaybeSerializeDeserialize + MaxEncodedLen;
@@ -86,16 +86,14 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Coallator was rewarded.
+        /// Collator was rewarded.
         CollatorRewarded {
             who: T::AccountId,
             amount: T::Balance,
-            reward_currency: T::CurrencyId,
+            currency: T::CurrencyId,
         },
     }
 }
-
-use frame_support::traits::OneSessionHandler;
 
 impl<T: Config> sp_runtime::BoundToRuntimeAppPublic for Pallet<T> {
     type Public = T::AuthorityId;
@@ -111,18 +109,17 @@ impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
         I: Iterator<Item = (&'a T::AccountId, T::AuthorityId)>,
     {
         for (collator, _) in collators {
-            if !T::NotRewardedCollators::get().contains(collator) {
+            if !T::ExcludedCollators::get().contains(collator) {
                 let result = T::Currency::deposit(T::RewardCurrencyId::get(), collator, T::RewardPerCollator::get());
-                if result.is_err() {
+                if result.is_ok() {
+                    Self::deposit_event(Event::CollatorRewarded {
+                        who: collator.clone(),
+                        amount: T::RewardPerCollator::get(),
+                        currency: T::RewardCurrencyId::get(),
+                    });
+                } else {
                     log::warn!("Error reward collators: {:?}", result);
-                    continue;
                 }
-
-                Self::deposit_event(Event::CollatorRewarded {
-                    who: collator.clone(),
-                    amount: T::RewardPerCollator::get(),
-                    reward_currency: T::RewardCurrencyId::get(),
-                });
             }
         }
     }

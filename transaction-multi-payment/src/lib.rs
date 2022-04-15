@@ -32,7 +32,7 @@ mod traits;
 use frame_support::{
     dispatch::DispatchResult,
     ensure,
-    traits::{Currency, ExistenceRequirement, Get, Imbalance},
+    traits::{Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, WithdrawReasons},
     transactional,
     weights::DispatchClass,
     weights::WeightToFeePolynomial,
@@ -61,11 +61,12 @@ use frame_support::traits::IsSubType;
 
 use scale_info::TypeInfo;
 
-use crate::traits::{PaymentInfo, TransactionMultiPaymentDataProvider};
+use crate::traits::*;
 use frame_support::dispatch::DispatchError;
 
 type AssetIdOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 type BalanceOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+type NegativeImbalanceOf<C, T> = <C as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
 /// Spot price type
 pub type Price = FixedU128;
@@ -419,9 +420,9 @@ where
 }
 
 /// Implements the transaction payment for native as well as non-native currencies
-pub struct MultiCurrencyAdapter<C, MC, DP>(PhantomData<(C, MC, DP)>);
+pub struct TransferFees<C, MC, DP>(PhantomData<(C, MC, DP)>);
 
-impl<T, C, MC, DP> OnChargeTransaction<T> for MultiCurrencyAdapter<C, MC, DP>
+impl<T, C, MC, DP> OnChargeTransaction<T> for TransferFees<C, MC, DP>
 where
     T: Config,
     T::TransactionByteFee: Get<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance>,
@@ -504,6 +505,96 @@ where
                         .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
                 },
             };
+        }
+        Ok(())
+    }
+}
+
+/// Implements the transaction payment for native as well as non-native currencies
+pub struct WithdrawFees<C, OU, SW>(PhantomData<(C, OU, SW)>);
+
+impl<T, C, OU, SW> OnChargeTransaction<T> for BurnFees<C, OU, SW>
+where
+    T: Config,
+    T::TransactionByteFee: Get<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance>,
+    C: Currency<<T as frame_system::Config>::AccountId>,
+    C::PositiveImbalance:
+        Imbalance<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance, Opposite = C::NegativeImbalance>,
+    C::NegativeImbalance:
+        Imbalance<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance, Opposite = C::PositiveImbalance>,
+    OU: OnUnbalanced<NegativeImbalanceOf<C, T>>,
+    C::Balance: Into<BalanceOf<T>>,
+    SW: CurrencyWithdraw<T::AccountId, BalanceOf<T>>,
+    BalanceOf<T>: FixedPointOperand,
+{
+    type LiquidityInfo = Option<NegativeImbalanceOf<C, T>>;
+    type Balance = <C as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+    /// Withdraw the predicted fee from the transaction origin.
+    ///
+    /// Note: The `fee` already includes the `tip`.
+    fn withdraw_fee(
+        who: &T::AccountId,
+        _call: &T::Call,
+        _info: &DispatchInfoOf<T::Call>,
+        fee: Self::Balance,
+        tip: Self::Balance,
+    ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
+        if fee.is_zero() {
+            return Ok(None);
+        }
+
+        let withdraw_reason = if tip.is_zero() {
+            WithdrawReasons::TRANSACTION_PAYMENT
+        } else {
+            WithdrawReasons::TRANSACTION_PAYMENT | WithdrawReasons::TIP
+        };
+
+        if let Ok(detail) = SW::withdraw(who, fee.into()) {
+            match detail {
+                PaymentWithdrawResult::Transferred => Ok(None),
+                PaymentWithdrawResult::Native => {
+                    match C::withdraw(who, fee, withdraw_reason, ExistenceRequirement::KeepAlive) {
+                        Ok(imbalance) => Ok(Some(imbalance)),
+                        Err(_) => Err(InvalidTransaction::Payment.into()),
+                    }
+                }
+            }
+        } else {
+            Err(InvalidTransaction::Payment.into())
+        }
+    }
+
+    /// Hand the fee and the tip over to the `[OnUnbalanced]` implementation.
+    /// Since the predicted fee might have been too high, parts of the fee may
+    /// be refunded.
+    ///
+    /// Note: The `fee` already includes the `tip`.
+    /// Note: This is the default implementation
+    fn correct_and_deposit_fee(
+        who: &T::AccountId,
+        _dispatch_info: &DispatchInfoOf<T::Call>,
+        _post_info: &PostDispatchInfoOf<T::Call>,
+        corrected_fee: Self::Balance,
+        tip: Self::Balance,
+        already_withdrawn: Self::LiquidityInfo,
+    ) -> Result<(), TransactionValidityError> {
+        if let Some(paid) = already_withdrawn {
+            // Calculate how much refund we should return
+            let refund_amount = paid.peek().saturating_sub(corrected_fee);
+            // refund to the the account that paid the fees. If this fails, the
+            // account might have dropped below the existential balance. In
+            // that case we don't refund anything.
+            let refund_imbalance =
+                C::deposit_into_existing(who, refund_amount).unwrap_or_else(|_| C::PositiveImbalance::zero());
+            // merge the imbalance caused by paying the fees and refunding parts of it again.
+            let adjusted_paid = paid
+                .offset(refund_imbalance)
+                .same()
+                .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+            // Call someone else to handle the imbalance (fee and tip separately)
+            let imbalances = adjusted_paid.split(tip);
+            OU::on_unbalanceds(Some(imbalances.0).into_iter().chain(Some(imbalances.1)));
         }
         Ok(())
     }

@@ -17,7 +17,7 @@
 
 use super::*;
 pub use crate as multi_payment;
-use crate::{Config, MultiCurrencyAdapter};
+use crate::{Config, TransferFees};
 use frame_support::{parameter_types, weights::DispatchClass};
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
@@ -172,7 +172,7 @@ impl pallet_balances::Config for Test {
 }
 
 impl pallet_transaction_payment::Config for Test {
-    type OnChargeTransaction = MultiCurrencyAdapter<Balances, Tokens, PaymentPallet>;
+    type OnChargeTransaction = TransferFees<Balances, Tokens, PaymentPallet>;
     type TransactionByteFee = TransactionByteFee;
     type OperationalFeeMultiplier = ();
     type WeightToFee = IdentityFee<Balance>;

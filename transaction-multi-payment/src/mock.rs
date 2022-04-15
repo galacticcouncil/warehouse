@@ -46,7 +46,7 @@ pub const INITIAL_BALANCE: Balance = 1_000_000_000_000_000u128;
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub const FALLBACK_ACCOUNT: AccountId = 300;
+pub const FEE_RECEIVER: AccountId = 300;
 
 pub const HDX: AssetId = 0;
 pub const SUPPORTED_CURRENCY: AssetId = 2000;
@@ -307,7 +307,7 @@ impl ExtBuilder {
                 (SUPPORTED_CURRENCY, Price::from_float(1.5)),
                 (SUPPORTED_CURRENCY_WITH_PRICE, Price::from_float(0.5)),
             ],
-            fallback_account: Some(FALLBACK_ACCOUNT),
+            fee_receiver: Some(FEE_RECEIVER),
             account_currencies: self.account_currencies,
         }
         .assimilate_storage(&mut t)

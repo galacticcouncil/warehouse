@@ -55,7 +55,7 @@ fn set_supported_currency_without_spot_price() {
             Currencies::free_balance(SUPPORTED_CURRENCY, &ALICE),
             999_999_999_998_457
         );
-        assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FALLBACK_ACCOUNT), 1_543);
+        assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 1_543);
     });
 }
 
@@ -236,7 +236,7 @@ fn account_currency_works() {
 #[test]
 fn data_provider_works() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_eq!(PaymentPallet::get_fallback_account(), Some(FALLBACK_ACCOUNT));
+        assert_eq!(PaymentPallet::get_fee_receiver(), Some(FEE_RECEIVER));
         assert_eq!(PaymentPallet::get_currency_and_price(&ALICE), Ok((<Test as Config>::NativeAssetId::get(), None)));
 
         assert_ok!(PaymentPallet::set_currency(Origin::signed(ALICE), SUPPORTED_CURRENCY));
@@ -254,7 +254,7 @@ fn data_provider_works() {
 #[test]
 fn transfer_set_fee_with_core_asset_should_work() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        let fb_account = PaymentPallet::fallback_account().unwrap();
+        let fb_account = PaymentPallet::fee_receiver().unwrap();
         let hdx_balance_before = Currencies::free_balance(HDX, &ALICE);
         let fb_balance_before = Currencies::free_balance(HDX, &fb_account);
 
@@ -276,7 +276,7 @@ fn transfer_set_fee_should_work() {
         let balance_before = Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &ALICE);
         let fb_acc_balance_before = Currencies::free_balance(
             SUPPORTED_CURRENCY_WITH_PRICE,
-            &PaymentPallet::fallback_account().unwrap(),
+            &PaymentPallet::fee_receiver().unwrap(),
         );
 
         assert_ok!(PaymentPallet::transfer_set_fee(&ALICE));
@@ -288,7 +288,7 @@ fn transfer_set_fee_should_work() {
             fb_acc_balance_before + 102,
             Currencies::free_balance(
                 SUPPORTED_CURRENCY_WITH_PRICE,
-                &PaymentPallet::fallback_account().unwrap()
+                &PaymentPallet::fee_receiver().unwrap()
             )
         );
     });
@@ -351,7 +351,7 @@ fn fee_payment_in_native_currency_work() {
             assert_eq!(pre, (tip, CHARLIE, Some(PaymentInfo::Native(5 + 15 + 10))));
 
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 30);
-            assert_eq!(Balances::free_balance(FALLBACK_ACCOUNT), 30);
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 30);
 
             assert_ok!(ChargeTransactionPayment::<Test>::post_dispatch(
                  Some(pre),
@@ -361,7 +361,7 @@ fn fee_payment_in_native_currency_work() {
                  &Ok(())
             ));
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 30);
-            assert_eq!(Balances::free_balance(FALLBACK_ACCOUNT), 30);
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 30);
         });
 }
 
@@ -384,7 +384,7 @@ fn fee_payment_in_native_currency_with_tip_work() {
             assert_eq!(pre, (tip, CHARLIE, Some(PaymentInfo::Native(5 + 15 + 10 + tip))));
 
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 5 - 10 - 15 - tip);
-            assert_eq!(Balances::free_balance(FALLBACK_ACCOUNT), 35);
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 35);
 
             assert_ok!(ChargeTransactionPayment::<Test>::post_dispatch(
                  Some(pre),
@@ -395,7 +395,7 @@ fn fee_payment_in_native_currency_with_tip_work() {
             ));
 
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 5 - 10 - 10 - 5);
-            assert_eq!(Balances::free_balance(FALLBACK_ACCOUNT), 30);
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 30);
         });
 }
 
@@ -419,9 +419,9 @@ fn fee_payment_in_non_native_currency_work() {
             assert_eq!(pre, (tip, CHARLIE, Some(PaymentInfo::NonNative(45, SUPPORTED_CURRENCY, Price::from_float(1.5)))));
 
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &PaymentPallet::fallback_account().unwrap()), 45);
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &PaymentPallet::fee_receiver().unwrap()), 45);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
-            assert_eq!(Balances::free_balance(FALLBACK_ACCOUNT), 0);
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
             assert_ok!(ChargeTransactionPayment::<Test>::post_dispatch(
                  Some(pre),
@@ -431,9 +431,9 @@ fn fee_payment_in_non_native_currency_work() {
                  &Ok(())
             ));
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &PaymentPallet::fallback_account().unwrap()), 45);
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &PaymentPallet::fee_receiver().unwrap()), 45);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
-            assert_eq!(Balances::free_balance(FALLBACK_ACCOUNT), 0);
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
         });
 }
 
@@ -458,9 +458,9 @@ fn fee_payment_in_non_native_currency_with_tip_work() {
             assert_eq!(pre, (tip, CHARLIE, Some(PaymentInfo::NonNative(52, SUPPORTED_CURRENCY, Price::from_float(1.5)))));
 
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 52);
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &PaymentPallet::fallback_account().unwrap()), 52);
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &PaymentPallet::fee_receiver().unwrap()), 52);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
-            assert_eq!(Balances::free_balance(FALLBACK_ACCOUNT), 0);
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
             assert_ok!(ChargeTransactionPayment::<Test>::post_dispatch(
                  Some(pre),
@@ -471,9 +471,9 @@ fn fee_payment_in_non_native_currency_with_tip_work() {
             ));
 
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &PaymentPallet::fallback_account().unwrap()), 45);
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &PaymentPallet::fee_receiver().unwrap()), 45);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
-            assert_eq!(Balances::free_balance(FALLBACK_ACCOUNT), 0);
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
         });
 }
 
@@ -496,7 +496,7 @@ fn fee_payment_in_native_currency_with_no_balance() {
                 .is_err());
 
             assert_eq!(Balances::free_balance(CHARLIE), 10);
-            assert_eq!(Balances::free_balance(PaymentPallet::fallback_account().unwrap()), 0);
+            assert_eq!(Balances::free_balance(PaymentPallet::fee_receiver().unwrap()), 0);
         });
 }
 
@@ -522,7 +522,7 @@ fn fee_payment_in_non_native_currency_with_no_balance() {
                 .is_err());
 
             assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 100);
-            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &PaymentPallet::fallback_account().unwrap()), 0);
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &PaymentPallet::fee_receiver().unwrap()), 0);
         });
 }
 
@@ -547,7 +547,7 @@ fn fee_payment_in_non_native_currency_with_no_price() {
                 ..Default::default()
             };
 
-            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &FALLBACK_ACCOUNT), 0);
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 0);
 
             assert!(ChargeTransactionPayment::<Test>::from(0)
                 .pre_dispatch(&CHARLIE, CALL, &info, len)
@@ -557,7 +557,7 @@ fn fee_payment_in_non_native_currency_with_no_price() {
             assert_eq!(Balances::free_balance(CHARLIE), 0);
 
             assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 9970);
-            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &FALLBACK_ACCOUNT), 30);
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 30);
         });
 }
 
@@ -627,7 +627,7 @@ fn fee_payment_non_native_insufficient_balance_with_no_pool() {
 //             let len = 10;
 //             let dispatch_info = info_from_weight(15);
 //
-//             assert_eq!(Balances::free_balance(FALLBACK_ACCOUNT), 0);
+//             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 //
 //             assert_noop!(ChargeTransactionPayment::<Test>::from(0)
 //                 .pre_dispatch(&CHARLIE, CALL, &dispatch_info, len),
@@ -635,7 +635,7 @@ fn fee_payment_non_native_insufficient_balance_with_no_pool() {
 //             );
 //
 //             assert_eq!(Balances::free_balance(CHARLIE), 30);
-//             assert_eq!(Balances::free_balance(FALLBACK_ACCOUNT), 0);
+//             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 //         });
 // }
 

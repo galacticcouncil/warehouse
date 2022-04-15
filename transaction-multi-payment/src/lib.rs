@@ -181,8 +181,8 @@ pub mod pallet {
         /// Math overflow
         Overflow,
 
-        /// Fallback account is not set.
-        FallbackAccountNotSet,
+        /// Fee receiver account is not set.
+        FeeReceiverAccountNotSet,
     }
 
     /// Account currency map
@@ -200,15 +200,15 @@ pub mod pallet {
     #[pallet::getter(fn currency_price)]
     pub type AcceptedCurrencyPrice<T: Config> = StorageMap<_, Twox64Concat, AssetIdOf<T>, Price, OptionQuery>;
 
-    /// Account to use when pool does not exist.
+    /// Account where fees are deposited
     #[pallet::storage]
-    #[pallet::getter(fn fallback_account)]
-    pub type FallbackAccount<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+    #[pallet::getter(fn fee_receiver)]
+    pub type FeeReceiver<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub currencies: Vec<(AssetIdOf<T>, Price)>,
-        pub fallback_account: Option<T::AccountId>,
+        pub fee_receiver: Option<T::AccountId>,
         pub account_currencies: Vec<(T::AccountId, AssetIdOf<T>)>,
     }
 
@@ -217,7 +217,7 @@ pub mod pallet {
         fn default() -> Self {
             GenesisConfig {
                 currencies: vec![],
-                fallback_account: None,
+                fee_receiver: None,
                 account_currencies: vec![],
             }
         }
@@ -226,11 +226,11 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            if self.fallback_account == None {
-                panic!("Fallback account is not set");
+            if self.fee_receiver == None {
+                panic!("Fee receiver account is not set");
             }
 
-            FallbackAccount::<T>::put(self.fallback_account.clone().expect("Fallback account is not set"));
+            FeeReceiver::<T>::put(self.fee_receiver.clone().expect("Fee receiver account is not set"));
 
             for (asset, price) in &self.currencies {
                 AcceptedCurrencies::<T>::insert(asset, price);
@@ -354,7 +354,7 @@ where
         T::Currencies::transfer(
             currency,
             who,
-            &Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
+            &Self::fee_receiver().ok_or(Error::<T>::FeeReceiverAccountNotSet)?,
             amount,
         )?;
 
@@ -363,7 +363,7 @@ where
             currency,
             fee,
             amount,
-            Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
+            Self::fee_receiver().ok_or(Error::<T>::FeeReceiverAccountNotSet)?,
         ));
 
         Ok(())
@@ -413,8 +413,8 @@ where
         Self::get_currency_and_price(who)
     }
 
-    fn get_fallback_account() -> Option<<T as frame_system::Config>::AccountId> {
-        Self::fallback_account()
+    fn get_fee_receiver() -> Option<<T as frame_system::Config>::AccountId> {
+        Self::fee_receiver()
     }
 
 }
@@ -453,7 +453,7 @@ where
         if fee.is_zero() {
             return Ok(None);
         }
-        let fee_receiver = DP::get_fallback_account().ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+        let fee_receiver = DP::get_fee_receiver().ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
         // get the currency in which fees are paid. In case of non-native currency, the price is required to calculate final fee.
         let maybe_non_native = DP::get_currency_and_price(who).map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
@@ -487,7 +487,7 @@ where
         _tip: Self::Balance,
         already_withdrawn: Self::LiquidityInfo,
     ) -> Result<(), TransactionValidityError> {
-        let fee_receiver = DP::get_fallback_account().ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+        let fee_receiver = DP::get_fee_receiver().ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
         if let Some(paid) = already_withdrawn {
             // Calculate how much refund we should return and transfer the amount to the account that paid the fees
@@ -513,7 +513,7 @@ where
 /// Implements the transaction payment for native as well as non-native currencies
 pub struct WithdrawFees<C, OU, SW>(PhantomData<(C, OU, SW)>);
 
-impl<T, C, OU, SW> OnChargeTransaction<T> for BurnFees<C, OU, SW>
+impl<T, C, OU, SW> OnChargeTransaction<T> for WithdrawFees<C, OU, SW>
 where
     T: Config,
     T::TransactionByteFee: Get<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance>,

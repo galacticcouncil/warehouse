@@ -506,7 +506,6 @@ fn fee_payment_in_non_native_currency_with_no_balance() {
 
     ExtBuilder::default()
         .base_weight(5)
-        .account_native_balance(CHARLIE, 0)
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 100)
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .build()
@@ -533,7 +532,6 @@ fn fee_payment_in_non_native_currency_with_no_price() {
 
     ExtBuilder::default()
         .base_weight(5)
-        .account_native_balance(CHARLIE, 0)
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10_000)
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .build()
@@ -567,7 +565,6 @@ fn fee_payment_in_unregistered_currency() {
 
     ExtBuilder::default()
         .base_weight(5)
-        .account_native_balance(CHARLIE, 0)
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 100)
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .build()
@@ -594,7 +591,6 @@ fn fee_payment_non_native_insufficient_balance_with_no_pool() {
 
     ExtBuilder::default()
         .base_weight(5)
-        .account_native_balance(CHARLIE, 0)
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 100)
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .build()
@@ -613,31 +609,30 @@ fn fee_payment_non_native_insufficient_balance_with_no_pool() {
         });
 }
 
-// TODO: uncomment once existential deposit is set
-// use sp_runtime::transaction_validity::TransactionValidityError;
-// #[test]
-// fn fee_in_native_cannot_kill_account() {
-//     const CHARLIE: AccountId = 5;
-//
-//     ExtBuilder::default()
-//         .account_native_balance(CHARLIE, 30)
-//         .base_weight(5)
-//         .build()
-//         .execute_with(|| {
-//             let len = 10;
-//             let dispatch_info = info_from_weight(15);
-//
-//             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
-//
-//             assert_noop!(ChargeTransactionPayment::<Test>::from(0)
-//                 .pre_dispatch(&CHARLIE, CALL, &dispatch_info, len),
-//                 TransactionValidityError::Invalid(InvalidTransaction::Payment)
-//             );
-//
-//             assert_eq!(Balances::free_balance(CHARLIE), 30);
-//             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
-//         });
-// }
+use sp_runtime::transaction_validity::TransactionValidityError;
+#[test]
+fn fee_in_native_cannot_kill_account() {
+    const CHARLIE: AccountId = 5;
+
+    ExtBuilder::default()
+        .account_native_balance(CHARLIE, 30)
+        .base_weight(5)
+        .build()
+        .execute_with(|| {
+            let len = 10;
+            let dispatch_info = info_from_weight(15);
+
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
+
+            assert_noop!(ChargeTransactionPayment::<Test>::from(0)
+                .pre_dispatch(&CHARLIE, CALL, &dispatch_info, len),
+                TransactionValidityError::Invalid(InvalidTransaction::Payment)
+            );
+
+            assert_eq!(Balances::free_balance(CHARLIE), 30);
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
+        });
+}
 
 #[test]
 fn fee_in_non_native_can_kill_account() {

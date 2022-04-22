@@ -182,7 +182,6 @@ fn fee_payment_in_non_native_currency() {
 
     ExtBuilder::default()
         .base_weight(5)
-        .account_native_balance(CHARLIE, 0)
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY_WITH_PRICE, 10_000)
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY_WITH_PRICE)])
         .build()
@@ -215,8 +214,7 @@ fn fee_payment_non_native_insufficient_balance() {
 
     ExtBuilder::default()
         .base_weight(5)
-        .account_native_balance(CHARLIE, 0)
-        .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 1_00)
+        .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 100)
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .build()
         .execute_with(|| {
@@ -230,7 +228,7 @@ fn fee_payment_non_native_insufficient_balance() {
                 .pre_dispatch(&CHARLIE, CALL, &info, len)
                 .is_err());
 
-            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 1_00);
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 100);
         });
 }
 
@@ -281,7 +279,6 @@ fn fee_payment_in_non_native_currency_with_no_price() {
 
     ExtBuilder::default()
         .base_weight(5)
-        .account_native_balance(CHARLIE, 0)
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10_000)
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .build()
@@ -315,7 +312,6 @@ fn fee_payment_non_native_insufficient_balance_with_no_pool() {
 
     ExtBuilder::default()
         .base_weight(5)
-        .account_native_balance(CHARLIE, 0)
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 100)
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .build()

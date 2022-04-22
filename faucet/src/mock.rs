@@ -18,13 +18,13 @@
 use crate as faucet;
 use crate::Config;
 use frame_support::parameter_types;
-use frame_support::traits::{Everything, GenesisBuild};
+use frame_support::traits::{Everything, Nothing, GenesisBuild};
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup, Zero},
+    traits::{BlakeTwo256, IdentityLookup, One},
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -81,7 +81,7 @@ pub type Amount = i128;
 
 parameter_type_with_key! {
     pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-        Zero::zero()
+        One::one()
     };
 }
 
@@ -94,7 +94,7 @@ impl orml_tokens::Config for Test {
     type ExistentialDeposits = ExistentialDeposits;
     type OnDust = ();
     type MaxLocks = ();
-    type DustRemovalWhitelist = Everything;
+    type DustRemovalWhitelist = Nothing;
 }
 
 impl Config for Test {

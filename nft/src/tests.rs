@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::tokens::nonfungibles::*};
 
 use super::*;
 use mock::*;
@@ -263,5 +263,128 @@ fn destroy_class_works() {
             NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0),
             Error::<Test>::ClassUnknown
         );
+    });
+}
+
+#[test]
+fn nonfungible_traits_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
+            b"metadata".to_vec().try_into().unwrap();
+
+        assert_ok!(NFTPallet::create_class(
+            Origin::signed(ALICE),
+            CLASS_ID_0,
+            Default::default(),
+            metadata.clone()
+        ));
+
+        assert_ok!(NFTPallet::mint(
+            Origin::signed(BOB),
+            CLASS_ID_0,
+            INSTANCE_ID_0,
+            metadata.clone()
+        ));
+
+        // `Inspect` trait
+        assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0), Some(BOB));
+        assert_eq!(NFTPallet::owner(CLASS_ID_1, INSTANCE_ID_0), None);
+        assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_1), None);
+        assert_eq!(NFTPallet::class_owner(CLASS_ID_0), Some(ALICE));
+        assert_eq!(NFTPallet::class_owner(CLASS_ID_1), None);
+        assert_eq!(
+            NFTPallet::attribute(&CLASS_ID_0, &INSTANCE_ID_0, &[0u8]),
+            Some(metadata.clone().into_inner())
+        );
+        assert_eq!(NFTPallet::attribute(&CLASS_ID_1, &INSTANCE_ID_0, &[0u8]), None);
+        assert_eq!(NFTPallet::attribute(&CLASS_ID_0, &INSTANCE_ID_1, &[0u8]), None);
+        assert!(NFTPallet::can_transfer(&CLASS_ID_0, &INSTANCE_ID_0));
+        assert!(!NFTPallet::can_transfer(&CLASS_ID_1, &INSTANCE_ID_1));
+
+        // `InspectEnumerable` trait
+        assert_eq!(
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::classes()
+                .collect::<Vec<ClassId>>(),
+            vec![CLASS_ID_0]
+        );
+        assert_eq!(
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::instances(&CLASS_ID_0)
+                .collect::<Vec<InstanceId>>(),
+            vec![INSTANCE_ID_0]
+        );
+        assert_eq!(
+            *NFTPallet::owned(&BOB).collect::<Vec<(ClassId, InstanceId)>>(),
+            vec![(CLASS_ID_0, INSTANCE_ID_0)]
+        );
+        assert_eq!(
+            *NFTPallet::owned_in_class(&CLASS_ID_0, &BOB).collect::<Vec<InstanceId>>(),
+            vec![INSTANCE_ID_0]
+        );
+
+        // `Create` trait
+        assert_noop!(
+            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_class(&CLASS_ID_0, &BOB, &ALICE),
+            pallet_uniques::Error::<Test>::InUse
+        );
+        assert_ok!(
+            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_class(&CLASS_ID_1, &BOB, &ALICE)
+        );
+
+        // `Destroy` trait
+        let witness = NFTPallet::get_destroy_witness(&CLASS_ID_0).unwrap();
+
+        assert_eq!(
+            witness,
+            pallet_uniques::DestroyWitness {
+                instances: 1,
+                instance_metadatas: 0,
+                attributes: 0
+            }
+        );
+        assert_noop!(
+            NFTPallet::destroy(CLASS_ID_0, witness, Some(ALICE)),
+            Error::<Test>::TokenClassNotEmpty
+        );
+
+        let empty_witness = pallet_uniques::DestroyWitness {
+            instances: 0,
+            instance_metadatas: 0,
+            attributes: 0,
+        };
+        assert_noop!(
+            NFTPallet::destroy(CLASS_ID_0, empty_witness, Some(ALICE)),
+            pallet_uniques::Error::<Test>::BadWitness
+        );
+
+        assert_ok!(NFTPallet::create_class(
+            Origin::signed(ALICE),
+            CLASS_ID_2,
+            Default::default(),
+            metadata,
+        ));
+        assert_noop!(
+            NFTPallet::destroy(CLASS_ID_2, empty_witness, Some(BOB)),
+            pallet_uniques::Error::<Test>::NoPermission
+        );
+        assert_noop!(
+            NFTPallet::destroy(CLASS_ID_2, witness, Some(ALICE)),
+            Error::<Test>::TokenClassNotEmpty
+        );
+        assert_ok!(
+            NFTPallet::destroy(CLASS_ID_2, empty_witness, Some(ALICE)),
+            empty_witness
+        );
+
+        // `Mutate` trait
+
+        // `Transfer` trait
+        assert_ok!(
+            <NFTPallet as Transfer<<Test as frame_system::Config>::AccountId>>::transfer(
+                &CLASS_ID_0,
+                &INSTANCE_ID_0,
+                &ALICE
+            )
+        );
+        assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0), Some(ALICE));
     });
 }

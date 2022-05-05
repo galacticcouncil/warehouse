@@ -415,3 +415,115 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 }
+
+impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
+    type InstanceId = T::NftInstanceId;
+    type ClassId = T::NftClassId;
+
+    fn owner(class: &Self::ClassId, instance: &Self::InstanceId) -> Option<T::AccountId> {
+        Self::owner(*class, *instance)
+    }
+
+    fn class_owner(class: &Self::ClassId) -> Option<T::AccountId> {
+        Self::class_owner(*class)
+    }
+
+    fn attribute(class: &Self::ClassId, instance: &Self::InstanceId, _key: &[u8]) -> Option<Vec<u8>> {
+        Self::instances(class, instance).map(|i| i.metadata.into_inner())
+    }
+
+    fn can_transfer(class: &Self::ClassId, _instance: &Self::InstanceId) -> bool {
+        let maybe_class_type = Self::classes(class).map(|c| c.class_type);
+
+        match maybe_class_type {
+            Some(class_type) => T::Permissions::can_transfer(&class_type),
+            _ => false,
+        }
+    }
+}
+
+impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
+    fn classes() -> Box<dyn Iterator<Item = Self::ClassId>> {
+        Box::new(Classes::<T>::iter_keys())
+    }
+
+    fn instances(class: &Self::ClassId) -> Box<dyn Iterator<Item = Self::InstanceId>> {
+        Box::new(Instances::<T>::iter_key_prefix(class))
+    }
+
+    fn owned(who: &T::AccountId) -> Box<dyn Iterator<Item = (Self::ClassId, Self::InstanceId)>> {
+        Box::new(pallet_uniques::Pallet::<T>::owned(who).map(|i| (i.0.into(), i.1.into())))
+    }
+
+    fn owned_in_class(class: &Self::ClassId, who: &T::AccountId) -> Box<dyn Iterator<Item = Self::InstanceId>> {
+        Box::new(
+            pallet_uniques::Pallet::<T>::owned_in_class(
+                &(Into::<<T as pallet_uniques::Config>::ClassId>::into(*class)),
+                who,
+            )
+            .map(|i| i.into()),
+        )
+    }
+}
+
+impl<T: Config> Create<T::AccountId> for Pallet<T> {
+    fn create_class(class: &Self::ClassId, who: &T::AccountId, _admin: &T::AccountId) -> DispatchResult {
+        ensure!(T::ReserveClassIdUpTo::get() < *class, Error::<T>::IdReserved);
+
+        Self::do_create_class(who.clone(), *class, Default::default(), BoundedVec::default())?;
+
+        Ok(())
+    }
+}
+
+impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
+    type DestroyWitness = pallet_uniques::DestroyWitness;
+
+    fn get_destroy_witness(class: &Self::ClassId) -> Option<Self::DestroyWitness> {
+        pallet_uniques::Pallet::<T>::get_destroy_witness(
+            &(Into::<<T as pallet_uniques::Config>::ClassId>::into(*class)),
+        )
+    }
+
+    fn destroy(
+        class: Self::ClassId,
+        witness: Self::DestroyWitness,
+        maybe_check_owner: Option<T::AccountId>,
+    ) -> Result<Self::DestroyWitness, DispatchError> {
+        let class_type = Self::classes(class)
+            .map(|c| c.class_type)
+            .ok_or(Error::<T>::ClassUnknown)?;
+
+        ensure!(T::Permissions::can_destroy(&class_type), Error::<T>::NotPermitted);
+        ensure!(witness.instances == 0u32, Error::<T>::TokenClassNotEmpty);
+
+        let owner = pallet_uniques::Pallet::<T>::class_owner(&class.into()).ok_or(Error::<T>::ClassUnknown)?;
+
+        pallet_uniques::Pallet::<T>::do_destroy_class(class.into(), witness, maybe_check_owner)?;
+
+        Classes::<T>::remove(class);
+
+        Self::deposit_event(Event::ClassDestroyed { owner, class_id: class });
+
+        Ok(witness)
+    }
+}
+
+impl<T: Config> Mutate<T::AccountId> for Pallet<T> {}
+
+impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
+    fn transfer(class: &Self::ClassId, instance: &Self::InstanceId, destination: &T::AccountId) -> DispatchResult {
+        let class_type = Self::classes(class)
+            .map(|c| c.class_type)
+            .ok_or(Error::<T>::ClassUnknown)?;
+
+        ensure!(T::Permissions::can_transfer(&class_type), Error::<T>::NotPermitted);
+
+        pallet_uniques::Pallet::<T>::do_transfer(
+            Into::<<T as pallet_uniques::Config>::ClassId>::into(*class),
+            Into::<<T as pallet_uniques::Config>::InstanceId>::into(*instance),
+            destination.clone(),
+            |_, _| Ok(()),
+        )
+    }
+}

@@ -287,15 +287,15 @@ fn nonfungible_traits_work() {
         ));
 
         // `Inspect` trait
-        assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0), Some(BOB));
-        assert_eq!(NFTPallet::owner(CLASS_ID_1, INSTANCE_ID_0), None);
-        assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_1), None);
-        
-        assert_eq!(NFTPallet::class_owner(CLASS_ID_0), Some(ALICE));
-        assert_eq!(NFTPallet::class_owner(CLASS_ID_1), None);
+        assert_eq!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_0, &INSTANCE_ID_0), Some(BOB));
+        assert_eq!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_1, &INSTANCE_ID_0), None);
+        assert_eq!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_0, &INSTANCE_ID_1), None);
 
-        assert!(NFTPallet::can_transfer(&CLASS_ID_0, &INSTANCE_ID_0));
-        assert!(!NFTPallet::can_transfer(&CLASS_ID_1, &INSTANCE_ID_1));
+        assert_eq!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::class_owner(&CLASS_ID_0), Some(ALICE));
+        assert_eq!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::class_owner(&CLASS_ID_1), None);
+
+        assert!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::can_transfer(&CLASS_ID_0, &INSTANCE_ID_0));
+        assert!(!<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::can_transfer(&CLASS_ID_1, &INSTANCE_ID_1));
 
         // `InspectEnumerable` trait
         assert_eq!(
@@ -309,11 +309,11 @@ fn nonfungible_traits_work() {
             vec![INSTANCE_ID_0]
         );
         assert_eq!(
-            *NFTPallet::owned(&BOB).collect::<Vec<(ClassId, InstanceId)>>(),
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned(&BOB).collect::<Vec<(ClassId, InstanceId)>>(),
             vec![(CLASS_ID_0, INSTANCE_ID_0)]
         );
         assert_eq!(
-            *NFTPallet::owned_in_class(&CLASS_ID_0, &BOB).collect::<Vec<InstanceId>>(),
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned_in_class(&CLASS_ID_0, &BOB).collect::<Vec<InstanceId>>(),
             vec![INSTANCE_ID_0]
         );
 
@@ -327,7 +327,7 @@ fn nonfungible_traits_work() {
         );
 
         // `Destroy` trait
-        let witness = NFTPallet::get_destroy_witness(&CLASS_ID_0).unwrap();
+        let witness = <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::get_destroy_witness(&CLASS_ID_0).unwrap();
 
         assert_eq!(
             witness,
@@ -338,7 +338,7 @@ fn nonfungible_traits_work() {
             }
         );
         assert_noop!(
-            NFTPallet::destroy(CLASS_ID_0, witness, Some(ALICE)),
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(CLASS_ID_0, witness, Some(ALICE)),
             Error::<Test>::TokenClassNotEmpty
         );
 
@@ -348,7 +348,7 @@ fn nonfungible_traits_work() {
             attributes: 0,
         };
         assert_noop!(
-            NFTPallet::destroy(CLASS_ID_0, empty_witness, Some(ALICE)),
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(CLASS_ID_0, empty_witness, Some(ALICE)),
             pallet_uniques::Error::<Test>::BadWitness
         );
 
@@ -359,15 +359,15 @@ fn nonfungible_traits_work() {
             metadata,
         ));
         assert_noop!(
-            NFTPallet::destroy(CLASS_ID_2, empty_witness, Some(BOB)),
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(CLASS_ID_2, empty_witness, Some(BOB)),
             pallet_uniques::Error::<Test>::NoPermission
         );
         assert_noop!(
-            NFTPallet::destroy(CLASS_ID_2, witness, Some(ALICE)),
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(CLASS_ID_2, witness, Some(ALICE)),
             Error::<Test>::TokenClassNotEmpty
         );
         assert_ok!(
-            NFTPallet::destroy(CLASS_ID_2, empty_witness, Some(ALICE)),
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(CLASS_ID_2, empty_witness, Some(ALICE)),
             empty_witness
         );
 

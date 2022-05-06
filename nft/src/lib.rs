@@ -428,10 +428,6 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
         Self::class_owner(*class)
     }
 
-    fn attribute(class: &Self::ClassId, instance: &Self::InstanceId, _key: &[u8]) -> Option<Vec<u8>> {
-        Self::instances(class, instance).map(|i| i.metadata.into_inner())
-    }
-
     fn can_transfer(class: &Self::ClassId, _instance: &Self::InstanceId) -> bool {
         let maybe_class_type = Self::classes(class).map(|c| c.class_type);
 

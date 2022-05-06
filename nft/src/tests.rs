@@ -290,14 +290,10 @@ fn nonfungible_traits_work() {
         assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0), Some(BOB));
         assert_eq!(NFTPallet::owner(CLASS_ID_1, INSTANCE_ID_0), None);
         assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_1), None);
+        
         assert_eq!(NFTPallet::class_owner(CLASS_ID_0), Some(ALICE));
         assert_eq!(NFTPallet::class_owner(CLASS_ID_1), None);
-        assert_eq!(
-            NFTPallet::attribute(&CLASS_ID_0, &INSTANCE_ID_0, &[0u8]),
-            Some(metadata.clone().into_inner())
-        );
-        assert_eq!(NFTPallet::attribute(&CLASS_ID_1, &INSTANCE_ID_0, &[0u8]), None);
-        assert_eq!(NFTPallet::attribute(&CLASS_ID_0, &INSTANCE_ID_1, &[0u8]), None);
+
         assert!(NFTPallet::can_transfer(&CLASS_ID_0, &INSTANCE_ID_0));
         assert!(!NFTPallet::can_transfer(&CLASS_ID_1, &INSTANCE_ID_1));
 

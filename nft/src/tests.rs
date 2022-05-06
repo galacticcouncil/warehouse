@@ -376,6 +376,12 @@ fn nonfungible_traits_work() {
         );
 
         // `Mutate` trait
+        assert_noop!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(&CLASS_ID_2, &INSTANCE_ID_1, &BOB),
+            Error::<Test>::ClassUnknown);
+        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(&CLASS_ID_0, &INSTANCE_ID_1, &BOB));
+
+        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn_from(&CLASS_ID_0, &INSTANCE_ID_1));
+        assert!(!<Instances<Test>>::contains_key(CLASS_ID_0, INSTANCE_ID_1));
 
         // `Transfer` trait
         assert_ok!(

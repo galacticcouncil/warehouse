@@ -497,7 +497,7 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
         ensure!(T::Permissions::can_destroy(&class_type), Error::<T>::NotPermitted);
         ensure!(witness.instances == 0u32, Error::<T>::TokenClassNotEmpty);
 
-        let owner = pallet_uniques::Pallet::<T>::class_owner(&class.into()).ok_or(Error::<T>::ClassUnknown)?;
+        let owner = Self::class_owner(class).ok_or(Error::<T>::ClassUnknown)?;
 
         pallet_uniques::Pallet::<T>::do_destroy_class(class.into(), witness, maybe_check_owner)?;
 
@@ -509,7 +509,33 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
     }
 }
 
-impl<T: Config> Mutate<T::AccountId> for Pallet<T> {}
+impl<T: Config> Mutate<T::AccountId> for Pallet<T> {
+    fn mint_into(class: &Self::ClassId, instance: &Self::InstanceId, who: &T::AccountId) -> DispatchResult {
+       let class_type = Self::classes(class)
+                .map(|c| c.class_type)
+                .ok_or(Error::<T>::ClassUnknown)?;
+
+        ensure!(T::Permissions::can_mint(&class_type), Error::<T>::NotPermitted);
+
+        Self::do_mint(who.clone(), *class, *instance, BoundedVec::default())?;
+
+        Ok(())
+    }
+
+    fn burn_from(class: &Self::ClassId, instance: &Self::InstanceId) -> DispatchResult {
+        let class_type = Self::classes(class)
+                .map(|c| c.class_type)
+                .ok_or(Error::<T>::ClassUnknown)?;
+
+        ensure!(T::Permissions::can_burn(&class_type), Error::<T>::NotPermitted);
+
+        let owner = Self::owner(*class, *instance).ok_or(Error::<T>::InstanceUnknown)?;
+
+        Self::do_burn(owner, *class, *instance)?;
+
+        Ok(())
+    }
+}
 
 impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
     fn transfer(class: &Self::ClassId, instance: &Self::InstanceId, destination: &T::AccountId) -> DispatchResult {

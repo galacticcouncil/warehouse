@@ -21,12 +21,13 @@
 
 use codec::HasCompact;
 use frame_support::{
-    dispatch::{DispatchResult, DispatchResultWithPostInfo},
+    dispatch::{DispatchResult},
     ensure,
     traits::{tokens::nonfungibles::*, Get, NamedReservableCurrency},
     transactional, BoundedVec,
 };
 use frame_system::ensure_signed;
+use pallet_uniques::DestroyWitness;
 
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, StaticLookup, Zero},
@@ -218,7 +219,7 @@ pub mod pallet {
         /// - `class_id`: The identifier of the asset class to be destroyed.
         #[pallet::weight(<T as Config>::WeightInfo::destroy_class())]
         #[transactional]
-        pub fn destroy_class(origin: OriginFor<T>, class_id: T::NftClassId) -> DispatchResultWithPostInfo {
+        pub fn destroy_class(origin: OriginFor<T>, class_id: T::NftClassId) -> DispatchResult{
             let sender = ensure_signed(origin)?;
 
             let class_type = Self::classes(class_id)
@@ -229,7 +230,7 @@ pub mod pallet {
 
             Self::do_destroy_class(sender, class_id)?;
 
-            Ok(().into())
+            Ok(())
         }
     }
 
@@ -403,7 +404,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    pub fn do_destroy_class(owner: T::AccountId, class_id: T::NftClassId) -> DispatchResultWithPostInfo {
+    pub fn do_destroy_class(owner: T::AccountId, class_id: T::NftClassId) -> DispatchResult{
         let witness =
             pallet_uniques::Pallet::<T>::get_destroy_witness(&class_id.into()).ok_or(Error::<T>::ClassUnknown)?;
 
@@ -412,7 +413,7 @@ impl<T: Config> Pallet<T> {
         Classes::<T>::remove(class_id);
 
         Self::deposit_event(Event::ClassDestroyed { owner, class_id });
-        Ok(().into())
+        Ok(())
     }
 }
 
@@ -483,25 +484,21 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
 
     fn destroy(
         class: Self::ClassId,
-        witness: Self::DestroyWitness,
-        maybe_check_owner: Option<T::AccountId>,
+        _witness: Self::DestroyWitness,
+        _maybe_check_owner: Option<T::AccountId>,
     ) -> Result<Self::DestroyWitness, DispatchError> {
         let class_type = Self::classes(class)
             .map(|c| c.class_type)
             .ok_or(Error::<T>::ClassUnknown)?;
 
         ensure!(T::Permissions::can_destroy(&class_type), Error::<T>::NotPermitted);
-        ensure!(witness.instances == 0u32, Error::<T>::TokenClassNotEmpty);
 
         let owner = Self::class_owner(class).ok_or(Error::<T>::ClassUnknown)?;
 
-        pallet_uniques::Pallet::<T>::do_destroy_class(class.into(), witness, maybe_check_owner)?;
+        Self::do_destroy_class(owner, class)?;
 
-        Classes::<T>::remove(class);
-
-        Self::deposit_event(Event::ClassDestroyed { owner, class_id: class });
-
-        Ok(witness)
+        // we can return empty struct here because we don't allow destroying a class with existing instances
+        Ok(DestroyWitness{ instances: 0, instance_metadatas: 0, attributes: 0})
     }
 }
 
@@ -541,11 +538,8 @@ impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
 
         ensure!(T::Permissions::can_transfer(&class_type), Error::<T>::NotPermitted);
 
-        pallet_uniques::Pallet::<T>::do_transfer(
-            Into::<<T as pallet_uniques::Config>::ClassId>::into(*class),
-            Into::<<T as pallet_uniques::Config>::InstanceId>::into(*instance),
-            destination.clone(),
-            |_, _| Ok(()),
-        )
+        let owner = Self::owner(*class, *instance).ok_or(Error::<T>::InstanceUnknown)?;
+
+        Self::do_transfer(*class, *instance, owner, destination.clone())
     }
 }

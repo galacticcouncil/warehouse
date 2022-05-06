@@ -347,10 +347,6 @@ fn nonfungible_traits_work() {
             instance_metadatas: 0,
             attributes: 0,
         };
-        assert_noop!(
-            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(CLASS_ID_0, empty_witness, Some(ALICE)),
-            pallet_uniques::Error::<Test>::BadWitness
-        );
 
         assert_ok!(NFTPallet::create_class(
             Origin::signed(ALICE),
@@ -358,14 +354,7 @@ fn nonfungible_traits_work() {
             Default::default(),
             metadata,
         ));
-        assert_noop!(
-            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(CLASS_ID_2, empty_witness, Some(BOB)),
-            pallet_uniques::Error::<Test>::NoPermission
-        );
-        assert_noop!(
-            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(CLASS_ID_2, witness, Some(ALICE)),
-            Error::<Test>::TokenClassNotEmpty
-        );
+
         assert_ok!(
             <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(CLASS_ID_2, empty_witness, Some(ALICE)),
             empty_witness

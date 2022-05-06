@@ -452,7 +452,7 @@ impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
     }
 
     fn owned(who: &T::AccountId) -> Box<dyn Iterator<Item = (Self::ClassId, Self::InstanceId)>> {
-        Box::new(pallet_uniques::Pallet::<T>::owned(who).map(|i| (i.0.into(), i.1.into())))
+        Box::new(pallet_uniques::Pallet::<T>::owned(who).map(|(class_id, instance_id)| (class_id.into(), instance_id.into())))
     }
 
     fn owned_in_class(class: &Self::ClassId, who: &T::AccountId) -> Box<dyn Iterator<Item = Self::InstanceId>> {

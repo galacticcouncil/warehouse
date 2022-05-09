@@ -408,7 +408,9 @@ impl<T: Config> Pallet<T> {
         let witness =
             pallet_uniques::Pallet::<T>::get_destroy_witness(&class_id.into()).ok_or(Error::<T>::ClassUnknown)?;
 
+        // witness struct is empty because we don't allow destroying a class with existing instances
         ensure!(witness.instances == 0u32, Error::<T>::TokenClassNotEmpty);
+        
         pallet_uniques::Pallet::<T>::do_destroy_class(class_id.into(), witness, Some(owner.clone()))?;
         Classes::<T>::remove(class_id);
 
@@ -492,7 +494,7 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
 
         Self::do_destroy_class(owner, class)?;
 
-        // we can return empty struct here because we don't allow destroying a class with existing instances
+        // We can return empty struct here because we don't allow destroying a class with existing instances
         Ok(DestroyWitness {
             instances: 0,
             instance_metadatas: 0,

@@ -21,7 +21,7 @@
 
 use codec::HasCompact;
 use frame_support::{
-    dispatch::{DispatchResult},
+    dispatch::DispatchResult,
     ensure,
     traits::{tokens::nonfungibles::*, Get, NamedReservableCurrency},
     transactional, BoundedVec,
@@ -125,10 +125,7 @@ pub mod pallet {
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
-            ensure!(T::ReserveClassIdUpTo::get() < class_id, Error::<T>::IdReserved);
-            ensure!(T::Permissions::can_create(&class_type), Error::<T>::NotPermitted);
-
-            Self::do_create_class(sender, class_id, Default::default(), metadata)?;
+            Self::do_create_class(sender, class_id, class_type, metadata)?;
 
             Ok(())
         }
@@ -149,12 +146,6 @@ pub mod pallet {
             metadata: BoundedVecOfUnq<T>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
-
-            let class_type = Self::classes(class_id)
-                .map(|c| c.class_type)
-                .ok_or(Error::<T>::ClassUnknown)?;
-
-            ensure!(T::Permissions::can_mint(&class_type), Error::<T>::NotPermitted);
 
             Self::do_mint(sender, class_id, instance_id, metadata)?;
 
@@ -181,12 +172,6 @@ pub mod pallet {
 
             let dest = T::Lookup::lookup(dest)?;
 
-            let class_type = Self::classes(class_id)
-                .map(|c| c.class_type)
-                .ok_or(Error::<T>::ClassUnknown)?;
-
-            ensure!(T::Permissions::can_transfer(&class_type), Error::<T>::NotPermitted);
-
             Self::do_transfer(class_id, instance_id, sender, dest)?;
 
             Ok(())
@@ -202,12 +187,6 @@ pub mod pallet {
         pub fn burn(origin: OriginFor<T>, class_id: T::NftClassId, instance_id: T::NftInstanceId) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
-            let class_type = Self::classes(class_id)
-                .map(|c| c.class_type)
-                .ok_or(Error::<T>::ClassUnknown)?;
-
-            ensure!(T::Permissions::can_burn(&class_type), Error::<T>::NotPermitted);
-
             Self::do_burn(sender, class_id, instance_id)?;
 
             Ok(())
@@ -219,14 +198,8 @@ pub mod pallet {
         /// - `class_id`: The identifier of the asset class to be destroyed.
         #[pallet::weight(<T as Config>::WeightInfo::destroy_class())]
         #[transactional]
-        pub fn destroy_class(origin: OriginFor<T>, class_id: T::NftClassId) -> DispatchResult{
+        pub fn destroy_class(origin: OriginFor<T>, class_id: T::NftClassId) -> DispatchResult {
             let sender = ensure_signed(origin)?;
-
-            let class_type = Self::classes(class_id)
-                .map(|c| c.class_type)
-                .ok_or(Error::<T>::ClassUnknown)?;
-
-            ensure!(T::Permissions::can_destroy(&class_type), Error::<T>::NotPermitted);
 
             Self::do_destroy_class(sender, class_id)?;
 
@@ -300,12 +273,15 @@ impl<T: Config> Pallet<T> {
         pallet_uniques::Pallet::<T>::owner(class_id.into(), instance_id.into())
     }
 
-    pub fn do_create_class(
+    fn do_create_class(
         owner: T::AccountId,
         class_id: T::NftClassId,
         class_type: T::ClassType,
         metadata: BoundedVecOfUnq<T>,
     ) -> Result<(T::NftClassId, T::ClassType), DispatchError> {
+        ensure!(T::ReserveClassIdUpTo::get() < class_id, Error::<T>::IdReserved);
+        ensure!(T::Permissions::can_create(&class_type), Error::<T>::NotPermitted);
+
         let deposit_info = match T::Permissions::has_deposit(&class_type) {
             false => (Zero::zero(), true),
             true => (T::ClassDeposit::get(), false),
@@ -335,12 +311,18 @@ impl<T: Config> Pallet<T> {
         Ok((class_id, class_type))
     }
 
-    pub fn do_mint(
+    fn do_mint(
         owner: T::AccountId,
         class_id: T::NftClassId,
         instance_id: T::NftInstanceId,
         metadata: BoundedVecOfUnq<T>,
     ) -> Result<T::NftInstanceId, DispatchError> {
+        let class_type = Self::classes(class_id)
+            .map(|c| c.class_type)
+            .ok_or(Error::<T>::ClassUnknown)?;
+
+        ensure!(T::Permissions::can_mint(&class_type), Error::<T>::NotPermitted);
+
         pallet_uniques::Pallet::<T>::do_mint(class_id.into(), instance_id.into(), owner.clone(), |_details| Ok(()))?;
 
         Instances::<T>::insert(class_id, instance_id, InstanceInfo { metadata });
@@ -354,12 +336,18 @@ impl<T: Config> Pallet<T> {
         Ok(instance_id)
     }
 
-    pub fn do_transfer(
+    fn do_transfer(
         class_id: T::NftClassId,
         instance_id: T::NftInstanceId,
         from: T::AccountId,
         to: T::AccountId,
     ) -> DispatchResult {
+        let class_type = Self::classes(class_id)
+            .map(|c| c.class_type)
+            .ok_or(Error::<T>::ClassUnknown)?;
+
+        ensure!(T::Permissions::can_transfer(&class_type), Error::<T>::NotPermitted);
+
         if from == to {
             return Ok(());
         }
@@ -382,7 +370,13 @@ impl<T: Config> Pallet<T> {
         )
     }
 
-    pub fn do_burn(owner: T::AccountId, class_id: T::NftClassId, instance_id: T::NftInstanceId) -> DispatchResult {
+    fn do_burn(owner: T::AccountId, class_id: T::NftClassId, instance_id: T::NftInstanceId) -> DispatchResult {
+        let class_type = Self::classes(class_id)
+            .map(|c| c.class_type)
+            .ok_or(Error::<T>::ClassUnknown)?;
+
+        ensure!(T::Permissions::can_burn(&class_type), Error::<T>::NotPermitted);
+
         pallet_uniques::Pallet::<T>::do_burn(
             class_id.into(),
             instance_id.into(),
@@ -404,7 +398,13 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    pub fn do_destroy_class(owner: T::AccountId, class_id: T::NftClassId) -> DispatchResult{
+    fn do_destroy_class(owner: T::AccountId, class_id: T::NftClassId) -> DispatchResult {
+        let class_type = Self::classes(class_id)
+            .map(|c| c.class_type)
+            .ok_or(Error::<T>::ClassUnknown)?;
+
+        ensure!(T::Permissions::can_destroy(&class_type), Error::<T>::NotPermitted);
+
         let witness =
             pallet_uniques::Pallet::<T>::get_destroy_witness(&class_id.into()).ok_or(Error::<T>::ClassUnknown)?;
 
@@ -449,7 +449,10 @@ impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
     }
 
     fn owned(who: &T::AccountId) -> Box<dyn Iterator<Item = (Self::ClassId, Self::InstanceId)>> {
-        Box::new(pallet_uniques::Pallet::<T>::owned(who).map(|(class_id, instance_id)| (class_id.into(), instance_id.into())))
+        Box::new(
+            pallet_uniques::Pallet::<T>::owned(who)
+                .map(|(class_id, instance_id)| (class_id.into(), instance_id.into())),
+        )
     }
 
     fn owned_in_class(class: &Self::ClassId, who: &T::AccountId) -> Box<dyn Iterator<Item = Self::InstanceId>> {
@@ -465,8 +468,6 @@ impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
 
 impl<T: Config> Create<T::AccountId> for Pallet<T> {
     fn create_class(class: &Self::ClassId, who: &T::AccountId, _admin: &T::AccountId) -> DispatchResult {
-        ensure!(T::ReserveClassIdUpTo::get() < *class, Error::<T>::IdReserved);
-
         Self::do_create_class(who.clone(), *class, Default::default(), BoundedVec::default())?;
 
         Ok(())
@@ -487,41 +488,27 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
         _witness: Self::DestroyWitness,
         _maybe_check_owner: Option<T::AccountId>,
     ) -> Result<Self::DestroyWitness, DispatchError> {
-        let class_type = Self::classes(class)
-            .map(|c| c.class_type)
-            .ok_or(Error::<T>::ClassUnknown)?;
-
-        ensure!(T::Permissions::can_destroy(&class_type), Error::<T>::NotPermitted);
-
         let owner = Self::class_owner(class).ok_or(Error::<T>::ClassUnknown)?;
 
         Self::do_destroy_class(owner, class)?;
 
         // we can return empty struct here because we don't allow destroying a class with existing instances
-        Ok(DestroyWitness{ instances: 0, instance_metadatas: 0, attributes: 0})
+        Ok(DestroyWitness {
+            instances: 0,
+            instance_metadatas: 0,
+            attributes: 0,
+        })
     }
 }
 
 impl<T: Config> Mutate<T::AccountId> for Pallet<T> {
     fn mint_into(class: &Self::ClassId, instance: &Self::InstanceId, who: &T::AccountId) -> DispatchResult {
-       let class_type = Self::classes(class)
-                .map(|c| c.class_type)
-                .ok_or(Error::<T>::ClassUnknown)?;
-
-        ensure!(T::Permissions::can_mint(&class_type), Error::<T>::NotPermitted);
-
         Self::do_mint(who.clone(), *class, *instance, BoundedVec::default())?;
 
         Ok(())
     }
 
     fn burn_from(class: &Self::ClassId, instance: &Self::InstanceId) -> DispatchResult {
-        let class_type = Self::classes(class)
-                .map(|c| c.class_type)
-                .ok_or(Error::<T>::ClassUnknown)?;
-
-        ensure!(T::Permissions::can_burn(&class_type), Error::<T>::NotPermitted);
-
         let owner = Self::owner(*class, *instance).ok_or(Error::<T>::InstanceUnknown)?;
 
         Self::do_burn(owner, *class, *instance)?;
@@ -532,12 +519,6 @@ impl<T: Config> Mutate<T::AccountId> for Pallet<T> {
 
 impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
     fn transfer(class: &Self::ClassId, instance: &Self::InstanceId, destination: &T::AccountId) -> DispatchResult {
-        let class_type = Self::classes(class)
-            .map(|c| c.class_type)
-            .ok_or(Error::<T>::ClassUnknown)?;
-
-        ensure!(T::Permissions::can_transfer(&class_type), Error::<T>::NotPermitted);
-
         let owner = Self::owner(*class, *instance).ok_or(Error::<T>::InstanceUnknown)?;
 
         Self::do_transfer(*class, *instance, owner, destination.clone())

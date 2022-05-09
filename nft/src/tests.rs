@@ -32,30 +32,35 @@ fn create_class_works() {
         assert_ok!(NFTPallet::create_class(
             Origin::signed(ALICE),
             CLASS_ID_0,
-            Default::default(),
+            Default::default(), // Marketplace
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::create_class(
-            Origin::signed(ALICE),
-            CLASS_ID_1,
-            ClassType::Marketplace,
-            metadata.clone()
-        ));
+        assert_eq!(
+            NFTPallet::classes(CLASS_ID_0).unwrap(),
+            ClassInfo {
+                class_type: ClassType::Marketplace,
+                metadata: metadata.clone()
+            }
+        );
+
+        // not allowed in Permissions
+        assert_noop!(
+            NFTPallet::create_class(Origin::signed(ALICE), CLASS_ID_2, ClassType::Auction, metadata.clone()),
+            Error::<Test>::NotPermitted
+        );
+
+        // existing class ID
         assert_noop!(
             NFTPallet::create_class(
                 Origin::signed(ALICE),
-                CLASS_ID_2,
+                CLASS_ID_0,
                 ClassType::LiquidityMining,
                 metadata.clone()
             ),
-            Error::<Test>::NotPermitted
+            pallet_uniques::Error::<Test>::InUse
         );
-        assert_ok!(NFTPallet::do_create_class(
-            ALICE,
-            CLASS_ID_2,
-            ClassType::LiquidityMining,
-            metadata.clone()
-        ));
+
+        // reserved class ID
         assert_noop!(
             NFTPallet::create_class(
                 Origin::signed(ALICE),
@@ -77,46 +82,55 @@ fn mint_works() {
         assert_ok!(NFTPallet::create_class(
             Origin::signed(ALICE),
             CLASS_ID_0,
-            Default::default(),
+            Default::default(), // Marketplace
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::do_create_class(
-            ALICE,
+        assert_ok!(NFTPallet::create_class(
+            Origin::signed(ALICE),
             CLASS_ID_1,
-            ClassType::LiquidityMining,
+            ClassType::Redeemable,
             metadata.clone()
         ));
+
         assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
             CLASS_ID_0,
             INSTANCE_ID_0,
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(BOB),
-            CLASS_ID_0,
-            INSTANCE_ID_1,
-            metadata.clone()
-        ));
+        assert_eq!(
+            NFTPallet::instances(CLASS_ID_0, INSTANCE_ID_0).unwrap(),
+            InstanceInfo {
+                metadata: metadata.clone()
+            }
+        );
+
+        // duplicate instance
         assert_noop!(
-            NFTPallet::mint(Origin::signed(ALICE), CLASS_ID_1, INSTANCE_ID_2, metadata.clone()),
+            NFTPallet::mint(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0, metadata.clone()),
+            pallet_uniques::Error::<Test>::AlreadyExists
+        );
+
+        // not allowed in Permissions
+        assert_noop!(
+            NFTPallet::mint(Origin::signed(ALICE), CLASS_ID_1, INSTANCE_ID_0, metadata.clone()),
             Error::<Test>::NotPermitted
         );
-        assert_ok!(NFTPallet::do_mint(ALICE, CLASS_ID_1, INSTANCE_ID_2, metadata.clone()));
 
-        assert_ok!(NFTPallet::create_class(
-            Origin::signed(ALICE),
-            CLASS_ID_2,
-            Default::default(),
-            metadata.clone()
-        ));
+        // not owner
         assert_noop!(
-            NFTPallet::mint(Origin::signed(ALICE), NON_EXISTING_CLASS_ID, INSTANCE_ID_0, metadata),
-            Error::<Test>::ClassUnknown
+            NFTPallet::mint(Origin::signed(BOB), CLASS_ID_1, INSTANCE_ID_0, metadata.clone()),
+            Error::<Test>::NotPermitted
         );
 
+        // invalid class ID
         assert_noop!(
-            NFTPallet::destroy_class(Origin::signed(ALICE), NON_EXISTING_CLASS_ID),
+            NFTPallet::mint(
+                Origin::signed(ALICE),
+                NON_EXISTING_CLASS_ID,
+                INSTANCE_ID_0,
+                metadata
+            ),
             Error::<Test>::ClassUnknown
         );
     });
@@ -134,50 +148,58 @@ fn transfer_works() {
             Default::default(),
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::do_create_class(
-            ALICE,
+        assert_ok!(NFTPallet::create_class(
+            Origin::signed(ALICE),
             CLASS_ID_1,
             ClassType::LiquidityMining,
             metadata.clone()
         ));
-        assert_eq!(Balances::free_balance(ALICE), 190_000 * BSX);
         assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
             CLASS_ID_0,
             INSTANCE_ID_0,
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::do_mint(ALICE, CLASS_ID_1, INSTANCE_ID_0, metadata));
-        assert_eq!(Balances::free_balance(ALICE), 189_900 * BSX);
-        assert_ok!(NFTPallet::transfer(
+        assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
-            CLASS_ID_0,
+            CLASS_ID_1,
             INSTANCE_ID_0,
-            BOB
+            metadata
         ));
+
+        // not existing
+        assert_noop!(
+            NFTPallet::transfer(Origin::signed(CHARLIE), CLASS_ID_2, INSTANCE_ID_0, ALICE),
+            Error::<Test>::ClassUnknown
+        );
+
+        // not owner
         assert_noop!(
             NFTPallet::transfer(Origin::signed(CHARLIE), CLASS_ID_0, INSTANCE_ID_0, ALICE),
             Error::<Test>::NotPermitted
         );
+
+        // not allowed in Permissions
+        assert_noop!(
+            NFTPallet::transfer(Origin::signed(ALICE), CLASS_ID_1, INSTANCE_ID_0, BOB),
+            Error::<Test>::NotPermitted
+        );
+
         assert_ok!(NFTPallet::transfer(
             Origin::signed(ALICE),
-            CLASS_ID_1,
+            CLASS_ID_0,
+            INSTANCE_ID_0,
+            ALICE
+        ));
+        assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0).unwrap(), ALICE);
+
+        assert_ok!(NFTPallet::transfer(
+            Origin::signed(ALICE),
+            CLASS_ID_0,
             INSTANCE_ID_0,
             BOB
         ));
-        assert_ok!(NFTPallet::do_transfer(CLASS_ID_1, INSTANCE_ID_0, BOB, CHARLIE));
-        assert_eq!(Balances::free_balance(BOB), 150_000 * BSX);
-        assert_ok!(NFTPallet::transfer(Origin::signed(BOB), CLASS_ID_0, INSTANCE_ID_0, BOB));
-        assert_eq!(Balances::free_balance(BOB), 150_000 * BSX);
-        assert_ok!(NFTPallet::transfer(
-            Origin::signed(BOB),
-            CLASS_ID_0,
-            INSTANCE_ID_0,
-            CHARLIE
-        ));
-        assert_eq!(Balances::free_balance(ALICE), 189_900 * BSX);
-        assert_eq!(Balances::free_balance(BOB), 150_000 * BSX);
-        assert_eq!(Balances::free_balance(CHARLIE), 15_000 * BSX);
+        assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0).unwrap(), BOB);
     });
 }
 
@@ -193,8 +215,8 @@ fn burn_works() {
             Default::default(),
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::do_create_class(
-            ALICE,
+        assert_ok!(NFTPallet::create_class(
+            Origin::signed(ALICE),
             CLASS_ID_1,
             ClassType::LiquidityMining,
             metadata.clone()
@@ -205,18 +227,39 @@ fn burn_works() {
             INSTANCE_ID_0,
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::do_mint(BOB, CLASS_ID_1, INSTANCE_ID_0, metadata));
+        assert_ok!(NFTPallet::mint(
+            Origin::signed(ALICE),
+            CLASS_ID_0,
+            INSTANCE_ID_1,
+            metadata.clone()
+        ));
+        assert_ok!(NFTPallet::mint(
+            Origin::signed(ALICE),
+            CLASS_ID_1,
+            INSTANCE_ID_0,
+            metadata
+        ));
 
+        // not owner
         assert_noop!(
             NFTPallet::burn(Origin::signed(BOB), CLASS_ID_0, INSTANCE_ID_0),
             Error::<Test>::NotPermitted
         );
+
+        // not allowed in Permissions
         assert_noop!(
-            NFTPallet::burn(Origin::signed(BOB), CLASS_ID_1, INSTANCE_ID_0),
+            NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_1, INSTANCE_ID_0),
             Error::<Test>::NotPermitted
         );
 
         assert_ok!(NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0));
+        assert!(!<Instances<Test>>::contains_key(CLASS_ID_0, INSTANCE_ID_0));
+
+        // not existing
+        assert_noop!(
+            NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0),
+            pallet_uniques::Error::<Test>::Unknown
+        );
     });
 }
 
@@ -229,41 +272,87 @@ fn destroy_class_works() {
         assert_ok!(NFTPallet::create_class(
             Origin::signed(ALICE),
             CLASS_ID_0,
-            Default::default(),
+            Default::default(), // Marketplace
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::do_create_class(
-            ALICE,
+        assert_ok!(NFTPallet::create_class(
+            Origin::signed(ALICE),
             CLASS_ID_1,
-            ClassType::LiquidityMining,
+            ClassType::Redeemable,
             metadata.clone()
         ));
         assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
             CLASS_ID_0,
             INSTANCE_ID_0,
-            metadata.clone()
+            metadata
         ));
-        assert_ok!(NFTPallet::do_mint(BOB, CLASS_ID_1, INSTANCE_ID_0, metadata));
 
+        // existing instance
         assert_noop!(
             NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0),
             Error::<Test>::TokenClassNotEmpty
         );
-
         assert_ok!(NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0));
-        assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
+
+        // not allowed in Permissions
         assert_noop!(
             NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_1),
             Error::<Test>::NotPermitted
         );
-        assert_ok!(NFTPallet::do_burn(BOB, CLASS_ID_1, INSTANCE_ID_0));
-        assert_ok!(NFTPallet::do_destroy_class(ALICE, CLASS_ID_1));
+
+        assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
+        assert_eq!(NFTPallet::classes(CLASS_ID_0), None);
+
+        // not existing
         assert_noop!(
             NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0),
             Error::<Test>::ClassUnknown
         );
     });
+}
+
+#[test]
+fn deposit_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
+            b"metadata".to_vec().try_into().unwrap();
+
+        let class_deposit = <Test as pallet_uniques::Config>::ClassDeposit::get();
+        let initial_balance = <Test as Config>::Currency::free_balance(&ALICE);
+
+        // has deposit
+        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+        assert_ok!(NFTPallet::create_class(
+            Origin::signed(ALICE),
+            CLASS_ID_0,
+            ClassType::Marketplace,
+            metadata.clone()
+        ));
+        assert_eq!(
+            <Test as Config>::Currency::free_balance(&ALICE),
+            initial_balance - class_deposit
+        );
+        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), class_deposit);
+
+        assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
+        assert_eq!(<Test as Config>::Currency::free_balance(&ALICE), initial_balance);
+        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+
+        // no deposit
+        assert_ok!(NFTPallet::create_class(
+            Origin::signed(ALICE),
+            CLASS_ID_0,
+            ClassType::LiquidityMining,
+            metadata
+        ));
+        assert_eq!(<Test as Config>::Currency::free_balance(&ALICE), initial_balance);
+        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+
+        assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
+        assert_eq!(<Test as Config>::Currency::free_balance(&ALICE), initial_balance);
+        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+    })
 }
 
 #[test]
@@ -287,15 +376,40 @@ fn nonfungible_traits_work() {
         ));
 
         // `Inspect` trait
-        assert_eq!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_0, &INSTANCE_ID_0), Some(BOB));
-        assert_eq!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_1, &INSTANCE_ID_0), None);
-        assert_eq!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_0, &INSTANCE_ID_1), None);
+        assert_eq!(
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_0, &INSTANCE_ID_0),
+            Some(BOB)
+        );
+        assert_eq!(
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_1, &INSTANCE_ID_0),
+            None
+        );
+        assert_eq!(
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_0, &INSTANCE_ID_1),
+            None
+        );
 
-        assert_eq!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::class_owner(&CLASS_ID_0), Some(ALICE));
-        assert_eq!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::class_owner(&CLASS_ID_1), None);
+        assert_eq!(
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::class_owner(&CLASS_ID_0),
+            Some(ALICE)
+        );
+        assert_eq!(
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::class_owner(&CLASS_ID_1),
+            None
+        );
 
-        assert!(<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::can_transfer(&CLASS_ID_0, &INSTANCE_ID_0));
-        assert!(!<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::can_transfer(&CLASS_ID_1, &INSTANCE_ID_1));
+        assert!(
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::can_transfer(
+                &CLASS_ID_0,
+                &INSTANCE_ID_0
+            )
+        );
+        assert!(
+            !<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::can_transfer(
+                &CLASS_ID_1,
+                &INSTANCE_ID_1
+            )
+        );
 
         // `InspectEnumerable` trait
         assert_eq!(
@@ -309,11 +423,16 @@ fn nonfungible_traits_work() {
             vec![INSTANCE_ID_0]
         );
         assert_eq!(
-            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned(&BOB).collect::<Vec<(ClassId, InstanceId)>>(),
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned(&BOB)
+                .collect::<Vec<(ClassId, InstanceId)>>(),
             vec![(CLASS_ID_0, INSTANCE_ID_0)]
         );
         assert_eq!(
-            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned_in_class(&CLASS_ID_0, &BOB).collect::<Vec<InstanceId>>(),
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned_in_class(
+                &CLASS_ID_0,
+                &BOB
+            )
+            .collect::<Vec<InstanceId>>(),
             vec![INSTANCE_ID_0]
         );
 
@@ -327,7 +446,9 @@ fn nonfungible_traits_work() {
         );
 
         // `Destroy` trait
-        let witness = <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::get_destroy_witness(&CLASS_ID_0).unwrap();
+        let witness =
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::get_destroy_witness(&CLASS_ID_0)
+                .unwrap();
 
         assert_eq!(
             witness,
@@ -338,7 +459,11 @@ fn nonfungible_traits_work() {
             }
         );
         assert_noop!(
-            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(CLASS_ID_0, witness, Some(ALICE)),
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
+                CLASS_ID_0,
+                witness,
+                Some(ALICE)
+            ),
             Error::<Test>::TokenClassNotEmpty
         );
 
@@ -356,16 +481,34 @@ fn nonfungible_traits_work() {
         ));
 
         assert_ok!(
-            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(CLASS_ID_2, empty_witness, Some(ALICE)),
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
+                CLASS_ID_2,
+                empty_witness,
+                Some(ALICE)
+            ),
             empty_witness
         );
 
         // `Mutate` trait
-        assert_noop!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(&CLASS_ID_2, &INSTANCE_ID_1, &BOB),
-            Error::<Test>::ClassUnknown);
-        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(&CLASS_ID_0, &INSTANCE_ID_1, &BOB));
+        assert_noop!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
+                &CLASS_ID_2,
+                &INSTANCE_ID_1,
+                &BOB
+            ),
+            Error::<Test>::ClassUnknown
+        );
+        assert_ok!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
+                &CLASS_ID_0,
+                &INSTANCE_ID_1,
+                &BOB
+            )
+        );
 
-        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn_from(&CLASS_ID_0, &INSTANCE_ID_1));
+        assert_ok!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn_from(&CLASS_ID_0, &INSTANCE_ID_1)
+        );
         assert!(!<Instances<Test>>::contains_key(CLASS_ID_0, INSTANCE_ID_1));
 
         // `Transfer` trait

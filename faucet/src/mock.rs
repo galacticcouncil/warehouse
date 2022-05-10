@@ -18,7 +18,7 @@
 use crate as faucet;
 use crate::Config;
 use frame_support::parameter_types;
-use frame_support::traits::{Everything, Nothing, GenesisBuild};
+use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;

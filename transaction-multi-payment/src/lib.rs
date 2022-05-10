@@ -500,8 +500,8 @@ where
                 PaymentInfo::NonNative(paid_fee, currency, price) => {
                     // calculate corrected_fee in the non-native currency
                     let converted_corrected_fee = price.checked_mul_int(corrected_fee).ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-                    let converted_fee = paid_fee.saturating_sub(converted_corrected_fee);
-                    MC::transfer(currency.into(), &fee_receiver, who, converted_fee.into())
+                    let refund = paid_fee.saturating_sub(converted_corrected_fee);
+                    MC::transfer(currency.into(), &fee_receiver, who, refund.into())
                         .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
                 },
             };

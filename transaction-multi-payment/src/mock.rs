@@ -34,7 +34,7 @@ use hydradx_traits::AssetPairAccountIdFor;
 use orml_currencies::BasicCurrencyAdapter;
 use std::cell::RefCell;
 
-use frame_support::traits::{Everything, Nothing, GenesisBuild, Get};
+use frame_support::traits::{Everything, GenesisBuild, Get, Nothing};
 use hydradx_traits::pools::SpotPriceProvider;
 
 pub type AccountId = u64;
@@ -247,7 +247,7 @@ impl Default for ExtBuilder {
             native_balances: vec![(ALICE, INITIAL_BALANCE)],
             endowed_accounts: vec![
                 (ALICE, HDX, INITIAL_BALANCE),
-                (ALICE, SUPPORTED_CURRENCY, INITIAL_BALANCE),  // used for fallback price test
+                (ALICE, SUPPORTED_CURRENCY, INITIAL_BALANCE), // used for fallback price test
                 (ALICE, SUPPORTED_CURRENCY_WITH_PRICE, INITIAL_BALANCE),
             ],
 

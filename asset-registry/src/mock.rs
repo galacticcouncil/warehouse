@@ -1,4 +1,4 @@
-// This file is part of HydraDX.
+// This file is part of pallet-asset-registry.
 
 // Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
@@ -15,23 +15,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate as faucet;
-use crate::Config;
+#![cfg(test)]
+
 use frame_support::parameter_types;
-use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
-use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup, One},
+    traits::{BlakeTwo256, IdentityLookup},
 };
+
+use frame_support::traits::{Everything, GenesisBuild};
+
+use polkadot_xcm::v0::MultiLocation;
+
+use crate::{self as asset_registry, Config};
+
+pub type AssetId = u32;
+pub type Balance = u128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-
-type AssetId = u32;
-type Balance = u128;
 
 frame_support::construct_runtime!(
     pub enum Test where
@@ -40,14 +44,16 @@ frame_support::construct_runtime!(
      UncheckedExtrinsic = UncheckedExtrinsic,
      {
          System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-         Faucet: faucet::{Pallet, Call,Config, Storage, Event<T>},
-         Currency: orml_tokens::{Pallet, Event<T>},
+         Registry: asset_registry::{Pallet, Call, Storage, Event<T>},
      }
+
 );
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
     pub const SS58Prefix: u8 = 63;
+    pub const NativeAssetId: AssetId = 0;
+    pub const RegistryStringLimit: u32 = 10;
 }
 
 impl system::Config for Test {
@@ -63,7 +69,7 @@ impl system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = ();
+    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -77,88 +83,70 @@ impl system::Config for Test {
     type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-pub type Amount = i128;
+use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 
-parameter_type_with_key! {
-    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-        One::one()
-    };
-}
+#[derive(Debug, Encode, Decode, Clone, PartialEq, Eq, TypeInfo)]
+pub struct AssetLocation(pub MultiLocation);
 
-impl orml_tokens::Config for Test {
-    type Event = ();
-    type Balance = Balance;
-    type Amount = Amount;
-    type CurrencyId = AssetId;
-    type WeightInfo = ();
-    type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = ();
-    type MaxLocks = ();
-    type DustRemovalWhitelist = Nothing;
+impl Default for AssetLocation {
+    fn default() -> Self {
+        AssetLocation(MultiLocation::Null)
+    }
 }
 
 impl Config for Test {
-    type Event = ();
-    type Currency = Currency;
+    type Event = Event;
+    type RegistryOrigin = frame_system::EnsureRoot<u64>;
+    type AssetId = u32;
+    type Balance = Balance;
+    type AssetNativeLocation = AssetLocation;
+    type StringLimit = RegistryStringLimit;
+    type NativeAssetId = NativeAssetId;
+    type WeightInfo = ();
 }
+pub type AssetRegistryPallet = crate::Pallet<Test>;
 
-pub type AccountId = u64;
-
-pub const ALICE: AccountId = 1;
-
-pub const HDX: AssetId = 1000;
-
+#[derive(Default)]
 pub struct ExtBuilder {
-    endowed_accounts: Vec<(AccountId, AssetId, Balance)>,
-}
-
-// Returns default values for genesis config
-impl Default for ExtBuilder {
-    fn default() -> Self {
-        Self {
-            endowed_accounts: vec![(ALICE, HDX, 1000u128)],
-        }
-    }
+    assets: Vec<(Vec<u8>, Balance)>,
+    native_asset_name: Option<Vec<u8>>,
 }
 
 impl ExtBuilder {
-    pub fn build_rampage(self) -> sp_io::TestExternalities {
+    pub fn with_assets(mut self, assets: Vec<(Vec<u8>, Balance)>) -> Self {
+        self.assets = assets;
+        self
+    }
+
+    pub fn with_native_asset_name(mut self, name: Vec<u8>) -> Self {
+        self.native_asset_name = Some(name);
+        self
+    }
+
+    pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-        orml_tokens::GenesisConfig::<Test> {
-            balances: self.endowed_accounts,
+        if let Some(name) = self.native_asset_name {
+            crate::GenesisConfig::<Test> {
+                asset_names: self.assets,
+                native_asset_name: name,
+                native_existential_deposit: 1_000_000u128,
+            }
+        } else {
+            crate::GenesisConfig::<Test> {
+                asset_names: self.assets,
+                ..Default::default()
+            }
         }
         .assimilate_storage(&mut t)
         .unwrap();
-
-        faucet::GenesisConfig {
-            rampage: true,
-            mintable_currencies: vec![2000, 3000],
-            mint_limit: 5,
-        }
-        .assimilate_storage::<Test>(&mut t)
-        .unwrap();
-
         t.into()
     }
+}
 
-    pub fn build_live(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-        crate::GenesisConfig {
-            rampage: false,
-            mintable_currencies: vec![2000, 3000],
-            mint_limit: 5,
-        }
-        .assimilate_storage::<Test>(&mut t)
-        .unwrap();
-
-        orml_tokens::GenesisConfig::<Test> {
-            balances: self.endowed_accounts,
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
-
-        t.into()
-    }
+pub fn new_test_ext() -> sp_io::TestExternalities {
+    let mut ext = ExtBuilder::default().build();
+    ext.execute_with(|| System::set_block_number(1));
+    ext
 }

@@ -133,6 +133,76 @@ fn set_currency_with_insufficient_balance() {
 }
 
 #[test]
+fn fee_payment_in_native_currency() {
+    const CHARLIE: AccountId = 5;
+
+    ExtBuilder::default()
+        .base_weight(5)
+        .account_native_balance(CHARLIE, 100)
+        .build()
+        .execute_with(|| {
+            let len = 10;
+            let info = info_from_weight(5);
+
+            assert!(ChargeTransactionPayment::<Test>::from(0)
+                .pre_dispatch(&CHARLIE, CALL, &info, len)
+                .is_ok());
+
+            assert_eq!(Balances::free_balance(CHARLIE), 100 - 5 - 5 - 10);
+        });
+}
+
+#[test]
+fn fee_payment_in_non_native_currency() {
+    const CHARLIE: AccountId = 5;
+
+    ExtBuilder::default()
+        .base_weight(5)
+        .account_tokens(CHARLIE, SUPPORTED_CURRENCY_WITH_PRICE, 10_000)
+        .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY_WITH_PRICE)])
+        .build()
+        .execute_with(|| {
+            // Make sure Charlie ain't got a penny!
+            assert_eq!(Balances::free_balance(CHARLIE), 0);
+
+            let len = 1000;
+            let info = info_from_weight(5);
+
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &CHARLIE), 10_000);
+
+            assert!(ChargeTransactionPayment::<Test>::from(0)
+                .pre_dispatch(&CHARLIE, CALL, &info, len)
+                .is_ok());
+
+            //Native balance check - Charlie should be still broke!
+            assert_eq!(Balances::free_balance(CHARLIE), 0);
+
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &CHARLIE), 9899);
+        });
+}
+
+#[test]
+fn fee_payment_non_native_insufficient_balance() {
+    const CHARLIE: AccountId = 5;
+
+    ExtBuilder::default()
+        .base_weight(5)
+        .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 100)
+        .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
+        .build()
+        .execute_with(|| {
+            let len = 1000;
+            let info = info_from_weight(5);
+
+            assert!(ChargeTransactionPayment::<Test>::from(0)
+                .pre_dispatch(&CHARLIE, CALL, &info, len)
+                .is_err());
+
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 100);
+        });
+}
+
+#[test]
 fn add_new_accepted_currency() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
         assert_ok!(PaymentPallet::add_currency(Origin::root(), 100, Price::from_float(1.1)));
@@ -487,10 +557,8 @@ fn fee_payment_in_native_currency_with_no_balance() {
         .build()
         .execute_with(|| {
             let len = 10;
-            let info = DispatchInfo {
-                weight: 5,
-                ..Default::default()
-            };
+            let info = info_from_weight(5);
+
             assert!(ChargeTransactionPayment::<Test>::from(0)
                 .pre_dispatch(&CHARLIE, CALL, &info, len)
                 .is_err());
@@ -511,10 +579,7 @@ fn fee_payment_in_non_native_currency_with_no_balance() {
         .build()
         .execute_with(|| {
             let len = 1000;
-            let info = DispatchInfo {
-                weight: 5,
-                ..Default::default()
-            };
+            let info = info_from_weight(5);
 
             assert!(ChargeTransactionPayment::<Test>::from(0)
                 .pre_dispatch(&CHARLIE, CALL, &info, len)
@@ -567,10 +632,7 @@ fn fee_payment_in_unregistered_currency() {
         .build()
         .execute_with(|| {
             let len = 1000;
-            let info = DispatchInfo {
-                weight: 5,
-                ..Default::default()
-            };
+            let info = info_from_weight(5);
 
             assert_ok!(PaymentPallet::remove_currency(Origin::root(), SUPPORTED_CURRENCY));
 
@@ -593,10 +655,7 @@ fn fee_payment_non_native_insufficient_balance_with_no_pool() {
         .build()
         .execute_with(|| {
             let len = 1000;
-            let info = DispatchInfo {
-                weight: 5,
-                ..Default::default()
-            };
+            let info = info_from_weight(5);
 
             assert!(ChargeTransactionPayment::<Test>::from(0)
                 .pre_dispatch(&CHARLIE, CALL, &info, len)

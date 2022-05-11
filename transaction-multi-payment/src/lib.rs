@@ -383,7 +383,9 @@ where
         Ok(())
     }
 
-    fn get_currency_and_price(who: &<T as frame_system::Config>::AccountId) -> Result<(AssetIdOf<T>, Option<Price>), DispatchError> {
+    fn get_currency_and_price(
+        who: &<T as frame_system::Config>::AccountId,
+    ) -> Result<(AssetIdOf<T>, Option<Price>), DispatchError> {
         let native_currency = T::NativeAssetId::get();
         let currency = Self::account_currency(who);
         if currency == T::NativeAssetId::get() {
@@ -405,40 +407,35 @@ where
     }
 }
 
-impl<T: Config> TransactionMultiPaymentDataProvider<<T as frame_system::Config>::AccountId, AssetIdOf<T>, Price> for Pallet<T>
+impl<T: Config> TransactionMultiPaymentDataProvider<<T as frame_system::Config>::AccountId, AssetIdOf<T>, Price>
+    for Pallet<T>
 where
     BalanceOf<T>: FixedPointOperand,
 {
-    fn get_currency_and_price(who: &<T as frame_system::Config>::AccountId) -> Result<(AssetIdOf<T>, Option<Price>), DispatchError> {
+    fn get_currency_and_price(
+        who: &<T as frame_system::Config>::AccountId,
+    ) -> Result<(AssetIdOf<T>, Option<Price>), DispatchError> {
         Self::get_currency_and_price(who)
     }
 
     fn get_fee_receiver() -> Option<<T as frame_system::Config>::AccountId> {
         Self::fee_receiver()
     }
-
 }
 
 /// Implements the transaction payment for native as well as non-native currencies
-pub struct TransferFees<C, MC, DP>(PhantomData<(C, MC, DP)>);
+pub struct TransferFees<MC, DP>(PhantomData<(MC, DP)>);
 
-impl<T, C, MC, DP> OnChargeTransaction<T> for TransferFees<C, MC, DP>
+impl<T, MC, DP> OnChargeTransaction<T> for TransferFees<MC, DP>
 where
     T: Config,
-    T::TransactionByteFee: Get<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance>,
-    C: Currency<<T as frame_system::Config>::AccountId>,
-    C::PositiveImbalance:
-        Imbalance<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance, Opposite = C::NegativeImbalance>,
-    C::NegativeImbalance:
-        Imbalance<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance, Opposite = C::PositiveImbalance>,
     MC: MultiCurrency<<T as frame_system::Config>::AccountId>,
     AssetIdOf<T>: Into<MC::CurrencyId>,
-    C::Balance: Into<MC::Balance>,
-    C::Balance: FixedPointOperand,
+    MC::Balance: FixedPointOperand,
     DP: TransactionMultiPaymentDataProvider<T::AccountId, AssetIdOf<T>, Price>,
 {
     type LiquidityInfo = Option<PaymentInfo<Self::Balance, AssetIdOf<T>, Price>>;
-    type Balance = <C as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    type Balance = <MC as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 
     /// Withdraw the predicted fee from the transaction origin.
     ///
@@ -453,25 +450,24 @@ where
         if fee.is_zero() {
             return Ok(None);
         }
-        let fee_receiver = DP::get_fee_receiver().ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-
         // get the currency in which fees are paid. In case of non-native currency, the price is required to calculate final fee.
-        let maybe_non_native = DP::get_currency_and_price(who).map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-        match maybe_non_native {
-            (_, None) => {
-                // match C::withdraw(who, fee, withdraw_reason, ExistenceRequirement::KeepAlive) {
-                match C::transfer(who, &fee_receiver, fee, ExistenceRequirement::KeepAlive) {
-                    Ok(()) => Ok(Some(PaymentInfo::Native(fee))),
-                    Err(_) => Err(InvalidTransaction::Payment.into()),
-                }
+        let currency_data = DP::get_currency_and_price(who)
+            .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+
+        match currency_data {
+            (_, None) => match MC::withdraw(T::NativeAssetId::get().into(), who, fee) {
+                Ok(()) => Ok(Some(PaymentInfo::Native(fee))),
+                Err(_) => Err(InvalidTransaction::Payment.into()),
             },
             (currency, Some(price)) => {
-                let converted_fee = price.checked_mul_int(fee).ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-                match MC::transfer(currency.into(), who, &fee_receiver, converted_fee.into()) {
+                let converted_fee = price
+                    .checked_mul_int(fee)
+                    .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+                match MC::withdraw(currency.into(), who, converted_fee) {
                     Ok(()) => Ok(Some(PaymentInfo::NonNative(converted_fee, currency, price))),
                     Err(_) => Err(InvalidTransaction::Payment.into()),
                 }
-            },
+            }
         }
     }
 
@@ -487,25 +483,36 @@ where
         _tip: Self::Balance,
         already_withdrawn: Self::LiquidityInfo,
     ) -> Result<(), TransactionValidityError> {
-        let fee_receiver = DP::get_fee_receiver().ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+        let fee_receiver =
+            DP::get_fee_receiver().ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
         if let Some(paid) = already_withdrawn {
-            // Calculate how much refund we should return and transfer the amount to the account that paid the fees
-            match paid {
-                PaymentInfo::Native(paid_fee) => {
-                    let refund_amount = paid_fee.saturating_sub(corrected_fee);
-                    C::transfer(&fee_receiver, who, refund_amount, ExistenceRequirement::KeepAlive)
-                        .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-                },
+            // Calculate how much refund we should return
+            let (currency, refund, fee) = match paid {
+                PaymentInfo::Native(paid_fee) => (
+                    T::NativeAssetId::get().into(),
+                    paid_fee.saturating_sub(corrected_fee),
+                    corrected_fee,
+                ),
                 PaymentInfo::NonNative(paid_fee, currency, price) => {
                     // calculate corrected_fee in the non-native currency
-                    let converted_corrected_fee = price.checked_mul_int(corrected_fee).ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+                    let converted_corrected_fee = price
+                        .checked_mul_int(corrected_fee)
+                        .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
                     let refund = paid_fee.saturating_sub(converted_corrected_fee);
-                    MC::transfer(currency.into(), &fee_receiver, who, refund.into())
-                        .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-                },
+                    (currency.into(), refund, converted_corrected_fee)
+                }
             };
+
+            // refund to the account that paid the fees
+            MC::deposit(currency, who, refund)
+                .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+
+            // deposit the fee
+            MC::deposit(currency, &fee_receiver, fee)
+                .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
         }
+
         Ok(())
     }
 }
@@ -652,9 +659,9 @@ where
         match call.is_sub_type() {
             Some(Call::set_currency { currency }) => match Pallet::<T>::check_balance(who, *currency) {
                 Ok(_) => Ok(()),
-                Err(error) => Err(TransactionValidityError::Invalid(
-                    InvalidTransaction::Custom(error.as_u8()),
-                )),
+                Err(error) => Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    error.as_u8(),
+                ))),
             },
             _ => Ok(()),
         }

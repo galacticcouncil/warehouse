@@ -171,7 +171,7 @@ impl pallet_balances::Config for Test {
 }
 
 impl pallet_transaction_payment::Config for Test {
-    type OnChargeTransaction = TransferFees<Balances, Tokens, PaymentPallet>;
+    type OnChargeTransaction = TransferFees<Currencies, PaymentPallet>;
     type TransactionByteFee = TransactionByteFee;
     type OperationalFeeMultiplier = ();
     type WeightToFee = IdentityFee<Balance>;

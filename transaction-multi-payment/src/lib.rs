@@ -561,9 +561,9 @@ where
         match call.is_sub_type() {
             Some(Call::set_currency { currency }) => match Pallet::<T>::check_balance(who, *currency) {
                 Ok(_) => Ok(()),
-                Err(error) => Err(TransactionValidityError::Invalid(
-                    InvalidTransaction::Custom(error.as_u8()),
-                )),
+                Err(error) => Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    error.as_u8(),
+                ))),
             },
             _ => Ok(()),
         }

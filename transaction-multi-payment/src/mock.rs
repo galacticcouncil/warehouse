@@ -24,7 +24,7 @@ use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup, Zero},
+    traits::{BlakeTwo256, IdentityLookup, One},
     Perbill,
 };
 
@@ -34,7 +34,7 @@ use hydradx_traits::AssetPairAccountIdFor;
 use orml_currencies::BasicCurrencyAdapter;
 use std::cell::RefCell;
 
-use frame_support::traits::{Everything, GenesisBuild, Get};
+use frame_support::traits::{Everything, GenesisBuild, Get, Nothing};
 use hydradx_traits::pools::SpotPriceProvider;
 
 pub type AccountId = u64;
@@ -52,8 +52,7 @@ pub const HDX: AssetId = 0;
 pub const SUPPORTED_CURRENCY: AssetId = 2000;
 pub const SUPPORTED_CURRENCY_WITH_PRICE: AssetId = 3000;
 pub const UNSUPPORTED_CURRENCY: AssetId = 4000;
-
-pub const SUPPORTED_CURRENCY_NO_BALANCE: AssetId = 5000;
+pub const SUPPORTED_CURRENCY_NO_BALANCE: AssetId = 5000; // Used for insufficient balance testing
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 const MAX_BLOCK_WEIGHT: Weight = 1024;
@@ -93,7 +92,7 @@ parameter_types! {
     pub const SS58Prefix: u8 = 63;
 
     pub const HdxAssetId: u32 = 0;
-    pub const ExistentialDeposit: u128 = 0;
+    pub const ExistentialDeposit: u128 = 1;
     pub const MaxLocks: u32 = 50;
     pub const TransactionByteFee: Balance = 1;
     pub const RegistryStringLimit: u32 = 100;
@@ -210,7 +209,7 @@ impl SpotPriceProvider<AssetId> for SpotPrice {
 
 parameter_type_with_key! {
     pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-        Zero::zero()
+        One::one()
     };
 }
 
@@ -223,7 +222,7 @@ impl orml_tokens::Config for Test {
     type ExistentialDeposits = ExistentialDeposits;
     type OnDust = ();
     type MaxLocks = ();
-    type DustRemovalWhitelist = Everything;
+    type DustRemovalWhitelist = Nothing;
 }
 
 impl orml_currencies::Config for Test {
@@ -245,11 +244,10 @@ impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
             base_weight: 0,
-            native_balances: vec![(ALICE, INITIAL_BALANCE), (BOB, 0)],
+            native_balances: vec![(ALICE, INITIAL_BALANCE)],
             endowed_accounts: vec![
                 (ALICE, HDX, INITIAL_BALANCE),
-                (ALICE, SUPPORTED_CURRENCY_NO_BALANCE, 0u128), // Used for insufficient balance testing
-                (ALICE, SUPPORTED_CURRENCY, INITIAL_BALANCE),  // used for fallback price test
+                (ALICE, SUPPORTED_CURRENCY, INITIAL_BALANCE), // used for fallback price test
                 (ALICE, SUPPORTED_CURRENCY_WITH_PRICE, INITIAL_BALANCE),
             ],
 

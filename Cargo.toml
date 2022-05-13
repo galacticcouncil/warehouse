@@ -10,6 +10,7 @@ members = [
 	"nft",
 	"asset-registry",
 	"adapters",
+	"collator-rewards",
 ]
 
 resolver = "2"

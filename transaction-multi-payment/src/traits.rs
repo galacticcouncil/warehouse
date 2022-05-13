@@ -1,4 +1,4 @@
-use frame_support::sp_runtime::DispatchError;
+use frame_support::sp_runtime::{DispatchError, DispatchResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PaymentInfo<Balance, AssetId, Price> {
@@ -22,5 +22,12 @@ pub trait CurrencyWithdraw<AccountId, Balance> {
     fn withdraw(
         who: &AccountId,
         fee: Balance,
-    ) -> Result<PaymentWithdrawResult, frame_support::sp_runtime::DispatchError>;
+    ) -> Result<PaymentWithdrawResult, DispatchError>;
+}
+
+pub trait DepositFee<AccountId, AssetId, Balance> {
+    fn deposit_fee(
+        who: &AccountId,
+        amounts: impl Iterator<Item = (AssetId, Balance)>,
+    ) -> DispatchResult;
 }

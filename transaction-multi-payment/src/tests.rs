@@ -20,7 +20,7 @@ use frame_support::{assert_err, assert_noop, assert_ok};
 use pallet_transaction_payment::ChargeTransactionPayment;
 use sp_runtime::traits::SignedExtension;
 
-use crate::traits::TransactionMultiPaymentDataProvider;
+use crate::traits::{DepositFee, TransactionMultiPaymentDataProvider};
 use crate::Price;
 use crate::{CurrencyBalanceCheck, PaymentInfo};
 use frame_support::sp_runtime::transaction_validity::{InvalidTransaction, ValidTransaction};
@@ -31,6 +31,41 @@ use sp_runtime::traits::BadOrigin;
 use sp_std::marker::PhantomData;
 
 const CALL: &<Test as frame_system::Config>::Call = &Call::Balances(BalancesCall::transfer { dest: 2, value: 69 });
+
+#[test]
+fn deposit_all_works() {
+    ExtBuilder::default()
+        .build()
+        .execute_with(|| {
+            let fees = Vec::new();
+            assert_ok!(DepositAll::deposit_fee(&ALICE, fees.into_iter()));
+
+            let fees = vec![(1, 1)];
+            assert_noop!(DepositAll::deposit_fee(&ALICE, fees.into_iter()),
+            orml_tokens::Error::<Test>::ExistentialDeposit);
+
+            let fees = vec![(1, 10), (1, 20), (1, 30)];
+            assert_ok!(DepositAll::deposit_fee(&ALICE, fees.into_iter()));
+            assert_eq!(Currencies::free_balance(1, &ALICE), 60);
+
+            let fees = vec![(1, 10), (2, 20), (1, 30)];
+            assert_ok!(DepositAll::deposit_fee(&ALICE, fees.into_iter()));
+            assert_eq!(Currencies::free_balance(1, &ALICE), 100);
+            assert_eq!(Currencies::free_balance(2, &ALICE), 20);
+
+            let fees = vec![(1, 10), (1, 20), (2, 30)];
+            assert_ok!(DepositAll::deposit_fee(&ALICE, fees.into_iter()));
+            assert_eq!(Currencies::free_balance(1, &ALICE), 130);
+            assert_eq!(Currencies::free_balance(2, &ALICE), 50);
+
+            let fees = vec![(1, 10), (2, 20), (3, 30)];
+            assert_ok!(DepositAll::deposit_fee(&ALICE, fees.into_iter()));
+            assert_eq!(Currencies::free_balance(1, &ALICE), 140);
+            assert_eq!(Currencies::free_balance(2, &ALICE), 70);
+            assert_eq!(Currencies::free_balance(3, &ALICE), 30);
+
+        });
+}
 
 #[test]
 fn set_unsupported_currency() {

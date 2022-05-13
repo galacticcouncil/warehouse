@@ -24,7 +24,7 @@ use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup, One},
+    traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
 
@@ -33,6 +33,7 @@ use frame_support::weights::Weight;
 use hydradx_traits::AssetPairAccountIdFor;
 use orml_currencies::BasicCurrencyAdapter;
 use std::cell::RefCell;
+use itertools::Itertools;
 
 use frame_support::traits::{Everything, GenesisBuild, Get, Nothing};
 use hydradx_traits::pools::SpotPriceProvider;
@@ -92,7 +93,7 @@ parameter_types! {
     pub const SS58Prefix: u8 = 63;
 
     pub const HdxAssetId: u32 = 0;
-    pub const ExistentialDeposit: u128 = 1;
+    pub const ExistentialDeposit: u128 = 2;
     pub const MaxLocks: u32 = 50;
     pub const TransactionByteFee: Balance = 1;
     pub const RegistryStringLimit: u32 = 100;
@@ -170,8 +171,28 @@ impl pallet_balances::Config for Test {
     type ReserveIdentifier = ();
 }
 
+pub struct DepositAll;
+
+impl DepositFee<AccountId, AssetId, Balance> for DepositAll{
+    fn deposit_fee(who: &AccountId, amounts: impl Iterator<Item = (AssetId, Balance)>) -> DispatchResult {
+        // merge items with the same asset ID
+        let amounts = amounts
+            .sorted_unstable_by(|a, b| Ord::cmp(&a.0, &b.0))
+            .coalesce(|a, b| if a.0 == b.0 {
+                Ok((a.0, a.1 + b.1))
+            } else {
+                Err((a, b))
+            });
+
+        for (currency, amount) in amounts {
+            orml_currencies::Pallet::<Test>::deposit(currency, who, amount)?;
+        }
+        Ok(())
+    }
+}
+
 impl pallet_transaction_payment::Config for Test {
-    type OnChargeTransaction = TransferFees<Currencies, PaymentPallet>;
+    type OnChargeTransaction = TransferFees<Currencies, PaymentPallet, DepositAll>;
     type TransactionByteFee = TransactionByteFee;
     type OperationalFeeMultiplier = ();
     type WeightToFee = IdentityFee<Balance>;
@@ -209,7 +230,7 @@ impl SpotPriceProvider<AssetId> for SpotPrice {
 
 parameter_type_with_key! {
     pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-        One::one()
+        2
     };
 }
 

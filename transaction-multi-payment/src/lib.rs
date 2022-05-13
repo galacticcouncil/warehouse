@@ -424,15 +424,16 @@ where
 }
 
 /// Implements the transaction payment for native as well as non-native currencies
-pub struct TransferFees<MC, DP>(PhantomData<(MC, DP)>);
+pub struct TransferFees<MC, DP, DF>(PhantomData<(MC, DP, DF)>);
 
-impl<T, MC, DP> OnChargeTransaction<T> for TransferFees<MC, DP>
+impl<T, MC, DP, DF> OnChargeTransaction<T> for TransferFees<MC, DP, DF>
 where
     T: Config,
     MC: MultiCurrency<<T as frame_system::Config>::AccountId>,
     AssetIdOf<T>: Into<MC::CurrencyId>,
     MC::Balance: FixedPointOperand,
     DP: TransactionMultiPaymentDataProvider<T::AccountId, AssetIdOf<T>, Price>,
+    DF: DepositFee<T::AccountId, MC::CurrencyId, MC::Balance>,
 {
     type LiquidityInfo = Option<PaymentInfo<Self::Balance, AssetIdOf<T>, Price>>;
     type Balance = <MC as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -480,7 +481,7 @@ where
         _dispatch_info: &DispatchInfoOf<T::Call>,
         _post_info: &PostDispatchInfoOf<T::Call>,
         corrected_fee: Self::Balance,
-        _tip: Self::Balance,
+        tip: Self::Balance,
         already_withdrawn: Self::LiquidityInfo,
     ) -> Result<(), TransactionValidityError> {
         let fee_receiver =
@@ -488,11 +489,12 @@ where
 
         if let Some(paid) = already_withdrawn {
             // Calculate how much refund we should return
-            let (currency, refund, fee) = match paid {
+            let (currency, refund, fee, tip) = match paid {
                 PaymentInfo::Native(paid_fee) => (
                     T::NativeAssetId::get().into(),
                     paid_fee.saturating_sub(corrected_fee),
-                    corrected_fee,
+                    corrected_fee.saturating_sub(tip),
+                    tip,
                 ),
                 PaymentInfo::NonNative(paid_fee, currency, price) => {
                     // calculate corrected_fee in the non-native currency
@@ -500,7 +502,10 @@ where
                         .checked_mul_int(corrected_fee)
                         .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
                     let refund = paid_fee.saturating_sub(converted_corrected_fee);
-                    (currency.into(), refund, converted_corrected_fee)
+                    let converted_tip = price
+                        .checked_mul_int(tip)
+                        .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+                    (currency.into(), refund, converted_corrected_fee.saturating_sub(converted_tip), converted_tip)
                 }
             };
 
@@ -509,7 +514,15 @@ where
                 .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
             // deposit the fee
-            MC::deposit(currency, &fee_receiver, fee)
+            let mut fee_amounts = Vec::new();
+            if !fee.is_zero() {
+                fee_amounts.push((currency, fee));
+            }
+            if !tip.is_zero() {
+                fee_amounts.push((currency, tip));
+            }
+
+            DF::deposit_fee(&fee_receiver, fee_amounts.into_iter())
                 .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
         }
 

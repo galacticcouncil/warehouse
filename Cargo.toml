@@ -9,6 +9,7 @@ members = [
 	"transaction-multi-payment",
 	"nft",
 	"asset-registry",
+	"adapters",
 ]
 
 resolver = "2"

@@ -213,3 +213,9 @@ pub trait CanCreatePool<AssetId> {
 pub trait LockedBalance<AssetId, AccountId, Balance> {
     fn get_by_lock(lock_id: LockIdentifier, currency_id: AssetId, who: AccountId) -> Balance;
 }
+
+/// Very simple price oracle trait.
+/// TODO: Properly define the price oracle interface.
+pub trait PriceOracle<AssetId, Price> {
+	fn price(currency: AssetId) -> Option<Price>;
+}

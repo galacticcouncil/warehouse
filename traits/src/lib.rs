@@ -217,5 +217,5 @@ pub trait LockedBalance<AssetId, AccountId, Balance> {
 /// Very simple price oracle trait.
 /// TODO: Properly define the price oracle interface.
 pub trait PriceOracle<AssetId, Price> {
-	fn price(currency: AssetId) -> Option<Price>;
+    fn price(currency: AssetId) -> Option<Price>;
 }

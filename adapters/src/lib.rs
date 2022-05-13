@@ -100,7 +100,7 @@ impl<
 
             let refund_asset = asset_loc.clone();
             if amount.is_zero() {
-                let key = (asset_loc.clone(), price.clone());
+                let key = (asset_loc.clone(), *price);
                 self.paid_assets.remove(&key);
             }
             Some((Concrete(refund_asset), refund).into())

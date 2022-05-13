@@ -365,7 +365,7 @@ impl<T: Config> Pallet<T> {
     ///
     /// Emits `FarmDestroyed` event when successful.
     #[transactional]
-    pub fn do_destroy_farm(who: AccountIdOf<T>, farm_id: GlobalPoolId) -> DispatchResult {
+    pub fn destroy_farm(who: AccountIdOf<T>, farm_id: GlobalPoolId) -> DispatchResult {
         <GlobalPoolData<T>>::try_mutate_exists(farm_id, |maybe_global_pool| -> DispatchResult {
             let global_pool = maybe_global_pool.as_ref().ok_or(Error::<T>::FarmNotFound)?;
 
@@ -397,7 +397,10 @@ impl<T: Config> Pallet<T> {
     ///
     /// Emits `UndistributedRewardsWithdrawn` event when successful.
     #[transactional]
-    pub fn do_withdraw_undistributed_rewards(who: AccountIdOf<T>, farm_id: GlobalPoolId) -> DispatchResult {
+    pub fn withdraw_undistributed_rewards(
+        who: AccountIdOf<T>,
+        farm_id: GlobalPoolId,
+    ) -> Result<(T::CurrencyId, Balance), DispatchError> {
         let global_pool = Self::global_pool(farm_id).ok_or(Error::<T>::FarmNotFound)?;
 
         ensure!(global_pool.owner == who, Error::<T>::Forbidden);
@@ -415,7 +418,7 @@ impl<T: Config> Pallet<T> {
             undistributed_reward,
         )?;
 
-        Ok(())
+        Ok((global_pool.reward_currency, undistributed_reward))
     }
 
     /// Add liquidity pool to farm and allow yield farming for given `asset_pair` amm.
@@ -436,13 +439,15 @@ impl<T: Config> Pallet<T> {
     ///
     /// Emits `LiquidityPoolAdded` event when successful.
     #[transactional]
-    pub fn do_add_liquidity_pool(
+    pub fn add_liquidity_pool(
         who: AccountIdOf<T>,
         farm_id: GlobalPoolId,
         multiplier: PoolMultiplier,
         loyalty_curve: Option<LoyaltyCurve>,
         amm_pool_id: AccountIdOf<T>,
-    ) -> DispatchResult {
+        asset_a: T::CurrencyId,
+        asset_b: T::CurrencyId,
+    ) -> Result<PoolId, DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T>::InvalidMultiplier);
 
         if let Some(ref curve) = loyalty_curve {
@@ -452,10 +457,15 @@ impl<T: Config> Pallet<T> {
             );
         }
 
-        <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_pool| -> DispatchResult {
+        <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_pool| -> Result<PoolId, DispatchError> {
             let global_pool = maybe_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
 
             ensure!(who == global_pool.owner, Error::<T>::Forbidden);
+
+            ensure!(
+                asset_a == global_pool.incentivized_asset || asset_b == global_pool.incentivized_asset,
+                Error::<T>::MissingIncentivizedAsset
+            );
 
             ensure!(
                 !<LiquidityPoolData<T>>::contains_key(farm_id, &amm_pool_id),
@@ -482,7 +492,7 @@ impl<T: Config> Pallet<T> {
             <LiquidityPoolData<T>>::insert(global_pool.id, &amm_pool_id, &pool);
             global_pool.liq_pools_count = global_pool.liq_pools_count.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
-            Ok(())
+            Ok(liq_pool_id)
         })
     }
 
@@ -552,11 +562,11 @@ impl<T: Config> Pallet<T> {
     ///
     /// Emits `LiquidityMiningCanceled` event when successful.
     #[transactional]
-    pub fn do_cancel_liquidity_pool(
+    pub fn cancel_liquidity_pool(
         who: AccountIdOf<T>,
         farm_id: GlobalPoolId,
         amm_pool_id: AccountIdOf<T>,
-    ) -> DispatchResult {
+    ) -> Result<PoolId, DispatchError> {
         <LiquidityPoolData<T>>::try_mutate(farm_id, amm_pool_id, |maybe_liq_pool| {
             let liq_pool = maybe_liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
 
@@ -579,7 +589,7 @@ impl<T: Config> Pallet<T> {
                 liq_pool.stake_in_global_pool = 0;
                 liq_pool.multiplier = 0.into();
 
-                Ok(())
+                Ok(liq_pool.id)
             })
         })
     }
@@ -600,12 +610,12 @@ impl<T: Config> Pallet<T> {
     ///
     /// Emits `LiquidityMiningResumed` event when successful.
     #[transactional]
-    pub fn do_resume_liquidity_pool(
+    pub fn resume_liquidity_pool(
         who: AccountIdOf<T>,
         farm_id: GlobalPoolId,
         multiplier: PoolMultiplier,
         amm_pool_id: AccountIdOf<T>,
-    ) -> DispatchResult {
+    ) -> Result<PoolId, DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T>::InvalidMultiplier);
 
         <LiquidityPoolData<T>>::try_mutate(farm_id, amm_pool_id, |maybe_liq_pool| {
@@ -646,7 +656,7 @@ impl<T: Config> Pallet<T> {
                 liq_pool.canceled = false;
                 liq_pool.multiplier = multiplier;
 
-                Ok(())
+                Ok(liq_pool.id)
             })
         })
     }
@@ -668,52 +678,49 @@ impl<T: Config> Pallet<T> {
     ///
     /// Emits `LiquidityPoolRemoved` event when successful.
     #[transactional]
-    pub fn do_remove_liquidity_pool(
+    pub fn remove_liquidity_pool(
         who: AccountIdOf<T>,
         farm_id: GlobalPoolId,
         amm_pool_id: AccountIdOf<T>,
-    ) -> DispatchResultWithPostInfo {
-        <LiquidityPoolData<T>>::try_mutate_exists(
-            farm_id,
-            amm_pool_id,
-            |maybe_liq_pool| -> DispatchResultWithPostInfo {
-                let liq_pool = maybe_liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
+    ) -> Result<PoolId, DispatchError> {
+        <LiquidityPoolData<T>>::try_mutate_exists(farm_id, amm_pool_id, |maybe_liq_pool| {
+            let liq_pool = maybe_liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
 
-                ensure!(liq_pool.canceled, Error::<T>::LiquidityMiningIsNotCanceled);
+            ensure!(liq_pool.canceled, Error::<T>::LiquidityMiningIsNotCanceled);
 
-                <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_global_pool| -> DispatchResultWithPostInfo {
-                    let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
+            <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_global_pool| -> Result<(), DispatchError> {
+                let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
 
-                    ensure!(global_pool.owner == who, Error::<T>::Forbidden);
+                ensure!(global_pool.owner == who, Error::<T>::Forbidden);
 
-                    global_pool.liq_pools_count =
-                        global_pool.liq_pools_count.checked_sub(1).ok_or(Error::<T>::Overflow)?;
+                global_pool.liq_pools_count = global_pool.liq_pools_count.checked_sub(1).ok_or(Error::<T>::Overflow)?;
 
-                    //transfer unpaid rewards back to global_pool
-                    let global_pool_account = Self::pool_account_id(global_pool.id)?;
-                    let liq_pool_account = Self::pool_account_id(liq_pool.id)?;
+                //transfer unpaid rewards back to global_pool
+                let global_pool_account = Self::pool_account_id(global_pool.id)?;
+                let liq_pool_account = Self::pool_account_id(liq_pool.id)?;
 
-                    let unpaid_reward = T::MultiCurrency::total_balance(global_pool.reward_currency, &liq_pool_account);
-                    T::MultiCurrency::transfer(
-                        global_pool.reward_currency,
-                        &liq_pool_account,
-                        &global_pool_account,
-                        unpaid_reward,
-                    )?;
+                let unpaid_reward = T::MultiCurrency::total_balance(global_pool.reward_currency, &liq_pool_account);
+                T::MultiCurrency::transfer(
+                    global_pool.reward_currency,
+                    &liq_pool_account,
+                    &global_pool_account,
+                    unpaid_reward,
+                )?;
 
-                    if let Some((deposits_count, _)) = Self::liq_pool_meta(liq_pool.id) {
-                        if deposits_count.is_zero() {
-                            <LiquidityPoolMetadata<T>>::remove(liq_pool.id);
-                        }
-                    };
+                if let Some((deposits_count, _)) = Self::liq_pool_meta(liq_pool.id) {
+                    if deposits_count.is_zero() {
+                        <LiquidityPoolMetadata<T>>::remove(liq_pool.id);
+                    }
+                };
 
-                    Ok(().into())
-                })?;
+                Ok(())
+            })?;
 
-                *maybe_liq_pool = None;
-                Ok(().into())
-            },
-        )
+            let liq_pool_id = liq_pool.id;
+            *maybe_liq_pool = None;
+
+            Ok(liq_pool_id)
+        })
     }
 
     /// Deposit LP shares to a liq. mining.
@@ -730,11 +737,17 @@ impl<T: Config> Pallet<T> {
     ///
     /// Emits `SharesDeposited` event when successful.
     #[transactional]
-    pub fn do_deposit_shares(
+    pub fn deposit_shares(
         farm_id: GlobalPoolId,
         shares_amount: Balance,
         amm_pool_id: AccountIdOf<T>,
-    ) -> DispatchResult {
+    ) -> Result<(PoolId, DepositId), DispatchError> {
+        ensure!(
+            //TODO: add test for this
+            shares_amount.ge(&T::MinDeposit::get()),
+            Error::<T>::InvalidDepositAmount,
+        );
+
         <LiquidityPoolData<T>>::try_mutate(farm_id, amm_pool_id.clone(), |liq_pool| {
             let liq_pool = liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
 
@@ -778,20 +791,18 @@ impl<T: Config> Pallet<T> {
 
                 let deposit = Deposit::new(shares_amount, valued_shares, liq_pool.accumulated_rpvs, now_period);
                 <DepositData<T>>::insert(&deposit_id, deposit);
-                <LiquidityPoolMetadata<T>>::try_mutate(liq_pool.id, |maybe_liq_pool_metadata| -> DispatchResult {
+                <LiquidityPoolMetadata<T>>::try_mutate(liq_pool.id, |maybe_liq_pool_metadata| {
                     //Something is very wrong if this fail. Metadata can exist without liq. pool but liq. pool can't
                     //exist without metadata.
                     let liq_pool_metadata = maybe_liq_pool_metadata
                         .as_mut()
                         .ok_or(Error::<T>::LiquidityPoolMetadataNotFound)?;
-                    
+
                     //Increment deposits count
                     liq_pool_metadata.0 = liq_pool_metadata.0.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
-                    Ok(())
-                })?;
-
-                Ok(())
+                    Ok((liq_pool.id, deposit_id))
+                })
             })
         })
     }
@@ -810,7 +821,11 @@ impl<T: Config> Pallet<T> {
     ///
     /// Emits `RewardClaimed` event when successful.
     #[transactional]
-    pub fn claim_rewards(who: AccountIdOf<T>, deposit_id: DepositId, amm_pool_id: AccountIdOf<T>) -> Result<Balance, DispatchError> {
+    pub fn claim_rewards(
+        who: AccountIdOf<T>,
+        deposit_id: DepositId,
+        amm_pool_id: AccountIdOf<T>,
+    ) -> Result<Balance, DispatchError> {
         //TODO: merge this with do_claim_rewards
         let liq_pool_id = Self::get_pool_id_from_deposit_id(deposit_id)?;
 

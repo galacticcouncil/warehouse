@@ -11,20 +11,20 @@ pub type DepositId = u128;
 /// users stake in `LiquidityPoolYieldFarm`.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
 pub struct GlobalPool<T: Config> {
-    pub(super) id: GlobalPoolId,
-    pub(super) owner: AccountIdOf<T>,
-    pub(super) updated_at: PeriodOf<T>,
-    pub(super) total_shares_z: Balance,
-    pub(super) accumulated_rpz: Balance,
-    pub(super) reward_currency: AssetIdOf<T>,
-    pub(super) accumulated_rewards: Balance,
-    pub(super) paid_accumulated_rewards: Balance,
-    pub(super) yield_per_period: Permill,
-    pub(super) planned_yielding_periods: PeriodOf<T>,
-    pub(super) blocks_per_period: BlockNumberFor<T>,
-    pub(super) incentivized_asset: AssetIdOf<T>,
-    pub(super) max_reward_per_period: Balance,
-    pub(super) liq_pools_count: u32,
+    pub id: GlobalPoolId,
+    pub owner: AccountIdOf<T>,
+    pub updated_at: PeriodOf<T>,
+    pub total_shares_z: Balance,
+    pub accumulated_rpz: Balance,
+    pub reward_currency: AssetIdOf<T>,
+    pub accumulated_rewards: Balance,
+    pub paid_accumulated_rewards: Balance,
+    pub yield_per_period: Permill,
+    pub planned_yielding_periods: PeriodOf<T>,
+    pub blocks_per_period: BlockNumberFor<T>,
+    pub incentivized_asset: AssetIdOf<T>,
+    pub max_reward_per_period: Balance,
+    pub liq_pools_count: u32,
 }
 
 impl<T: Config> GlobalPool<T> {
@@ -61,16 +61,16 @@ impl<T: Config> GlobalPool<T> {
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
 pub struct LiquidityPoolYieldFarm<T: Config> {
-    pub(super) id: PoolId,
-    pub(super) updated_at: PeriodOf<T>,
-    pub(super) total_shares: Balance,
-    pub(super) total_valued_shares: Balance,
-    pub(super) accumulated_rpvs: Balance,
-    pub(super) accumulated_rpz: Balance,
-    pub(super) loyalty_curve: Option<LoyaltyCurve>,
-    pub(super) stake_in_global_pool: Balance, //NOTE: may be replaced with: total_valued_shares * multiplier
-    pub(super) multiplier: PoolMultiplier,
-    pub(super) canceled: bool,
+    pub id: PoolId,
+    pub updated_at: PeriodOf<T>,
+    pub total_shares: Balance,
+    pub total_valued_shares: Balance,
+    pub accumulated_rpvs: Balance,
+    pub accumulated_rpz: Balance,
+    pub loyalty_curve: Option<LoyaltyCurve>,
+    pub stake_in_global_pool: Balance, //NOTE: may be replaced with: total_valued_shares * multiplier
+    pub multiplier: PoolMultiplier,
+    pub canceled: bool,
 }
 
 impl<T: Config> LiquidityPoolYieldFarm<T> {
@@ -98,8 +98,8 @@ impl<T: Config> LiquidityPoolYieldFarm<T> {
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct LoyaltyCurve {
-    pub(super) initial_reward_percentage: FixedU128,
-    pub(super) scale_coef: u32,
+    pub initial_reward_percentage: FixedU128,
+    pub scale_coef: u32,
 }
 
 impl Default for LoyaltyCurve {
@@ -113,16 +113,16 @@ impl Default for LoyaltyCurve {
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
 pub struct Deposit<T: Config> {
-    pub(super) shares: Balance,
-    pub(super) valued_shares: Balance,
-    pub(super) accumulated_rpvs: Balance,
-    pub(super) accumulated_claimed_rewards: Balance,
-    pub(super) entered_at: PeriodOf<T>,
-    pub(super) updated_at: PeriodOf<T>,
+    pub shares: Balance,
+    pub valued_shares: Balance,
+    pub accumulated_rpvs: Balance,
+    pub accumulated_claimed_rewards: Balance,
+    pub entered_at: PeriodOf<T>,
+    pub updated_at: PeriodOf<T>,
 }
 
 impl<T: Config> Deposit<T> {
-    pub(super) fn new(
+    pub fn new(
         shares: Balance,
         valued_shares: Balance,
         accumulated_rpvs: Balance,

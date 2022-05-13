@@ -505,7 +505,12 @@ where
                     let converted_tip = price
                         .checked_mul_int(tip)
                         .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-                    (currency.into(), refund, converted_corrected_fee.saturating_sub(converted_tip), converted_tip)
+                    (
+                        currency.into(),
+                        refund,
+                        converted_corrected_fee.saturating_sub(converted_tip),
+                        converted_tip,
+                    )
                 }
             };
 

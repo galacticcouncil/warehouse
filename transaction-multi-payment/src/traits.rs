@@ -19,15 +19,9 @@ pub enum PaymentWithdrawResult {
 }
 
 pub trait CurrencyWithdraw<AccountId, Balance> {
-    fn withdraw(
-        who: &AccountId,
-        fee: Balance,
-    ) -> Result<PaymentWithdrawResult, DispatchError>;
+    fn withdraw(who: &AccountId, fee: Balance) -> Result<PaymentWithdrawResult, DispatchError>;
 }
 
 pub trait DepositFee<AccountId, AssetId, Balance> {
-    fn deposit_fee(
-        who: &AccountId,
-        amounts: impl Iterator<Item = (AssetId, Balance)>,
-    ) -> DispatchResult;
+    fn deposit_fee(who: &AccountId, amounts: impl Iterator<Item = (AssetId, Balance)>) -> DispatchResult;
 }

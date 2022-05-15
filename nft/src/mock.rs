@@ -56,6 +56,35 @@ parameter_types! {
     pub ReserveClassIdUpTo: u128 = 999;
 }
 
+#[derive(Eq, Copy, PartialEq, Clone)]
+pub struct NftTestPermissions;
+
+impl NftPermission<ClassType> for NftTestPermissions {
+    fn can_create(class_type: &ClassType) -> bool {
+        matches!(*class_type, ClassType::Marketplace | ClassType::LiquidityMining | ClassType::Redeemable)
+    }
+
+    fn can_mint(class_type: &ClassType) -> bool {
+        matches!(*class_type, ClassType::Marketplace | ClassType::LiquidityMining)
+    }
+
+    fn can_transfer(class_type: &ClassType) -> bool {
+        matches!(*class_type, ClassType::Marketplace)
+    }
+
+    fn can_burn(class_type: &ClassType) -> bool {
+        matches!(*class_type, ClassType::Marketplace)
+    }
+
+    fn can_destroy(class_type: &ClassType) -> bool {
+        matches!(*class_type, ClassType::Marketplace | ClassType::LiquidityMining)
+    }
+
+    fn has_deposit(class_type: &ClassType) -> bool {
+        matches!(*class_type, ClassType::Marketplace)
+    }
+}
+
 impl pallet_nft::Config for Test {
     type Currency = Balances;
     type Event = Event;
@@ -64,7 +93,7 @@ impl pallet_nft::Config for Test {
     type NftInstanceId = InstanceId;
     type ProtocolOrigin = EnsureRoot<AccountId>;
     type ClassType = ClassType;
-    type Permissions = NftPermissions;
+    type Permissions = NftTestPermissions;
     type ReserveClassIdUpTo = ReserveClassIdUpTo;
 }
 

@@ -507,12 +507,12 @@ impl<T: Config> Pallet<T> {
     ///
     /// Emits `LiquidityPoolUpdated` event when successful.
     #[transactional]
-    pub fn do_update_liquidity_pool(
+    pub fn update_liquidity_pool(
         who: AccountIdOf<T>,
         farm_id: GlobalPoolId,
         multiplier: PoolMultiplier,
         amm_pool_id: AccountIdOf<T>,
-    ) -> DispatchResult {
+    ) -> Result<PoolId, DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T>::InvalidMultiplier);
 
         <LiquidityPoolData<T>>::try_mutate(farm_id, &amm_pool_id, |liq_pool| {
@@ -542,7 +542,7 @@ impl<T: Config> Pallet<T> {
                 liq_pool.stake_in_global_pool = new_stake_in_global_pool;
                 liq_pool.multiplier = multiplier;
 
-                Ok(())
+                Ok(liq_pool.id)
             })
         })
     }
@@ -825,11 +825,11 @@ impl<T: Config> Pallet<T> {
         who: AccountIdOf<T>,
         deposit_id: DepositId,
         amm_pool_id: AccountIdOf<T>,
-    ) -> Result<Balance, DispatchError> {
-        //TODO: merge this with do_claim_rewards
+        check_double_claim: bool, //this param is important because withdraw_shares need unclaimable_rewards
+    ) -> Result<(GlobalPoolId, PoolId, T::CurrencyId, Balance, Balance), DispatchError> {
         let liq_pool_id = Self::get_pool_id_from_deposit_id(deposit_id)?;
 
-        //This is same as liq pool not found in this case. Liq. pool metadata CAN exist
+        //This is same as liq. pool not found in this case. Liq. pool metadata CAN exist
         //without liq. pool but liq. pool CAN'T exist without metadata.
         let (_, farm_id) = <LiquidityPoolMetadata<T>>::get(liq_pool_id).ok_or(Error::<T>::LiquidityPoolNotFound)?;
 
@@ -839,28 +839,53 @@ impl<T: Config> Pallet<T> {
             <LiquidityPoolData<T>>::try_mutate(farm_id, amm_pool_id, |maybe_liq_pool| {
                 let liq_pool = maybe_liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
 
-                ensure!(!liq_pool.canceled, Error::<T>::LiquidityMiningCanceled);
-
                 <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_global_pool| {
                     //Something is very wrong if this fail. Liq. pool can't exist without GlobalPool.
                     let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
 
                     // can't claim multiple times in the same period
                     let now_period = Self::get_now_period(global_pool.blocks_per_period)?;
-                    ensure!(deposit.updated_at != now_period, Error::<T>::DoubleClaimInThePeriod);
+                    //TODO: test this
+                    if check_double_claim {
+                        ensure!(deposit.updated_at != now_period, Error::<T>::DoubleClaimInThePeriod);
+                    }
 
                     Self::maybe_update_pools(global_pool, liq_pool, now_period)?;
 
-                    //do_claim_rewards() is doing rewards calculation and tranfer
-                    let (reward, _) = Self::do_claim_rewards(
-                        who.clone(),
-                        deposit,
-                        liq_pool,
-                        now_period,
-                        global_pool.reward_currency,
-                    )?;
+                    let periods = now_period
+                        .checked_sub(&deposit.entered_at)
+                        .ok_or(Error::<T>::Overflow)?;
 
-                    Ok(reward)
+                    let loyalty_multiplier = Self::get_loyalty_multiplier(periods, liq_pool.loyalty_curve.clone())?;
+
+                    let (rewards, unclaimable_rewards) = math::calculate_user_reward(
+                        deposit.accumulated_rpvs,
+                        deposit.valued_shares,
+                        deposit.accumulated_claimed_rewards,
+                        liq_pool.accumulated_rpvs,
+                        loyalty_multiplier,
+                    )
+                    .map_err(|_e| Error::<T>::Overflow)?;
+
+                    if !rewards.is_zero() {
+                        deposit.accumulated_claimed_rewards = deposit
+                            .accumulated_claimed_rewards
+                            .checked_add(rewards)
+                            .ok_or(Error::<T>::Overflow)?;
+
+                        deposit.updated_at = now_period;
+
+                        let liq_pool_account = Self::pool_account_id(liq_pool.id)?;
+                        T::MultiCurrency::transfer(global_pool.reward_currency, &liq_pool_account, &who, rewards)?;
+                    }
+
+                    Ok((
+                        global_pool.id,
+                        liq_pool.id,
+                        global_pool.reward_currency,
+                        rewards,
+                        unclaimable_rewards,
+                    ))
                 })
             })
         })
@@ -890,12 +915,13 @@ impl<T: Config> Pallet<T> {
     /// * `SharesWithdrawn` event when successful
     #[transactional]
     pub fn withdraw_shares(
-        who: AccountIdOf<T>,
+        _who: AccountIdOf<T>,
         deposit_id: DepositId,
-        amm_exists: bool,
-        amm_account: AccountIdOf<T>,
-    ) -> DispatchResultWithPostInfo {
+        amm_pool_id: AccountIdOf<T>,
+        unclaimable_rewards: Balance,
+    ) -> Result<(GlobalPoolId, PoolId, Balance), DispatchError> {
         let liq_pool_id = Self::get_pool_id_from_deposit_id(deposit_id)?;
+
         <LiquidityPoolMetadata<T>>::try_mutate_exists(liq_pool_id, |maybe_liq_pool_metadata| {
             //This is same as liq pool not found in this case. Liq. pool metadata CAN exist
             //without liq. pool but liq. pool CAN'T exist without metadata.
@@ -905,12 +931,12 @@ impl<T: Config> Pallet<T> {
             <DepositData<T>>::try_mutate_exists(deposit_id, |maybe_deposit| {
                 let deposit = maybe_deposit.as_mut().ok_or(Error::<T>::DepositNotFound)?;
 
-                //Metadata can be removed only if the liq. pool doesn't exist. Liq. pool can be
-                //resumed if it's only canceled.
+                //Metadata can be removed only if the liq. pool doesn't exist.
+                //Liq. pool can be resumed if it's only canceled.
                 let mut can_remove_liq_pool_metadata = false;
                 <LiquidityPoolData<T>>::try_mutate(
                     farm_id,
-                    amm_account,
+                    amm_pool_id,
                     |maybe_liq_pool| -> Result<(), DispatchError> {
                         if maybe_liq_pool.is_some() {
                             //This is intentional. This fn should not fail if liq. pool does not
@@ -923,23 +949,6 @@ impl<T: Config> Pallet<T> {
                                     //This should never happen. If this happen something is very broken.
                                     let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
 
-                                    let now_period = Self::get_now_period(global_pool.blocks_per_period)?;
-
-                                    if !liq_pool.canceled {
-                                        Self::maybe_update_pools(global_pool, liq_pool, now_period)?;
-                                    }
-
-                                    let (reward, unclaimable_rewards) = Self::do_claim_rewards(
-                                        who.clone(),
-                                        deposit,
-                                        liq_pool,
-                                        now_period,
-                                        global_pool.reward_currency,
-                                    )?;
-
-                                    let global_pool_account = Self::pool_account_id(global_pool.id)?;
-                                    let liq_pool_account = Self::pool_account_id(liq_pool.id)?;
-
                                     liq_pool.total_shares = liq_pool
                                         .total_shares
                                         .checked_sub(deposit.shares)
@@ -950,6 +959,8 @@ impl<T: Config> Pallet<T> {
                                         .checked_sub(deposit.valued_shares)
                                         .ok_or(Error::<T>::Overflow)?;
 
+                                    // liq. pool farm's stake in global pool is set 0 when farm is
+                                    // canceled
                                     if !liq_pool.canceled {
                                         let shares_in_global_pool_for_deposit = math::calculate_global_pool_shares(
                                             deposit.valued_shares,
@@ -968,16 +979,16 @@ impl<T: Config> Pallet<T> {
                                             .ok_or(Error::<T>::Overflow)?;
                                     }
 
-                                    T::MultiCurrency::transfer(
-                                        global_pool.reward_currency,
-                                        &liq_pool_account,
-                                        &global_pool_account,
-                                        unclaimable_rewards,
-                                    )?;
+                                    if !unclaimable_rewards.is_zero() {
+                                        let global_pool_account = Self::pool_account_id(global_pool.id)?;
+                                        let liq_pool_account = Self::pool_account_id(liq_pool.id)?;
 
-                                    //emit this event only if something was claimed
-                                    if !reward.is_zero() {
-                                        //TODO: deposit claim reward
+                                        T::MultiCurrency::transfer(
+                                            global_pool.reward_currency,
+                                            &liq_pool_account,
+                                            &global_pool_account,
+                                            unclaimable_rewards,
+                                        )?;
                                     }
 
                                     Ok(())
@@ -992,18 +1003,11 @@ impl<T: Config> Pallet<T> {
                     },
                 )?;
 
-                //NOTE: no LP shares will be transferred to the user if AMM doesn't exist
-                //anymore.
-                if amm_exists {
-                    //TODO: transfer share tokens to user
+                //backup value before cleanup
+                let withdrawn_amount = deposit.shares;
 
-                    //NOTE: Theoretically neither `GlobalPool` nor `LiquidityPoolYieldFarm` may
-                    //not exits at this point.
-                    //TODO: communicate event SharesWithdrawn
-                }
-
+                //cleanup
                 *maybe_deposit = None;
-                //TODO: communicate nft class should be burned
 
                 //Last withdrawn from removed liq. pool should destroy metadata.
                 if deposits_count.is_one() && can_remove_liq_pool_metadata {
@@ -1012,10 +1016,11 @@ impl<T: Config> Pallet<T> {
                     *maybe_liq_pool_metadata =
                         Some((deposits_count.checked_sub(1).ok_or(Error::<T>::Overflow)?, farm_id));
                 }
-                Ok(().into())
+                Ok((farm_id, liq_pool_id, withdrawn_amount))
             })
         })
     }
+
     /// This function return new unused `PoolId` usable for liq. or global pool or error.
     fn get_next_pool_id() -> Result<PoolId, Error<T>> {
         PoolIdSequencer::<T>::try_mutate(|current_id| {
@@ -1271,48 +1276,6 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::Overflow)
     }
 
-    /// This function performs the user's claim from liq. pool and transfer claimed rewards to user.
-    /// Function return `(claimed rewards, unclaimable rewards)` or error.
-    fn do_claim_rewards(
-        who: AccountIdOf<T>,
-        deposit: &mut Deposit<T>,
-        liq_pool: &LiquidityPoolYieldFarm<T>,
-        now_period: PeriodOf<T>,
-        reward_currency: T::CurrencyId,
-    ) -> Result<(Balance, Balance), DispatchError> {
-        let periods = now_period
-            .checked_sub(&deposit.entered_at)
-            .ok_or(Error::<T>::Overflow)?;
-
-        // Only one claim per period is allowed.
-        if deposit.updated_at == now_period {
-            return Ok((0, 0));
-        }
-
-        let loyalty_multiplier = Self::get_loyalty_multiplier(periods, liq_pool.loyalty_curve.clone())?;
-
-        let (rewards, unclaimable_rewards) = math::calculate_user_reward(
-            deposit.accumulated_rpvs,
-            deposit.valued_shares,
-            deposit.accumulated_claimed_rewards,
-            liq_pool.accumulated_rpvs,
-            loyalty_multiplier,
-        )
-        .map_err(|_e| Error::<T>::Overflow)?;
-
-        deposit.accumulated_claimed_rewards = deposit
-            .accumulated_claimed_rewards
-            .checked_add(rewards)
-            .ok_or(Error::<T>::Overflow)?;
-
-        deposit.updated_at = now_period;
-
-        let liq_pool_account = Self::pool_account_id(liq_pool.id)?;
-        T::MultiCurrency::transfer(reward_currency, &liq_pool_account, &who, rewards)?;
-
-        Ok((rewards, unclaimable_rewards))
-    }
-
     /// This function update both pools(`GlobalPool` and `LiquidityPoolYieldFarm`) if conditions are met.
     fn maybe_update_pools(
         global_pool: &mut GlobalPool<T>,
@@ -1345,5 +1308,15 @@ impl<T: Config> Pallet<T> {
             )?;
         }
         Ok(())
+    }
+
+    pub fn liquidity_pool_farm_exists(deposit_id: DepositId, amm_pool_id: &AccountIdOf<T>) -> Result<bool, Error::<T>> {
+        let liq_pool_id = Self::get_pool_id_from_deposit_id(deposit_id)?;
+
+        if let Some((_, farm_id)) = Self::liq_pool_meta(liq_pool_id) {
+            return Ok(Self::liquidity_pool(farm_id, amm_pool_id).is_some());
+        }
+
+        Ok(false)
     }
 }

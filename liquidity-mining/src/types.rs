@@ -122,12 +122,7 @@ pub struct Deposit<T: Config> {
 }
 
 impl<T: Config> Deposit<T> {
-    pub fn new(
-        shares: Balance,
-        valued_shares: Balance,
-        accumulated_rpvs: Balance,
-        entered_at: PeriodOf<T>,
-    ) -> Self {
+    pub fn new(shares: Balance, valued_shares: Balance, accumulated_rpvs: Balance, entered_at: PeriodOf<T>) -> Self {
         Self {
             updated_at: entered_at,
             entered_at,

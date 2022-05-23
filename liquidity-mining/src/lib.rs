@@ -42,9 +42,6 @@
 //! User can claim rewards without resetting loyalty factor, only withdrawing shares
 //! is penalized by loyalty factor reset.
 //! User is rewarded from the next period after he enters.
-//!
-//! User deposit in liquidity mining pool is represented by an NFT which is minted for the user when he
-//! enters liq. mining and is burned when he exits. NFT representing deposit is tradable.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -61,10 +58,10 @@ pub use pallet::*;
 pub use crate::types::{
     Balance, Deposit, DepositId, GlobalPool, GlobalPoolId, LiquidityPoolYieldFarm, LoyaltyCurve, PoolId, PoolMultiplier,
 };
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, FullCodec};
 use frame_support::{
     ensure,
-    sp_runtime::traits::{BlockNumberProvider, One, Zero},
+    sp_runtime::traits::{BlockNumberProvider, MaybeSerializeDeserialize, One, Zero},
     transactional, PalletId,
 };
 use frame_support::{
@@ -73,6 +70,7 @@ use frame_support::{
 };
 
 use hydra_dx_math::liquidity_mining as math;
+use hydradx_traits::liquidity_mining::Handler;
 use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
 use sp_arithmetic::{
@@ -83,7 +81,7 @@ use sp_std::convert::{From, Into, TryInto};
 
 //This value is result of: u128::from_le_bytes([255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0])
 //This is necessary because first 4 bytes of DepositId (u128) is reserved to encode liq_pool_id (u32) into DepositId.
-//For more details look at `get_next_nft_id()`.
+//For more details look at `get_next_deposit_id()`.
 const MAX_DEPOSIT_SEQUENCER: u128 = 79_228_162_514_264_337_593_543_950_335;
 //consts bellow are used to encode/decode liq. pool into/from DepositId.
 const POOL_ID_BYTES: usize = 4;
@@ -108,8 +106,6 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + TypeInfo {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
         /// Asset type.
         type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize + Ord + From<u32>;
 
@@ -130,6 +126,19 @@ pub mod pallet {
 
         /// The block number provider
         type BlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
+
+        /// Id used as a amm pool id key in the storage.
+        type AmmPoolId: Parameter + Member + Clone + FullCodec;
+
+        type Handler: hydradx_traits::liquidity_mining::Handler<
+            Self::CurrencyId,
+            Self::AmmPoolId,
+            GlobalPoolId,
+            PoolId,
+            Balance,
+            DepositId,
+            Self::AccountId,
+        >;
     }
 
     #[pallet::error]
@@ -138,68 +147,20 @@ pub mod pallet {
         /// Math computation overflow.
         Overflow,
 
-        /// Insufficient reward currency in global pool.
-        InsufficientBalanceInGlobalPool,
-
-        /// Provided pool id is not valid. Valid range is [1, u32::MAX)
-        InvalidPoolId,
-
-        /// Planned yielding periods is less than `MinPlannedYieldingPeriods`.
-        InvalidPlannedYieldingPeriods,
-
-        /// Blocks per period can't be 0.
-        InvalidBlocksPerPeriod,
-
-        /// Yield per period can't be 0.
-        InvalidYieldPerPeriod,
-
-        /// Total rewards is less than `MinTotalFarmRewards`.
-        InvalidTotalRewards,
-
-        /// Reward currency balance is not sufficient.
-        InsufficientRewardCurrencyBalance,
-
-        /// Account is not allowed to perform action.
-        Forbidden,
-
         /// Farm does not exist.
         FarmNotFound,
-
-        /// Liquidity pool already exist in the farm.
-        LiquidityPoolAlreadyExists,
-
-        /// Pool multiplier can't be 0
-        InvalidMultiplier,
-
-        /// Loyalty curve's initial reward percentage is not valid. Valid range is: [0, 1)
-        InvalidInitialRewardPercentage,
-
-        /// Account balance of amm pool shares is not sufficient.
-        InsufficientAmmSharesBalance,
-
-        /// AMM pool does not exist
-        AmmPoolDoesNotExist,
 
         /// Assets liq. pool does not exist.
         LiquidityPoolNotFound,
 
-        /// One or more liq. pools exist in farm.
-        FarmIsNotEmpty,
-
-        /// Global pool rewards balance is not 0.
-        RewardBalanceIsNotZero,
-
-        /// Liq. pool's metadata does not exist.
-        LiquidityPoolMetadataNotFound,
-
         /// Deposit does not exist.
         DepositNotFound,
 
-        /// Max number of deposit id was reached.
-        DepositIdOverflow,
+        /// Multiple claims in the same period is not allowed.
+        DoubleClaimInThePeriod,
 
-        /// Deposit id is not valid.
-        InvalidDepositId,
+        /// Liq. pool's metadata does not exist.
+        LiquidityPoolMetadataNotFound,
 
         /// Pool's liquidity mining is canceled.
         LiquidityMiningCanceled,
@@ -210,33 +171,53 @@ pub mod pallet {
         /// LP tokens amount is not valid.
         InvalidDepositAmount,
 
-        /// Account is not deposit owner.
-        NotDepositOwner,
+        /// Account is not allowed to perform action.
+        Forbidden,
 
-        /// Multiple claims in the same period is not allowed.
-        DoubleClaimInThePeriod,
+        /// Pool multiplier can't be 0
+        InvalidMultiplier,
+
+        /// Liquidity pool already exist in the farm.
+        LiquidityPoolAlreadyExists,
+
+        /// Loyalty curve's initial reward percentage is not valid. Valid range is: [0, 1)
+        InvalidInitialRewardPercentage,
+
+        /// One or more liq. pools exist in farm.
+        FarmIsNotEmpty,
 
         /// Farm's `incentivized_asset` is missing in provided asset pair.
         MissingIncentivizedAsset,
-    }
 
-    #[pallet::event]
-    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
-    pub enum Event<T: Config> {
-        /// Farm's(`GlobalPool`) accumulated reward per share was updated.
-        FarmAccRPZUpdated {
-            farm_id: GlobalPoolId,
-            accumulated_rpz: Balance,
-            total_shares_z: Balance,
-        },
+        /// Global pool rewards balance is not 0.
+        RewardBalanceIsNotZero,
 
-        /// Liquidity pool's `accumulated_rpvs` was updated.
-        LiquidityPoolAccRPVSUpdated {
-            farm_id: GlobalPoolId,
-            liq_pool_farm_id: PoolId,
-            accumulated_rpvs: Balance,
-            total_valued_shares: Balance,
-        },
+        /// Reward currency balance is not sufficient.
+        InsufficientRewardCurrencyBalance,
+
+        /// Blocks per period can't be 0.
+        InvalidBlocksPerPeriod,
+
+        /// Yield per period can't be 0.
+        InvalidYieldPerPeriod,
+
+        /// Total rewards is less than `MinTotalFarmRewards`.
+        InvalidTotalRewards,
+
+        /// Planned yielding periods is less than `MinPlannedYieldingPeriods`.
+        InvalidPlannedYieldingPeriods,
+
+        /// Insufficient reward currency in global pool.
+        InsufficientBalanceInGlobalPool,
+
+        /// Provided pool id is not valid. Valid range is [1, u32::MAX)
+        InvalidPoolId,
+
+        /// Max number of deposit id was reached.
+        DepositIdOverflow,
+
+        /// Deposit id is not valid.
+        InvalidDepositId,
     }
 
     /// Id sequencer for `GlobalPool` and `LiquidityPoolYieldFarm`.
@@ -244,10 +225,9 @@ pub mod pallet {
     #[pallet::getter(fn pool_id)]
     pub type PoolIdSequencer<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
-    /// Sequencer for nft part of nft id.
-    //TODO: this is not ok
+    /// Sequencer for last 12 bytes of deposit id.
     #[pallet::storage]
-    pub type NftInstanceSequencer<T: Config> = StorageValue<_, DepositId, ValueQuery>;
+    pub type DepositSequencer<T: Config> = StorageValue<_, DepositId, ValueQuery>;
 
     /// Global pool details.
     #[pallet::storage]
@@ -262,7 +242,7 @@ pub mod pallet {
         Twox64Concat,
         GlobalPoolId,
         Twox64Concat,
-        AccountIdOf<T>,
+        T::AmmPoolId,
         LiquidityPoolYieldFarm<T>,
         OptionQuery,
     >;
@@ -303,8 +283,6 @@ impl<T: Config> Pallet<T> {
     /// - `reward_currency`: payoff currency of rewards.
     /// - `owner`: liq. mining farm owner.
     /// - `yield_per_period`: percentage return on `reward_currency` of all pools p.a.
-    ///
-    /// Emits `FarmCreated` event when successful.
     #[allow(clippy::too_many_arguments)]
     #[transactional]
     pub fn create_farm(
@@ -361,9 +339,8 @@ impl<T: Config> Pallet<T> {
     /// removed from the farm) and all undistributed rewards have to be withdrawn.
     ///
     /// Parameters:
+    /// - `who`: farm's owner.
     /// - `farm_id`: id of farm to be destroyed.
-    ///
-    /// Emits `FarmDestroyed` event when successful.
     #[transactional]
     pub fn destroy_farm(who: AccountIdOf<T>, farm_id: GlobalPoolId) -> DispatchResult {
         <GlobalPoolData<T>>::try_mutate_exists(farm_id, |maybe_global_pool| -> DispatchResult {
@@ -389,13 +366,12 @@ impl<T: Config> Pallet<T> {
     ///  
     /// Only farm owner can perform this action.
     ///
-    /// WARN: Farm have to be empty(all liq. pools have to be removed for the farm) to
+    /// WARN: Farm have to be empty(all liq. pools have to be removed from the farm) to
     /// successfully withdraw rewards left to distribute from the farm.
     ///
     /// Parameters:
+    /// - `who`: farm's owner.
     /// - `farm_id`: id of farm to be destroyed.
-    ///
-    /// Emits `UndistributedRewardsWithdrawn` event when successful.
     #[transactional]
     pub fn withdraw_undistributed_rewards(
         who: AccountIdOf<T>,
@@ -421,30 +397,29 @@ impl<T: Config> Pallet<T> {
         Ok((global_pool.reward_currency, undistributed_reward))
     }
 
-    /// Add liquidity pool to farm and allow yield farming for given `asset_pair` amm.
+    /// Add liquidity pool to farm and allow yield farming for given assets pair amm.
     ///  
     /// Only farm owner can perform this action.
     ///
-    /// Only AMMs with `asset_pair` with `incentivized_asset` can be added into the farm. AMM
-    /// for `asset_pair` has to exist to successfully add liq. pool to the farm. Same AMM can
+    /// One of the AMM assets HAVE TO be `incentivized_token`. Same AMM can be
     /// in the same farm only once.
     ///
     /// Parameters:
+    /// - `who`: farm's owner
     /// - `farm_id`: farm id to which a liq. pool will be added.
-    /// - `asset_pair`: asset pair identifying liq. pool. Liq. mining will be allowed for this
-    /// `asset_pair` and one of the assets in the pair must be `incentivized_asset`.
     /// - `multiplier`: liq. pool multiplier in the farm.
     /// - `loyalty_curve`: curve to calculate loyalty multiplier to distribute rewards to users
     /// with time incentive. `None` means no loyalty multiplier.
-    ///
-    /// Emits `LiquidityPoolAdded` event when successful.
+    /// - `amm_pool_id`: identifier of the AMM. It's used as a key in the storage
+    /// - `asset_a`: one of the assets in the AMM
+    /// - `asset_b`: second asset in the AMM
     #[transactional]
     pub fn add_liquidity_pool(
         who: AccountIdOf<T>,
         farm_id: GlobalPoolId,
         multiplier: PoolMultiplier,
         loyalty_curve: Option<LoyaltyCurve>,
-        amm_pool_id: AccountIdOf<T>,
+        amm_pool_id: T::AmmPoolId,
         asset_a: T::CurrencyId,
         asset_b: T::CurrencyId,
     ) -> Result<PoolId, DispatchError> {
@@ -501,17 +476,17 @@ impl<T: Config> Pallet<T> {
     /// Only farm owner can perform this action.
     ///
     /// Parameters:
+    /// - `who`: farm's owner
     /// - `farm_id`: farm id in which liq. pool will be updated.
     /// - `asset_pair`: asset pair identifying liq. pool in farm.
     /// - `multiplier`: new liq. pool multiplier in the farm.
-    ///
-    /// Emits `LiquidityPoolUpdated` event when successful.
+    /// - `amm_pool_id`: identifier of the AMM.
     #[transactional]
     pub fn update_liquidity_pool(
         who: AccountIdOf<T>,
         farm_id: GlobalPoolId,
         multiplier: PoolMultiplier,
-        amm_pool_id: AccountIdOf<T>,
+        amm_pool_id: T::AmmPoolId,
     ) -> Result<PoolId, DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T>::InvalidMultiplier);
 
@@ -550,22 +525,21 @@ impl<T: Config> Pallet<T> {
     /// Cancel liq. miming for specific liq. pool.
     ///
     /// This function claims rewards from `GlobalPool` last time and stops liq. pool
-    /// incentivization from a `GlobalPool`. Users will be able to only withdraw
-    /// shares(with claiming) after calling this function.
-    /// `deposit_shares()` and `claim_rewards()` are not allowed on canceled liq. pool.
+    /// incentivization from a `GlobalPool`. Users will be able to only claim and withdraw
+    /// shares after calling this function.
+    /// `deposit_shares()` is not allowed on canceled liq. pool.
     ///  
     /// Only farm owner can perform this action.
     ///
     /// Parameters:
+    /// - `who`: farm's owner.
     /// - `farm_id`: farm id in which liq. pool will be canceled.
-    /// - `asset_pair`: asset pair identifying liq. pool in the farm.
-    ///
-    /// Emits `LiquidityMiningCanceled` event when successful.
+    /// - `amm_pool_id`: identifier of the AMM pool.
     #[transactional]
     pub fn cancel_liquidity_pool(
         who: AccountIdOf<T>,
         farm_id: GlobalPoolId,
-        amm_pool_id: AccountIdOf<T>,
+        amm_pool_id: T::AmmPoolId,
     ) -> Result<PoolId, DispatchError> {
         <LiquidityPoolData<T>>::try_mutate(farm_id, amm_pool_id, |maybe_liq_pool| {
             let liq_pool = maybe_liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
@@ -604,17 +578,16 @@ impl<T: Config> Pallet<T> {
     /// Only farm owner can perform this action.
     ///
     /// Parameters:
+    /// - `who`: farm's owner
     /// - `farm_id`: farm id in which liq. pool will be resumed.
-    /// - `asset_pair`: asset pair identifying liq. pool in the farm.
     /// - `multiplier`: liq. pool multiplier in the farm.
-    ///
-    /// Emits `LiquidityMiningResumed` event when successful.
+    /// - `amm_pool_id`: indentifier of the AMM pool.
     #[transactional]
     pub fn resume_liquidity_pool(
         who: AccountIdOf<T>,
         farm_id: GlobalPoolId,
         multiplier: PoolMultiplier,
-        amm_pool_id: AccountIdOf<T>,
+        amm_pool_id: T::AmmPoolId,
     ) -> Result<PoolId, DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T>::InvalidMultiplier);
 
@@ -673,15 +646,15 @@ impl<T: Config> Pallet<T> {
     /// Only farm owner can perform this action.
     ///
     /// Parameters:
+    /// - `who`: farm's owner.
     /// - `farm_id`: farm id from which liq. pool should be removed.
     /// - `asset_pair`: asset pair identifying liq. pool in the farm.
-    ///
-    /// Emits `LiquidityPoolRemoved` event when successful.
+    /// - `amm_pool_id`: indentifier of the AMM pool.
     #[transactional]
     pub fn remove_liquidity_pool(
         who: AccountIdOf<T>,
         farm_id: GlobalPoolId,
-        amm_pool_id: AccountIdOf<T>,
+        amm_pool_id: T::AmmPoolId,
     ) -> Result<PoolId, DispatchError> {
         <LiquidityPoolData<T>>::try_mutate_exists(farm_id, amm_pool_id, |maybe_liq_pool| {
             let liq_pool = maybe_liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
@@ -725,25 +698,20 @@ impl<T: Config> Pallet<T> {
 
     /// Deposit LP shares to a liq. mining.
     ///
-    /// This function transfer LP shares from `origin` to pallet's account and mint nft for
-    /// `origin` account. Minted nft represent deposit in the liq. mining.
+    /// This function create deposits in the lquidity pool yeild farm.
     ///
     /// Parameters:
-    /// - `origin`: account depositing LP shares. This account have to have at least
-    /// `shares_amount` of LP shares.
     /// - `farm_id`: id of farm to which user want to deposit LP shares.
-    /// - `asset_pair`: asset pair identifying LP shares user want to deposit.
     /// - `shares_amount`: amount of LP shares user want to deposit.
-    ///
-    /// Emits `SharesDeposited` event when successful.
+    /// - `amm_pool_id`: identifier of the AMM pool.
     #[transactional]
     pub fn deposit_shares(
+        who: AccountIdOf<T>,
         farm_id: GlobalPoolId,
         shares_amount: Balance,
-        amm_pool_id: AccountIdOf<T>,
+        amm_pool_id: T::AmmPoolId,
     ) -> Result<(PoolId, DepositId), DispatchError> {
         ensure!(
-            //TODO: add test for this
             shares_amount.ge(&T::MinDeposit::get()),
             Error::<T>::InvalidDepositAmount,
         );
@@ -762,7 +730,7 @@ impl<T: Config> Pallet<T> {
                 Self::maybe_update_pools(global_pool, liq_pool, now_period)?;
 
                 let valued_shares =
-                    Self::get_valued_shares(shares_amount, amm_pool_id, global_pool.incentivized_asset)?;
+                    Self::get_valued_shares(shares_amount, amm_pool_id.clone(), global_pool.incentivized_asset)?;
                 let shares_in_global_pool_for_deposit =
                     math::calculate_global_pool_shares(valued_shares, liq_pool.multiplier)
                         .map_err(|_e| Error::<T>::Overflow)?;
@@ -791,6 +759,7 @@ impl<T: Config> Pallet<T> {
 
                 let deposit = Deposit::new(shares_amount, valued_shares, liq_pool.accumulated_rpvs, now_period);
                 <DepositData<T>>::insert(&deposit_id, deposit);
+
                 <LiquidityPoolMetadata<T>>::try_mutate(liq_pool.id, |maybe_liq_pool_metadata| {
                     //Something is very wrong if this fail. Metadata can exist without liq. pool but liq. pool can't
                     //exist without metadata.
@@ -801,31 +770,33 @@ impl<T: Config> Pallet<T> {
                     //Increment deposits count
                     liq_pool_metadata.0 = liq_pool_metadata.0.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
+                    T::Handler::lock_lp_tokens(amm_pool_id, who, shares_amount, deposit_id)?;
                     Ok((liq_pool.id, deposit_id))
                 })
             })
         })
     }
 
-    /// Claim rewards from liq. mining for deposit represented by `nft_id`.
+    /// Claim rewards from liq. mining for given deposit.
     ///
-    /// This function calculate user rewards from liq. mining and transfer rewards to `origin`
+    /// This function calculate user rewards from liq. mining and transfer rewards to `who`
     /// account. Claiming in the same period is allowed only once.
     ///
-    /// WARN: User have to use `withdraw_shares()` if liq. pool is canceled, removed or whole
+    /// WARN: User have to use `withdraw_shares()` if liq. pool is removed or whole
     /// farm is destroyed.
     ///
     /// Parameters:
-    /// - `origin`: account owner of deposit(nft).
-    /// - `nft_id`: nft id representing deposit in the liq. pool.
-    ///
-    /// Emits `RewardClaimed` event when successful.
+    /// - `who`: destination account to receive rewards.
+    /// - `deposit_id`: id representing deposit in the liq. pool.
+    /// - `amm_pool_id`: identifier of the AMM pool.
+    /// - `check_double_claim`: fn failed on double claim if this is set to `true`. `fasle` is
+    /// usefull for `withdraw_shares()` where we need `unclaimable_rewards` from this fn.
     #[transactional]
     pub fn claim_rewards(
         who: AccountIdOf<T>,
         deposit_id: DepositId,
-        amm_pool_id: AccountIdOf<T>,
-        check_double_claim: bool, //this param is important because withdraw_shares need unclaimable_rewards
+        amm_pool_id: T::AmmPoolId,
+        check_double_claim: bool,
     ) -> Result<(GlobalPoolId, PoolId, T::CurrencyId, Balance, Balance), DispatchError> {
         let liq_pool_id = Self::get_pool_id_from_deposit_id(deposit_id)?;
 
@@ -878,7 +849,6 @@ impl<T: Config> Pallet<T> {
                         let liq_pool_account = Self::pool_account_id(liq_pool.id)?;
                         T::MultiCurrency::transfer(global_pool.reward_currency, &liq_pool_account, &who, rewards)?;
                     }
-
                     Ok((
                         global_pool.id,
                         liq_pool.id,
@@ -891,33 +861,23 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-    /// Withdraw LP shares from liq. mining. with reward claiming if possible.
+    /// Withdraw LP shares from liq. mining.
     ///
     /// Cases for transfer LP shares and claimed rewards:
-    ///
-    /// * liq. mining is active(liq. pool is not canceled) - claim and transfer rewards(if it
-    /// wasn't claimed in this period) and transfer LP shares.
-    /// * liq. mining is canceled - claim and transfer rewards(if it
-    /// wasn't claimed in this period) and transfer LP shares.
-    /// * liq. pool was removed - only LP shares will be transferred.
-    /// * farm was destroyed - only LP shares will be transferred.
-    /// * SPECIAL CASE: AMM pool does not exist - claiming based on liq. pool/farm state, LP
-    /// shares will not be transfered.
     ///
     /// This function transfer user's unclaimable rewards back to global pool's account.
     ///
     /// Parameters:
-    /// - `origin`: account owner of deposit(nft).
-    /// - `nft_id`: nft id representing deposit in the liq. pool.
-    ///
-    /// Emits:
-    /// * `RewardClaimed` if claim happen
-    /// * `SharesWithdrawn` event when successful
+    /// - `_who`
+    /// - `deposit_id`: id representing deposit in the liq. pool.
+    /// - `amm_pool_id`: identifier of the AMM pool.
+    /// - `unclaimable_rewards`: amount of reward will be not claimed anymore. This amount is
+    /// transfered from `LiquidityPoolYieldFarm` account to `GlobalPool` account
     #[transactional]
     pub fn withdraw_shares(
-        _who: AccountIdOf<T>,
+        who: AccountIdOf<T>,
         deposit_id: DepositId,
-        amm_pool_id: AccountIdOf<T>,
+        amm_pool_id: T::AmmPoolId,
         unclaimable_rewards: Balance,
     ) -> Result<(GlobalPoolId, PoolId, Balance), DispatchError> {
         let liq_pool_id = Self::get_pool_id_from_deposit_id(deposit_id)?;
@@ -936,7 +896,7 @@ impl<T: Config> Pallet<T> {
                 let mut can_remove_liq_pool_metadata = false;
                 <LiquidityPoolData<T>>::try_mutate(
                     farm_id,
-                    amm_pool_id,
+                    amm_pool_id.clone(),
                     |maybe_liq_pool| -> Result<(), DispatchError> {
                         if maybe_liq_pool.is_some() {
                             //This is intentional. This fn should not fail if liq. pool does not
@@ -1016,6 +976,9 @@ impl<T: Config> Pallet<T> {
                     *maybe_liq_pool_metadata =
                         Some((deposits_count.checked_sub(1).ok_or(Error::<T>::Overflow)?, farm_id));
                 }
+
+                T::Handler::unlock_lp_tokens(amm_pool_id, who, withdrawn_amount, deposit_id)?;
+
                 Ok((farm_id, liq_pool_id, withdrawn_amount))
             })
         })
@@ -1030,14 +993,14 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-    /// This function return new unused `NftInstanceIdOf<T>` with encoded `liq_pool_id` into it or
+    /// This function return new unused `DepositId` with encoded `liq_pool_id` into it or
     /// error.
     ///
-    /// 4 most significant bytes of `NftInstanceIdOf<T>` are reserved for liq. pool id(`u32`).
+    /// 4 most significant bytes of `DepositId` are reserved for liq. pool id(`u32`).
     fn get_next_deposit_id(liq_pool_id: PoolId) -> Result<DepositId, Error<T>> {
         Self::validate_pool_id(liq_pool_id)?;
 
-        NftInstanceSequencer::<T>::try_mutate(|current_id| {
+        DepositSequencer::<T>::try_mutate(|current_id| {
             *current_id = current_id.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
             ensure!(MAX_DEPOSIT_SEQUENCER.ge(current_id), Error::<T>::DepositIdOverflow);
@@ -1052,7 +1015,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-    /// This function return decoded liq. pool id from `NftInstanceIdOf<T>`
+    /// This function return decoded liq. pool id from `DepositId`
     fn get_pool_id_from_deposit_id(deposit_id: DepositId) -> Result<PoolId, Error<T>> {
         //4_294_967_296(largest invalid nft id) = encoded NftInstanceId from (1,1) - 1
         ensure!(4_294_967_296_u128.lt(&deposit_id), Error::<T>::InvalidDepositId);
@@ -1103,7 +1066,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// This function calculate and update `accumulated_rpz` and all associated properties of `GlobalPool` if
-    /// conditions are met and emit `FarmAccRPZUpdated` event.
+    /// conditions are met.
     fn update_global_pool(
         global_pool: &mut GlobalPool<T>,
         now_period: PeriodOf<T>,
@@ -1149,11 +1112,8 @@ impl<T: Config> Pallet<T> {
 
         global_pool.updated_at = now_period;
 
-        Self::deposit_event(Event::FarmAccRPZUpdated {
-            farm_id: global_pool.id,
-            accumulated_rpz: global_pool.accumulated_rpz,
-            total_shares_z: global_pool.total_shares_z,
-        });
+        // This should emit event for FE
+        T::Handler::on_accumulated_rpz_update(global_pool.id, global_pool.accumulated_rpz, global_pool.total_shares_z);
 
         Ok(())
     }
@@ -1164,12 +1124,12 @@ impl<T: Config> Pallet<T> {
         liq_pool: &mut LiquidityPoolYieldFarm<T>,
         stake_in_global_pool: Balance,
     ) -> Result<Balance, Error<T>> {
-        let reward = global_pool
-            .accumulated_rpz
-            .checked_sub(liq_pool.accumulated_rpz)
-            .ok_or(Error::<T>::Overflow)?
-            .checked_mul(stake_in_global_pool)
-            .ok_or(Error::<T>::Overflow)?;
+        let reward = math::calculate_reward(
+            liq_pool.accumulated_rpz,
+            global_pool.accumulated_rpz,
+            stake_in_global_pool,
+        )
+        .map_err(|_e| Error::<T>::Overflow)?;
 
         liq_pool.accumulated_rpz = global_pool.accumulated_rpz;
 
@@ -1187,8 +1147,8 @@ impl<T: Config> Pallet<T> {
     }
 
     /// This function calculate and update `accumulated_rpvz` and all associated properties of `LiquidityPoolYieldFarm` if
-    /// conditions are met and emit `FarmAccRPVSUpdated` event. Function also transfer
-    /// `pool_rewareds` from `GlobalPool` account to `LiquidityPoolYieldFarm` account.
+    /// conditions are met. Function also transfer `pool_rewareds` from `GlobalPool` account to `LiquidityPoolYieldFarm`
+    /// account.
     fn update_liq_pool(
         pool: &mut LiquidityPoolYieldFarm<T>,
         pool_rewards: Balance,
@@ -1220,12 +1180,13 @@ impl<T: Config> Pallet<T> {
         let global_pool_account = Self::pool_account_id(global_pool_id)?;
         let pool_account = Self::pool_account_id(pool.id)?;
 
-        Self::deposit_event(Event::LiquidityPoolAccRPVSUpdated {
-            farm_id: global_pool_id,
-            liq_pool_farm_id: pool.id,
-            accumulated_rpvs: pool.accumulated_rpvs,
-            total_valued_shares: pool.total_valued_shares,
-        });
+        // This should emit event for FE
+        T::Handler::on_accumulated_rpvs_update(
+            global_pool_id,
+            pool.id,
+            pool.accumulated_rpvs,
+            pool.total_valued_shares,
+        );
 
         T::MultiCurrency::transfer(reward_currency, &global_pool_account, &pool_account, pool_rewards)
     }
@@ -1266,10 +1227,10 @@ impl<T: Config> Pallet<T> {
     /// This function calculate account's valued shares[`Balance`] or error.
     fn get_valued_shares(
         shares: Balance,
-        amm: AccountIdOf<T>,
+        amm: T::AmmPoolId,
         incentivized_asset: T::CurrencyId,
     ) -> Result<Balance, Error<T>> {
-        let incentivized_asset_balance = T::MultiCurrency::free_balance(incentivized_asset, &amm);
+        let incentivized_asset_balance = T::Handler::get_balance_in_amm(incentivized_asset, amm);
 
         shares
             .checked_mul(incentivized_asset_balance)
@@ -1282,6 +1243,7 @@ impl<T: Config> Pallet<T> {
         liq_pool: &mut LiquidityPoolYieldFarm<T>,
         now_period: PeriodOf<T>,
     ) -> Result<(), DispatchError> {
+        //TODO: test this
         if liq_pool.canceled {
             return Ok(());
         }
@@ -1310,7 +1272,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    pub fn liquidity_pool_farm_exists(deposit_id: DepositId, amm_pool_id: &AccountIdOf<T>) -> Result<bool, Error::<T>> {
+    pub fn liquidity_pool_farm_exists(deposit_id: DepositId, amm_pool_id: &T::AmmPoolId) -> Result<bool, Error<T>> {
         let liq_pool_id = Self::get_pool_id_from_deposit_id(deposit_id)?;
 
         if let Some((_, farm_id)) = Self::liq_pool_meta(liq_pool_id) {

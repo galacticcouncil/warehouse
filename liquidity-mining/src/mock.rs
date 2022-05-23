@@ -21,22 +21,34 @@ use super::*;
 use crate as liq_mining;
 use crate::Config;
 use frame_support::{
-	parameter_types,
-	traits::{Everything, GenesisBuild, Nothing},
-	PalletId,
+    parameter_types,
+    traits::{Everything, GenesisBuild, Nothing},
+    PalletId,
 };
 use frame_system as system;
 use hydradx_traits::AMM;
 use orml_traits::parameter_type_with_key;
-use primitives::nft::{ClassType, NftPermissions};
-use primitives::ReserveIdentifier;
-use primitives::{asset::AssetPair, Amount, AssetId, Balance};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, BlockNumberProvider, IdentityLookup},
+    testing::Header,
+    traits::{BlakeTwo256, BlockNumberProvider, IdentityLookup},
 };
+
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord, MaxEncodedLen, RuntimeDebug, TypeInfo)]
+#[repr(u8)]
+pub enum ReserveIdentifier {
+    Nft,
+    Marketplace,
+
+    // always the last, indicate number of variants
+    Count,
+}
+
 use std::{cell::RefCell, collections::HashMap};
+
+pub type Balance = u128;
+pub type AssetId = u32;
+pub type Amount = i128;
 
 pub type AccountId = u128;
 pub type PoolId = crate::PoolId;
@@ -48,6 +60,7 @@ pub const DAVE: AccountId = 4;
 pub const TREASURY: AccountId = 5;
 pub const ACCOUNT_WITH_1M: AccountId = 6;
 pub const GC: AccountId = 7;
+pub const LP_SHARES_STASH: AccountId = 8;
 
 pub const INITIAL_BALANCE: u128 = 1_000_000_000_000;
 
@@ -90,327 +103,356 @@ pub const KSM_FARM: PoolId = 2;
 pub const GC_FARM: PoolId = 3;
 pub const ACA_FARM: PoolId = 4;
 
-pub const LIQ_MINING_NFT_CLASS: primitives::ClassId = 1;
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
+#[derive(Clone)]
+pub struct AssetPair {
+    pub asset_in: AssetId,
+    pub asset_out: AssetId,
+}
+
 frame_support::construct_runtime!(
-	pub enum Test where
-	Block = Block,
-	NodeBlock = Block,
-	UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		LiquidityMining: liq_mining::{Pallet, Call, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		NFT: pallet_nft::{Pallet, Call, Event<T>, Storage},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Uniques: pallet_uniques::{Pallet, Call, Storage, Event<T>},
-	}
+    pub enum Test where
+    Block = Block,
+    NodeBlock = Block,
+    UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        LiquidityMining: liq_mining::{Pallet, Storage},
+        Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+    }
 );
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-	pub const SS58Prefix: u8 = 63;
-	pub static MockBlockNumberProvider: u64 = 0;
+    pub const BlockHashCount: u64 = 250;
+    pub const SS58Prefix: u8 = 63;
+    pub static MockBlockNumberProvider: u64 = 0;
 }
 
 impl BlockNumberProvider for MockBlockNumberProvider {
-	type BlockNumber = u64;
+    type BlockNumber = u64;
 
-	fn current_block_number() -> Self::BlockNumber {
-		Self::get()
-	}
+    fn current_block_number() -> Self::BlockNumber {
+        Self::get()
+    }
 }
 impl system::Config for Test {
-	type BaseCallFilter = Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Call = Call;
-	type Index = u64;
-	type BlockNumber = BlockNumber;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u128>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
+    type BaseCallFilter = Everything;
+    type BlockWeights = ();
+    type BlockLength = ();
+    type DbWeight = ();
+    type Origin = Origin;
+    type Call = Call;
+    type Index = u64;
+    type BlockNumber = BlockNumber;
+    type Hash = H256;
+    type Hashing = BlakeTwo256;
+    type AccountId = AccountId;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type Header = Header;
+    type Event = Event;
+    type BlockHashCount = BlockHashCount;
+    type Version = ();
+    type PalletInfo = PalletInfo;
+    type AccountData = pallet_balances::AccountData<u128>;
+    type OnNewAccount = ();
+    type OnKilledAccount = ();
+    type SystemWeightInfo = ();
+    type SS58Prefix = ();
+    type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 pub struct Amm;
 
 thread_local! {
-	pub static AMM_POOLS: RefCell<HashMap<String, (AccountId, AssetId)>> = RefCell::new(HashMap::new());
+    pub static AMM_POOLS: RefCell<HashMap<String, (AccountId, AssetId)>> = RefCell::new(HashMap::new());
 }
 
 impl AMM<AccountId, AssetId, AssetPair, Balance> for Amm {
-	fn get_max_out_ratio() -> u128 {
-		0_u32.into()
-	}
+    fn get_max_out_ratio() -> u128 {
+        0_u32.into()
+    }
 
-	fn get_fee(_pool_account_id: &AccountId) -> (u32, u32) {
-		(0, 0)
-	}
+    fn get_fee(_pool_account_id: &AccountId) -> (u32, u32) {
+        (0, 0)
+    }
 
-	fn get_max_in_ratio() -> u128 {
-		0_u32.into()
-	}
+    fn get_max_in_ratio() -> u128 {
+        0_u32.into()
+    }
 
-	fn get_pool_assets(_pool_account_id: &AccountId) -> Option<Vec<AssetId>> {
-		None
-	}
+    fn get_pool_assets(_pool_account_id: &AccountId) -> Option<Vec<AssetId>> {
+        None
+    }
 
-	fn get_spot_price_unchecked(_asset_a: AssetId, _asset_b: AssetId, _amount: Balance) -> Balance {
-		Balance::from(0_u32)
-	}
+    fn get_spot_price_unchecked(_asset_a: AssetId, _asset_b: AssetId, _amount: Balance) -> Balance {
+        Balance::from(0_u32)
+    }
 
-	fn validate_sell(
-		_origin: &AccountId,
-		_assets: AssetPair,
-		_amount: Balance,
-		_min_bought: Balance,
-		_discount: bool,
-	) -> Result<
-		hydradx_traits::AMMTransfer<AccountId, AssetId, AssetPair, Balance>,
-		frame_support::sp_runtime::DispatchError,
-	> {
-		Err(sp_runtime::DispatchError::Other("NotImplemented"))
-	}
+    fn validate_sell(
+        _origin: &AccountId,
+        _assets: AssetPair,
+        _amount: Balance,
+        _min_bought: Balance,
+        _discount: bool,
+    ) -> Result<
+        hydradx_traits::AMMTransfer<AccountId, AssetId, AssetPair, Balance>,
+        frame_support::sp_runtime::DispatchError,
+    > {
+        Err(sp_runtime::DispatchError::Other("NotImplemented"))
+    }
 
-	fn execute_buy(
-		_transfer: &hydradx_traits::AMMTransfer<AccountId, AssetId, AssetPair, Balance>,
-	) -> frame_support::dispatch::DispatchResult {
-		Err(sp_runtime::DispatchError::Other("NotImplemented"))
-	}
+    fn execute_buy(
+        _transfer: &hydradx_traits::AMMTransfer<AccountId, AssetId, AssetPair, Balance>,
+    ) -> frame_support::dispatch::DispatchResult {
+        Err(sp_runtime::DispatchError::Other("NotImplemented"))
+    }
 
-	fn execute_sell(
-		_transfer: &hydradx_traits::AMMTransfer<AccountId, AssetId, AssetPair, Balance>,
-	) -> frame_support::dispatch::DispatchResult {
-		Err(sp_runtime::DispatchError::Other("NotImplemented"))
-	}
+    fn execute_sell(
+        _transfer: &hydradx_traits::AMMTransfer<AccountId, AssetId, AssetPair, Balance>,
+    ) -> frame_support::dispatch::DispatchResult {
+        Err(sp_runtime::DispatchError::Other("NotImplemented"))
+    }
 
-	fn validate_buy(
-		_origin: &AccountId,
-		_assets: AssetPair,
-		_amount: Balance,
-		_max_limit: Balance,
-		_discount: bool,
-	) -> Result<
-		hydradx_traits::AMMTransfer<AccountId, AssetId, AssetPair, Balance>,
-		frame_support::sp_runtime::DispatchError,
-	> {
-		Err(sp_runtime::DispatchError::Other("NotImplemented"))
-	}
+    fn validate_buy(
+        _origin: &AccountId,
+        _assets: AssetPair,
+        _amount: Balance,
+        _max_limit: Balance,
+        _discount: bool,
+    ) -> Result<
+        hydradx_traits::AMMTransfer<AccountId, AssetId, AssetPair, Balance>,
+        frame_support::sp_runtime::DispatchError,
+    > {
+        Err(sp_runtime::DispatchError::Other("NotImplemented"))
+    }
 
-	fn get_min_pool_liquidity() -> Balance {
-		Balance::from(0_u32)
-	}
+    fn get_min_pool_liquidity() -> Balance {
+        Balance::from(0_u32)
+    }
 
-	fn get_min_trading_limit() -> Balance {
-		Balance::from(0_u32)
-	}
+    fn get_min_trading_limit() -> Balance {
+        Balance::from(0_u32)
+    }
 
-	// Fn bellow are used by liq. mining pallet
-	fn exists(assets: AssetPair) -> bool {
-		AMM_POOLS.with(|v| v.borrow().contains_key(&asset_pair_to_map_key(assets)))
-	}
+    // Fn bellow are used by liq. mining pallet
+    fn exists(assets: AssetPair) -> bool {
+        AMM_POOLS.with(|v| v.borrow().contains_key(&asset_pair_to_map_key(assets)))
+    }
 
-	fn get_pair_id(assets: AssetPair) -> AccountId {
-		AMM_POOLS.with(|v| match v.borrow().get(&asset_pair_to_map_key(assets)) {
-			Some(p) => p.0,
-			None => DEFAULT_AMM,
-		})
-	}
+    fn get_pair_id(assets: AssetPair) -> AccountId {
+        AMM_POOLS.with(|v| match v.borrow().get(&asset_pair_to_map_key(assets)) {
+            Some(p) => p.0,
+            None => DEFAULT_AMM,
+        })
+    }
 
-	fn get_share_token(assets: AssetPair) -> AssetId {
-		AMM_POOLS.with(|v| match v.borrow().get(&asset_pair_to_map_key(assets)) {
-			Some(p) => p.1,
-			None => BSX,
-		})
-	}
+    fn get_share_token(assets: AssetPair) -> AssetId {
+        AMM_POOLS.with(|v| match v.borrow().get(&asset_pair_to_map_key(assets)) {
+            Some(p) => p.1,
+            None => BSX,
+        })
+    }
 }
 
 pub fn asset_pair_to_map_key(assets: AssetPair) -> String {
-	format!("in:{}_out:{}", assets.asset_in, assets.asset_out)
+    format!("in:{}_out:{}", assets.asset_in, assets.asset_out)
 }
 
 parameter_types! {
-	pub const MaxLocks: u32 = 1;
-	pub const LMPalletId: PalletId = PalletId(*b"TEST_lm_");
-	pub const MinPlannedYieldingPeriods: BlockNumber = 100;
-	pub const MinTotalFarmRewards: Balance = 1_000_000;
-	pub const NftClass: primitives::ClassId = LIQ_MINING_NFT_CLASS;
+    pub const MaxLocks: u32 = 1;
+    pub const LMPalletId: PalletId = PalletId(*b"TEST_lm_");
+    pub const MinPlannedYieldingPeriods: BlockNumber = 100;
+    pub const MinTotalFarmRewards: Balance = 1_000_000;
+    pub const MininumDeposit: Balance = 10;
 }
 
 impl Config for Test {
-	type Event = Event;
-	type CurrencyId = AssetId;
-	type MultiCurrency = Tokens;
-	type CreateOrigin = frame_system::EnsureRoot<AccountId>;
-	type WeightInfo = ();
-	type PalletId = LMPalletId;
-	type MinPlannedYieldingPeriods = MinPlannedYieldingPeriods;
-	type MinTotalFarmRewards = MinTotalFarmRewards;
-	type BlockNumberProvider = MockBlockNumberProvider;
-	type NftClass = NftClass;
-	type AMM = Amm;
+    type CurrencyId = AssetId;
+    type MultiCurrency = Tokens;
+    type PalletId = LMPalletId;
+    type MinPlannedYieldingPeriods = MinPlannedYieldingPeriods;
+    type MinTotalFarmRewards = MinTotalFarmRewards;
+    type BlockNumberProvider = MockBlockNumberProvider;
+    type AmmPoolId = AccountId;
+    type MinDeposit = MininumDeposit;
+    type Handler = TestLiquidityMiningHandler;
+}
+
+pub struct TestLiquidityMiningHandler {}
+
+impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalPoolId, PoolId, Balance, DepositId, AccountId>
+    for TestLiquidityMiningHandler
+{
+    fn get_balance_in_amm(asset: AssetId, amm_pool: AccountId) -> Balance {
+        Tokens::free_balance(asset, &amm_pool)
+    }
+
+    fn on_accumulated_rpvs_update(
+        _farm_id: GlobalPoolId,
+        _liq_pool_farm_id: PoolId,
+        _accumulated_rpvs: Balance,
+        _total_valued_shares: Balance,
+    ) {
+        //TODO: fix this
+    }
+
+    fn on_accumulated_rpz_update(_farm_id: GlobalPoolId, _accumulated_rpz: Balance, _total_shares_z: Balance) {
+        //TODO: fix this
+    }
+
+    fn lock_lp_tokens(
+        amm_pool_id: AccountId,
+        who: AccountId,
+        amount: Balance,
+        _deposit_id: AccountId,
+    ) -> Result<(), DispatchError> {
+        let map = HashMap::from([
+            (BSX_ACA_AMM, BSX_ACA_SHARE_ID),
+            (BSX_KSM_AMM, BSX_KSM_SHARE_ID),
+            (BSX_DOT_AMM, BSX_DOT_SHARE_ID),
+            (BSX_ETH_AMM, BSX_ETH_SHARE_ID),
+            (BSX_HDX_AMM, BSX_HDX_SHARE_ID),
+            (BSX_TKN1_AMM, BSX_TKN1_SHARE_ID),
+            (BSX_TKN2_AMM, BSX_TKN2_SHARE_ID),
+            (KSM_DOT_AMM, KSM_DOT_SHARE_ID),
+            (ACA_KSM_AMM, ACA_KSM_SHARE_ID),
+        ]);
+
+        let lp_token = map.get(&amm_pool_id).unwrap();
+
+        Tokens::transfer(Origin::signed(who), LP_SHARES_STASH, *lp_token, amount)?;
+
+        Ok(())
+    }
+
+    fn unlock_lp_tokens(
+        amm_pool_id: AccountId,
+        who: AccountId,
+        amount: Balance,
+        _deposit_id: AccountId,
+    ) -> Result<(), DispatchError> {
+        let map = HashMap::from([
+            (BSX_ACA_AMM, BSX_ACA_SHARE_ID),
+            (BSX_KSM_AMM, BSX_KSM_SHARE_ID),
+            (BSX_DOT_AMM, BSX_DOT_SHARE_ID),
+            (BSX_ETH_AMM, BSX_ETH_SHARE_ID),
+            (BSX_HDX_AMM, BSX_HDX_SHARE_ID),
+            (BSX_TKN1_AMM, BSX_TKN1_SHARE_ID),
+            (BSX_TKN2_AMM, BSX_TKN2_SHARE_ID),
+            (KSM_DOT_AMM, KSM_DOT_SHARE_ID),
+            (ACA_KSM_AMM, ACA_KSM_SHARE_ID),
+        ]);
+
+        let lp_token = map.get(&amm_pool_id).unwrap();
+
+        Tokens::transfer(Origin::signed(LP_SHARES_STASH), who, *lp_token, amount)?;
+
+        Ok(())
+    }
 }
 
 parameter_types! {
-	pub ReserveClassIdUpTo: u128 = 999;
-}
-
-impl pallet_nft::Config for Test {
-	type Currency = Balances;
-	type Event = Event;
-	type WeightInfo = pallet_nft::weights::BasiliskWeight<Test>;
-	type NftClassId = primitives::ClassId;
-	type NftInstanceId = primitives::InstanceId;
-	type ProtocolOrigin = frame_system::EnsureRoot<AccountId>;
-	type ClassType = ClassType;
-	type Permissions = NftPermissions;
-	type ReserveClassIdUpTo = ReserveClassIdUpTo;
-}
-
-parameter_types! {
-	pub const ExistentialDeposit: u128 = 500;
-	pub const MaxReserves: u32 = 50;
+    pub const ExistentialDeposit: u128 = 500;
+    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Test {
-	type Balance = Balance;
-	type Event = Event;
-	type DustRemoval = ();
-	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = frame_system::Pallet<Test>;
-	type MaxLocks = ();
-	type WeightInfo = ();
-	type MaxReserves = MaxReserves;
-	type ReserveIdentifier = ReserveIdentifier;
-}
-
-parameter_types! {
-	pub const ClassDeposit: Balance = 1_000_000_000_000_000; // 1 UNIT deposit to create asset class
-	pub const InstanceDeposit: Balance = 10_000_000_000_000; // 1/100 UNIT deposit to create asset instance
-	pub const KeyLimit: u32 = 32;	// Max 32 bytes per key
-	pub const ValueLimit: u32 = 64;	// Max 64 bytes per value
-	pub const UniquesMetadataDepositBase: Balance = 100_000_000_000_000;
-	pub const AttributeDepositBase: Balance = 10_000_000_000_000;
-	pub const DepositPerByte: Balance = 1_000_000_000_000;
-	pub const UniquesStringLimit: u32 = 32;
-}
-
-impl pallet_uniques::Config for Test {
-	type Event = Event;
-	type ClassId = primitives::ClassId;
-	type InstanceId = primitives::InstanceId;
-	type Currency = Balances;
-	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
-	type ClassDeposit = ClassDeposit;
-	type InstanceDeposit = InstanceDeposit;
-	type MetadataDepositBase = UniquesMetadataDepositBase;
-	type AttributeDepositBase = AttributeDepositBase;
-	type DepositPerByte = DepositPerByte;
-	type StringLimit = UniquesStringLimit;
-	type KeyLimit = KeyLimit;
-	type ValueLimit = ValueLimit;
-	type WeightInfo = ();
+    type Balance = Balance;
+    type Event = Event;
+    type DustRemoval = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type AccountStore = frame_system::Pallet<Test>;
+    type MaxLocks = ();
+    type WeightInfo = ();
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = ReserveIdentifier;
 }
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-		1u128
-	};
+    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
+        1u128
+    };
 }
 
 impl orml_tokens::Config for Test {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = Amount;
-	type CurrencyId = AssetId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-	type MaxLocks = MaxLocks;
-	type DustRemovalWhitelist = Nothing;
+    type Event = Event;
+    type Balance = Balance;
+    type Amount = Amount;
+    type CurrencyId = AssetId;
+    type WeightInfo = ();
+    type ExistentialDeposits = ExistentialDeposits;
+    type OnDust = ();
+    type MaxLocks = MaxLocks;
+    type DustRemovalWhitelist = Nothing;
 }
 
 pub struct ExtBuilder {
-	endowed_accounts: Vec<(AccountId, AssetId, Balance)>,
+    endowed_accounts: Vec<(AccountId, AssetId, Balance)>,
 }
 
 impl Default for ExtBuilder {
-	fn default() -> Self {
-		Self {
-			endowed_accounts: vec![
-				(ALICE, BSX_ACA_SHARE_ID, INITIAL_BALANCE),
-				(ALICE, BSX_DOT_SHARE_ID, INITIAL_BALANCE),
-				(ALICE, BSX_KSM_SHARE_ID, INITIAL_BALANCE),
-				(ALICE, BSX_TKN1_SHARE_ID, 3_000_000),
-				(ALICE, BSX_TKN2_SHARE_ID, 3_000_000),
-				(ALICE, ACA_KSM_SHARE_ID, 3_000_000),
-				(ALICE, BSX, INITIAL_BALANCE),
-				(ACCOUNT_WITH_1M, BSX, 1_000_000),
-				(BOB, BSX_ACA_SHARE_ID, INITIAL_BALANCE),
-				(BOB, BSX_DOT_SHARE_ID, INITIAL_BALANCE),
-				(BOB, BSX_KSM_SHARE_ID, INITIAL_BALANCE),
-				(BOB, BSX_TKN1_SHARE_ID, 2_000_000),
-				(BOB, BSX_TKN2_SHARE_ID, 2_000_000),
-				(BOB, ACA_KSM_SHARE_ID, 2_000_000),
-				(BOB, BSX, INITIAL_BALANCE),
-				(BOB, KSM, INITIAL_BALANCE),
-				(CHARLIE, BSX_ACA_SHARE_ID, INITIAL_BALANCE),
-				(CHARLIE, BSX_DOT_SHARE_ID, INITIAL_BALANCE),
-				(CHARLIE, BSX_KSM_SHARE_ID, INITIAL_BALANCE),
-				(CHARLIE, BSX_TKN1_SHARE_ID, 5_000_000),
-				(CHARLIE, BSX_TKN2_SHARE_ID, 5_000_000),
-				(CHARLIE, BSX, INITIAL_BALANCE),
-				(CHARLIE, KSM, INITIAL_BALANCE),
-				(CHARLIE, ACA, INITIAL_BALANCE),
-				(DAVE, BSX_ACA_SHARE_ID, INITIAL_BALANCE),
-				(DAVE, BSX_DOT_SHARE_ID, INITIAL_BALANCE),
-				(DAVE, BSX_KSM_SHARE_ID, INITIAL_BALANCE),
-				(DAVE, BSX_TKN1_SHARE_ID, 10_000_000),
-				(DAVE, BSX_TKN2_SHARE_ID, 10_000_000),
-				(DAVE, BSX, INITIAL_BALANCE),
-				(GC, BSX, INITIAL_BALANCE),
-				(TREASURY, BSX, 1_000_000_000_000_000_000),
-				(TREASURY, ACA, 1_000_000_000_000_000_000),
-				(TREASURY, HDX, 1_000_000_000_000_000_000),
-				(TREASURY, KSM, 1_000_000_000_000_000_000),
-			],
-		}
-	}
+    fn default() -> Self {
+        Self {
+            endowed_accounts: vec![
+                (ALICE, BSX_ACA_SHARE_ID, INITIAL_BALANCE),
+                (ALICE, BSX_DOT_SHARE_ID, INITIAL_BALANCE),
+                (ALICE, BSX_KSM_SHARE_ID, INITIAL_BALANCE),
+                (ALICE, BSX_TKN1_SHARE_ID, 3_000_000),
+                (ALICE, BSX_TKN2_SHARE_ID, 3_000_000),
+                (ALICE, ACA_KSM_SHARE_ID, 3_000_000),
+                (ALICE, BSX, INITIAL_BALANCE),
+                (ACCOUNT_WITH_1M, BSX, 1_000_000),
+                (BOB, BSX_ACA_SHARE_ID, INITIAL_BALANCE),
+                (BOB, BSX_DOT_SHARE_ID, INITIAL_BALANCE),
+                (BOB, BSX_KSM_SHARE_ID, INITIAL_BALANCE),
+                (BOB, BSX_TKN1_SHARE_ID, 2_000_000),
+                (BOB, BSX_TKN2_SHARE_ID, 2_000_000),
+                (BOB, ACA_KSM_SHARE_ID, 2_000_000),
+                (BOB, BSX, INITIAL_BALANCE),
+                (BOB, KSM, INITIAL_BALANCE),
+                (CHARLIE, BSX_ACA_SHARE_ID, INITIAL_BALANCE),
+                (CHARLIE, BSX_DOT_SHARE_ID, INITIAL_BALANCE),
+                (CHARLIE, BSX_KSM_SHARE_ID, INITIAL_BALANCE),
+                (CHARLIE, BSX_TKN1_SHARE_ID, 5_000_000),
+                (CHARLIE, BSX_TKN2_SHARE_ID, 5_000_000),
+                (CHARLIE, BSX, INITIAL_BALANCE),
+                (CHARLIE, KSM, INITIAL_BALANCE),
+                (CHARLIE, ACA, INITIAL_BALANCE),
+                (DAVE, BSX_ACA_SHARE_ID, INITIAL_BALANCE),
+                (DAVE, BSX_DOT_SHARE_ID, INITIAL_BALANCE),
+                (DAVE, BSX_KSM_SHARE_ID, INITIAL_BALANCE),
+                (DAVE, BSX_TKN1_SHARE_ID, 10_000_000),
+                (DAVE, BSX_TKN2_SHARE_ID, 10_000_000),
+                (DAVE, BSX, INITIAL_BALANCE),
+                (GC, BSX, INITIAL_BALANCE),
+                (TREASURY, BSX, 1_000_000_000_000_000_000),
+                (TREASURY, ACA, 1_000_000_000_000_000_000),
+                (TREASURY, HDX, 1_000_000_000_000_000_000),
+                (TREASURY, KSM, 1_000_000_000_000_000_000),
+            ],
+        }
+    }
 }
 
 impl ExtBuilder {
-	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+    pub fn build(self) -> sp_io::TestExternalities {
+        let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		orml_tokens::GenesisConfig::<Test> {
-			balances: self.endowed_accounts,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
+        orml_tokens::GenesisConfig::<Test> {
+            balances: self.endowed_accounts,
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
 
-		t.into()
-	}
+        t.into()
+    }
 }
 
 pub fn set_block_number(n: u64) {
-	MockBlockNumberProvider::set(n);
-	System::set_block_number(n);
+    MockBlockNumberProvider::set(n);
+    System::set_block_number(n);
 }

@@ -61,7 +61,10 @@ pub struct NftTestPermissions;
 
 impl NftPermission<ClassType> for NftTestPermissions {
     fn can_create(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace | ClassType::LiquidityMining | ClassType::Redeemable)
+        matches!(
+            *class_type,
+            ClassType::Marketplace | ClassType::LiquidityMining | ClassType::Redeemable
+        )
     }
 
     fn can_mint(class_type: &ClassType) -> bool {

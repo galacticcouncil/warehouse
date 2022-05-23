@@ -372,10 +372,7 @@ pub mod pallet {
             AssetLocations::<T>::insert(asset_id, &location);
             LocationAssets::<T>::insert(&location, asset_id);
 
-            Self::deposit_event(Event::LocationSet {
-                asset_id,
-                location,
-            });
+            Self::deposit_event(Event::LocationSet { asset_id, location });
 
             Ok(())
         }

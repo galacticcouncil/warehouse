@@ -209,10 +209,7 @@ impl<T: Config> Pallet<T> {
                 Ok(_pos) => Err(Error::<T>::AssetAlreadyAdded.into()), // new asset is already in the NewAssets vector
                 Err(pos) => {
                     new_assets.insert(pos, Self::get_name(asset_a, asset_b));
-                    Self::deposit_event(Event::PoolRegistered {
-                        asset_a,
-                        asset_b,
-                    });
+                    Self::deposit_event(Event::PoolRegistered { asset_a, asset_b });
                     Ok(())
                 }
             }

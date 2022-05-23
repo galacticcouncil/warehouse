@@ -128,16 +128,19 @@ fn add_new_asset_pair_should_work() {
         expect_events(vec![
             Event::PoolRegistered {
                 asset_a: HDX,
-                asset_b: DOT
-            }.into(),
+                asset_b: DOT,
+            }
+            .into(),
             Event::PoolRegistered {
                 asset_a: HDX,
-                asset_b: ACA
-            }.into(),
+                asset_b: ACA,
+            }
+            .into(),
             Event::PoolRegistered {
                 asset_a: HDX,
-                asset_b: ETH
-            }.into(),
+                asset_b: ETH,
+            }
+            .into(),
         ]);
     });
 }
@@ -178,12 +181,14 @@ fn on_create_pool_should_work() {
         expect_events(vec![
             Event::PoolRegistered {
                 asset_a: HDX,
-                asset_b: DOT
-            }.into(),
+                asset_b: DOT,
+            }
+            .into(),
             Event::PoolRegistered {
                 asset_a: HDX,
-                asset_b: ACA
-            }.into(),
+                asset_b: ACA,
+            }
+            .into(),
         ]);
     });
 }

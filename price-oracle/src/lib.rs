@@ -84,8 +84,8 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Pool was registered. [asset a, asset b]
-        PoolRegistered(AssetId, AssetId),
+        /// Pool was registered.
+        PoolRegistered { asset_a: AssetId, asset_b: AssetId },
     }
 
     /// The number of assets registered and handled by this pallet.
@@ -209,7 +209,10 @@ impl<T: Config> Pallet<T> {
                 Ok(_pos) => Err(Error::<T>::AssetAlreadyAdded.into()), // new asset is already in the NewAssets vector
                 Err(pos) => {
                     new_assets.insert(pos, Self::get_name(asset_a, asset_b));
-                    Self::deposit_event(Event::PoolRegistered(asset_a, asset_b));
+                    Self::deposit_event(Event::PoolRegistered {
+                        asset_a,
+                        asset_b,
+                    });
                     Ok(())
                 }
             }

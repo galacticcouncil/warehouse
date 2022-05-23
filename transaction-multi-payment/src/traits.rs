@@ -9,7 +9,7 @@ pub enum PaymentInfo<Balance, AssetId, Price> {
 pub trait TransactionMultiPaymentDataProvider<AccountId, AssetId, Price> {
     fn get_currency_and_price(who: &AccountId) -> Result<(AssetId, Option<Price>), DispatchError>;
 
-    fn get_fee_receiver() -> Option<AccountId>;
+    fn get_fee_receiver() -> AccountId;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -97,6 +97,7 @@ parameter_types! {
     pub const MaxLocks: u32 = 50;
     pub const TransactionByteFee: Balance = 1;
     pub const RegistryStringLimit: u32 = 100;
+    pub const FeeReceiver: AccountId = FEE_RECEIVER;
 
     pub RuntimeBlockWeights: system::limits::BlockWeights = system::limits::BlockWeights::builder()
         .base_block(10)
@@ -155,6 +156,7 @@ impl Config for Test {
     type WithdrawFeeForSetCurrency = PayForSetCurrency;
     type WeightToFee = IdentityFee<Balance>;
     type NativeAssetId = HdxAssetId;
+    type FeeReceiver = FeeReceiver;
 }
 
 impl pallet_balances::Config for Test {
@@ -322,7 +324,6 @@ impl ExtBuilder {
                 (SUPPORTED_CURRENCY, Price::from_float(1.5)),
                 (SUPPORTED_CURRENCY_WITH_PRICE, Price::from_float(0.5)),
             ],
-            fee_receiver: Some(FEE_RECEIVER),
             account_currencies: self.account_currencies,
         }
         .assimilate_storage(&mut t)

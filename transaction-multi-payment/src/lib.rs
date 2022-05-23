@@ -136,6 +136,10 @@ pub mod pallet {
         /// Native Asset
         #[pallet::constant]
         type NativeAssetId: Get<AssetIdOf<Self>>;
+
+        /// Account where fees are deposited
+        #[pallet::constant]
+        type FeeReceiver: Get<Self::AccountId>;
     }
 
     #[pallet::event]
@@ -180,9 +184,6 @@ pub mod pallet {
 
         /// Math overflow
         Overflow,
-
-        /// Fee receiver account is not set.
-        FeeReceiverAccountNotSet,
     }
 
     /// Account currency map
@@ -200,15 +201,9 @@ pub mod pallet {
     #[pallet::getter(fn currency_price)]
     pub type AcceptedCurrencyPrice<T: Config> = StorageMap<_, Twox64Concat, AssetIdOf<T>, Price, OptionQuery>;
 
-    /// Account where fees are deposited
-    #[pallet::storage]
-    #[pallet::getter(fn fee_receiver)]
-    pub type FeeReceiver<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
-
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub currencies: Vec<(AssetIdOf<T>, Price)>,
-        pub fee_receiver: Option<T::AccountId>,
         pub account_currencies: Vec<(T::AccountId, AssetIdOf<T>)>,
     }
 
@@ -217,7 +212,6 @@ pub mod pallet {
         fn default() -> Self {
             GenesisConfig {
                 currencies: vec![],
-                fee_receiver: None,
                 account_currencies: vec![],
             }
         }
@@ -226,12 +220,6 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            if self.fee_receiver == None {
-                panic!("Fee receiver account is not set");
-            }
-
-            FeeReceiver::<T>::put(self.fee_receiver.clone().expect("Fee receiver account is not set"));
-
             for (asset, price) in &self.currencies {
                 AcceptedCurrencies::<T>::insert(asset, price);
             }
@@ -354,7 +342,7 @@ where
         T::Currencies::transfer(
             currency,
             who,
-            &Self::fee_receiver().ok_or(Error::<T>::FeeReceiverAccountNotSet)?,
+            &T::FeeReceiver::get(),
             amount,
         )?;
 
@@ -363,7 +351,7 @@ where
             currency,
             fee,
             amount,
-            Self::fee_receiver().ok_or(Error::<T>::FeeReceiverAccountNotSet)?,
+            T::FeeReceiver::get(),
         ));
 
         Ok(())
@@ -418,8 +406,8 @@ where
         Self::get_currency_and_price(who)
     }
 
-    fn get_fee_receiver() -> Option<<T as frame_system::Config>::AccountId> {
-        Self::fee_receiver()
+    fn get_fee_receiver() -> <T as frame_system::Config>::AccountId {
+        T::FeeReceiver::get()
     }
 }
 
@@ -485,7 +473,7 @@ where
         already_withdrawn: Self::LiquidityInfo,
     ) -> Result<(), TransactionValidityError> {
         let fee_receiver =
-            DP::get_fee_receiver().ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+            DP::get_fee_receiver();
 
         if let Some(paid) = already_withdrawn {
             // Calculate how much refund we should return

@@ -203,28 +203,28 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Asset was registered. \[asset_id, name, type\]
+        /// Asset was registered.
         Registered {
             asset_id: T::AssetId,
             asset_name: BoundedVec<u8, T::StringLimit>,
             asset_type: AssetType<T::AssetId>,
         },
 
-        /// Asset was updated. \[asset_id, name, type\]
+        /// Asset was updated.
         Updated {
             asset_id: T::AssetId,
             asset_name: BoundedVec<u8, T::StringLimit>,
             asset_type: AssetType<T::AssetId>,
         },
 
-        /// Metadata set for an asset. \[asset_id, symbol, decimals\]
+        /// Metadata set for an asset.
         MetadataSet {
             asset_id: T::AssetId,
             symbol: BoundedVec<u8, T::StringLimit>,
             decimals: u8,
         },
 
-        /// Native location set for an asset. \[asset_id, location\]
+        /// Native location set for an asset.
         LocationSet {
             asset_id: T::AssetId,
             location: T::AssetNativeLocation,

@@ -339,12 +339,7 @@ where
             Some(price) => price.checked_mul_int(fee).ok_or(Error::<T>::Overflow)?,
         };
 
-        T::Currencies::transfer(
-            currency,
-            who,
-            &T::FeeReceiver::get(),
-            amount,
-        )?;
+        T::Currencies::transfer(currency, who, &T::FeeReceiver::get(), amount)?;
 
         Self::deposit_event(Event::FeeWithdrawn(
             who.clone(),
@@ -472,8 +467,7 @@ where
         tip: Self::Balance,
         already_withdrawn: Self::LiquidityInfo,
     ) -> Result<(), TransactionValidityError> {
-        let fee_receiver =
-            DP::get_fee_receiver();
+        let fee_receiver = DP::get_fee_receiver();
 
         if let Some(paid) = already_withdrawn {
             // Calculate how much refund we should return

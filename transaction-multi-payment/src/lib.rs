@@ -144,19 +144,28 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// CurrencySet
         /// [who, currency]
-        CurrencySet(T::AccountId, AssetIdOf<T>),
+        CurrencySet {
+            account_id: T::AccountId,
+            asset_id: AssetIdOf<T>,
+        },
 
         /// New accepted currency added
         /// [currency]
-        CurrencyAdded(AssetIdOf<T>),
+        CurrencyAdded { asset_id: AssetIdOf<T> },
 
         /// Accepted currency removed
         /// [currency]
-        CurrencyRemoved(AssetIdOf<T>),
+        CurrencyRemoved { asset_id: AssetIdOf<T> },
 
         /// Transaction fee paid in non-native currency
         /// [Account, Currency, Native fee amount, Non-native fee amount, Destination account]
-        FeeWithdrawn(T::AccountId, AssetIdOf<T>, BalanceOf<T>, BalanceOf<T>, T::AccountId),
+        FeeWithdrawn {
+            account_id: T::AccountId,
+            asset_id: AssetIdOf<T>,
+            native_fee_amount: BalanceOf<T>,
+            non_native_fee_amount: BalanceOf<T>,
+            destination_account_id: T::AccountId,
+        },
     }
 
     #[pallet::error]
@@ -273,7 +282,10 @@ pub mod pallet {
                     Self::withdraw_set_fee(&who)?;
                 }
 
-                Self::deposit_event(Event::CurrencySet(who, currency));
+                Self::deposit_event(Event::CurrencySet {
+                    account_id: who,
+                    asset_id: currency,
+                });
 
                 return Ok(());
             }
@@ -300,7 +312,7 @@ pub mod pallet {
                 }
 
                 *maybe_price = Some(price);
-                Self::deposit_event(Event::CurrencyAdded(currency));
+                Self::deposit_event(Event::CurrencyAdded { asset_id: currency });
                 Ok(())
             })
         }
@@ -324,7 +336,7 @@ pub mod pallet {
 
                 *x = None;
 
-                Self::deposit_event(Event::CurrencyRemoved(currency));
+                Self::deposit_event(Event::CurrencyRemoved { asset_id: currency });
 
                 Ok(())
             })
@@ -371,13 +383,13 @@ where
                 amount,
             )?;
 
-            Self::deposit_event(Event::FeeWithdrawn(
-                who.clone(),
-                currency,
-                fee,
-                amount,
-                Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
-            ));
+            Self::deposit_event(Event::FeeWithdrawn {
+                account_id: who.clone(),
+                asset_id: currency,
+                native_fee_amount: fee,
+                non_native_fee_amount: amount,
+                destination_account_id: Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
+            });
 
             Ok(PaymentWithdrawResult::Transferred)
         }

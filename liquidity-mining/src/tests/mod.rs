@@ -17,12 +17,13 @@
 
 use super::*;
 use crate::mock::{
-    asset_pair_to_map_key, set_block_number, AssetPair, Balance, BlockNumber, ExtBuilder, LiquidityMining, Origin,
-    Test, Tokens, ACA, ACA_FARM, ACA_KSM_AMM, ACA_KSM_SHARE_ID, ACCOUNT_WITH_1M, ALICE, AMM_POOLS, BOB, BSX,
-    BSX_ACA_AMM, BSX_ACA_LM_POOL, BSX_ACA_SHARE_ID, BSX_DOT_AMM, BSX_DOT_LM_POOL, BSX_DOT_SHARE_ID, BSX_ETH_AMM,
-    BSX_ETH_SHARE_ID, BSX_FARM, BSX_HDX_AMM, BSX_HDX_SHARE_ID, BSX_KSM_AMM, BSX_KSM_LM_POOL, BSX_KSM_SHARE_ID,
-    BSX_TKN1_AMM, BSX_TKN1_SHARE_ID, BSX_TKN2_AMM, BSX_TKN2_SHARE_ID, CHARLIE, DOT, ETH, GC, GC_FARM, HDX,
-    INITIAL_BALANCE, KSM, KSM_DOT_AMM, KSM_DOT_SHARE_ID, KSM_FARM, LP_SHARES_STASH, TKN1, TKN2, TREASURY,
+    asset_pair_to_map_key, reset_rpvs_updated, reset_rpz_updated, set_block_number, AssetId, AssetPair, Balance,
+    BlockNumber, ExtBuilder, LiquidityMining, Origin, Test, Tokens, ACA, ACA_FARM, ACA_KSM_AMM, ACA_KSM_SHARE_ID,
+    ACCOUNT_WITH_1M, ALICE, AMM_POOLS, BOB, BSX, BSX_ACA_AMM, BSX_ACA_LM_POOL, BSX_ACA_SHARE_ID, BSX_DOT_AMM,
+    BSX_DOT_LM_POOL, BSX_DOT_SHARE_ID, BSX_ETH_AMM, BSX_ETH_SHARE_ID, BSX_FARM, BSX_HDX_AMM, BSX_HDX_SHARE_ID,
+    BSX_KSM_AMM, BSX_KSM_LM_POOL, BSX_KSM_SHARE_ID, BSX_TKN1_AMM, BSX_TKN1_SHARE_ID, BSX_TKN2_AMM, BSX_TKN2_SHARE_ID,
+    CHARLIE, DOT, ETH, GC, GC_FARM, HDX, INITIAL_BALANCE, KSM, KSM_DOT_AMM, KSM_DOT_SHARE_ID, KSM_FARM,
+    LP_SHARES_STASH, RPVS_UPDATED, RPZ_UPDATED, TKN1, TKN2, TREASURY,
 };
 
 use frame_support::{assert_err, assert_noop, assert_ok};
@@ -173,6 +174,14 @@ fn is_approx_eq_fixedu128(num_1: FixedU128, num_2: FixedU128, delta: FixedU128) 
     } else {
         true
     }
+}
+
+fn expect_on_accumulated_rzp_update(expected: (GlobalPoolId, Balance, Balance)) {
+    assert_eq!(expected, RPZ_UPDATED.with(|v| *v.borrow()));
+}
+
+fn expect_on_accumulated_rpvs_update(expected: (GlobalPoolId, PoolId, Balance, Balance)) {
+    assert_eq!(expected, RPVS_UPDATED.with(|v| *v.borrow()));
 }
 
 pub mod add_liquidity_pool;

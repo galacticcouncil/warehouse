@@ -405,3 +405,41 @@ fn claim_rewards_from_removed_pool_should_not_work() {
         );
     });
 }
+
+#[test]
+fn claim_rewards_double_claim_should_work() {
+    const DONT_FAIL_ON_DOUBLE_CLAIM: bool = false;
+
+    predefined_test_ext_with_deposits().execute_with(|| {
+        let (_, _, _, claimable_rewards, unclaimable_rewards) = LiquidityMining::claim_rewards(
+            ALICE,
+            PREDEFINED_DEPOSIT_IDS[0],
+            BSX_TKN1_AMM,
+            DONT_FAIL_ON_DOUBLE_CLAIM,
+        )
+        .unwrap();
+
+        assert_eq!(claimable_rewards, 79_906);
+        assert_eq!(unclaimable_rewards, 70_094);
+
+        //second claim in the same period should renurn 0 for `claimable_rewards` and real value for
+        //`unclaimable_rewards`
+        let (_, _, _, claimable_rewards, unclaimable_rewards) = LiquidityMining::claim_rewards(
+            ALICE,
+            PREDEFINED_DEPOSIT_IDS[0],
+            BSX_TKN1_AMM,
+            DONT_FAIL_ON_DOUBLE_CLAIM,
+        )
+        .unwrap();
+
+        assert_eq!(claimable_rewards, 0);
+        assert_eq!(unclaimable_rewards, 70_094);
+
+        //check if double claim fails
+        const FAIL_ON_DOUBLE_CLAIM: bool = true;
+        assert_noop!(
+            LiquidityMining::claim_rewards(ALICE, PREDEFINED_DEPOSIT_IDS[0], BSX_TKN1_AMM, FAIL_ON_DOUBLE_CLAIM,),
+            Error::<Test>::DoubleClaimInThePeriod
+        );
+    });
+}

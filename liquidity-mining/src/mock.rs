@@ -169,6 +169,14 @@ pub struct Amm;
 
 thread_local! {
     pub static AMM_POOLS: RefCell<HashMap<String, (AccountId, AssetId)>> = RefCell::new(HashMap::new());
+
+    //This is used to check if `on_accumulated_rpvs_update()` was called with correct values
+    //`(global pool id, liq. pool yield farm id, accumulated rpvs, total valued shares)`
+    pub static RPVS_UPDATED: RefCell<(GlobalPoolId, PoolId, Balance, Balance)> = RefCell::new((0,0,0,0));
+
+    //This is used to check if `on_accumulated_rpz_update()` was called with correct values
+    //`(global pool id, accumulated rpz, total shares z)`
+    pub static RPZ_UPDATED: RefCell<(GlobalPoolId, Balance, Balance)> = RefCell::new((0,0,0));
 }
 
 impl AMM<AccountId, AssetId, AssetPair, Balance> for Amm {
@@ -292,16 +300,27 @@ impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalPoolId,
     }
 
     fn on_accumulated_rpvs_update(
-        _farm_id: GlobalPoolId,
-        _liq_pool_farm_id: PoolId,
-        _accumulated_rpvs: Balance,
-        _total_valued_shares: Balance,
+        farm_id: GlobalPoolId,
+        liq_pool_farm_id: PoolId,
+        accumulated_rpvs: Balance,
+        total_valued_shares: Balance,
     ) {
-        //TODO: fix this
+        RPVS_UPDATED.with(|v| {
+            let mut p = v.borrow_mut();
+            p.0 = farm_id;
+            p.1 = liq_pool_farm_id;
+            p.2 = accumulated_rpvs;
+            p.3 = total_valued_shares;
+        });
     }
 
-    fn on_accumulated_rpz_update(_farm_id: GlobalPoolId, _accumulated_rpz: Balance, _total_shares_z: Balance) {
-        //TODO: fix this
+    fn on_accumulated_rpz_update(farm_id: GlobalPoolId, accumulated_rpz: Balance, total_shares_z: Balance) {
+        RPZ_UPDATED.with(|v| {
+            let mut p = v.borrow_mut();
+            p.0 = farm_id;
+            p.1 = accumulated_rpz;
+            p.2 = total_shares_z;
+        });
     }
 
     fn lock_lp_tokens(
@@ -455,4 +474,23 @@ impl ExtBuilder {
 pub fn set_block_number(n: u64) {
     MockBlockNumberProvider::set(n);
     System::set_block_number(n);
+}
+
+pub fn reset_rpvs_updated() {
+    RPVS_UPDATED.with(|v| {
+        let mut p = v.borrow_mut();
+        p.0 = 0;
+        p.1 = 0;
+        p.2 = 0;
+        p.3 = 0;
+    });
+}
+
+pub fn reset_rpz_updated() {
+    RPZ_UPDATED.with(|v| {
+        let mut p = v.borrow_mut();
+        p.0 = 0;
+        p.1 = 0;
+        p.2 = 0;
+    });
 }

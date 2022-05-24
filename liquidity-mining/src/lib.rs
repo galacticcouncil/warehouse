@@ -121,7 +121,7 @@ pub mod pallet {
         /// Minimum number of periods to run liquidity mining program.
         type MinPlannedYieldingPeriods: Get<Self::BlockNumber>;
 
-        /// Mininum deposit to the liquidity mining pool.
+        /// Mininum user's deposit to enter liquidity mining pool.
         type MinDeposit: Get<Balance>;
 
         /// The block number provider
@@ -150,7 +150,7 @@ pub mod pallet {
         /// Farm does not exist.
         FarmNotFound,
 
-        /// Assets liq. pool does not exist.
+        /// Liquidity pool yield farm does not exist.
         LiquidityPoolNotFound,
 
         /// Deposit does not exist.
@@ -262,12 +262,12 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    /// Create new liquidity mining program with proved parameters.
+    /// Create new liquidity mining program with provided parameters.
     ///
-    /// `owner` account have to have at least `total_rewards` balance. This fund will be
+    /// `owner` account have to have at least `total_rewards` balance. This funds will be
     /// transferred from `owner` to farm account.
     ///
-    /// The dispatch origin for this call must be `T::CreateOrigin`.
+    /// Returns: `(global pool id, max reward per period)`
     ///
     /// Parameters:
     /// - `total_rewards`: total rewards planned to distribute. This rewards will be
@@ -282,7 +282,7 @@ impl<T: Config> Pallet<T> {
     /// liq. mining program have to have `incentivized_asset` in their pair.
     /// - `reward_currency`: payoff currency of rewards.
     /// - `owner`: liq. mining farm owner.
-    /// - `yield_per_period`: percentage return on `reward_currency` of all pools p.a.
+    /// - `yield_per_period`: percentage return on `reward_currency` of all pools
     #[allow(clippy::too_many_arguments)]
     #[transactional]
     pub fn create_farm(
@@ -369,6 +369,8 @@ impl<T: Config> Pallet<T> {
     /// WARN: Farm have to be empty(all liq. pools have to be removed from the farm) to
     /// successfully withdraw rewards left to distribute from the farm.
     ///
+    /// Returns: `(reward currency, withdrawn amount)`;
+    ///
     /// Parameters:
     /// - `who`: farm's owner.
     /// - `farm_id`: id of farm to be destroyed.
@@ -404,15 +406,17 @@ impl<T: Config> Pallet<T> {
     /// One of the AMM assets HAVE TO be `incentivized_token`. Same AMM can be
     /// in the same farm only once.
     ///
+    /// Returns: `(new liq. pool yield farm id)`
+    ///
     /// Parameters:
     /// - `who`: farm's owner
     /// - `farm_id`: farm id to which a liq. pool will be added.
     /// - `multiplier`: liq. pool multiplier in the farm.
     /// - `loyalty_curve`: curve to calculate loyalty multiplier to distribute rewards to users
     /// with time incentive. `None` means no loyalty multiplier.
-    /// - `amm_pool_id`: identifier of the AMM. It's used as a key in the storage
-    /// - `asset_a`: one of the assets in the AMM
-    /// - `asset_b`: second asset in the AMM
+    /// - `amm_pool_id`: identifier of the AMM. It's used as a key in the storage.
+    /// - `asset_a`: one of the assets in the AMM.
+    /// - `asset_b`: second asset in the AMM.
     #[transactional]
     pub fn add_liquidity_pool(
         who: AccountIdOf<T>,
@@ -475,6 +479,8 @@ impl<T: Config> Pallet<T> {
     ///  
     /// Only farm owner can perform this action.
     ///
+    /// Returns: `(liq. pool yield farm id of updated farm)`
+    ///
     /// Parameters:
     /// - `who`: farm's owner
     /// - `farm_id`: farm id in which liq. pool will be updated.
@@ -531,6 +537,8 @@ impl<T: Config> Pallet<T> {
     ///  
     /// Only farm owner can perform this action.
     ///
+    /// Returns: `(liq. pool yield farm id of canceled farm)`
+    ///
     /// Parameters:
     /// - `who`: farm's owner.
     /// - `farm_id`: farm id in which liq. pool will be canceled.
@@ -576,6 +584,8 @@ impl<T: Config> Pallet<T> {
     /// WARN: Liq. pool is NOT rewarded for time it was canceled.
     ///
     /// Only farm owner can perform this action.
+    ///
+    /// Returns: `(liq pool yield farm id of resumed farm)`
     ///
     /// Parameters:
     /// - `who`: farm's owner
@@ -645,6 +655,8 @@ impl<T: Config> Pallet<T> {
     ///
     /// Only farm owner can perform this action.
     ///
+    /// Returns: `(liq. pool yield farm id of removed farm)`
+    ///
     /// Parameters:
     /// - `who`: farm's owner.
     /// - `farm_id`: farm id from which liq. pool should be removed.
@@ -699,6 +711,8 @@ impl<T: Config> Pallet<T> {
     /// Deposit LP shares to a liq. mining.
     ///
     /// This function create deposits in the lquidity pool yeild farm.
+    ///
+    /// Returns: `(liq. pool yield farm id to whitch LP shares was deposited, deposit id)`
     ///
     /// Parameters:
     /// - `farm_id`: id of farm to which user want to deposit LP shares.
@@ -785,6 +799,10 @@ impl<T: Config> Pallet<T> {
     /// WARN: User have to use `withdraw_shares()` if liq. pool is removed or whole
     /// farm is destroyed.
     ///
+    /// Returns: `(global pool id, liq. pool yield farm id, claimed amount, unclaimable amount)`
+    /// unclaimable rewards is usefull for `withdraw_shares()` - this value is applied only when
+    /// user exit liq. mining program.
+    ///
     /// Parameters:
     /// - `who`: destination account to receive rewards.
     /// - `deposit_id`: id representing deposit in the liq. pool.
@@ -814,9 +832,9 @@ impl<T: Config> Pallet<T> {
                     //Something is very wrong if this fail. Liq. pool can't exist without GlobalPool.
                     let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
 
-                    // can't claim multiple times in the same period
                     let now_period = Self::get_now_period(global_pool.blocks_per_period)?;
-                    //TODO: test this
+                    //Double claim should be allowed in some case e.g for withdraw_shares we need
+                    //`unclaimable_rewards` returned by this function.
                     if check_double_claim {
                         ensure!(deposit.updated_at != now_period, Error::<T>::DoubleClaimInThePeriod);
                     }
@@ -863,16 +881,16 @@ impl<T: Config> Pallet<T> {
 
     /// Withdraw LP shares from liq. mining.
     ///
-    /// Cases for transfer LP shares and claimed rewards:
-    ///
     /// This function transfer user's unclaimable rewards back to global pool's account.
     ///
+    /// Returns: `(global pool id, liq. pool yield farm id, withdrawn amount)`
+    ///
     /// Parameters:
-    /// - `_who`
+    /// - `who`: account to which LP shares should be transfered.
     /// - `deposit_id`: id representing deposit in the liq. pool.
     /// - `amm_pool_id`: identifier of the AMM pool.
     /// - `unclaimable_rewards`: amount of reward will be not claimed anymore. This amount is
-    /// transfered from `LiquidityPoolYieldFarm` account to `GlobalPool` account
+    /// transfered from `LiquidityPoolYieldFarm` account to `GlobalPool` account.
     #[transactional]
     pub fn withdraw_shares(
         who: AccountIdOf<T>,
@@ -1243,7 +1261,6 @@ impl<T: Config> Pallet<T> {
         liq_pool: &mut LiquidityPoolYieldFarm<T>,
         now_period: PeriodOf<T>,
     ) -> Result<(), DispatchError> {
-        //TODO: test this
         if liq_pool.canceled {
             return Ok(());
         }

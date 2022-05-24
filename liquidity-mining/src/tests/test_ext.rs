@@ -183,6 +183,9 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
             LiquidityMining::liquidity_pool(CHARLIE_FARM, ACA_KSM_AMM).unwrap(),
             PREDEFINED_LIQ_POOLS.with(|v| v[2].clone())
         );
+
+        reset_rpvs_updated();
+        reset_rpz_updated();
     });
 
     ext
@@ -390,14 +393,16 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         assert_eq!(Tokens::free_balance(BSX, &bsx_tkn1_liq_pool_account), 212_400);
         assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_liq_pool_account), 952_000);
 
-        //TODO: think about adding this to the trait
         //balance check after transfer amm shares
-        //assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE), 3_000_000 - 536);
-        //assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE), 3_000_000 - 135);
+        assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE), 3_000_000 - 536);
+        assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE), 3_000_000 - 135);
 
         //balance check after transfer amm shares
-        //assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &BOB), 2_000_000 - 80);
-        //assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB), 2_000_000 - 825);
+        assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &BOB), 2_000_000 - 80);
+        assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB), 2_000_000 - 825);
+
+        reset_rpvs_updated();
+        reset_rpz_updated();
     });
 
     ext

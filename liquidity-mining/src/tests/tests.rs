@@ -621,6 +621,8 @@ fn update_global_pool_should_work() {
         let mut ext = new_test_ext();
 
         ext.execute_with(|| {
+            reset_rpz_updated();
+
             let farm_account_id = LiquidityMining::pool_account_id(*id).unwrap();
             let _ = Tokens::transfer(
                 Origin::signed(TREASURY),
@@ -653,6 +655,10 @@ fn update_global_pool_should_work() {
             expected_global_pool.accumulated_rewards = *expected_accumulated_rewards;
 
             assert_eq!(global_pool, expected_global_pool);
+
+            if updated_at != now_period {
+                expect_on_accumulated_rzp_update((*id, *expected_accumulated_rpz, *total_shares_z));
+            }
         });
     }
 }
@@ -1391,6 +1397,7 @@ fn update_pool_should_work() {
         let pool_account_id = LiquidityMining::pool_account_id(*liq_pool_id).unwrap();
 
         ext.execute_with(|| {
+            reset_rpvs_updated();
             let _ = Tokens::transfer(
                 Origin::signed(TREASURY),
                 farm_account_id,
@@ -1456,6 +1463,15 @@ fn update_pool_should_work() {
                 Tokens::free_balance(global_pool.reward_currency, &pool_account_id),
                 *expected_liq_pool_reward_currency_balance
             );
+
+            if now_period != liq_pool_updated_at && !liq_pool_total_valued_shares.is_zero() {
+                expect_on_accumulated_rpvs_update((
+                    global_pool.id,
+                    *liq_pool_id,
+                    *expected_liq_pool_accumulated_rpvs,
+                    liq_pool.total_valued_shares,
+                ));
+            }
         });
     }
 }
@@ -1623,5 +1639,130 @@ fn get_pool_id_from_deposit_id_should_not_work() {
                 Error::<Test>::InvalidDepositId
             );
         }
+    });
+}
+
+#[test]
+fn maybe_update_pools_should_work() {
+    //NOTE: this test is not testing if pools are updated correctly only if they are updated when
+    //conditions are met.
+
+    const LEFT_TO_DISTRIBUTE: Balance = 1_000_000_000;
+    const REWARD_CURRENCY: AssetId = PREDEFINED_GLOBAL_POOLS[0].reward_currency;
+    let mut ext = new_test_ext();
+
+    let expected_global_pool = GlobalPool {
+        updated_at: 20,
+        accumulated_rpz: 20,
+        liq_pools_count: 1,
+        paid_accumulated_rewards: 1_000_000,
+        total_shares_z: 1_000_000,
+        accumulated_rewards: 20_000,
+        ..PREDEFINED_GLOBAL_POOLS[0]
+    };
+
+    let expected_liq_pool = LiquidityPoolYieldFarm {
+        updated_at: 20,
+        total_shares: 200_000,
+        total_valued_shares: 400_000,
+        accumulated_rpvs: 15,
+        accumulated_rpz: 20,
+        stake_in_global_pool: 1_000_000,
+        ..PREDEFINED_LIQ_POOLS.with(|v| v[0].clone())
+    };
+
+    ext.execute_with(|| {
+        let farm_account_id = LiquidityMining::pool_account_id(PREDEFINED_GLOBAL_POOLS[0].id).unwrap();
+        let _ = Tokens::transfer(
+            Origin::signed(TREASURY),
+            farm_account_id,
+            REWARD_CURRENCY,
+            LEFT_TO_DISTRIBUTE,
+        )
+        .unwrap();
+
+        assert_eq!(
+            Tokens::free_balance(REWARD_CURRENCY, &farm_account_id),
+            LEFT_TO_DISTRIBUTE
+        );
+
+        let mut global_pool = GlobalPool { ..expected_global_pool };
+
+        let mut liq_pool = LiquidityPoolYieldFarm {
+            canceled: true,
+            ..expected_liq_pool.clone()
+        };
+
+        let now_period = 30;
+
+        //I. - LiquidityPoolYieldFarm is canceled. Nothing should be updated if liq. pool is canceled.
+        assert_ok!(LiquidityMining::maybe_update_pools(
+            &mut global_pool,
+            &mut liq_pool,
+            now_period
+        ));
+
+        assert_eq!(global_pool, expected_global_pool);
+        assert_eq!(
+            liq_pool,
+            LiquidityPoolYieldFarm {
+                canceled: true,
+                ..expected_liq_pool.clone()
+            }
+        );
+
+        //II. - liq. pool have 0 shares and was updated in this period
+        let now_period = 20;
+        let mut liq_pool = LiquidityPoolYieldFarm {
+            ..expected_liq_pool.clone()
+        };
+        assert_ok!(LiquidityMining::maybe_update_pools(
+            &mut global_pool,
+            &mut liq_pool,
+            now_period
+        ));
+
+        assert_eq!(global_pool, expected_global_pool);
+        assert_eq!(liq_pool, expected_liq_pool);
+
+        //III. - global pool have 0 shares and was updated in this period - only liq. pool should
+        //be updated
+        let now_period = 30;
+        let mut global_pool = GlobalPool {
+            total_shares_z: 0,
+            updated_at: 30,
+            ..expected_global_pool
+        };
+
+        assert_ok!(LiquidityMining::maybe_update_pools(
+            &mut global_pool,
+            &mut liq_pool,
+            now_period
+        ));
+
+        assert_eq!(
+            global_pool,
+            GlobalPool {
+                total_shares_z: 0,
+                updated_at: 30,
+                ..expected_global_pool
+            }
+        );
+        assert_ne!(liq_pool, expected_liq_pool);
+        assert_eq!(liq_pool.updated_at, now_period);
+
+        //IV. - booth pools met conditions to update
+        let now_period = 30;
+        assert_ok!(LiquidityMining::maybe_update_pools(
+            &mut global_pool,
+            &mut liq_pool,
+            now_period
+        ));
+
+        assert_ne!(global_pool, expected_global_pool);
+        assert_ne!(liq_pool, expected_liq_pool);
+
+        assert_eq!(global_pool.updated_at, now_period);
+        assert_eq!(liq_pool.updated_at, now_period);
     });
 }

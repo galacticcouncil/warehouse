@@ -68,7 +68,6 @@ pub struct LiquidityPoolYieldFarm<T: Config> {
     pub accumulated_rpvs: Balance,
     pub accumulated_rpz: Balance,
     pub loyalty_curve: Option<LoyaltyCurve>,
-    pub stake_in_global_pool: Balance, //NOTE: may be replaced with: total_valued_shares * multiplier
     pub multiplier: PoolMultiplier,
     pub canceled: bool,
 }
@@ -84,7 +83,6 @@ impl<T: Config> LiquidityPoolYieldFarm<T> {
         Self {
             accumulated_rpvs: Zero::zero(),
             accumulated_rpz: Zero::zero(),
-            stake_in_global_pool: Zero::zero(),
             total_shares: Zero::zero(),
             total_valued_shares: Zero::zero(),
             canceled: false,

@@ -506,6 +506,10 @@ impl<T: Config> Pallet<T> {
 
                 ensure!(who == global_pool.owner, Error::<T>::Forbidden);
 
+                let old_stake_in_global_pool =
+                    math::calculate_global_pool_shares(liq_pool.total_valued_shares, liq_pool.multiplier)
+                        .map_err(|_e| Error::<T>::Overflow)?;
+
                 let now_period = Self::get_now_period(global_pool.blocks_per_period)?;
                 Self::maybe_update_pools(global_pool, liq_pool, now_period)?;
 
@@ -515,12 +519,11 @@ impl<T: Config> Pallet<T> {
 
                 global_pool.total_shares_z = global_pool
                     .total_shares_z
-                    .checked_sub(liq_pool.stake_in_global_pool)
+                    .checked_sub(old_stake_in_global_pool)
                     .ok_or(Error::<T>::Overflow)?
                     .checked_add(new_stake_in_global_pool)
                     .ok_or(Error::<T>::Overflow)?;
 
-                liq_pool.stake_in_global_pool = new_stake_in_global_pool;
                 liq_pool.multiplier = multiplier;
 
                 Ok(liq_pool.id)
@@ -562,13 +565,16 @@ impl<T: Config> Pallet<T> {
                 let now_period = Self::get_now_period(global_pool.blocks_per_period)?;
                 Self::maybe_update_pools(global_pool, liq_pool, now_period)?;
 
+                let old_stake_in_global_pool =
+                    math::calculate_global_pool_shares(liq_pool.total_valued_shares, liq_pool.multiplier)
+                        .map_err(|_e| Error::<T>::Overflow)?;
+
                 global_pool.total_shares_z = global_pool
                     .total_shares_z
-                    .checked_sub(liq_pool.stake_in_global_pool)
+                    .checked_sub(old_stake_in_global_pool)
                     .ok_or(Error::<T>::Overflow)?;
 
                 liq_pool.canceled = true;
-                liq_pool.stake_in_global_pool = 0;
                 liq_pool.multiplier = 0.into();
 
                 Ok(liq_pool.id)
@@ -635,7 +641,6 @@ impl<T: Config> Pallet<T> {
 
                 liq_pool.accumulated_rpz = global_pool.accumulated_rpz;
                 liq_pool.updated_at = now_period;
-                liq_pool.stake_in_global_pool = new_stake_in_global_poll;
                 liq_pool.canceled = false;
                 liq_pool.multiplier = multiplier;
 
@@ -757,11 +762,6 @@ impl<T: Config> Pallet<T> {
                 liq_pool.total_valued_shares = liq_pool
                     .total_valued_shares
                     .checked_add(valued_shares)
-                    .ok_or(Error::<T>::Overflow)?;
-
-                liq_pool.stake_in_global_pool = liq_pool
-                    .stake_in_global_pool
-                    .checked_add(shares_in_global_pool_for_deposit)
                     .ok_or(Error::<T>::Overflow)?;
 
                 global_pool.total_shares_z = global_pool
@@ -945,11 +945,6 @@ impl<T: Config> Pallet<T> {
                                             liq_pool.multiplier,
                                         )
                                         .map_err(|_e| Error::<T>::Overflow)?;
-
-                                        liq_pool.stake_in_global_pool = liq_pool
-                                            .stake_in_global_pool
-                                            .checked_sub(shares_in_global_pool_for_deposit)
-                                            .ok_or(Error::<T>::Overflow)?;
 
                                         global_pool.total_shares_z = global_pool
                                             .total_shares_z
@@ -1277,7 +1272,10 @@ impl<T: Config> Pallet<T> {
                 Self::update_global_pool(global_pool, now_period, rewards)?;
             }
 
-            let rewards = Self::claim_from_global_pool(global_pool, liq_pool, liq_pool.stake_in_global_pool)?;
+            let stake_in_global_pool =
+                math::calculate_global_pool_shares(liq_pool.total_valued_shares, liq_pool.multiplier)
+                    .map_err(|_e| Error::<T>::Overflow)?;
+            let rewards = Self::claim_from_global_pool(global_pool, liq_pool, stake_in_global_pool)?;
             Self::update_liq_pool(
                 liq_pool,
                 rewards,

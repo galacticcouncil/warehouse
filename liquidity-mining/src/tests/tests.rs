@@ -1386,7 +1386,6 @@ fn update_pool_should_work() {
             accumulated_rpvs: *liq_pool_accumulated_rpvs,
             accumulated_rpz: 200_u128,
             loyalty_curve: None,
-            stake_in_global_pool: Balance::from(10_000_u32),
             multiplier: FixedU128::from(10_u128),
             canceled: false,
         };
@@ -1449,7 +1448,6 @@ fn update_pool_should_work() {
                     accumulated_rpvs: *expected_liq_pool_accumulated_rpvs,
                     accumulated_rpz: 200_u128,
                     loyalty_curve: None,
-                    stake_in_global_pool: Balance::from(10_000_u32),
                     multiplier: FixedU128::from(10_u128),
                     canceled: false,
                 }
@@ -1667,7 +1665,6 @@ fn maybe_update_pools_should_work() {
         total_valued_shares: 400_000,
         accumulated_rpvs: 15,
         accumulated_rpz: 20,
-        stake_in_global_pool: 1_000_000,
         ..PREDEFINED_LIQ_POOLS.with(|v| v[0].clone())
     };
 

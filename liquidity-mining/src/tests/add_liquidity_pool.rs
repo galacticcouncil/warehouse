@@ -34,7 +34,6 @@ fn add_liquidity_pool_should_work() {
                 total_valued_shares: 0,
                 accumulated_rpvs: 0,
                 accumulated_rpz: 0,
-                stake_in_global_pool: 0,
                 multiplier: FixedU128::from(20_000_u128),
                 loyalty_curve: Some(LoyaltyCurve::default()),
                 canceled: false,
@@ -60,7 +59,6 @@ fn add_liquidity_pool_should_work() {
                 total_valued_shares: 0,
                 accumulated_rpvs: 0,
                 accumulated_rpz: 0,
-                stake_in_global_pool: 0,
                 multiplier: FixedU128::from(10_000_u128),
                 loyalty_curve: None,
                 canceled: false,
@@ -86,7 +84,6 @@ fn add_liquidity_pool_should_work() {
                 total_valued_shares: 0,
                 accumulated_rpvs: 0,
                 accumulated_rpz: 0,
-                stake_in_global_pool: 0,
                 multiplier: FixedU128::from(10_000_u128),
                 loyalty_curve: Some(LoyaltyCurve {
                     initial_reward_percentage: FixedU128::from_inner(100_000_000_000_000_000),
@@ -115,7 +112,6 @@ fn add_liquidity_pool_should_work() {
                 total_valued_shares: 0,
                 accumulated_rpvs: 0,
                 accumulated_rpz: 0,
-                stake_in_global_pool: 0,
                 multiplier: FixedU128::from(50_000_128),
                 loyalty_curve: Some(LoyaltyCurve {
                     initial_reward_percentage: FixedU128::from_inner(1),

@@ -30,7 +30,6 @@ fn resume_liquidity_pool_should_work() {
         let new_multiplier = FixedU128::from(7_490_000);
 
         assert!(liq_pool.canceled);
-        assert!(liq_pool.stake_in_global_pool.is_zero());
         assert!(liq_pool.multiplier.is_zero());
 
         set_block_number(13_420_000);
@@ -48,7 +47,6 @@ fn resume_liquidity_pool_should_work() {
             LiquidityMining::liquidity_pool(GC_FARM, BSX_TKN1_AMM).unwrap(),
             LiquidityPoolYieldFarm {
                 canceled: false,
-                stake_in_global_pool: liq_pool_stake_in_global_pool,
                 accumulated_rpz: 62_996,
                 multiplier: new_multiplier,
                 updated_at: 134_200,

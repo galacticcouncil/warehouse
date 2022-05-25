@@ -56,7 +56,6 @@ impl<
     /// price oracle.
     fn get_asset_and_price(&mut self, payment: &Assets) -> Option<(MultiLocation, Price)> {
         if let Some(asset) = payment.fungible_assets_iter().next() {
-            // TODO: consider optimizing out the clone
             ConvertCurrency::convert(asset.clone())
                 .and_then(|currency| AcceptedCurrencyPrices::price(currency))
                 .and_then(|price| match asset.id.clone() {

@@ -30,7 +30,7 @@ use xcm_executor::{traits::WeightTrader, Assets};
 pub type Price = FixedU128;
 
 /// Weight trader which uses `WeightToFee` in combination with a `PriceOracle` to set the right
-/// price for weight. Keeps track of the assets used used to pay for weight and can refund them one
+/// price for weight. Keeps track of the assets used to pay for weight and can refund them one
 /// by one (interface only allows returning one asset per refund).
 pub struct MultiCurrencyTrader<
     AssetId,
@@ -85,9 +85,13 @@ impl<
     }
 
     /// Will try to buy weight with the first asset in `payment`.
-    /// The fee is determined by `WeightToFee` in combination with the determined price.
+    /// The fee is determined by `WeightToFee` in combination with the price determined by
+    /// `AcceptedCurrencyPrices`.
     fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
-        log::trace!(target: "xcm::weight", "MultiCurrencyTrader::buy_weight weight: {:?}, payment: {:?}", weight, payment);
+        log::trace!(
+            target: "xcm::weight", "MultiCurrencyTrader::buy_weight weight: {:?}, payment: {:?}",
+            weight, payment
+        );
         let (asset_loc, price) = self.get_asset_and_price(&payment).ok_or(XcmError::AssetNotFound)?;
         let fee = WeightToFee::calc(&weight);
         let converted_fee = price.checked_mul_int(fee).ok_or(XcmError::Overflow)?;
@@ -107,7 +111,10 @@ impl<
 
     /// Will refund up to `weight` from the first asset tracked by the trader.
     fn refund_weight(&mut self, weight: Weight) -> Option<MultiAsset> {
-        log::trace!(target: "xcm::weight", "MultiCurrencyTrader::refund_weight weight: {:?}, paid_assets: {:?}", weight, self.paid_assets);
+        log::trace!(
+            target: "xcm::weight", "MultiCurrencyTrader::refund_weight weight: {:?}, paid_assets: {:?}",
+            weight, self.paid_assets
+        );
         let weight = weight.min(self.weight);
         self.weight -= weight; // Will not underflow because of `min()` above.
         let fee = WeightToFee::calc(&weight);

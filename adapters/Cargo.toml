@@ -22,9 +22,11 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 
 # Polkadot dependencies
 polkadot-xcm = { package = "xcm", git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17", default-features = false }
 
 [dev-dependencies]
+lazy_static = { features = ["spin_no_std"], version = "1.4.0" }
 smallvec = "1.6.1"
 
 [features]
@@ -37,5 +39,6 @@ std = [
     "polkadot-xcm/std",
     "sp-runtime/std",
     "sp-std/std",
+    "xcm-builder/std",
     "xcm-executor/std",
 ]

@@ -33,6 +33,7 @@ pub type Price = FixedU128;
 /// Weight trader which uses `WeightToFee` in combination with a `PriceOracle` to set the right
 /// price for weight. Keeps track of the assets used to pay for weight and can refund them one
 /// by one (interface only allows returning one asset per refund).
+/// Will pass any remaining assets on `Drop` to `TakeRevenue`.
 pub struct MultiCurrencyTrader<
     AssetId,
     Balance: FixedPointOperand + TryInto<u128>,

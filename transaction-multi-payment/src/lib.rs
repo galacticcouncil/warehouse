@@ -51,7 +51,7 @@ use sp_std::marker::PhantomData;
 use frame_support::sp_runtime::FixedPointNumber;
 use frame_support::sp_runtime::FixedPointOperand;
 use frame_support::weights::{Pays, Weight};
-use hydradx_traits::{PriceOracle, pools::SpotPriceProvider};
+use hydradx_traits::{pools::SpotPriceProvider, PriceOracle};
 use orml_traits::{MultiCurrency, MultiCurrencyExtended};
 
 use codec::{Decode, Encode};

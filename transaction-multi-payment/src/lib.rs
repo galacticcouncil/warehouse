@@ -51,7 +51,7 @@ use sp_std::marker::PhantomData;
 use frame_support::sp_runtime::FixedPointNumber;
 use frame_support::sp_runtime::FixedPointOperand;
 use frame_support::weights::{Pays, Weight};
-use hydradx_traits::pools::SpotPriceProvider;
+use hydradx_traits::{PriceOracle, pools::SpotPriceProvider};
 use orml_traits::{MultiCurrency, MultiCurrencyExtended};
 
 use codec::{Decode, Encode};
@@ -574,5 +574,11 @@ impl<T: Config + Send + Sync> CurrencyBalanceCheck<T> {
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::new_without_default))]
     pub fn new() -> Self {
         Self(sp_std::marker::PhantomData)
+    }
+}
+
+impl<T: Config> PriceOracle<AssetIdOf<T>, Price> for Pallet<T> {
+    fn price(currency: AssetIdOf<T>) -> Option<Price> {
+        Pallet::<T>::currency_price(currency)
     }
 }

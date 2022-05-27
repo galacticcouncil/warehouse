@@ -407,11 +407,9 @@ where
     }
 }
 
-
 pub struct DepositAll<T>(PhantomData<T>);
 
-impl<T: Config> DepositFee<T::AccountId, AssetIdOf<T>, BalanceOf<T>>
-    for DepositAll<T>
+impl<T: Config> DepositFee<T::AccountId, AssetIdOf<T>, BalanceOf<T>> for DepositAll<T>
 where
     AssetIdOf<T>: Ord,
 {

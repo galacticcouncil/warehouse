@@ -31,7 +31,6 @@ use sp_runtime::{
 use frame_support::weights::IdentityFee;
 use frame_support::weights::Weight;
 use hydradx_traits::AssetPairAccountIdFor;
-use itertools::Itertools;
 use orml_currencies::BasicCurrencyAdapter;
 use std::cell::RefCell;
 
@@ -173,24 +172,8 @@ impl pallet_balances::Config for Test {
     type ReserveIdentifier = ();
 }
 
-pub struct DepositAll;
-
-impl DepositFee<AccountId, AssetId, Balance> for DepositAll {
-    fn deposit_fee(who: &AccountId, amounts: impl Iterator<Item = (AssetId, Balance)>) -> DispatchResult {
-        // merge items with the same asset ID
-        let amounts = amounts
-            .sorted_unstable_by(|a, b| Ord::cmp(&a.0, &b.0))
-            .coalesce(|a, b| if a.0 == b.0 { Ok((a.0, a.1 + b.1)) } else { Err((a, b)) });
-
-        for (currency, amount) in amounts {
-            orml_currencies::Pallet::<Test>::deposit(currency, who, amount)?;
-        }
-        Ok(())
-    }
-}
-
 impl pallet_transaction_payment::Config for Test {
-    type OnChargeTransaction = TransferFees<Currencies, PaymentPallet, DepositAll>;
+    type OnChargeTransaction = TransferFees<Currencies, PaymentPallet, DepositAll<Test>>;
     type TransactionByteFee = TransactionByteFee;
     type OperationalFeeMultiplier = ();
     type WeightToFee = IdentityFee<Balance>;

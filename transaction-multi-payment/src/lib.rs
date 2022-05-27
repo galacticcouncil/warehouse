@@ -63,6 +63,7 @@ use scale_info::TypeInfo;
 
 use crate::traits::*;
 use frame_support::dispatch::DispatchError;
+use itertools::Itertools;
 
 type AssetIdOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 type BalanceOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -403,6 +404,27 @@ where
 
     fn get_fee_receiver() -> <T as frame_system::Config>::AccountId {
         T::FeeReceiver::get()
+    }
+}
+
+
+pub struct DepositAll<T>(PhantomData<T>);
+
+impl<T: Config> DepositFee<T::AccountId, AssetIdOf<T>, BalanceOf<T>>
+    for DepositAll<T>
+where
+    AssetIdOf<T>: Ord,
+{
+    fn deposit_fee(who: &T::AccountId, amounts: impl Iterator<Item = (AssetIdOf<T>, BalanceOf<T>)>) -> DispatchResult {
+        // merge items with the same asset ID
+        let amounts = amounts
+            .sorted_unstable_by(|a, b| Ord::cmp(&a.0, &b.0))
+            .coalesce(|a, b| if a.0 == b.0 { Ok((a.0, a.1 + b.1)) } else { Err((a, b)) });
+
+        for (currency, amount) in amounts {
+            <T as Config>::Currencies::deposit(currency, who, amount)?;
+        }
+        Ok(())
     }
 }
 

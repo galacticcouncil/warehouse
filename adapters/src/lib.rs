@@ -19,9 +19,10 @@
 
 use frame_support::weights::{Weight, WeightToFeePolynomial};
 use hydradx_traits::PriceOracle;
+use pallet_transaction_multi_payment::{DepositFee, TransactionMultiPaymentDataProvider};
 use polkadot_xcm::latest::prelude::*;
 use sp_runtime::{
-    traits::{Convert, Saturating, Zero},
+    traits::{AtLeast32BitUnsigned, Convert, Saturating, Zero},
     FixedPointNumber, FixedPointOperand, FixedU128, SaturatedConversion,
 };
 use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
@@ -164,16 +165,55 @@ impl<
     }
 }
 
+/// Implements `TakeRevenue` by sending the assets to the fee receiver, using and implementor of
+/// `DepositFee`.
+///
+/// Note: Only supports concrete fungible assets.
+pub struct ToFeeReceiver<AccountId, AssetId, Balance, Price, C, D, F>(
+    PhantomData<(AccountId, AssetId, Balance, Price, C, D, F)>,
+);
+impl<
+        AccountId,
+        AssetId,
+        Balance: AtLeast32BitUnsigned,
+        Price,
+        C: Convert<MultiLocation, Option<AssetId>>,
+        D: DepositFee<AccountId, AssetId, Balance>,
+        F: TransactionMultiPaymentDataProvider<AccountId, AssetId, Price>,
+    > TakeRevenue for ToFeeReceiver<AccountId, AssetId, Balance, Price, C, D, F>
+{
+    fn take_revenue(asset: MultiAsset) {
+        match asset {
+            MultiAsset {
+                id: Concrete(loc),
+                fun: Fungibility::Fungible(amount),
+            } => {
+                C::convert(loc).and_then(|id| {
+                    let receiver = F::get_fee_receiver();
+                    D::deposit_fee(&receiver, Some((id, amount.saturated_into::<Balance>())).into_iter())
+                        .map_err(|e| log::trace!(target: "xcm::take_revenue", "Could not deposit fee: {:?}", e))
+                        .ok()
+                });
+            }
+            _ => {
+                debug_assert!(false, "Can only accept concrete fungible tokens as revenue.");
+                log::trace!(target: "xcm::take_revenue", "Can only accept concrete fungible tokens as revenue.");
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use codec::{Decode, Encode};
     use frame_support::weights::IdentityFee;
     use smallvec::smallvec;
-    use sp_runtime::{traits::One, Perbill};
+    use sp_runtime::{traits::One, DispatchError, DispatchResult, Perbill};
     use sp_std::collections::btree_set::BTreeSet;
     use std::sync::Mutex;
 
+    type AccountId = u32;
     type AssetId = u32;
     type Balance = u128;
 
@@ -434,5 +474,72 @@ mod tests {
             assert_eq!(trader.refund_weight(weight), Some(test_payment.into()));
         }
         ExpectRevenue::expect_no_revenue();
+    }
+
+    macro_rules! generate_deposit_type {
+        ($name:ident) => {
+            lazy_static::lazy_static! {
+                pub static ref EXPECTED: Mutex<BTreeSet<(AccountId, AssetId, Balance)>> =
+                    Mutex::new(BTreeSet::new());
+            };
+
+            struct $name;
+            impl $name {
+                #[allow(unused)]
+                fn register_expected_fee(who: AccountId, asset: AssetId, amount: Balance) {
+                    EXPECTED.lock().unwrap().insert((who, asset, amount));
+                }
+
+                /// Reset the global mutable state.
+                #[allow(unused)]
+                fn reset() {
+                    *EXPECTED.lock().unwrap() = BTreeSet::new();
+                }
+            }
+
+            impl DepositFee<AccountId, AssetId, Balance> for $name {
+                fn deposit_fee(who: &AccountId, amounts: impl Iterator<Item = (AssetId, Balance)>) -> DispatchResult {
+                    for (currency, amount) in amounts {
+                        log::trace!("Depositing {} of {} to {}", amount, currency, who);
+                        assert!(
+                            EXPECTED.lock().unwrap().remove(&(*who, currency, amount)),
+                            "Unexpected combination of receiver and fee {:?} deposited that was not expected.",
+                            (*who, currency, amount)
+                        );
+                    }
+                    let remaining = EXPECTED.lock().unwrap();
+                    assert!(
+                        remaining.is_empty(),
+                        "There should be no expected fees remaining. Remaining: {:?}",
+                        remaining
+                    );
+                    Ok(())
+                }
+            }
+        };
+    }
+
+    #[test]
+    fn revenue_goes_to_fee_receiver() {
+        generate_deposit_type!(ExpectDeposit);
+
+        struct MockFeeReceiver;
+        impl TransactionMultiPaymentDataProvider<AccountId, AssetId, Price> for MockFeeReceiver {
+            fn get_currency_and_price(_who: &AccountId) -> Result<(AssetId, Option<Price>), DispatchError> {
+                Err("not implemented".into())
+            }
+
+            fn get_fee_receiver() -> AccountId {
+                42
+            }
+        }
+
+        type Revenue = ToFeeReceiver<AccountId, AssetId, Balance, Price, MockConvert, ExpectDeposit, MockFeeReceiver>;
+
+        let core_id = MockConvert::convert(CORE_ASSET_ID).unwrap();
+
+        ExpectDeposit::register_expected_fee(42, CORE_ASSET_ID, 1234);
+
+        Revenue::take_revenue((core_id, 1234).into());
     }
 }

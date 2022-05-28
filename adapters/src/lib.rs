@@ -92,7 +92,7 @@ impl<
 {
     fn new() -> Self {
         Self {
-            weight: 0,
+            weight: Default::default(),
             paid_assets: Default::default(),
             _phantom: PhantomData,
         }

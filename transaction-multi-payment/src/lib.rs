@@ -63,7 +63,6 @@ use scale_info::TypeInfo;
 
 pub use crate::traits::*;
 use frame_support::dispatch::DispatchError;
-use itertools::Itertools;
 
 type AssetIdOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 type BalanceOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -410,19 +409,9 @@ where
 /// Deposits all fees to some account
 pub struct DepositAll<T>(PhantomData<T>);
 
-impl<T: Config> DepositFee<T::AccountId, AssetIdOf<T>, BalanceOf<T>> for DepositAll<T>
-where
-    AssetIdOf<T>: Ord,
-{
-    fn deposit_fee(who: &T::AccountId, amounts: impl Iterator<Item = (AssetIdOf<T>, BalanceOf<T>)>) -> DispatchResult {
-        // merge items with the same asset ID
-        let amounts = amounts
-            .sorted_unstable_by(|a, b| Ord::cmp(&a.0, &b.0))
-            .coalesce(|a, b| if a.0 == b.0 { Ok((a.0, a.1 + b.1)) } else { Err((a, b)) });
-
-        for (currency, amount) in amounts {
-            <T as Config>::Currencies::deposit(currency, who, amount)?;
-        }
+impl<T: Config> DepositFee<T::AccountId, AssetIdOf<T>, BalanceOf<T>> for DepositAll<T> {
+    fn deposit_fee(who: &T::AccountId, currency: AssetIdOf<T>, amount: BalanceOf<T>) -> DispatchResult {
+        <T as Config>::Currencies::deposit(currency, who, amount)?;
         Ok(())
     }
 }
@@ -522,15 +511,7 @@ where
                 .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
             // deposit the fee
-            let mut fee_amounts = Vec::new();
-            if !fee.is_zero() {
-                fee_amounts.push((currency, fee));
-            }
-            if !tip.is_zero() {
-                fee_amounts.push((currency, tip));
-            }
-
-            DF::deposit_fee(&fee_receiver, fee_amounts.into_iter())
+            DF::deposit_fee(&fee_receiver, currency, fee + tip)
                 .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
         }
 

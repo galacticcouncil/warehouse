@@ -27,5 +27,5 @@ pub trait CurrencyWithdraw<AccountId, Balance> {
 
 /// Handler for dealing with fees
 pub trait DepositFee<AccountId, AssetId, Balance> {
-    fn deposit_fee(who: &AccountId, amounts: impl Iterator<Item = (AssetId, Balance)>) -> DispatchResult;
+    fn deposit_fee(who: &AccountId, currency: AssetId, amount: Balance) -> DispatchResult;
 }

@@ -407,6 +407,7 @@ where
     }
 }
 
+/// Deposits all fees to some account
 pub struct DepositAll<T>(PhantomData<T>);
 
 impl<T: Config> DepositFee<T::AccountId, AssetIdOf<T>, BalanceOf<T>> for DepositAll<T>

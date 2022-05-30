@@ -61,7 +61,7 @@ use frame_support::traits::IsSubType;
 
 use scale_info::TypeInfo;
 
-use crate::traits::*;
+pub use crate::traits::*;
 use frame_support::dispatch::DispatchError;
 use itertools::Itertools;
 

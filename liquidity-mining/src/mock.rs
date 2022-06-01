@@ -51,7 +51,7 @@ pub type AssetId = u32;
 pub type Amount = i128;
 
 pub type AccountId = u128;
-pub type PoolId = crate::PoolId;
+pub type FarmId = crate::FarmId;
 pub type BlockNumber = u64;
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
@@ -94,14 +94,14 @@ pub const DEFAULT_AMM: AccountId = 11_007;
 pub const KSM_DOT_AMM: AccountId = 11_008;
 pub const ACA_KSM_AMM: AccountId = 11_009;
 
-pub const BSX_ACA_LM_POOL: PoolId = 12_000;
-pub const BSX_KSM_LM_POOL: PoolId = 12_001;
-pub const BSX_DOT_LM_POOL: PoolId = 12_002;
+pub const BSX_ACA_YIELD_FARM: FarmId = 12_000;
+pub const BSX_KSM_YIELD_FARM: FarmId = 12_001;
+pub const BSX_DOT_YIELD_FARM: FarmId = 12_002;
 
-pub const BSX_FARM: PoolId = 1;
-pub const KSM_FARM: PoolId = 2;
-pub const GC_FARM: PoolId = 3;
-pub const ACA_FARM: PoolId = 4;
+pub const BSX_FARM: FarmId = 1;
+pub const KSM_FARM: FarmId = 2;
+pub const GC_FARM: FarmId = 3;
+pub const ACA_FARM: FarmId = 4;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -172,11 +172,11 @@ thread_local! {
 
     //This is used to check if `on_accumulated_rpvs_update()` was called with correct values
     //`(global pool id, liq. pool yield farm id, accumulated rpvs, total valued shares)`
-    pub static RPVS_UPDATED: RefCell<(GlobalPoolId, PoolId, Balance, Balance)> = RefCell::new((0,0,0,0));
+    pub static RPVS_UPDATED: RefCell<(GlobalFarmId, FarmId, Balance, Balance)> = RefCell::new((0,0,0,0));
 
     //This is used to check if `on_accumulated_rpz_update()` was called with correct values
-    //`(global pool id, accumulated rpz, total shares z)`
-    pub static RPZ_UPDATED: RefCell<(GlobalPoolId, Balance, Balance)> = RefCell::new((0,0,0));
+    //`(global farm id, accumulated rpz, total shares z)`
+    pub static RPZ_UPDATED: RefCell<(GlobalFarmId, Balance, Balance)> = RefCell::new((0,0,0));
 }
 
 impl AMM<AccountId, AssetId, AssetPair, Balance> for Amm {
@@ -276,6 +276,7 @@ parameter_types! {
     pub const MinPlannedYieldingPeriods: BlockNumber = 100;
     pub const MinTotalFarmRewards: Balance = 1_000_000;
     pub const MininumDeposit: Balance = 10;
+    pub const MaxEntriesPerDeposit: u8 = 5;
 }
 
 impl Config for Test {
@@ -288,11 +289,12 @@ impl Config for Test {
     type AmmPoolId = AccountId;
     type MinDeposit = MininumDeposit;
     type Handler = TestLiquidityMiningHandler;
+    type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit;
 }
 
 pub struct TestLiquidityMiningHandler {}
 
-impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalPoolId, PoolId, Balance, DepositId, AccountId>
+impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalFarmId, FarmId, Balance, DepositId, AccountId>
     for TestLiquidityMiningHandler
 {
     fn get_balance_in_amm(asset: AssetId, amm_pool: AccountId) -> Balance {
@@ -300,8 +302,8 @@ impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalPoolId,
     }
 
     fn on_accumulated_rpvs_update(
-        farm_id: GlobalPoolId,
-        liq_pool_farm_id: PoolId,
+        farm_id: GlobalFarmId,
+        liq_pool_farm_id: FarmId,
         accumulated_rpvs: Balance,
         total_valued_shares: Balance,
     ) {
@@ -314,7 +316,7 @@ impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalPoolId,
         });
     }
 
-    fn on_accumulated_rpz_update(farm_id: GlobalPoolId, accumulated_rpz: Balance, total_shares_z: Balance) {
+    fn on_accumulated_rpz_update(farm_id: GlobalFarmId, accumulated_rpz: Balance, total_shares_z: Balance) {
         RPZ_UPDATED.with(|v| {
             let mut p = v.borrow_mut();
             p.0 = farm_id;

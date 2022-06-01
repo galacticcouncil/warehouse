@@ -20,21 +20,21 @@ use test_ext::*;
 
 #[test]
 fn validate_create_farm_data_should_work() {
-    assert_ok!(LiquidityMining::validate_create_farm_data(
+    assert_ok!(LiquidityMining::validate_create_global_farm_data(
         1_000_000,
         100,
         1,
         Permill::from_percent(50)
     ));
 
-    assert_ok!(LiquidityMining::validate_create_farm_data(
+    assert_ok!(LiquidityMining::validate_create_global_farm_data(
         9_999_000_000_000,
         2_000_000,
         500,
         Permill::from_percent(100)
     ));
 
-    assert_ok!(LiquidityMining::validate_create_farm_data(
+    assert_ok!(LiquidityMining::validate_create_global_farm_data(
         10_000_000,
         101,
         16_986_741,
@@ -45,42 +45,42 @@ fn validate_create_farm_data_should_work() {
 #[test]
 fn validate_create_farm_data_should_not_work() {
     assert_err!(
-        LiquidityMining::validate_create_farm_data(999_999, 100, 1, Permill::from_percent(50)),
+        LiquidityMining::validate_create_global_farm_data(999_999, 100, 1, Permill::from_percent(50)),
         Error::<Test>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_farm_data(9, 100, 1, Permill::from_percent(50)),
+        LiquidityMining::validate_create_global_farm_data(9, 100, 1, Permill::from_percent(50)),
         Error::<Test>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_farm_data(0, 100, 1, Permill::from_percent(50)),
+        LiquidityMining::validate_create_global_farm_data(0, 100, 1, Permill::from_percent(50)),
         Error::<Test>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_farm_data(1_000_000, 99, 1, Permill::from_percent(50)),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 99, 1, Permill::from_percent(50)),
         Error::<Test>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_farm_data(1_000_000, 0, 1, Permill::from_percent(50)),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 0, 1, Permill::from_percent(50)),
         Error::<Test>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_farm_data(1_000_000, 87, 1, Permill::from_percent(50)),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 87, 1, Permill::from_percent(50)),
         Error::<Test>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_farm_data(1_000_000, 100, 0, Permill::from_percent(50)),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 0, Permill::from_percent(50)),
         Error::<Test>::InvalidBlocksPerPeriod
     );
 
     assert_err!(
-        LiquidityMining::validate_create_farm_data(1_000_000, 100, 10, Permill::from_percent(0)),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 10, Permill::from_percent(0)),
         Error::<Test>::InvalidYieldPerPeriod
     );
 }
@@ -303,7 +303,7 @@ fn get_loyalty_multiplier_should_work() {
 }
 
 #[test]
-fn update_global_pool_should_work() {
+fn update_global_farm_should_work() {
     let testing_values = vec![
         (
             26_u64,
@@ -587,7 +587,7 @@ fn update_global_pool_should_work() {
         reward_currency,
         id,
         rewards_left_to_distribute,
-        now_period,
+        current_period,
         reward_per_period,
         accumulated_rewards,
         expected_accumulated_rpz,
@@ -601,7 +601,7 @@ fn update_global_pool_should_work() {
         let incentivized_token = BSX;
         let max_reward_per_period = 10_000_u128;
 
-        let mut global_pool = GlobalPool::new(
+        let mut global_farm = GlobalFarmData::new(
             *id,
             *updated_at,
             *reward_currency,
@@ -613,17 +613,17 @@ fn update_global_pool_should_work() {
             max_reward_per_period,
         );
 
-        global_pool.total_shares_z = *total_shares_z;
-        global_pool.accumulated_rewards = *accumulated_rewards;
-        global_pool.accumulated_rpz = *accumulated_rpz;
-        global_pool.paid_accumulated_rewards = 10;
+        global_farm.total_shares_z = *total_shares_z;
+        global_farm.accumulated_rewards = *accumulated_rewards;
+        global_farm.accumulated_rpz = *accumulated_rpz;
+        global_farm.paid_accumulated_rewards = 10;
 
         let mut ext = new_test_ext();
 
         ext.execute_with(|| {
             reset_rpz_updated();
 
-            let farm_account_id = LiquidityMining::pool_account_id(*id).unwrap();
+            let farm_account_id = LiquidityMining::farm_account_id(*id).unwrap();
             let _ = Tokens::transfer(
                 Origin::signed(TREASURY),
                 farm_account_id,
@@ -635,11 +635,11 @@ fn update_global_pool_should_work() {
                 *rewards_left_to_distribute
             );
 
-            LiquidityMining::update_global_pool(&mut global_pool, *now_period, *reward_per_period).unwrap();
+            LiquidityMining::update_global_farm(&mut global_farm, *current_period, *reward_per_period).unwrap();
 
-            let mut expected_global_pool = GlobalPool::new(
+            let mut expected_global_farm = GlobalFarmData::new(
                 *id,
-                *now_period,
+                *current_period,
                 *reward_currency,
                 yield_per_period,
                 planned_yielding_periods,
@@ -649,14 +649,14 @@ fn update_global_pool_should_work() {
                 max_reward_per_period,
             );
 
-            expected_global_pool.total_shares_z = *total_shares_z;
-            expected_global_pool.paid_accumulated_rewards = 10;
-            expected_global_pool.accumulated_rpz = *expected_accumulated_rpz;
-            expected_global_pool.accumulated_rewards = *expected_accumulated_rewards;
+            expected_global_farm.total_shares_z = *total_shares_z;
+            expected_global_farm.paid_accumulated_rewards = 10;
+            expected_global_farm.accumulated_rpz = *expected_accumulated_rpz;
+            expected_global_farm.accumulated_rewards = *expected_accumulated_rewards;
 
-            assert_eq!(global_pool, expected_global_pool);
+            assert_eq!(global_farm, expected_global_farm);
 
-            if updated_at != now_period {
+            if updated_at != current_period {
                 expect_on_accumulated_rzp_update((*id, *expected_accumulated_rpz, *total_shares_z));
             }
         });
@@ -664,7 +664,7 @@ fn update_global_pool_should_work() {
 }
 
 #[test]
-fn claim_from_global_pool_should_work() {
+fn claim_from_global_farm_should_work() {
     let testing_values = vec![
         (
             26_u64,
@@ -965,20 +965,20 @@ fn claim_from_global_pool_should_work() {
     for (
         updated_at,
         total_shares_z,
-        liq_pool_accumulated_rpz,
-        global_pool_accumulated_rpz,
+        yield_farm_accumulated_rpz,
+        global_farm_accumuated_rpz,
         reward_currency,
         accumulated_rewards,
         paid_accumulated_rewards,
-        liq_pool_stake_in_global_pool,
-        expected_rewards_from_global_pool,
-        expected_liq_pool_accumulated_rpz,
-        expected_global_pool_accumulated_rewards,
-        expected_global_pool_paid_accumulated_rewards,
+        yield_farm_stake_in_global_farm,
+        expected_rewards_from_global_farm,
+        expected_yield_farm_accumulated_rpz,
+        expected_global_farm_accumulated_rewards,
+        expected_global_farm_pair_accumulated_rewards,
     ) in testing_values.iter()
     {
-        let global_pool_id = 1;
-        let liq_pool_id = 2;
+        let global_farm_id = 1;
+        let yield_farm_id = 2;
         let yield_per_period = Permill::from_percent(50);
         let planned_yielding_periods = 100;
         let blocks_per_period = 1;
@@ -986,8 +986,8 @@ fn claim_from_global_pool_should_work() {
         let incentivized_token = BSX;
         let max_reward_per_period = Balance::from(10_000_u32);
 
-        let mut global_pool = GlobalPool::new(
-            global_pool_id,
+        let mut global_farm = GlobalFarmData::new(
+            global_farm_id,
             *updated_at,
             *reward_currency,
             yield_per_period,
@@ -998,22 +998,22 @@ fn claim_from_global_pool_should_work() {
             max_reward_per_period,
         );
 
-        global_pool.total_shares_z = *total_shares_z;
-        global_pool.accumulated_rpz = *global_pool_accumulated_rpz;
-        global_pool.accumulated_rewards = *accumulated_rewards;
-        global_pool.paid_accumulated_rewards = *paid_accumulated_rewards;
+        global_farm.total_shares_z = *total_shares_z;
+        global_farm.accumulated_rpz = *global_farm_accumuated_rpz;
+        global_farm.accumulated_rewards = *accumulated_rewards;
+        global_farm.paid_accumulated_rewards = *paid_accumulated_rewards;
 
-        let mut liq_pool = LiquidityPoolYieldFarm::new(liq_pool_id, *updated_at, None, FixedU128::from(10_u128));
-        liq_pool.accumulated_rpz = *liq_pool_accumulated_rpz;
+        let mut yield_farm = YieldFarmData::new(yield_farm_id, *updated_at, None, FixedU128::from(10_u128));
+        yield_farm.accumulated_rpz = *yield_farm_accumulated_rpz;
 
         assert_eq!(
-            LiquidityMining::claim_from_global_pool(&mut global_pool, &mut liq_pool, *liq_pool_stake_in_global_pool)
+            LiquidityMining::claim_from_global_farm(&mut global_farm, &mut yield_farm, *yield_farm_stake_in_global_farm)
                 .unwrap(),
-            *expected_rewards_from_global_pool
+            *expected_rewards_from_global_farm
         );
 
-        let mut expected_global_pool = GlobalPool::new(
-            global_pool_id,
+        let mut expected_global_farm = GlobalFarmData::new(
+            global_farm_id,
             *updated_at,
             *reward_currency,
             yield_per_period,
@@ -1024,27 +1024,27 @@ fn claim_from_global_pool_should_work() {
             max_reward_per_period,
         );
 
-        expected_global_pool.total_shares_z = *total_shares_z;
-        expected_global_pool.accumulated_rpz = *global_pool_accumulated_rpz;
-        expected_global_pool.accumulated_rewards = *expected_global_pool_accumulated_rewards;
-        expected_global_pool.paid_accumulated_rewards = *expected_global_pool_paid_accumulated_rewards;
+        expected_global_farm.total_shares_z = *total_shares_z;
+        expected_global_farm.accumulated_rpz = *global_farm_accumuated_rpz;
+        expected_global_farm.accumulated_rewards = *expected_global_farm_accumulated_rewards;
+        expected_global_farm.paid_accumulated_rewards = *expected_global_farm_pair_accumulated_rewards;
 
-        assert_eq!(global_pool, expected_global_pool);
+        assert_eq!(global_farm, expected_global_farm);
 
-        let mut expected_liq_pool =
-            LiquidityPoolYieldFarm::new(liq_pool_id, *updated_at, None, FixedU128::from(10_u128));
-        expected_liq_pool.accumulated_rpz = *expected_liq_pool_accumulated_rpz;
+        let mut expected_yield_farm =
+            YieldFarmData::new(yield_farm_id, *updated_at, None, FixedU128::from(10_u128));
+        expected_yield_farm.accumulated_rpz = *expected_yield_farm_accumulated_rpz;
 
-        assert_eq!(liq_pool, expected_liq_pool);
+        assert_eq!(yield_farm, expected_yield_farm);
     }
 }
 
 #[test]
-fn update_pool_should_work() {
+fn update_yield_farm_should_work() {
     let testing_values = vec![
         (
             BSX_FARM,
-            BSX_DOT_LM_POOL,
+            BSX_DOT_YIELD_FARM,
             26_u64,
             206_u64,
             299_u128,
@@ -1058,7 +1058,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_ACA_LM_POOL,
+            BSX_ACA_YIELD_FARM,
             188_u64,
             259_u64,
             1151_u128,
@@ -1072,7 +1072,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_KSM_LM_POOL,
+            BSX_KSM_YIELD_FARM,
             195_u64,
             326_u64,
             823_u128,
@@ -1086,7 +1086,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_KSM_LM_POOL,
+            BSX_KSM_YIELD_FARM,
             181_u64,
             1856_u64,
             320_u128,
@@ -1100,7 +1100,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_ACA_LM_POOL,
+            BSX_ACA_YIELD_FARM,
             196_u64,
             954_u64,
             5684_u128,
@@ -1114,7 +1114,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_DOT_LM_POOL,
+            BSX_DOT_YIELD_FARM,
             68_u64,
             161_u64,
             37_u128,
@@ -1128,7 +1128,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_ACA_LM_POOL,
+            BSX_ACA_YIELD_FARM,
             161_u64,
             448_u64,
             678_u128,
@@ -1142,7 +1142,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_DOT_LM_POOL,
+            BSX_DOT_YIELD_FARM,
             27_u64,
             132_u64,
             978_u128,
@@ -1156,7 +1156,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_KSM_LM_POOL,
+            BSX_KSM_YIELD_FARM,
             97_u64,
             146_u64,
             28_u128,
@@ -1170,7 +1170,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_ACA_LM_POOL,
+            BSX_ACA_YIELD_FARM,
             154_u64,
             202_u64,
             876_u128,
@@ -1184,7 +1184,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_DOT_LM_POOL,
+            BSX_DOT_YIELD_FARM,
             104_u64,
             131_u64,
             8373_u128,
@@ -1198,7 +1198,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_KSM_LM_POOL,
+            BSX_KSM_YIELD_FARM,
             90_u64,
             110_u64,
             5886_u128,
@@ -1212,7 +1212,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_DOT_LM_POOL,
+            BSX_DOT_YIELD_FARM,
             198_u64,
             582_u64,
             2591_u128,
@@ -1226,7 +1226,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_KSM_LM_POOL,
+            BSX_KSM_YIELD_FARM,
             29_u64,
             100_u64,
             80_u128,
@@ -1240,7 +1240,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_ACA_LM_POOL,
+            BSX_ACA_YIELD_FARM,
             91_u64,
             260_u64,
             2537_u128,
@@ -1254,7 +1254,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_ACA_LM_POOL,
+            BSX_ACA_YIELD_FARM,
             67_u64,
             229_u64,
             471_u128,
@@ -1268,7 +1268,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_DOT_LM_POOL,
+            BSX_DOT_YIELD_FARM,
             168_u64,
             361_u64,
             952_u128,
@@ -1282,7 +1282,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_ACA_LM_POOL,
+            BSX_ACA_YIELD_FARM,
             3_u64,
             52_u64,
             357_u128,
@@ -1296,7 +1296,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_KSM_LM_POOL,
+            BSX_KSM_YIELD_FARM,
             49_u64,
             132_u64,
             1557_u128,
@@ -1310,7 +1310,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_ACA_LM_POOL,
+            BSX_ACA_YIELD_FARM,
             38_u64,
             38_u64,
             2564373_u128,
@@ -1324,7 +1324,7 @@ fn update_pool_should_work() {
         ),
         (
             BSX_FARM,
-            BSX_ACA_LM_POOL,
+            BSX_ACA_YIELD_FARM,
             158_u64,
             158_u64,
             129_u128,
@@ -1339,18 +1339,18 @@ fn update_pool_should_work() {
     ];
 
     for (
-        global_pool_id,
-        liq_pool_id,
-        liq_pool_updated_at,
-        now_period,
-        liq_pool_accumulated_rpvs,
-        liq_pool_total_valued_shares,
-        liq_pool_rewards,
+        global_farm_id,
+        yield_farm_id,
+        yield_farm_updated_at,
+        current_period,
+        yield_farm_accumulated_rpvs,
+        yield_farm_total_valued_shares,
+        yield_farm_rewards,
         reward_currency,
-        expected_liq_pool_accumulated_rpvs,
+        expected_yield_farm_accumulated_rpvs,
         expected_updated_at,
-        expected_liq_pool_reward_currency_balance,
-        expected_global_pool_reward_currency_balance,
+        expected_yield_farm_reward_currency_balance,
+        expected_global_farm_reward_currency_balance,
     ) in testing_values.iter()
     {
         let owner = ALICE;
@@ -1361,8 +1361,8 @@ fn update_pool_should_work() {
         let updated_at = 200_u64;
         let max_reward_per_period = Balance::from(10_000_u32);
 
-        let mut global_pool = GlobalPool::<Test>::new(
-            *global_pool_id,
+        let mut global_farm = GlobalFarmData::<Test>::new(
+            *global_farm_id,
             updated_at,
             *reward_currency,
             yield_per_period,
@@ -1373,17 +1373,17 @@ fn update_pool_should_work() {
             max_reward_per_period,
         );
 
-        global_pool.total_shares_z = 1_000_000_u128;
-        global_pool.accumulated_rpz = 200_u128;
-        global_pool.accumulated_rewards = 1_000_000_u128;
-        global_pool.paid_accumulated_rewards = 1_000_000_u128;
+        global_farm.total_shares_z = 1_000_000_u128;
+        global_farm.accumulated_rpz = 200_u128;
+        global_farm.accumulated_rewards = 1_000_000_u128;
+        global_farm.paid_accumulated_rewards = 1_000_000_u128;
 
-        let mut liq_pool = LiquidityPoolYieldFarm {
-            id: *liq_pool_id,
-            updated_at: *liq_pool_updated_at,
+        let mut yield_farm = YieldFarmData {
+            id: *yield_farm_id,
+            updated_at: *yield_farm_updated_at,
             total_shares: 200_u128,
-            total_valued_shares: *liq_pool_total_valued_shares,
-            accumulated_rpvs: *liq_pool_accumulated_rpvs,
+            total_valued_shares: *yield_farm_total_valued_shares,
+            accumulated_rpvs: *yield_farm_accumulated_rpvs,
             accumulated_rpz: 200_u128,
             loyalty_curve: None,
             multiplier: FixedU128::from(10_u128),
@@ -1392,34 +1392,34 @@ fn update_pool_should_work() {
 
         let mut ext = new_test_ext();
 
-        let farm_account_id = LiquidityMining::pool_account_id(*global_pool_id).unwrap();
-        let pool_account_id = LiquidityMining::pool_account_id(*liq_pool_id).unwrap();
+        let global_farm_account_id = LiquidityMining::farm_account_id(*global_farm_id).unwrap();
+        let yield_farm_account_id = LiquidityMining::farm_account_id(*yield_farm_id).unwrap();
 
         ext.execute_with(|| {
             reset_rpvs_updated();
             let _ = Tokens::transfer(
                 Origin::signed(TREASURY),
-                farm_account_id,
-                global_pool.reward_currency,
+                global_farm_account_id,
+                global_farm.reward_currency,
                 9_000_000_000_000,
             );
             assert_eq!(
-                Tokens::free_balance(global_pool.reward_currency, &farm_account_id),
+                Tokens::free_balance(global_farm.reward_currency, &global_farm_account_id),
                 9_000_000_000_000_u128
             );
 
-            assert_eq!(Tokens::free_balance(*reward_currency, &pool_account_id), 0);
+            assert_eq!(Tokens::free_balance(*reward_currency, &yield_farm_account_id), 0);
 
-            assert_ok!(LiquidityMining::update_liq_pool(
-                &mut liq_pool,
-                *liq_pool_rewards,
-                *now_period,
-                *global_pool_id,
+            assert_ok!(LiquidityMining::update_yield_farm(
+                &mut yield_farm,
+                *yield_farm_rewards,
+                *current_period,
+                *global_farm_id,
                 *reward_currency
             ));
 
-            let mut rhs_global_pool = GlobalPool::new(
-                *global_pool_id,
+            let mut rhs_global_farm = GlobalFarmData::new(
+                *global_farm_id,
                 updated_at,
                 *reward_currency,
                 yield_per_period,
@@ -1430,22 +1430,22 @@ fn update_pool_should_work() {
                 max_reward_per_period,
             );
 
-            rhs_global_pool.updated_at = 200_u64;
-            rhs_global_pool.total_shares_z = 1_000_000_u128;
-            rhs_global_pool.accumulated_rpz = 200_u128;
-            rhs_global_pool.accumulated_rewards = 1_000_000_u128;
-            rhs_global_pool.paid_accumulated_rewards = 1_000_000_u128;
+            rhs_global_farm.updated_at = 200_u64;
+            rhs_global_farm.total_shares_z = 1_000_000_u128;
+            rhs_global_farm.accumulated_rpz = 200_u128;
+            rhs_global_farm.accumulated_rewards = 1_000_000_u128;
+            rhs_global_farm.paid_accumulated_rewards = 1_000_000_u128;
 
-            assert_eq!(global_pool, rhs_global_pool);
+            assert_eq!(global_farm, rhs_global_farm);
 
             assert_eq!(
-                liq_pool,
-                LiquidityPoolYieldFarm {
-                    id: *liq_pool_id,
+                yield_farm,
+                YieldFarmData {
+                    id: *yield_farm_id,
                     updated_at: *expected_updated_at,
                     total_shares: 200_u128,
-                    total_valued_shares: *liq_pool_total_valued_shares,
-                    accumulated_rpvs: *expected_liq_pool_accumulated_rpvs,
+                    total_valued_shares: *yield_farm_total_valued_shares,
+                    accumulated_rpvs: *expected_yield_farm_accumulated_rpvs,
                     accumulated_rpz: 200_u128,
                     loyalty_curve: None,
                     multiplier: FixedU128::from(10_u128),
@@ -1454,20 +1454,20 @@ fn update_pool_should_work() {
             );
 
             assert_eq!(
-                Tokens::free_balance(global_pool.reward_currency, &farm_account_id),
-                *expected_global_pool_reward_currency_balance
+                Tokens::free_balance(global_farm.reward_currency, &global_farm_account_id),
+                *expected_global_farm_reward_currency_balance
             );
             assert_eq!(
-                Tokens::free_balance(global_pool.reward_currency, &pool_account_id),
-                *expected_liq_pool_reward_currency_balance
+                Tokens::free_balance(global_farm.reward_currency, &yield_farm_account_id),
+                *expected_yield_farm_reward_currency_balance
             );
 
-            if now_period != liq_pool_updated_at && !liq_pool_total_valued_shares.is_zero() {
+            if current_period != yield_farm_updated_at && !yield_farm_total_valued_shares.is_zero() {
                 expect_on_accumulated_rpvs_update((
-                    global_pool.id,
-                    *liq_pool_id,
-                    *expected_liq_pool_accumulated_rpvs,
-                    liq_pool.total_valued_shares,
+                    global_farm.id,
+                    *yield_farm_id,
+                    *expected_yield_farm_accumulated_rpvs,
+                    yield_farm.total_valued_shares,
                 ));
             }
         });
@@ -1475,201 +1475,83 @@ fn update_pool_should_work() {
 }
 
 #[test]
-fn get_next_pool_id_should_work() {
+fn get_next_farm_id_should_work() {
     let mut ext = new_test_ext();
 
     ext.execute_with(|| {
-        assert_eq!(LiquidityMining::get_next_pool_id().unwrap(), 1);
-        assert_eq!(LiquidityMining::pool_id(), 1);
+        assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 1);
+        assert_eq!(LiquidityMining::farm_id(), 1);
 
-        assert_eq!(LiquidityMining::get_next_pool_id().unwrap(), 2);
-        assert_eq!(LiquidityMining::pool_id(), 2);
+        assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 2);
+        assert_eq!(LiquidityMining::farm_id(), 2);
 
-        assert_eq!(LiquidityMining::get_next_pool_id().unwrap(), 3);
-        assert_eq!(LiquidityMining::pool_id(), 3);
+        assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 3);
+        assert_eq!(LiquidityMining::farm_id(), 3);
 
-        assert_eq!(LiquidityMining::get_next_pool_id().unwrap(), 4);
-        assert_eq!(LiquidityMining::pool_id(), 4);
+        assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 4);
+        assert_eq!(LiquidityMining::farm_id(), 4);
     });
 }
 
 #[test]
-fn pool_account_id_should_work() {
-    let ids: Vec<PoolId> = vec![1, 100, 543, u32::max_value()];
+fn farm_account_id_should_work() {
+    let ids: Vec<FarmId> = vec![1, 100, 543, u32::max_value()];
 
     for id in ids {
-        assert_ok!(LiquidityMining::pool_account_id(id));
+        assert_ok!(LiquidityMining::farm_account_id(id));
     }
 }
 
 #[test]
-fn pool_account_id_should_not_work() {
-    let ids: Vec<PoolId> = vec![0];
+fn farm_account_id_should_not_work() {
+    let ids: Vec<FarmId> = vec![0];
 
     for id in ids {
-        assert_err!(LiquidityMining::pool_account_id(id), Error::<Test>::InvalidPoolId);
+        assert_err!(LiquidityMining::farm_account_id(id), Error::<Test>::InvalidFarmId);
     }
-}
-
-#[test]
-fn validate_pool_id_should_work() {
-    let ids: Vec<PoolId> = vec![1, 100, 543, u32::max_value()];
-
-    for id in ids {
-        assert_ok!(LiquidityMining::validate_pool_id(id));
-    }
-}
-
-#[test]
-fn validate_pool_id_should_not_work() {
-    assert_eq!(
-        LiquidityMining::validate_pool_id(0).unwrap_err(),
-        Error::<Test>::InvalidPoolId
-    );
 }
 
 #[test]
 fn get_next_deposit_id_should_work() {
     new_test_ext().execute_with(|| {
-        //(pool_id, result)
-        let test_data = vec![
-            (1, 4_294_967_297),
-            (6_886, 8_589_941_478),
-            (87_321, 12_884_989_209),
-            (56, 17_179_869_240),
-            (789, 21_474_837_269),
-            (248, 25_769_804_024),
-            (1_000_000_200, 31_064_771_272),
-            (u32::max_value(), 38_654_705_663),
-        ];
+        let test_data = vec![1,2,3,4,5];
 
-        for (pool_id, expected_nft_id) in test_data {
-            assert_eq!(LiquidityMining::get_next_deposit_id(pool_id).unwrap(), expected_nft_id);
-        }
-
-        //This is last allowed sequencer number - 1, test with max pool id
-        let last_nft_sequencer_num =
-            u128::from_le_bytes([255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0])
-                .checked_sub(1_u128)
-                .unwrap();
-
-        <DepositSequencer<Test>>::set(last_nft_sequencer_num);
-        assert_eq!(<DepositSequencer<Test>>::get(), 79_228_162_514_264_337_593_543_950_334);
-
-        assert_eq!(
-            LiquidityMining::get_next_deposit_id(u32::max_value()).unwrap(),
-            u128::max_value()
-        );
-
-        //This is last allowed sequencer number - 1, test with min. pool id
-        let last_nft_sequencer_num =
-            u128::from_le_bytes([255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0])
-                .checked_sub(1_u128)
-                .unwrap();
-
-        <DepositSequencer<Test>>::set(last_nft_sequencer_num);
-        assert_eq!(<DepositSequencer<Test>>::get(), 79_228_162_514_264_337_593_543_950_334);
-
-        assert_eq!(
-            LiquidityMining::get_next_deposit_id(1).unwrap(),
-            340_282_366_920_938_463_463_374_607_427_473_244_161
-        );
-    });
-}
-
-#[test]
-fn get_next_deposit_id_should_not_work() {
-    new_test_ext().execute_with(|| {
-        //This is last allowed sequencer number, next should throw error
-        let last_deposit_sequencer_num =
-            u128::from_le_bytes([255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0]);
-
-        <DepositSequencer<Test>>::set(last_deposit_sequencer_num);
-        assert_eq!(<DepositSequencer<Test>>::get(), 79_228_162_514_264_337_593_543_950_335);
-
-        assert_noop!(
-            LiquidityMining::get_next_deposit_id(u32::max_value()),
-            Error::<Test>::DepositIdOverflow
-        );
-
-        assert_noop!(
-            LiquidityMining::get_next_deposit_id(1),
-            Error::<Test>::DepositIdOverflow
-        );
-    });
-}
-
-#[test]
-fn get_pool_id_from_deposit_id_should_work() {
-    new_test_ext().execute_with(|| {
-        //(deposit_id, liq. pool id)
-        let test_data = vec![
-            (4_294_967_297, 1),
-            (8_589_941_478, 6_886),
-            (12_884_989_209, 87_321),
-            (17_179_869_240, 56),
-            (21_474_837_269, 789),
-            (25_769_804_024, 248),
-            (31_064_771_272, 1_000_000_200),
-            (38_654_705_663, u32::max_value()),
-            (u128::max_value(), u32::max_value()),
-            (340_282_366_920_938_463_463_374_607_427_473_244_161, 1),
-            (340_282_366_920_938_463_463_374_607_427_473_244_161, 1),
-        ];
-
-        for (deposit_id, expected_pool_id) in test_data {
-            assert_eq!(
-                LiquidityMining::get_pool_id_from_deposit_id(deposit_id).unwrap(),
-                expected_pool_id
-            );
+        for expected_deposit_id in test_data {
+            assert_eq!(LiquidityMining::get_next_deposit_id().unwrap(), expected_deposit_id);
         }
     });
 }
 
 #[test]
-fn get_pool_id_from_deposit_id_should_not_work() {
-    new_test_ext().execute_with(|| {
-        let test_data = vec![0, 132_342_314, 4_294_967_296];
-
-        for deposit_id in test_data {
-            assert_noop!(
-                LiquidityMining::get_pool_id_from_deposit_id(deposit_id),
-                Error::<Test>::InvalidDepositId
-            );
-        }
-    });
-}
-
-#[test]
-fn maybe_update_pools_should_work() {
-    //NOTE: this test is not testing if pools are updated correctly only if they are updated when
+fn maybe_update_farms_should_work() {
+    //NOTE: this test is not testing if farms are updated correctly only if they are updated when
     //conditions are met.
 
     const LEFT_TO_DISTRIBUTE: Balance = 1_000_000_000;
-    const REWARD_CURRENCY: AssetId = PREDEFINED_GLOBAL_POOLS[0].reward_currency;
+    const REWARD_CURRENCY: AssetId = PREDEFINED_GLOBAL_FARMS[0].reward_currency;
     let mut ext = new_test_ext();
 
-    let expected_global_pool = GlobalPool {
+    let expected_global_farm = GlobalFarmData {
         updated_at: 20,
         accumulated_rpz: 20,
-        liq_pools_count: 1,
+        yield_farms_count: 1,
         paid_accumulated_rewards: 1_000_000,
         total_shares_z: 1_000_000,
         accumulated_rewards: 20_000,
-        ..PREDEFINED_GLOBAL_POOLS[0]
+        ..PREDEFINED_GLOBAL_FARMS[0]
     };
 
-    let expected_liq_pool = LiquidityPoolYieldFarm {
+    let expected_yield_farm = YieldFarmData {
         updated_at: 20,
         total_shares: 200_000,
         total_valued_shares: 400_000,
         accumulated_rpvs: 15,
         accumulated_rpz: 20,
-        ..PREDEFINED_LIQ_POOLS.with(|v| v[0].clone())
+        ..PREDEVINED_YIELD_FARMS.with(|v| v[0].clone())
     };
 
     ext.execute_with(|| {
-        let farm_account_id = LiquidityMining::pool_account_id(PREDEFINED_GLOBAL_POOLS[0].id).unwrap();
+        let farm_account_id = LiquidityMining::farm_account_id(PREDEFINED_GLOBAL_FARMS[0].id).unwrap();
         let _ = Tokens::transfer(
             Origin::signed(TREASURY),
             farm_account_id,
@@ -1683,83 +1565,118 @@ fn maybe_update_pools_should_work() {
             LEFT_TO_DISTRIBUTE
         );
 
-        let mut global_pool = GlobalPool { ..expected_global_pool };
+        let mut global_farm = GlobalFarmData { ..expected_global_farm };
 
-        let mut liq_pool = LiquidityPoolYieldFarm {
+        let mut yield_farm = YieldFarmData {
             canceled: true,
-            ..expected_liq_pool.clone()
+            ..expected_yield_farm.clone()
         };
 
-        let now_period = 30;
+        let current_period = 30;
 
-        //I. - LiquidityPoolYieldFarm is canceled. Nothing should be updated if liq. pool is canceled.
-        assert_ok!(LiquidityMining::maybe_update_pools(
-            &mut global_pool,
-            &mut liq_pool,
-            now_period
+        //I. - yield farming is canceled. Nothing should be updated if yield farming is canceled.
+        assert_ok!(LiquidityMining::maybe_update_farms(
+            &mut global_farm,
+            &mut yield_farm,
+            current_period
         ));
 
-        assert_eq!(global_pool, expected_global_pool);
+        assert_eq!(global_farm, expected_global_farm);
         assert_eq!(
-            liq_pool,
-            LiquidityPoolYieldFarm {
+            yield_farm,
+            YieldFarmData {
                 canceled: true,
-                ..expected_liq_pool.clone()
+                ..expected_yield_farm.clone()
             }
         );
 
-        //II. - liq. pool have 0 shares and was updated in this period
-        let now_period = 20;
-        let mut liq_pool = LiquidityPoolYieldFarm {
-            ..expected_liq_pool.clone()
+        //II. - yield farm has 0 shares and was updated in this period
+        let current_period = 20;
+        let mut yield_farm = YieldFarmData {
+            ..expected_yield_farm.clone()
         };
-        assert_ok!(LiquidityMining::maybe_update_pools(
-            &mut global_pool,
-            &mut liq_pool,
-            now_period
+        assert_ok!(LiquidityMining::maybe_update_farms(
+            &mut global_farm,
+            &mut yield_farm,
+            current_period
         ));
 
-        assert_eq!(global_pool, expected_global_pool);
-        assert_eq!(liq_pool, expected_liq_pool);
+        assert_eq!(global_farm, expected_global_farm);
+        assert_eq!(yield_farm, expected_yield_farm);
 
-        //III. - global pool have 0 shares and was updated in this period - only liq. pool should
+        //III. - global farm has 0 shares and was updated in this period - only yield farm should
         //be updated
-        let now_period = 30;
-        let mut global_pool = GlobalPool {
+        let current_period = 30;
+        let mut global_farm = GlobalFarmData {
             total_shares_z: 0,
             updated_at: 30,
-            ..expected_global_pool
+            ..expected_global_farm
         };
 
-        assert_ok!(LiquidityMining::maybe_update_pools(
-            &mut global_pool,
-            &mut liq_pool,
-            now_period
+        assert_ok!(LiquidityMining::maybe_update_farms(
+            &mut global_farm,
+            &mut yield_farm,
+            current_period
         ));
 
         assert_eq!(
-            global_pool,
-            GlobalPool {
+            global_farm,
+            GlobalFarmData {
                 total_shares_z: 0,
                 updated_at: 30,
-                ..expected_global_pool
+                ..expected_global_farm
             }
         );
-        assert_ne!(liq_pool, expected_liq_pool);
-        assert_eq!(liq_pool.updated_at, now_period);
+        assert_ne!(yield_farm, expected_yield_farm);
+        assert_eq!(yield_farm.updated_at, current_period);
 
-        //IV. - booth pools met conditions to update
-        let now_period = 30;
-        assert_ok!(LiquidityMining::maybe_update_pools(
-            &mut global_pool,
-            &mut liq_pool,
-            now_period
+        //IV. - booth farms met conditions to update
+        let current_period = 30;
+        assert_ok!(LiquidityMining::maybe_update_farms(
+            &mut global_farm,
+            &mut yield_farm,
+            current_period
         ));
 
-        assert_ne!(global_pool, expected_global_pool);
-        assert_ne!(liq_pool, expected_liq_pool);
+        assert_ne!(global_farm, expected_global_farm);
+        assert_ne!(yield_farm, expected_yield_farm);
 
-        assert_eq!(global_pool.updated_at, now_period);
-        assert_eq!(liq_pool.updated_at, now_period);
+        assert_eq!(global_farm.updated_at, current_period);
+        assert_eq!(yield_farm.updated_at, current_period);
     });
+}
+
+#[test]
+fn depositdata_add_farm_entry_to_should_work() {
+    /*let deposit = DepositData::<Test> {
+        shares: 10,
+        amm_pool_id: BSX_TKN1_AMM,
+        yield_farm_entries: vec![],
+    };*/
+    
+}
+
+#[test] 
+fn depositdata_has_no_yield_farm_entries_shoudl_work() {
+    let mut deposit = DepositData::<Test> {
+        shares: 10,
+        amm_pool_id: BSX_TKN1_AMM,
+        yield_farm_entries: vec![],
+    };
+   
+    //no yield farm entries
+    assert!(deposit.has_no_yield_farm_entries());
+
+    deposit.yield_farm_entries.push(YieldFarmEntry {
+        global_farm_id: GC_FARM,
+        yield_farm_id: BSX_TKN1_YIELD_FARM_ID,
+        valued_shares: 1_000_000,
+        accumulated_rpvs: 12,
+        accumulated_claimed_rewards: 0,
+        entered_at: 12,
+        updated_at: 12,
+    });
+
+    //some yield farm entris
+    assert_eq!(deposit.has_no_yield_farm_entries(), false);
 }

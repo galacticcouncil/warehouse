@@ -19,15 +19,15 @@ use super::*;
 use test_ext::*;
 
 #[test]
-fn add_liquidity_pool_should_work() {
-    //Note: global_pool.updated_at isn't changed because pool is empty (no liq. pool stake in globalPool)
+fn create_yield_farm_should_work() {
+    //Note: global_farm.updated_at isn't changed because global farm is empty (no yield farm stake in global farm)
     let test_data = vec![
         (
             AssetPair {
                 asset_in: BSX,
                 asset_out: ACA,
             },
-            LiquidityPoolYieldFarm {
+            YieldFarmData {
                 id: 8,
                 updated_at: 17,
                 total_shares: 0,
@@ -42,9 +42,9 @@ fn add_liquidity_pool_should_work() {
             ALICE,
             ALICE_FARM,
             17_850,
-            GlobalPool {
-                liq_pools_count: 1,
-                ..PREDEFINED_GLOBAL_POOLS[0].clone()
+            GlobalFarmData {
+                yield_farms_count: 1,
+                ..PREDEFINED_GLOBAL_FARMS[0].clone()
             },
         ),
         (
@@ -52,7 +52,7 @@ fn add_liquidity_pool_should_work() {
                 asset_in: KSM,
                 asset_out: BSX,
             },
-            LiquidityPoolYieldFarm {
+            YieldFarmData {
                 id: 9,
                 updated_at: 17,
                 total_shares: 0,
@@ -67,9 +67,9 @@ fn add_liquidity_pool_should_work() {
             ALICE,
             ALICE_FARM,
             17_850,
-            GlobalPool {
-                liq_pools_count: 2,
-                ..PREDEFINED_GLOBAL_POOLS[0].clone()
+            GlobalFarmData {
+                yield_farms_count: 2,
+                ..PREDEFINED_GLOBAL_FARMS[0].clone()
             },
         ),
         (
@@ -77,7 +77,7 @@ fn add_liquidity_pool_should_work() {
                 asset_in: BSX,
                 asset_out: ETH,
             },
-            LiquidityPoolYieldFarm {
+            YieldFarmData {
                 id: 10,
                 updated_at: 20,
                 total_shares: 0,
@@ -95,9 +95,9 @@ fn add_liquidity_pool_should_work() {
             ALICE,
             ALICE_FARM,
             20_000,
-            GlobalPool {
-                liq_pools_count: 3,
-                ..PREDEFINED_GLOBAL_POOLS[0].clone()
+            GlobalFarmData {
+                yield_farms_count: 3,
+                ..PREDEFINED_GLOBAL_FARMS[0].clone()
             },
         ),
         (
@@ -105,7 +105,7 @@ fn add_liquidity_pool_should_work() {
                 asset_in: BSX,
                 asset_out: ETH,
             },
-            LiquidityPoolYieldFarm {
+            YieldFarmData {
                 id: 11,
                 updated_at: 2,
                 total_shares: 0,
@@ -123,42 +123,46 @@ fn add_liquidity_pool_should_work() {
             BOB,
             BOB_FARM,
             20_000,
-            GlobalPool {
-                liq_pools_count: 1,
-                ..PREDEFINED_GLOBAL_POOLS[1].clone()
+            GlobalFarmData {
+                yield_farms_count: 1,
+                ..PREDEFINED_GLOBAL_FARMS[1].clone()
             },
         ),
     ];
 
     predefined_test_ext().execute_with(|| {
-        for (assets, pool, amm_id, who, farm_id, now, global_pool) in test_data.clone() {
+        for (assets, yield_farm, amm_id, who, global_farm_id, now, global_farm) in test_data.clone() {
             set_block_number(now);
 
-            assert_ok!(LiquidityMining::add_liquidity_pool(
+            assert_eq!(LiquidityMining::create_yield_farm(
                 who,
-                farm_id,
-                pool.multiplier,
-                pool.loyalty_curve.clone(),
+                global_farm_id,
+                yield_farm.multiplier,
+                yield_farm.loyalty_curve.clone(),
                 amm_id,
                 assets.asset_in,
                 assets.asset_out,
-            ));
+            ).unwrap(), yield_farm.id);
 
-            assert_eq!(LiquidityMining::global_pool(farm_id).unwrap(), global_pool);
+            assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
         }
 
-        for (_, pool, amm_id, _, farm_id, _, global_pool) in test_data {
-            assert_eq!(LiquidityMining::liquidity_pool(farm_id, amm_id).unwrap(), pool);
-            assert_eq!(LiquidityMining::liq_pool_meta(pool.id).unwrap(), (0, global_pool.id));
+        const EXPECTED_FARM_ENTRIES_COUNT: u64 = 0;
+        for (_, yield_farm, amm_id, _, global_farm_id, _, _) in test_data {
+            assert_eq!(LiquidityMining::yield_farm(amm_id, global_farm_id).unwrap(), yield_farm);
+            assert_eq!(
+                LiquidityMining::yield_farm_metadata(yield_farm.id).unwrap(),
+                EXPECTED_FARM_ENTRIES_COUNT
+            );
         }
     });
 }
 
 #[test]
-fn add_liquidity_pool_missing_incentivized_asset_should_not_work() {
+fn add_yield_farm_missing_incentivized_asset_should_not_work() {
     predefined_test_ext().execute_with(|| {
         assert_noop!(
-            LiquidityMining::add_liquidity_pool(
+            LiquidityMining::create_yield_farm(
                 ALICE,
                 ALICE_FARM,
                 FixedU128::from(10_000_u128),
@@ -174,10 +178,10 @@ fn add_liquidity_pool_missing_incentivized_asset_should_not_work() {
 }
 
 #[test]
-fn add_liquidity_pool_not_owner_should_not_work() {
+fn add_yield_farm_not_owner_should_not_work() {
     predefined_test_ext().execute_with(|| {
         assert_noop!(
-            LiquidityMining::add_liquidity_pool(
+            LiquidityMining::create_yield_farm(
                 BOB,
                 ALICE_FARM,
                 FixedU128::from(10_000_u128),
@@ -190,7 +194,7 @@ fn add_liquidity_pool_not_owner_should_not_work() {
         );
 
         assert_noop!(
-            LiquidityMining::add_liquidity_pool(
+            LiquidityMining::create_yield_farm(
                 BOB,
                 ALICE_FARM,
                 FixedU128::from(10_000_u128),
@@ -205,7 +209,7 @@ fn add_liquidity_pool_not_owner_should_not_work() {
 }
 
 #[test]
-fn add_liquidity_pool_invalid_loyalty_curve_should_not_work() {
+fn add_yield_farm_invalid_loyalty_curve_should_not_work() {
     predefined_test_ext().execute_with(|| {
         let curves = vec![
             Some(LoyaltyCurve {
@@ -236,7 +240,7 @@ fn add_liquidity_pool_invalid_loyalty_curve_should_not_work() {
 
         for c in curves {
             assert_noop!(
-                LiquidityMining::add_liquidity_pool(
+                LiquidityMining::create_yield_farm(
                     ALICE,
                     ALICE_FARM,
                     FixedU128::from(10_000_u128),
@@ -252,10 +256,10 @@ fn add_liquidity_pool_invalid_loyalty_curve_should_not_work() {
 }
 
 #[test]
-fn add_liquidity_pool_invalid_multiplier_should_not_work() {
+fn add_yield_farm_invalid_multiplier_should_not_work() {
     predefined_test_ext().execute_with(|| {
         assert_noop!(
-            LiquidityMining::add_liquidity_pool(
+            LiquidityMining::create_yield_farm(
                 ALICE,
                 ALICE_FARM,
                 FixedU128::from(0_u128),
@@ -270,7 +274,7 @@ fn add_liquidity_pool_invalid_multiplier_should_not_work() {
 }
 
 #[test]
-fn add_liquidity_pool_add_duplicate_amm_should_not_work() {
+fn add_yield_farm_add_duplicate_amm_should_not_work() {
     predefined_test_ext().execute_with(|| {
         set_block_number(20_000);
 
@@ -281,12 +285,12 @@ fn add_liquidity_pool_add_duplicate_amm_should_not_work() {
 
         let aca_ksm_amm_account = AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(aca_ksm_assets)).unwrap().0);
 
-        //check if liq. pool for aca ksm assets pair exist
-        assert!(LiquidityMining::liquidity_pool(CHARLIE_FARM, aca_ksm_amm_account).is_some());
+        //check if yeild farm for aca ksm assets pair exist
+        assert!(LiquidityMining::yield_farm(aca_ksm_amm_account, CHARLIE_FARM).is_some());
 
         //try to add same amm second time in the same block(period)
         assert_noop!(
-            LiquidityMining::add_liquidity_pool(
+            LiquidityMining::create_yield_farm(
                 CHARLIE,
                 CHARLIE_FARM,
                 FixedU128::from(9_000_u128),
@@ -295,14 +299,14 @@ fn add_liquidity_pool_add_duplicate_amm_should_not_work() {
                 ACA,
                 KSM,
             ),
-            Error::<Test>::LiquidityPoolAlreadyExists
+            Error::<Test>::YieldFarmAlreadyExists
         );
 
         //try to add same amm second time in later block(period)
         set_block_number(30_000);
 
         assert_noop!(
-            LiquidityMining::add_liquidity_pool(
+            LiquidityMining::create_yield_farm(
                 CHARLIE,
                 CHARLIE_FARM,
                 FixedU128::from(9_000_u128),
@@ -311,7 +315,7 @@ fn add_liquidity_pool_add_duplicate_amm_should_not_work() {
                 ACA,
                 KSM,
             ),
-            Error::<Test>::LiquidityPoolAlreadyExists
+            Error::<Test>::YieldFarmAlreadyExists
         );
     });
 }

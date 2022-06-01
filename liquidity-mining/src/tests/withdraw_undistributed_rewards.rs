@@ -22,29 +22,36 @@ use test_ext::*;
 fn withdraw_undistributed_rewards_should_work() {
     predefined_test_ext().execute_with(|| {
         //farm have to empty to be able to withdraw undistributed rewards
-        assert_ok!(LiquidityMining::cancel_liquidity_pool(GC, GC_FARM, BSX_TKN1_AMM));
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
-        assert_ok!(LiquidityMining::cancel_liquidity_pool(GC, GC_FARM, BSX_TKN2_AMM));
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
 
-        assert_ok!(LiquidityMining::remove_liquidity_pool(GC, GC_FARM, BSX_TKN1_AMM));
-        assert_ok!(LiquidityMining::remove_liquidity_pool(GC, GC_FARM, BSX_TKN2_AMM));
+        assert_ok!(LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+        assert_ok!(LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
 
         let farm_owner_bsx_balance = Tokens::total_balance(BSX, &GC);
 
-        assert_ok!(LiquidityMining::withdraw_undistributed_rewards(GC, GC_FARM));
+        let withdrawn_amount = 30_000_000_000;
+        assert_eq!(
+            LiquidityMining::withdraw_undistributed_rewards(GC, GC_FARM).unwrap(),
+            (BSX, withdrawn_amount)
+        );
 
-        assert_eq!(Tokens::total_balance(BSX, &GC), farm_owner_bsx_balance + 30_000_000_000);
+        assert_eq!(
+            Tokens::total_balance(BSX, &GC),
+            farm_owner_bsx_balance + withdrawn_amount
+        );
     });
 }
 
 #[test]
 fn withdraw_undistributed_rewards_non_existing_farm_should_not_work() {
-    const NON_EXISTING_FARM: PoolId = 879_798;
+    const NON_EXISTING_FARM: FarmId = 879_798;
 
     predefined_test_ext().execute_with(|| {
         assert_noop!(
             LiquidityMining::withdraw_undistributed_rewards(GC, NON_EXISTING_FARM),
-            Error::<Test>::FarmNotFound
+            Error::<Test>::GlobalFarmNotFound
         );
     });
 }
@@ -53,11 +60,11 @@ fn withdraw_undistributed_rewards_non_existing_farm_should_not_work() {
 fn withdraw_undistributed_rewards_not_owner_should_not_work() {
     predefined_test_ext().execute_with(|| {
         //farm have to empty to be able to withdraw undistributed rewards
-        assert_ok!(LiquidityMining::cancel_liquidity_pool(GC, GC_FARM, BSX_TKN1_AMM));
-        assert_ok!(LiquidityMining::cancel_liquidity_pool(GC, GC_FARM, BSX_TKN2_AMM));
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
 
-        assert_ok!(LiquidityMining::remove_liquidity_pool(GC, GC_FARM, BSX_TKN1_AMM));
-        assert_ok!(LiquidityMining::remove_liquidity_pool(GC, GC_FARM, BSX_TKN2_AMM));
+        assert_ok!(LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+        assert_ok!(LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
 
         const NOT_OWNER: u128 = ALICE;
         assert_noop!(
@@ -70,26 +77,26 @@ fn withdraw_undistributed_rewards_not_owner_should_not_work() {
 #[test]
 fn withdraw_undistributed_rewards_not_empty_farm_should_not_work() {
     predefined_test_ext().execute_with(|| {
-        //only cancel liq. pools, DON'T remove (farm is not empty)
-        assert_ok!(LiquidityMining::cancel_liquidity_pool(GC, GC_FARM, BSX_TKN1_AMM));
-        assert_ok!(LiquidityMining::cancel_liquidity_pool(GC, GC_FARM, BSX_TKN2_AMM));
+        //only cancel yield farm, DON'T remove (global farm is not empty)
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
 
-        assert_ok!(LiquidityMining::remove_liquidity_pool(GC, GC_FARM, BSX_TKN2_AMM));
+        assert_ok!(LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
 
         assert_noop!(
             LiquidityMining::withdraw_undistributed_rewards(GC, GC_FARM),
-            Error::<Test>::FarmIsNotEmpty
+            Error::<Test>::GlobalFarmIsNotEmpty
         );
     });
 
     predefined_test_ext().execute_with(|| {
-        //not all liq. pools are canceled
-        assert_ok!(LiquidityMining::cancel_liquidity_pool(GC, GC_FARM, BSX_TKN1_AMM));
-        assert_ok!(LiquidityMining::cancel_liquidity_pool(GC, GC_FARM, BSX_TKN2_AMM));
+        //not all yield farms are canceled
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
 
         assert_noop!(
             LiquidityMining::withdraw_undistributed_rewards(GC, GC_FARM),
-            Error::<Test>::FarmIsNotEmpty
+            Error::<Test>::GlobalFarmIsNotEmpty
         );
     });
 }

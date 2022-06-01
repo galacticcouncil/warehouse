@@ -17,7 +17,7 @@
 //
 // Abbr:
 //  rpvs - reward per valued share
-//  rpz - reward per share in global pool
+//  rpz - reward per share in global farm
 
 // Notion spec naming map:
 // * shares                 -> s
@@ -38,7 +38,7 @@
 //!
 //! Reward per one period is derived from the user's loyalty factor which grows with time(periods)
 //! the user is in the liq. mining and amount of LP shares user locked into deposit.
-//! User's loyalty factor is reset if the user exits and reenters liquidity mining pool.
+//! User's loyalty factor is reset if the user exits and reenters liquidity mining.
 //! User can claim rewards without resetting loyalty factor, only withdrawing shares
 //! is penalized by loyalty factor reset.
 //! User is rewarded from the next period after he enters.
@@ -56,7 +56,8 @@ mod types;
 pub use pallet::*;
 
 pub use crate::types::{
-    Balance, Deposit, DepositId, GlobalPool, GlobalPoolId, LiquidityPoolYieldFarm, LoyaltyCurve, PoolId, PoolMultiplier,
+    Balance, DepositData, DepositId, FarmId, FarmMultiplier, GlobalFarmData, GlobalFarmId, GlobalFarmState,
+    LoyaltyCurve, YieldFarmData, YieldFarmEntry, YieldFarmId, YieldFarmState,
 };
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
@@ -78,14 +79,6 @@ use sp_arithmetic::{
     FixedPointNumber, FixedU128, Permill,
 };
 use sp_std::convert::{From, Into, TryInto};
-
-//This value is result of: u128::from_le_bytes([255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0])
-//This is necessary because first 4 bytes of DepositId (u128) is reserved to encode liq_pool_id (u32) into DepositId.
-//For more details look at `get_next_deposit_id()`.
-const MAX_DEPOSIT_SEQUENCER: u128 = 79_228_162_514_264_337_593_543_950_335;
-//consts bellow are used to encode/decode liq. pool into/from DepositId.
-const POOL_ID_BYTES: usize = 4;
-const DEPOSIT_SEQUENCER_BYTES: usize = 12;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type AssetIdOf<T> = <T as pallet::Config>::CurrencyId;
@@ -115,13 +108,16 @@ pub mod pallet {
         /// Pallet id.
         type PalletId: Get<PalletId>;
 
-        /// Minimum total rewards to distribute from global pool during liquidity mining.
+        /// Minimum total rewards to distribute from global farm during liquidity mining.
+        #[pallet::constant]
         type MinTotalFarmRewards: Get<Balance>;
 
         /// Minimum number of periods to run liquidity mining program.
+        #[pallet::constant]
         type MinPlannedYieldingPeriods: Get<Self::BlockNumber>;
 
-        /// Mininum user's deposit to enter liquidity mining pool.
+        /// Mininum user's deposit to start yield farming.
+        #[pallet::constant]
         type MinDeposit: Get<Balance>;
 
         /// The block number provider
@@ -133,12 +129,17 @@ pub mod pallet {
         type Handler: hydradx_traits::liquidity_mining::Handler<
             Self::CurrencyId,
             Self::AmmPoolId,
-            GlobalPoolId,
-            PoolId,
+            GlobalFarmId,
+            FarmId,
             Balance,
             DepositId,
             Self::AccountId,
         >;
+
+        /// Maximum number of incentives for the same deposit(LP shares). This have to be allways
+        /// at least 1.
+        #[pallet::constant]
+        type MaxFarmEntriesPerDeposit: Get<u8>;
     }
 
     #[pallet::error]
@@ -147,11 +148,11 @@ pub mod pallet {
         /// Math computation overflow.
         Overflow,
 
-        /// Farm does not exist.
-        FarmNotFound,
+        /// Global farm does not exist.
+        GlobalFarmNotFound,
 
-        /// Liquidity pool yield farm does not exist.
-        LiquidityPoolNotFound,
+        /// Yield farm does not exist.
+        YieldFarmNotFound,
 
         /// Deposit does not exist.
         DepositNotFound,
@@ -159,13 +160,10 @@ pub mod pallet {
         /// Multiple claims in the same period is not allowed.
         DoubleClaimInThePeriod,
 
-        /// Liq. pool's metadata does not exist.
-        LiquidityPoolMetadataNotFound,
+        /// Liquidity liquidity mining is canceled.
+        LiquidityMiningIsNotActive,
 
-        /// Pool's liquidity mining is canceled.
-        LiquidityMiningCanceled,
-
-        /// Pool's liquidity mining is not canceled.
+        /// Liquidity mining is not canceled.
         LiquidityMiningIsNotCanceled,
 
         /// LP tokens amount is not valid.
@@ -174,22 +172,22 @@ pub mod pallet {
         /// Account is not allowed to perform action.
         Forbidden,
 
-        /// Pool multiplier can't be 0
+        /// Yield farm multiplier can't be 0
         InvalidMultiplier,
 
-        /// Liquidity pool already exist in the farm.
-        LiquidityPoolAlreadyExists,
+        /// Yield farm for digen `amm_pool_id` already exist in global farm.
+        YieldFarmAlreadyExists,
 
         /// Loyalty curve's initial reward percentage is not valid. Valid range is: [0, 1)
         InvalidInitialRewardPercentage,
 
-        /// One or more liq. pools exist in farm.
-        FarmIsNotEmpty,
+        /// One or more yield farms exist in global farm.
+        GlobalFarmIsNotEmpty,
 
         /// Farm's `incentivized_asset` is missing in provided asset pair.
         MissingIncentivizedAsset,
 
-        /// Global pool rewards balance is not 0.
+        /// Global's farm rewards balance is not 0.
         RewardBalanceIsNotZero,
 
         /// Reward currency balance is not sufficient.
@@ -207,55 +205,59 @@ pub mod pallet {
         /// Planned yielding periods is less than `MinPlannedYieldingPeriods`.
         InvalidPlannedYieldingPeriods,
 
-        /// Insufficient reward currency in global pool.
-        InsufficientBalanceInGlobalPool,
+        /// Insufficient reward currency in global farm.
+        InsufficientBalanceInGlobalFarm,
 
-        /// Provided pool id is not valid. Valid range is [1, u32::MAX)
-        InvalidPoolId,
+        /// Provided farm id is not valid. Valid range is [1, u32::MAX)
+        InvalidFarmId,
 
-        /// Max number of deposit id was reached.
-        DepositIdOverflow,
+        /// Maximum number of locks reached for deposit.
+        MaxLocksReachedForDeposit,
 
-        /// Deposit id is not valid.
-        InvalidDepositId,
+        /// Trying to lock LP shares into alredy locked yield farm.
+        DuplicateLock,
+
+        /// Yield farm entry doesn't exist for given deposit.
+        YieldFarmEntryNotFound,
     }
 
-    /// Id sequencer for `GlobalPool` and `LiquidityPoolYieldFarm`.
+    /// Id sequencer for `GlobalFarm` and `YieldFarm`.
     #[pallet::storage]
-    #[pallet::getter(fn pool_id)]
-    pub type PoolIdSequencer<T: Config> = StorageValue<_, PoolId, ValueQuery>;
+    #[pallet::getter(fn farm_id)]
+    pub type FarmSequencer<T: Config> = StorageValue<_, FarmId, ValueQuery>;
 
-    /// Sequencer for last 12 bytes of deposit id.
     #[pallet::storage]
+    #[pallet::getter(fn deposit_id)]
     pub type DepositSequencer<T: Config> = StorageValue<_, DepositId, ValueQuery>;
 
-    /// Global pool details.
     #[pallet::storage]
-    #[pallet::getter(fn global_pool)]
-    pub type GlobalPoolData<T: Config> = StorageMap<_, Twox64Concat, GlobalPoolId, GlobalPool<T>, OptionQuery>;
+    #[pallet::getter(fn global_farm)]
+    pub type GlobalFarm<T: Config> = StorageMap<_, Blake2_128Concat, GlobalFarmId, GlobalFarmData<T>, OptionQuery>;
 
-    /// Liquidity pool yield farm details.
+    /// Yield farm details.
     #[pallet::storage]
-    #[pallet::getter(fn liquidity_pool)]
-    pub type LiquidityPoolData<T: Config> = StorageDoubleMap<
+    #[pallet::getter(fn yield_farm)]
+    pub type YieldFarm<T: Config> = StorageNMap<
         _,
-        Twox64Concat,
-        GlobalPoolId,
-        Twox64Concat,
-        T::AmmPoolId,
-        LiquidityPoolYieldFarm<T>,
+        (
+            NMapKey<Blake2_128Concat, T::AmmPoolId>,
+            NMapKey<Blake2_128Concat, GlobalFarmId>,
+            NMapKey<Blake2_128Concat, YieldFarmId>,
+        ),
+        YieldFarmData<T>,
         OptionQuery,
     >;
 
     /// Deposit details.
     #[pallet::storage]
     #[pallet::getter(fn deposit)]
-    pub type DepositData<T: Config> = StorageMap<_, Twox64Concat, DepositId, Deposit<T>, OptionQuery>;
+    pub type Deposit<T: Config> = StorageMap<_, Blake2_128Concat, DepositId, DepositData<T>, OptionQuery>;
 
-    /// `LiquidityPoolYieldFarm` metadata holding: `(existing deposits count, global pool id)`
+    /// Active(farms allowed to add and new LP shares)yield farms.
     #[pallet::storage]
-    #[pallet::getter(fn liq_pool_meta)]
-    pub type LiquidityPoolMetadata<T: Config> = StorageMap<_, Twox64Concat, PoolId, (u64, GlobalPoolId), OptionQuery>;
+    #[pallet::getter(fn active_yield_farm)]
+    pub type ActiveYieldFarm<T: Config> =
+        StorageDoubleMap<_, Blake2_128Concat, T::AmmPoolId, Blake2_128Concat, GlobalFarmId, YieldFarmId>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
@@ -267,7 +269,7 @@ impl<T: Config> Pallet<T> {
     /// `owner` account have to have at least `total_rewards` balance. This funds will be
     /// transferred from `owner` to farm account.
     ///
-    /// Returns: `(global pool id, max reward per period)`
+    /// Returns: `(GlobalFarmId, max reward per period)`
     ///
     /// Parameters:
     /// - `total_rewards`: total rewards planned to distribute. This rewards will be
@@ -285,7 +287,7 @@ impl<T: Config> Pallet<T> {
     /// - `yield_per_period`: percentage return on `reward_currency` of all pools
     #[allow(clippy::too_many_arguments)]
     #[transactional]
-    pub fn create_farm(
+    pub fn create_global_farm(
         total_rewards: Balance,
         planned_yielding_periods: PeriodOf<T>,
         blocks_per_period: BlockNumberFor<T>,
@@ -293,8 +295,8 @@ impl<T: Config> Pallet<T> {
         reward_currency: AssetIdOf<T>,
         owner: AccountIdOf<T>,
         yield_per_period: Permill,
-    ) -> Result<(GlobalPoolId, Balance), DispatchError> {
-        Self::validate_create_farm_data(
+    ) -> Result<(GlobalFarmId, Balance), DispatchError> {
+        Self::validate_create_global_farm_data(
             total_rewards,
             planned_yielding_periods,
             blocks_per_period,
@@ -308,12 +310,12 @@ impl<T: Config> Pallet<T> {
 
         let planned_periods = TryInto::<u128>::try_into(planned_yielding_periods).map_err(|_e| Error::<T>::Overflow)?;
         let max_reward_per_period = total_rewards.checked_div(planned_periods).ok_or(Error::<T>::Overflow)?;
-        let now_period = Self::get_now_period(blocks_per_period)?;
-        let pool_id = Self::get_next_pool_id()?;
+        let current_period = Self::get_current_period(blocks_per_period)?;
+        let farm_id = Self::get_next_farm_id()?;
 
-        let global_pool = GlobalPool::new(
-            pool_id,
-            now_period,
+        let global_farm = GlobalFarmData::new(
+            farm_id,
+            current_period,
             reward_currency,
             yield_per_period,
             planned_yielding_periods,
@@ -323,83 +325,60 @@ impl<T: Config> Pallet<T> {
             max_reward_per_period,
         );
 
-        <GlobalPoolData<T>>::insert(&global_pool.id, &global_pool);
+        <GlobalFarm<T>>::insert(&global_farm.id, &global_farm);
 
-        let global_pool_account = Self::pool_account_id(global_pool.id)?;
-        T::MultiCurrency::transfer(reward_currency, &global_pool.owner, &global_pool_account, total_rewards)?;
+        let global_farm_account = Self::farm_account_id(global_farm.id)?;
+        T::MultiCurrency::transfer(reward_currency, &global_farm.owner, &global_farm_account, total_rewards)?;
 
-        Ok((pool_id, max_reward_per_period))
+        Ok((farm_id, max_reward_per_period))
     }
 
     /// Destroy existing liq. mining program.
     ///
     /// Only farm owner can perform this action.
     ///
-    /// WARN: To successfully destroy a farm, farm have to be empty(all liq. pools have to be
+    /// WARN: To successfully destroy a global farm, farm have to be empty(all yield farms have to be
     /// removed from the farm) and all undistributed rewards have to be withdrawn.
     ///
     /// Parameters:
     /// - `who`: farm's owner.
     /// - `farm_id`: id of farm to be destroyed.
     #[transactional]
-    pub fn destroy_farm(who: AccountIdOf<T>, farm_id: GlobalPoolId) -> DispatchResult {
-        <GlobalPoolData<T>>::try_mutate_exists(farm_id, |maybe_global_pool| -> DispatchResult {
-            let global_pool = maybe_global_pool.as_ref().ok_or(Error::<T>::FarmNotFound)?;
+    pub fn destroy_global_farm(
+        who: AccountIdOf<T>,
+        farm_id: GlobalFarmId,
+    ) -> Result<(T::CurrencyId, Balance, AccountIdOf<T>), DispatchError> {
+        <GlobalFarm<T>>::try_mutate_exists(farm_id, |maybe_global_farm| {
+            let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
 
-            ensure!(who == global_pool.owner, Error::<T>::Forbidden);
+            ensure!(who == global_farm.owner, Error::<T>::Forbidden);
 
-            ensure!(global_pool.liq_pools_count.is_zero(), Error::<T>::FarmIsNotEmpty);
+            ensure!(global_farm.has_no_live_farms(), Error::<T>::GlobalFarmIsNotEmpty);
 
-            let global_pool_account = Self::pool_account_id(global_pool.id)?;
-            ensure!(
-                T::MultiCurrency::free_balance(global_pool.reward_currency, &global_pool_account).is_zero(),
-                Error::<T>::RewardBalanceIsNotZero
-            );
+            let global_farm_account = Self::farm_account_id(global_farm.id)?;
+            let undistributed_rewards =
+                T::MultiCurrency::total_balance(global_farm.reward_currency, &global_farm_account);
 
-            *maybe_global_pool = None;
+            T::MultiCurrency::transfer(
+                global_farm.reward_currency,
+                &global_farm_account,
+                &who,
+                undistributed_rewards,
+            )?;
 
-            Ok(())
+            //Mark for flush from storage on last `YieldFarm` in the farm flush.
+            global_farm.state = GlobalFarmState::Deleted;
+
+            let reward_currency = global_farm.reward_currency;
+            if global_farm.can_be_flushed() {
+                *maybe_global_farm = None;
+            }
+
+            Ok((reward_currency, undistributed_rewards, who))
         })
     }
 
-    /// Transfer all rewards left to distribute from farm account to farm's `owner` account.
-    ///  
-    /// Only farm owner can perform this action.
-    ///
-    /// WARN: Farm have to be empty(all liq. pools have to be removed from the farm) to
-    /// successfully withdraw rewards left to distribute from the farm.
-    ///
-    /// Returns: `(reward currency, withdrawn amount)`;
-    ///
-    /// Parameters:
-    /// - `who`: farm's owner.
-    /// - `farm_id`: id of farm to be destroyed.
-    #[transactional]
-    pub fn withdraw_undistributed_rewards(
-        who: AccountIdOf<T>,
-        farm_id: GlobalPoolId,
-    ) -> Result<(T::CurrencyId, Balance), DispatchError> {
-        let global_pool = Self::global_pool(farm_id).ok_or(Error::<T>::FarmNotFound)?;
-
-        ensure!(global_pool.owner == who, Error::<T>::Forbidden);
-
-        ensure!(global_pool.liq_pools_count.is_zero(), Error::<T>::FarmIsNotEmpty);
-
-        let global_pool_account = Self::pool_account_id(global_pool.id)?;
-
-        let undistributed_reward = T::MultiCurrency::total_balance(global_pool.reward_currency, &global_pool_account);
-
-        T::MultiCurrency::transfer(
-            global_pool.reward_currency,
-            &global_pool_account,
-            &who,
-            undistributed_reward,
-        )?;
-
-        Ok((global_pool.reward_currency, undistributed_reward))
-    }
-
-    /// Add liquidity pool to farm and allow yield farming for given assets pair amm.
+    /// Add yield farm to global farm and allow yield farming for given assets pair.
     ///  
     /// Only farm owner can perform this action.
     ///
@@ -418,15 +397,15 @@ impl<T: Config> Pallet<T> {
     /// - `asset_a`: one of the assets in the AMM.
     /// - `asset_b`: second asset in the AMM.
     #[transactional]
-    pub fn add_liquidity_pool(
+    pub fn create_yield_farm(
         who: AccountIdOf<T>,
-        farm_id: GlobalPoolId,
-        multiplier: PoolMultiplier,
+        global_farm_id: GlobalFarmId,
+        multiplier: FarmMultiplier,
         loyalty_curve: Option<LoyaltyCurve>,
         amm_pool_id: T::AmmPoolId,
         asset_a: T::CurrencyId,
         asset_b: T::CurrencyId,
-    ) -> Result<PoolId, DispatchError> {
+    ) -> Result<YieldFarmId, DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T>::InvalidMultiplier);
 
         if let Some(ref curve) = loyalty_curve {
@@ -436,42 +415,44 @@ impl<T: Config> Pallet<T> {
             );
         }
 
-        <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_pool| -> Result<PoolId, DispatchError> {
-            let global_pool = maybe_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
+        <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| -> Result<FarmId, DispatchError> {
+            let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
 
-            ensure!(who == global_pool.owner, Error::<T>::Forbidden);
+            //This is basically same as farm not found.
+            ensure!(global_farm.is_active(), Error::<T>::GlobalFarmNotFound);
+
+            ensure!(who == global_farm.owner, Error::<T>::Forbidden);
 
             ensure!(
-                asset_a == global_pool.incentivized_asset || asset_b == global_pool.incentivized_asset,
+                asset_a == global_farm.incentivized_asset || asset_b == global_farm.incentivized_asset,
                 Error::<T>::MissingIncentivizedAsset
             );
 
             ensure!(
-                !<LiquidityPoolData<T>>::contains_key(farm_id, &amm_pool_id),
-                Error::<T>::LiquidityPoolAlreadyExists
+                !<ActiveYieldFarm<T>>::contains_key(amm_pool_id.clone(), &global_farm_id),
+                Error::<T>::YieldFarmAlreadyExists
             );
 
-            // update  global pool accumulated RPZ
-            let now_period = Self::get_now_period(global_pool.blocks_per_period)?;
-            if !global_pool.total_shares_z.is_zero() && global_pool.updated_at != now_period {
+            // update global farm accumulated RPZ
+            let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
+            if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
                 let reward_per_period = math::calculate_global_pool_reward_per_period(
-                    global_pool.yield_per_period.into(),
-                    global_pool.total_shares_z,
-                    global_pool.max_reward_per_period,
+                    global_farm.yield_per_period.into(),
+                    global_farm.total_shares_z,
+                    global_farm.max_reward_per_period,
                 )
                 .map_err(|_e| Error::<T>::Overflow)?;
-                Self::update_global_pool(global_pool, now_period, reward_per_period)?;
+                Self::update_global_farm(global_farm, current_period, reward_per_period)?;
             }
 
-            let liq_pool_id = Self::get_next_pool_id()?;
-            <LiquidityPoolMetadata<T>>::insert(liq_pool_id, (0, global_pool.id));
+            let yield_farm_id = Self::get_next_farm_id()?;
 
-            let pool = LiquidityPoolYieldFarm::new(liq_pool_id, now_period, loyalty_curve.clone(), multiplier);
+            let yield_farm = YieldFarmData::new(yield_farm_id, current_period, loyalty_curve.clone(), multiplier);
 
-            <LiquidityPoolData<T>>::insert(global_pool.id, &amm_pool_id, &pool);
-            global_pool.liq_pools_count = global_pool.liq_pools_count.checked_add(1).ok_or(Error::<T>::Overflow)?;
+            <YieldFarm<T>>::insert((amm_pool_id, global_farm_id, yield_farm_id), yield_farm);
+            global_farm.yield_farm_added()?;
 
-            Ok(liq_pool_id)
+            Ok(yield_farm_id)
         })
     }
 
@@ -488,45 +469,50 @@ impl<T: Config> Pallet<T> {
     /// - `multiplier`: new liq. pool multiplier in the farm.
     /// - `amm_pool_id`: identifier of the AMM.
     #[transactional]
-    pub fn update_liquidity_pool(
+    pub fn updated_yield_farm(
         who: AccountIdOf<T>,
-        farm_id: GlobalPoolId,
-        multiplier: PoolMultiplier,
+        global_farm_id: GlobalFarmId,
+        multiplier: FarmMultiplier,
         amm_pool_id: T::AmmPoolId,
-    ) -> Result<PoolId, DispatchError> {
+    ) -> Result<YieldFarmId, DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T>::InvalidMultiplier);
 
-        <LiquidityPoolData<T>>::try_mutate(farm_id, &amm_pool_id, |liq_pool| {
-            let liq_pool = liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
+        let yield_farm_id =
+            Self::active_yield_farm(amm_pool_id.clone(), global_farm_id).ok_or(Error::<T>::YieldFarmNotFound)?;
 
-            ensure!(!liq_pool.canceled, Error::<T>::LiquidityMiningCanceled);
+        <YieldFarm<T>>::try_mutate((amm_pool_id, global_farm_id, yield_farm_id), |maybe_yield_farm| {
+            let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
 
-            <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_global_pool| {
-                let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
+            //This should never fail. If farm is in the `ActiveYieldFarm` storate, it MUST be
+            //active.
+            ensure!(yield_farm.is_active(), Error::<T>::LiquidityMiningIsNotActive);
 
-                ensure!(who == global_pool.owner, Error::<T>::Forbidden);
+            <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
+                let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
 
-                let old_stake_in_global_pool =
-                    math::calculate_global_pool_shares(liq_pool.total_valued_shares, liq_pool.multiplier)
+                ensure!(who == global_farm.owner, Error::<T>::Forbidden);
+
+                let old_stake_in_global_farm =
+                    math::calculate_global_pool_shares(yield_farm.total_valued_shares, yield_farm.multiplier)
                         .map_err(|_e| Error::<T>::Overflow)?;
 
-                let now_period = Self::get_now_period(global_pool.blocks_per_period)?;
-                Self::maybe_update_pools(global_pool, liq_pool, now_period)?;
+                let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
+                Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
 
-                let new_stake_in_global_pool =
-                    math::calculate_global_pool_shares(liq_pool.total_valued_shares, multiplier)
+                let new_stake_in_global_farm =
+                    math::calculate_global_pool_shares(yield_farm.total_valued_shares, multiplier)
                         .map_err(|_e| Error::<T>::Overflow)?;
 
-                global_pool.total_shares_z = global_pool
+                global_farm.total_shares_z = global_farm
                     .total_shares_z
-                    .checked_sub(old_stake_in_global_pool)
+                    .checked_sub(old_stake_in_global_farm)
                     .ok_or(Error::<T>::Overflow)?
-                    .checked_add(new_stake_in_global_pool)
+                    .checked_add(new_stake_in_global_farm)
                     .ok_or(Error::<T>::Overflow)?;
 
-                liq_pool.multiplier = multiplier;
+                yield_farm.multiplier = multiplier;
 
-                Ok(liq_pool.id)
+                Ok(yield_farm.id)
             })
         })
     }
@@ -547,39 +533,60 @@ impl<T: Config> Pallet<T> {
     /// - `farm_id`: farm id in which liq. pool will be canceled.
     /// - `amm_pool_id`: identifier of the AMM pool.
     #[transactional]
-    pub fn cancel_liquidity_pool(
+    pub fn stop_yield_farm(
         who: AccountIdOf<T>,
-        farm_id: GlobalPoolId,
+        global_farm_id: GlobalFarmId,
         amm_pool_id: T::AmmPoolId,
-    ) -> Result<PoolId, DispatchError> {
-        <LiquidityPoolData<T>>::try_mutate(farm_id, amm_pool_id, |maybe_liq_pool| {
-            let liq_pool = maybe_liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
+    ) -> Result<YieldFarmId, DispatchError> {
+        <ActiveYieldFarm<T>>::try_mutate_exists(
+            amm_pool_id.clone(),
+            global_farm_id,
+            |maybe_active_yield_farm_id| -> Result<YieldFarmId, DispatchError> {
+                let yield_farm_id = maybe_active_yield_farm_id
+                    .as_ref()
+                    .ok_or(Error::<T>::YieldFarmNotFound)?;
 
-            ensure!(!liq_pool.canceled, Error::<T>::LiquidityMiningCanceled);
+                <YieldFarm<T>>::try_mutate(
+                    (amm_pool_id, global_farm_id, yield_farm_id),
+                    |maybe_yield_farm| -> Result<(), DispatchError> {
+                        let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
 
-            <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_global_pool| {
-                let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
+                        ensure!(yield_farm.is_active(), Error::<T>::LiquidityMiningIsNotActive);
 
-                ensure!(global_pool.owner == who, Error::<T>::Forbidden);
+                        <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
+                            let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
 
-                let now_period = Self::get_now_period(global_pool.blocks_per_period)?;
-                Self::maybe_update_pools(global_pool, liq_pool, now_period)?;
+                            ensure!(global_farm.owner == who, Error::<T>::Forbidden);
 
-                let old_stake_in_global_pool =
-                    math::calculate_global_pool_shares(liq_pool.total_valued_shares, liq_pool.multiplier)
-                        .map_err(|_e| Error::<T>::Overflow)?;
+                            let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
+                            Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
 
-                global_pool.total_shares_z = global_pool
-                    .total_shares_z
-                    .checked_sub(old_stake_in_global_pool)
-                    .ok_or(Error::<T>::Overflow)?;
+                            let old_stake_in_global_pool = math::calculate_global_pool_shares(
+                                yield_farm.total_valued_shares,
+                                yield_farm.multiplier,
+                            )
+                            .map_err(|_e| Error::<T>::Overflow)?;
 
-                liq_pool.canceled = true;
-                liq_pool.multiplier = 0.into();
+                            global_farm.total_shares_z = global_farm
+                                .total_shares_z
+                                .checked_sub(old_stake_in_global_pool)
+                                .ok_or(Error::<T>::Overflow)?;
 
-                Ok(liq_pool.id)
-            })
-        })
+                            yield_farm.state = YieldFarmState::Stopped;
+                            yield_farm.multiplier = 0.into();
+
+                            Ok(())
+                        })
+                    },
+                )?;
+
+                let yield_farm_id = yield_farm_id.clone();
+                //Remove yield farm from active farms storage.
+                *maybe_active_yield_farm_id = None;
+
+                Ok(yield_farm_id)
+            },
+        )
     }
 
     /// Resume liq. miming for canceled liq. pool.
@@ -599,52 +606,60 @@ impl<T: Config> Pallet<T> {
     /// - `multiplier`: liq. pool multiplier in the farm.
     /// - `amm_pool_id`: indentifier of the AMM pool.
     #[transactional]
-    pub fn resume_liquidity_pool(
+    pub fn resume_yield_farm(
         who: AccountIdOf<T>,
-        farm_id: GlobalPoolId,
-        multiplier: PoolMultiplier,
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
         amm_pool_id: T::AmmPoolId,
-    ) -> Result<PoolId, DispatchError> {
+        multiplier: FarmMultiplier,
+    ) -> Result<YieldFarmId, DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T>::InvalidMultiplier);
 
-        <LiquidityPoolData<T>>::try_mutate(farm_id, amm_pool_id, |maybe_liq_pool| {
-            let liq_pool = maybe_liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
+        <ActiveYieldFarm<T>>::try_mutate(amm_pool_id.clone(), global_farm_id, |maybe_active_yield_farm_id| {
+            ensure!(maybe_active_yield_farm_id.is_none(), Error::<T>::YieldFarmAlreadyExists);
 
-            ensure!(liq_pool.canceled, Error::<T>::LiquidityMiningIsNotCanceled);
+            <YieldFarm<T>>::try_mutate((amm_pool_id, global_farm_id, yield_farm_id), |maybe_yield_farm| {
+                let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
 
-            <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_global_pool| {
-                // this should never happen, liq. pool can't exist without global_pool
-                let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
+                //Active or deleted yield farms can't be resumed.
+                ensure!(yield_farm.is_canceled(), Error::<T>::LiquidityMiningIsNotCanceled);
 
-                ensure!(global_pool.owner == who, Error::<T>::Forbidden);
+                <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
+                    let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
 
-                //update `GlobalPool` accumulated_rpz
-                let now_period = Self::get_now_period(global_pool.blocks_per_period)?;
-                if !global_pool.total_shares_z.is_zero() && global_pool.updated_at != now_period {
-                    let reward_per_period = math::calculate_global_pool_reward_per_period(
-                        global_pool.yield_per_period.into(),
-                        global_pool.total_shares_z,
-                        global_pool.max_reward_per_period,
-                    )
-                    .map_err(|_e| Error::<T>::Overflow)?;
-                    Self::update_global_pool(global_pool, now_period, reward_per_period)?;
-                }
+                    ensure!(global_farm.owner == who, Error::<T>::Forbidden);
 
-                let new_stake_in_global_poll =
-                    math::calculate_global_pool_shares(liq_pool.total_valued_shares, multiplier)
+                    //update `GlobalFarm` accumulated_rpz
+                    let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
+                    if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
+                        let reward_per_period = math::calculate_global_pool_reward_per_period(
+                            global_farm.yield_per_period.into(),
+                            global_farm.total_shares_z,
+                            global_farm.max_reward_per_period,
+                        )
                         .map_err(|_e| Error::<T>::Overflow)?;
+                        Self::update_global_farm(global_farm, current_period, reward_per_period)?;
+                    }
 
-                global_pool.total_shares_z = global_pool
-                    .total_shares_z
-                    .checked_add(new_stake_in_global_poll)
-                    .ok_or(Error::<T>::Overflow)?;
+                    let new_stake_in_global_farm =
+                        math::calculate_global_pool_shares(yield_farm.total_valued_shares, multiplier)
+                            .map_err(|_e| Error::<T>::Overflow)?;
 
-                liq_pool.accumulated_rpz = global_pool.accumulated_rpz;
-                liq_pool.updated_at = now_period;
-                liq_pool.canceled = false;
-                liq_pool.multiplier = multiplier;
+                    global_farm.total_shares_z = global_farm
+                        .total_shares_z
+                        .checked_add(new_stake_in_global_farm)
+                        .ok_or(Error::<T>::Overflow)?;
 
-                Ok(liq_pool.id)
+                    yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
+                    yield_farm.updated_at = current_period;
+                    yield_farm.state = YieldFarmState::Active;
+                    yield_farm.multiplier = multiplier;
+
+                    //add yield farm to active farms.
+                    *maybe_active_yield_farm_id = Some(yield_farm.id);
+
+                    Ok(yield_farm.id)
+                })
             })
         })
     }
@@ -668,48 +683,63 @@ impl<T: Config> Pallet<T> {
     /// - `asset_pair`: asset pair identifying liq. pool in the farm.
     /// - `amm_pool_id`: indentifier of the AMM pool.
     #[transactional]
-    pub fn remove_liquidity_pool(
+    pub fn remove_yield_farm(
         who: AccountIdOf<T>,
-        farm_id: GlobalPoolId,
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
         amm_pool_id: T::AmmPoolId,
-    ) -> Result<PoolId, DispatchError> {
-        <LiquidityPoolData<T>>::try_mutate_exists(farm_id, amm_pool_id, |maybe_liq_pool| {
-            let liq_pool = maybe_liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
+    ) -> Result<YieldFarmId, DispatchError> {
+        ensure!(
+            !<ActiveYieldFarm<T>>::contains_key(amm_pool_id.clone(), global_farm_id),
+            Error::<T>::LiquidityMiningIsNotCanceled
+        );
 
-            ensure!(liq_pool.canceled, Error::<T>::LiquidityMiningIsNotCanceled);
+        <GlobalFarm<T>>::try_mutate_exists(global_farm_id, |maybe_global_farm| {
+            let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
 
-            <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_global_pool| -> Result<(), DispatchError> {
-                let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
+            ensure!(global_farm.owner == who, Error::<T>::Forbidden);
 
-                ensure!(global_pool.owner == who, Error::<T>::Forbidden);
+            <YieldFarm<T>>::try_mutate_exists(
+                (amm_pool_id, global_farm_id, yield_farm_id),
+                |maybe_yield_farm| -> Result<(), DispatchError> {
+                    let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
 
-                global_pool.liq_pools_count = global_pool.liq_pools_count.checked_sub(1).ok_or(Error::<T>::Overflow)?;
+                    ensure!(yield_farm.is_canceled(), Error::<T>::LiquidityMiningIsNotCanceled);
 
-                //transfer unpaid rewards back to global_pool
-                let global_pool_account = Self::pool_account_id(global_pool.id)?;
-                let liq_pool_account = Self::pool_account_id(liq_pool.id)?;
+                    //transfer unpaid rewards back to global_pool
+                    let global_farm_account = Self::farm_account_id(global_farm.id)?;
+                    let yield_farm_account = Self::farm_account_id(yield_farm.id)?;
 
-                let unpaid_reward = T::MultiCurrency::total_balance(global_pool.reward_currency, &liq_pool_account);
-                T::MultiCurrency::transfer(
-                    global_pool.reward_currency,
-                    &liq_pool_account,
-                    &global_pool_account,
-                    unpaid_reward,
-                )?;
+                    let unpaid_reward =
+                        T::MultiCurrency::free_balance(global_farm.reward_currency, &yield_farm_account);
+                    T::MultiCurrency::transfer(
+                        global_farm.reward_currency,
+                        &yield_farm_account,
+                        &global_farm_account,
+                        unpaid_reward,
+                    )?;
 
-                if let Some((deposits_count, _)) = Self::liq_pool_meta(liq_pool.id) {
-                    if deposits_count.is_zero() {
-                        <LiquidityPoolMetadata<T>>::remove(liq_pool.id);
+                    //Delete yield farm.
+                    yield_farm.state = YieldFarmState::Deleted;
+                    global_farm.yield_farm_removed()?;
+
+                    //cleanup if it's possible
+                    if yield_farm.can_be_flushed() {
+                        global_farm.yield_farm_flushed()?;
+
+                        *maybe_yield_farm = None;
                     }
-                };
 
-                Ok(())
-            })?;
+                    Ok(())
+                },
+            )?;
 
-            let liq_pool_id = liq_pool.id;
-            *maybe_liq_pool = None;
+            //NOTE: this never happen. Deleted `GlboalFarm` can't have canceled `YiledFarms`
+            if global_farm.can_be_flushed() {
+                *maybe_global_farm = None;
+            }
 
-            Ok(liq_pool_id)
+            Ok(yield_farm_id)
         })
     }
 
@@ -724,70 +754,97 @@ impl<T: Config> Pallet<T> {
     /// - `shares_amount`: amount of LP shares user want to deposit.
     /// - `amm_pool_id`: identifier of the AMM pool.
     #[transactional]
-    pub fn deposit_shares(
+    pub fn deposit_lp_shares(
         who: AccountIdOf<T>,
-        farm_id: GlobalPoolId,
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
         shares_amount: Balance,
         amm_pool_id: T::AmmPoolId,
-    ) -> Result<(PoolId, DepositId), DispatchError> {
+        deposit_id: Option<DepositId>,
+    ) -> Result<(YieldFarmId, DepositId), DispatchError> {
+        //NOTE: add possibility for multiple farm entries for deposit. This is currently only for 1.
+        //This fn have to create new deposit or add entry to existing deposit
         ensure!(
             shares_amount.ge(&T::MinDeposit::get()),
             Error::<T>::InvalidDepositAmount,
         );
 
-        <LiquidityPoolData<T>>::try_mutate(farm_id, amm_pool_id.clone(), |liq_pool| {
-            let liq_pool = liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
+        let deposit_id = deposit_id.unwrap_or(Self::get_next_deposit_id()?);
 
-            ensure!(!liq_pool.canceled, Error::<T>::LiquidityMiningCanceled);
+        <Deposit<T>>::try_mutate(deposit_id, |maybe_deposit| {
+            let mut new_deposit = DepositData::new(shares_amount, amm_pool_id.clone()); //tmp variable to make rust happy
+            let deposit = maybe_deposit.as_mut().unwrap_or(&mut new_deposit);
 
-            <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_global_pool| {
-                //something is very wrong if this fail, liq_pool can't exist without global_pool
-                let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
+            //LP shares can be locked only once in the same yield farm
+            ensure!(
+                !deposit.contains_yield_farm_entry(yield_farm_id),
+                Error::<T>::DuplicateLock
+            );
 
-                let now_period = Self::get_now_period(global_pool.blocks_per_period)?;
+            let yield_farm_entry = <YieldFarm<T>>::try_mutate(
+                (amm_pool_id.clone(), global_farm_id, yield_farm_id),
+                |maybe_yield_farm| -> Result<YieldFarmEntry<T>, DispatchError> {
+                    let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
 
-                Self::maybe_update_pools(global_pool, liq_pool, now_period)?;
+                    ensure!(yield_farm.is_active(), Error::<T>::LiquidityMiningIsNotActive);
 
-                let valued_shares =
-                    Self::get_valued_shares(shares_amount, amm_pool_id.clone(), global_pool.incentivized_asset)?;
-                let shares_in_global_pool_for_deposit =
-                    math::calculate_global_pool_shares(valued_shares, liq_pool.multiplier)
-                        .map_err(|_e| Error::<T>::Overflow)?;
+                    <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
+                        let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
 
-                liq_pool.total_shares = liq_pool
-                    .total_shares
-                    .checked_add(shares_amount)
-                    .ok_or(Error::<T>::Overflow)?;
+                        let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
 
-                liq_pool.total_valued_shares = liq_pool
-                    .total_valued_shares
-                    .checked_add(valued_shares)
-                    .ok_or(Error::<T>::Overflow)?;
+                        Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
 
-                global_pool.total_shares_z = global_pool
-                    .total_shares_z
-                    .checked_add(shares_in_global_pool_for_deposit)
-                    .ok_or(Error::<T>::Overflow)?;
+                        let valued_shares = Self::get_valued_shares(
+                            shares_amount,
+                            amm_pool_id.clone(),
+                            global_farm.incentivized_asset,
+                        )?;
+                        let deposit_stake_in_global_farm =
+                            math::calculate_global_pool_shares(valued_shares, yield_farm.multiplier)
+                                .map_err(|_e| Error::<T>::Overflow)?;
 
-                let deposit_id = Self::get_next_deposit_id(liq_pool.id)?;
+                        yield_farm.total_shares = yield_farm
+                            .total_shares
+                            .checked_add(shares_amount)
+                            .ok_or(Error::<T>::Overflow)?;
 
-                let deposit = Deposit::new(shares_amount, valued_shares, liq_pool.accumulated_rpvs, now_period);
-                <DepositData<T>>::insert(&deposit_id, deposit);
+                        yield_farm.total_valued_shares = yield_farm
+                            .total_valued_shares
+                            .checked_add(valued_shares)
+                            .ok_or(Error::<T>::Overflow)?;
 
-                <LiquidityPoolMetadata<T>>::try_mutate(liq_pool.id, |maybe_liq_pool_metadata| {
-                    //Something is very wrong if this fail. Metadata can exist without liq. pool but liq. pool can't
-                    //exist without metadata.
-                    let liq_pool_metadata = maybe_liq_pool_metadata
-                        .as_mut()
-                        .ok_or(Error::<T>::LiquidityPoolMetadataNotFound)?;
+                        global_farm.total_shares_z = global_farm
+                            .total_shares_z
+                            .checked_add(deposit_stake_in_global_farm)
+                            .ok_or(Error::<T>::Overflow)?;
 
-                    //Increment deposits count
-                    liq_pool_metadata.0 = liq_pool_metadata.0.checked_add(1).ok_or(Error::<T>::Overflow)?;
+                        let farm_entry = YieldFarmEntry::new(
+                            global_farm.id,
+                            yield_farm.id,
+                            valued_shares,
+                            yield_farm.accumulated_rpvs,
+                            current_period,
+                        );
 
-                    T::Handler::lock_lp_tokens(amm_pool_id, who, shares_amount, deposit_id)?;
-                    Ok((liq_pool.id, deposit_id))
-                })
-            })
+                        //Increment farm entries count
+                        yield_farm.entries_count =
+                            yield_farm.entries_count.checked_add(1).ok_or(Error::<T>::Overflow)?;
+
+                        Ok(farm_entry)
+                    })
+                },
+            )?;
+
+            deposit.add_yield_farm_entry(yield_farm_entry)?;
+
+            //NOTE: lp shares hould be transfered only if new deposit is created. Second deposit on
+            //the same LP shares should only create `YieldFarm` entry.(multiple incentives feature)
+            if maybe_deposit.is_none() {
+                T::Handler::lock_lp_tokens(amm_pool_id, who, shares_amount, deposit_id)?;
+            }
+
+            Ok((yield_farm_id, deposit_id))
         })
     }
 
@@ -799,7 +856,7 @@ impl<T: Config> Pallet<T> {
     /// WARN: User have to use `withdraw_shares()` if liq. pool is removed or whole
     /// farm is destroyed.
     ///
-    /// Returns: `(global pool id, liq. pool yield farm id, claimed amount, unclaimable amount)`
+    /// Returns: `(GlobalFarmId, YieldFarmId, "reward currency", "claimed amount", "unclaimable amount")`
     /// unclaimable rewards is usefull for `withdraw_shares()` - this value is applied only when
     /// user exit liq. mining program.
     ///
@@ -813,71 +870,88 @@ impl<T: Config> Pallet<T> {
     pub fn claim_rewards(
         who: AccountIdOf<T>,
         deposit_id: DepositId,
-        amm_pool_id: T::AmmPoolId,
+        yield_farm_id: YieldFarmId,
         check_double_claim: bool,
-    ) -> Result<(GlobalPoolId, PoolId, T::CurrencyId, Balance, Balance), DispatchError> {
-        let liq_pool_id = Self::get_pool_id_from_deposit_id(deposit_id)?;
-
-        //This is same as liq. pool not found in this case. Liq. pool metadata CAN exist
-        //without liq. pool but liq. pool CAN'T exist without metadata.
-        let (_, farm_id) = <LiquidityPoolMetadata<T>>::get(liq_pool_id).ok_or(Error::<T>::LiquidityPoolNotFound)?;
-
-        <DepositData<T>>::try_mutate(deposit_id, |maybe_deposit| {
+    ) -> Result<(GlobalFarmId, YieldFarmId, T::CurrencyId, Balance, Balance), DispatchError> {
+        <Deposit<T>>::try_mutate(deposit_id, |maybe_deposit| {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T>::DepositNotFound)?;
 
-            <LiquidityPoolData<T>>::try_mutate(farm_id, amm_pool_id, |maybe_liq_pool| {
-                let liq_pool = maybe_liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
+            let amm_pool_id = deposit.amm_pool_id.clone();
+            let farm_entry = deposit
+                .get_yield_farm_entry(yield_farm_id)
+                .ok_or(Error::<T>::YieldFarmEntryNotFound)?;
 
-                <GlobalPoolData<T>>::try_mutate(farm_id, |maybe_global_pool| {
-                    //Something is very wrong if this fail. Liq. pool can't exist without GlobalPool.
-                    let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
+            <YieldFarm<T>>::try_mutate(
+                (amm_pool_id, farm_entry.global_farm_id, yield_farm_id),
+                |maybe_yield_farm| {
+                    let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
 
-                    let now_period = Self::get_now_period(global_pool.blocks_per_period)?;
-                    //Double claim should be allowed in some case e.g for withdraw_shares we need
-                    //`unclaimable_rewards` returned by this function.
-                    if check_double_claim {
-                        ensure!(deposit.updated_at != now_period, Error::<T>::DoubleClaimInThePeriod);
-                    }
+                    //NOTE: claiming from removed yield farm should NOT work. This is same as yield
+                    //farm doesn't exist.
+                    ensure!(!yield_farm.is_deleted(), Error::<T>::YieldFarmNotFound);
 
-                    Self::maybe_update_pools(global_pool, liq_pool, now_period)?;
+                    <GlobalFarm<T>>::try_mutate(farm_entry.global_farm_id, |maybe_global_farm| {
+                        let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
 
-                    let periods = now_period
-                        .checked_sub(&deposit.entered_at)
-                        .ok_or(Error::<T>::Overflow)?;
+                        let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
+                        //Double claim should be allowed in some case e.g for withdraw_shares we need
+                        //`unclaimable_rewards` returned by this function.
+                        if check_double_claim {
+                            ensure!(
+                                farm_entry.updated_at != current_period,
+                                Error::<T>::DoubleClaimInThePeriod
+                            );
+                        }
 
-                    let loyalty_multiplier = Self::get_loyalty_multiplier(periods, liq_pool.loyalty_curve.clone())?;
+                        Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
 
-                    let (rewards, unclaimable_rewards) = math::calculate_user_reward(
-                        deposit.accumulated_rpvs,
-                        deposit.valued_shares,
-                        deposit.accumulated_claimed_rewards,
-                        liq_pool.accumulated_rpvs,
-                        loyalty_multiplier,
-                    )
-                    .map_err(|_e| Error::<T>::Overflow)?;
-
-                    if !rewards.is_zero() {
-                        deposit.accumulated_claimed_rewards = deposit
-                            .accumulated_claimed_rewards
-                            .checked_add(rewards)
+                        let periods = current_period
+                            .checked_sub(&farm_entry.entered_at)
                             .ok_or(Error::<T>::Overflow)?;
 
-                        deposit.updated_at = now_period;
+                        let loyalty_multiplier =
+                            Self::get_loyalty_multiplier(periods, yield_farm.loyalty_curve.clone())?;
 
-                        let liq_pool_account = Self::pool_account_id(liq_pool.id)?;
-                        T::MultiCurrency::transfer(global_pool.reward_currency, &liq_pool_account, &who, rewards)?;
-                    }
-                    Ok((
-                        global_pool.id,
-                        liq_pool.id,
-                        global_pool.reward_currency,
-                        rewards,
-                        unclaimable_rewards,
-                    ))
-                })
-            })
+                        let (rewards, unclaimable_rewards) = math::calculate_user_reward(
+                            farm_entry.accumulated_rpvs,
+                            farm_entry.valued_shares,
+                            farm_entry.accumulated_claimed_rewards,
+                            yield_farm.accumulated_rpvs,
+                            loyalty_multiplier,
+                        )
+                        .map_err(|_e| Error::<T>::Overflow)?;
+
+                        if !rewards.is_zero() {
+                            farm_entry.accumulated_claimed_rewards = farm_entry
+                                .accumulated_claimed_rewards
+                                .checked_add(rewards)
+                                .ok_or(Error::<T>::Overflow)?;
+
+                            farm_entry.updated_at = current_period;
+
+                            let yield_farm_account = Self::farm_account_id(yield_farm.id)?;
+                            T::MultiCurrency::transfer(
+                                global_farm.reward_currency,
+                                &yield_farm_account,
+                                &who,
+                                rewards,
+                            )?;
+                        }
+
+
+                        Ok((
+                            global_farm.id,
+                            yield_farm.id,
+                            global_farm.reward_currency,
+                            rewards,
+                            unclaimable_rewards,
+                        ))
+                    })
+                },
+            )
         })
     }
+
 
     /// Withdraw LP shares from liq. mining.
     ///
@@ -892,114 +966,95 @@ impl<T: Config> Pallet<T> {
     /// - `unclaimable_rewards`: amount of reward will be not claimed anymore. This amount is
     /// transfered from `LiquidityPoolYieldFarm` account to `GlobalPool` account.
     #[transactional]
-    pub fn withdraw_shares(
+    pub fn withdraw_lp_shares(
         who: AccountIdOf<T>,
         deposit_id: DepositId,
-        amm_pool_id: T::AmmPoolId,
+        yield_farm_id: YieldFarmId,
         unclaimable_rewards: Balance,
-    ) -> Result<(GlobalPoolId, PoolId, Balance), DispatchError> {
-        let liq_pool_id = Self::get_pool_id_from_deposit_id(deposit_id)?;
+    ) -> Result<(GlobalFarmId, YieldFarmId, Balance), DispatchError> {
+        <Deposit<T>>::try_mutate_exists(deposit_id, |maybe_deposit| {
+            let deposit = maybe_deposit.as_mut().ok_or(Error::<T>::DepositNotFound)?;
 
-        <LiquidityPoolMetadata<T>>::try_mutate_exists(liq_pool_id, |maybe_liq_pool_metadata| {
-            //This is same as liq pool not found in this case. Liq. pool metadata CAN exist
-            //without liq. pool but liq. pool CAN'T exist without metadata.
-            //If metadata doesn't exist, the user CAN'T withdraw.
-            let (deposits_count, farm_id) = maybe_liq_pool_metadata.ok_or(Error::<T>::LiquidityPoolNotFound)?;
+            let farm_entry = deposit.remove_yield_farm_entry(yield_farm_id)?;
+            let amm_pool_id = deposit.amm_pool_id.clone();
 
-            <DepositData<T>>::try_mutate_exists(deposit_id, |maybe_deposit| {
-                let deposit = maybe_deposit.as_mut().ok_or(Error::<T>::DepositNotFound)?;
+            <GlobalFarm<T>>::try_mutate_exists(
+                farm_entry.global_farm_id,
+                |maybe_global_farm| -> Result<(), DispatchError> {
+                    let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
+                    <YieldFarm<T>>::try_mutate_exists(
+                        (&amm_pool_id, farm_entry.global_farm_id, yield_farm_id),
+                        |maybe_yield_farm| -> Result<(), DispatchError> {
+                            let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
 
-                //Metadata can be removed only if the liq. pool doesn't exist.
-                //Liq. pool can be resumed if it's only canceled.
-                let mut can_remove_liq_pool_metadata = false;
-                <LiquidityPoolData<T>>::try_mutate(
-                    farm_id,
-                    amm_pool_id.clone(),
-                    |maybe_liq_pool| -> Result<(), DispatchError> {
-                        if maybe_liq_pool.is_some() {
-                            //This is intentional. This fn should not fail if liq. pool does not
-                            //exist, it should only behave differently.
-                            let liq_pool = maybe_liq_pool.as_mut().ok_or(Error::<T>::LiquidityPoolNotFound)?;
+                            yield_farm.total_shares = yield_farm
+                                .total_shares
+                                .checked_sub(deposit.shares)
+                                .ok_or(Error::<T>::Overflow)?;
 
-                            <GlobalPoolData<T>>::try_mutate(
-                                farm_id,
-                                |maybe_global_pool| -> Result<(), DispatchError> {
-                                    //This should never happen. If this happen something is very broken.
-                                    let global_pool = maybe_global_pool.as_mut().ok_or(Error::<T>::FarmNotFound)?;
+                            yield_farm.total_valued_shares = yield_farm
+                                .total_valued_shares
+                                .checked_sub(farm_entry.valued_shares)
+                                .ok_or(Error::<T>::Overflow)?;
 
-                                    liq_pool.total_shares = liq_pool
-                                        .total_shares
-                                        .checked_sub(deposit.shares)
-                                        .ok_or(Error::<T>::Overflow)?;
-
-                                    liq_pool.total_valued_shares = liq_pool
-                                        .total_valued_shares
-                                        .checked_sub(deposit.valued_shares)
-                                        .ok_or(Error::<T>::Overflow)?;
-
-                                    // liq. pool farm's stake in global pool is set 0 when farm is
-                                    // canceled
-                                    if !liq_pool.canceled {
-                                        let shares_in_global_pool_for_deposit = math::calculate_global_pool_shares(
-                                            deposit.valued_shares,
-                                            liq_pool.multiplier,
-                                        )
+                            // `YieldFarm`'s stake in global pool is set to 0 when farm is
+                            // canceled and yield farm have to be canceled before it's deleted.
+                            if yield_farm.is_active() {
+                                let shares_in_global_farm_for_deposit =
+                                    math::calculate_global_pool_shares(farm_entry.valued_shares, yield_farm.multiplier)
                                         .map_err(|_e| Error::<T>::Overflow)?;
 
-                                        global_pool.total_shares_z = global_pool
-                                            .total_shares_z
-                                            .checked_sub(shares_in_global_pool_for_deposit)
-                                            .ok_or(Error::<T>::Overflow)?;
-                                    }
+                                global_farm.total_shares_z = global_farm
+                                    .total_shares_z
+                                    .checked_sub(shares_in_global_farm_for_deposit)
+                                    .ok_or(Error::<T>::Overflow)?;
+                            }
 
-                                    if !unclaimable_rewards.is_zero() {
-                                        let global_pool_account = Self::pool_account_id(global_pool.id)?;
-                                        let liq_pool_account = Self::pool_account_id(liq_pool.id)?;
+                            if !unclaimable_rewards.is_zero() {
+                                let global_farm_account = Self::farm_account_id(global_farm.id)?;
+                                let yield_farm_account = Self::farm_account_id(yield_farm.id)?;
 
-                                        T::MultiCurrency::transfer(
-                                            global_pool.reward_currency,
-                                            &liq_pool_account,
-                                            &global_pool_account,
-                                            unclaimable_rewards,
-                                        )?;
-                                    }
+                                T::MultiCurrency::transfer(
+                                    global_farm.reward_currency,
+                                    &yield_farm_account,
+                                    &global_farm_account,
+                                    unclaimable_rewards,
+                                )?;
+                            }
 
-                                    Ok(())
-                                },
-                            )?;
-                        } else {
-                            //Canceled liq. pool can be resumed so metadata can be removed only
-                            //if liq pool doesn't exist.
-                            can_remove_liq_pool_metadata = true;
-                        }
-                        Ok(())
-                    },
-                )?;
+                            yield_farm.entry_removed()?;
+                            if yield_farm.can_be_flushed() {
+                                global_farm.yield_farm_flushed()?;
 
-                //backup value before cleanup
-                let withdrawn_amount = deposit.shares;
+                                *maybe_yield_farm = None;
+                            }
 
-                //cleanup
+                            Ok(())
+                        },
+                    )?;
+
+                    if global_farm.can_be_flushed() {
+                        *maybe_global_farm = None;
+                    }
+
+                    Ok(())
+                },
+            )?;
+
+            let withdrawn_amount = deposit.shares;
+            if deposit.can_be_flushed() {
+                //NOTE: lp shares should be unlocked only if deposit is destroyed
+                T::Handler::unlock_lp_tokens(deposit.amm_pool_id.clone(), who, withdrawn_amount, deposit_id)?;
+
                 *maybe_deposit = None;
-
-                //Last withdrawn from removed liq. pool should destroy metadata.
-                if deposits_count.is_one() && can_remove_liq_pool_metadata {
-                    *maybe_liq_pool_metadata = None;
-                } else {
-                    *maybe_liq_pool_metadata =
-                        Some((deposits_count.checked_sub(1).ok_or(Error::<T>::Overflow)?, farm_id));
-                }
-
-                T::Handler::unlock_lp_tokens(amm_pool_id, who, withdrawn_amount, deposit_id)?;
-
-                Ok((farm_id, liq_pool_id, withdrawn_amount))
-            })
+            }
+            Ok((farm_entry.global_farm_id, yield_farm_id, withdrawn_amount))
         })
     }
 
     /// This function return new unused `PoolId` usable for liq. or global pool or error.
-    fn get_next_pool_id() -> Result<PoolId, Error<T>> {
-        PoolIdSequencer::<T>::try_mutate(|current_id| {
+    fn get_next_farm_id() -> Result<FarmId, Error<T>> {
+        FarmSequencer::<T>::try_mutate(|current_id| {
             *current_id = current_id.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
             Ok(*current_id)
@@ -1008,49 +1063,25 @@ impl<T: Config> Pallet<T> {
 
     /// This function return new unused `DepositId` with encoded `liq_pool_id` into it or
     /// error.
-    ///
-    /// 4 most significant bytes of `DepositId` are reserved for liq. pool id(`u32`).
-    fn get_next_deposit_id(liq_pool_id: PoolId) -> Result<DepositId, Error<T>> {
-        Self::validate_pool_id(liq_pool_id)?;
-
+    fn get_next_deposit_id() -> Result<DepositId, Error<T>> {
         DepositSequencer::<T>::try_mutate(|current_id| {
             *current_id = current_id.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
-            ensure!(MAX_DEPOSIT_SEQUENCER.ge(current_id), Error::<T>::DepositIdOverflow);
-
-            let mut id_bytes: [u8; POOL_ID_BYTES + DEPOSIT_SEQUENCER_BYTES] =
-                [0; POOL_ID_BYTES + DEPOSIT_SEQUENCER_BYTES];
-
-            id_bytes[..POOL_ID_BYTES].copy_from_slice(&liq_pool_id.to_le_bytes());
-            id_bytes[POOL_ID_BYTES..].copy_from_slice(&current_id.to_le_bytes()[..DEPOSIT_SEQUENCER_BYTES]);
-
-            Ok(u128::from_le_bytes(id_bytes))
+            Ok(*current_id)
         })
-    }
-
-    /// This function return decoded liq. pool id from `DepositId`
-    fn get_pool_id_from_deposit_id(deposit_id: DepositId) -> Result<PoolId, Error<T>> {
-        //4_294_967_296(largest invalid nft id) = encoded NftInstanceId from (1,1) - 1
-        ensure!(4_294_967_296_u128.lt(&deposit_id), Error::<T>::InvalidDepositId);
-
-        let mut pool_id_bytes = [0; POOL_ID_BYTES];
-
-        pool_id_bytes.copy_from_slice(&deposit_id.to_le_bytes()[..POOL_ID_BYTES]);
-
-        Ok(PoolId::from_le_bytes(pool_id_bytes))
     }
 
     /// This function return account from `PoolId` or error.
     ///
     /// WARN: pool_id = 0 is same as `T::PalletId::get().into_account()`. 0 is not valid value
-    pub fn pool_account_id(pool_id: PoolId) -> Result<AccountIdOf<T>, Error<T>> {
-        Self::validate_pool_id(pool_id)?;
+    pub fn farm_account_id(farm_id: FarmId) -> Result<AccountIdOf<T>, Error<T>> {
+        Self::validate_farm_id(farm_id)?;
 
-        Ok(T::PalletId::get().into_sub_account(pool_id))
+        Ok(T::PalletId::get().into_sub_account(farm_id))
     }
 
     /// This function return now period number or error.
-    fn get_now_period(blocks_per_period: BlockNumberFor<T>) -> Result<PeriodOf<T>, Error<T>> {
+    fn get_current_period(blocks_per_period: BlockNumberFor<T>) -> Result<PeriodOf<T>, Error<T>> {
         Self::get_period_number(T::BlockNumberProvider::current_block_number(), blocks_per_period)
     }
 
@@ -1080,8 +1111,8 @@ impl<T: Config> Pallet<T> {
 
     /// This function calculate and update `accumulated_rpz` and all associated properties of `GlobalPool` if
     /// conditions are met.
-    fn update_global_pool(
-        global_pool: &mut GlobalPool<T>,
+    fn update_global_farm(
+        global_pool: &mut GlobalFarmData<T>,
         now_period: PeriodOf<T>,
         reward_per_period: Balance,
     ) -> Result<(), Error<T>> {
@@ -1103,7 +1134,7 @@ impl<T: Config> Pallet<T> {
         )
         .map_err(|_e| Error::<T>::Overflow)?;
 
-        let global_pool_account = Self::pool_account_id(global_pool.id)?;
+        let global_pool_account = Self::farm_account_id(global_pool.id)?;
         let left_to_distribute = T::MultiCurrency::free_balance(global_pool.reward_currency, &global_pool_account);
 
         // Calculate reward for all periods since last update capped by balance on `GlobalPool`
@@ -1132,9 +1163,9 @@ impl<T: Config> Pallet<T> {
     }
 
     /// This function calculate and return liq. pool's reward from `GlobalPool`.
-    fn claim_from_global_pool(
-        global_pool: &mut GlobalPool<T>,
-        liq_pool: &mut LiquidityPoolYieldFarm<T>,
+    fn claim_from_global_farm(
+        global_pool: &mut GlobalFarmData<T>,
+        liq_pool: &mut YieldFarmData<T>,
         stake_in_global_pool: Balance,
     ) -> Result<Balance, Error<T>> {
         let reward = math::calculate_reward(
@@ -1162,11 +1193,11 @@ impl<T: Config> Pallet<T> {
     /// This function calculate and update `accumulated_rpvz` and all associated properties of `LiquidityPoolYieldFarm` if
     /// conditions are met. Function also transfer `pool_rewareds` from `GlobalPool` account to `LiquidityPoolYieldFarm`
     /// account.
-    fn update_liq_pool(
-        pool: &mut LiquidityPoolYieldFarm<T>,
+    fn update_yield_farm(
+        pool: &mut YieldFarmData<T>,
         pool_rewards: Balance,
         period_now: BlockNumberFor<T>,
-        global_pool_id: PoolId,
+        global_pool_id: FarmId,
         reward_currency: T::CurrencyId,
     ) -> DispatchResult {
         if pool.updated_at == period_now {
@@ -1183,15 +1214,15 @@ impl<T: Config> Pallet<T> {
         pool.updated_at = period_now;
 
         let global_pool_balance =
-            T::MultiCurrency::free_balance(reward_currency, &Self::pool_account_id(global_pool_id)?);
+            T::MultiCurrency::free_balance(reward_currency, &Self::farm_account_id(global_pool_id)?);
 
         ensure!(
             global_pool_balance >= pool_rewards,
-            Error::<T>::InsufficientBalanceInGlobalPool
+            Error::<T>::InsufficientBalanceInGlobalFarm
         );
 
-        let global_pool_account = Self::pool_account_id(global_pool_id)?;
-        let pool_account = Self::pool_account_id(pool.id)?;
+        let global_pool_account = Self::farm_account_id(global_pool_id)?;
+        let pool_account = Self::farm_account_id(pool.id)?;
 
         // This should emit event for FE
         T::Handler::on_accumulated_rpvs_update(
@@ -1204,17 +1235,17 @@ impl<T: Config> Pallet<T> {
         T::MultiCurrency::transfer(reward_currency, &global_pool_account, &pool_account, pool_rewards)
     }
 
-    /// This function return error if `pool_id` is not valid.
-    fn validate_pool_id(pool_id: PoolId) -> Result<(), Error<T>> {
-        if pool_id.is_zero() {
-            return Err(Error::<T>::InvalidPoolId);
+    /// This function return error if `farm_id` is not valid.
+    fn validate_farm_id(farm_id: FarmId) -> Result<(), Error<T>> {
+        if farm_id.is_zero() {
+            return Err(Error::<T>::InvalidFarmId);
         }
 
         Ok(())
     }
 
     /// This function is used to validate input data before creating new farm (`GlobalPool`).
-    fn validate_create_farm_data(
+    fn validate_create_global_farm_data(
         total_rewards: Balance,
         planned_yielding_periods: PeriodOf<T>,
         blocks_per_period: BlockNumberFor<T>,
@@ -1251,49 +1282,53 @@ impl<T: Config> Pallet<T> {
     }
 
     /// This function update both pools(`GlobalPool` and `LiquidityPoolYieldFarm`) if conditions are met.
-    fn maybe_update_pools(
-        global_pool: &mut GlobalPool<T>,
-        liq_pool: &mut LiquidityPoolYieldFarm<T>,
-        now_period: PeriodOf<T>,
+    fn maybe_update_farms(
+        global_farm: &mut GlobalFarmData<T>,
+        yield_farm: &mut YieldFarmData<T>,
+        current_period: PeriodOf<T>,
     ) -> Result<(), DispatchError> {
-        if liq_pool.canceled {
+        if !yield_farm.is_active() {
             return Ok(());
         }
 
-        if !liq_pool.total_shares.is_zero() && liq_pool.updated_at != now_period {
-            if !global_pool.total_shares_z.is_zero() && global_pool.updated_at != now_period {
+        if !yield_farm.total_shares.is_zero() && yield_farm.updated_at != current_period {
+            if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
                 let rewards = math::calculate_global_pool_reward_per_period(
-                    global_pool.yield_per_period.into(),
-                    global_pool.total_shares_z,
-                    global_pool.max_reward_per_period,
+                    global_farm.yield_per_period.into(),
+                    global_farm.total_shares_z,
+                    global_farm.max_reward_per_period,
                 )
                 .map_err(|_e| Error::<T>::Overflow)?;
 
-                Self::update_global_pool(global_pool, now_period, rewards)?;
+                Self::update_global_farm(global_farm, current_period, rewards)?;
             }
 
             let stake_in_global_pool =
-                math::calculate_global_pool_shares(liq_pool.total_valued_shares, liq_pool.multiplier)
+                math::calculate_global_pool_shares(yield_farm.total_valued_shares, yield_farm.multiplier)
                     .map_err(|_e| Error::<T>::Overflow)?;
-            let rewards = Self::claim_from_global_pool(global_pool, liq_pool, stake_in_global_pool)?;
-            Self::update_liq_pool(
-                liq_pool,
+            let rewards = Self::claim_from_global_farm(global_farm, yield_farm, stake_in_global_pool)?;
+            Self::update_yield_farm(
+                yield_farm,
                 rewards,
-                now_period,
-                global_pool.id,
-                global_pool.reward_currency,
+                current_period,
+                global_farm.id,
+                global_farm.reward_currency,
             )?;
         }
         Ok(())
     }
 
-    pub fn liquidity_pool_farm_exists(deposit_id: DepositId, amm_pool_id: &T::AmmPoolId) -> Result<bool, Error<T>> {
-        let liq_pool_id = Self::get_pool_id_from_deposit_id(deposit_id)?;
-
-        if let Some((_, farm_id)) = Self::liq_pool_meta(liq_pool_id) {
-            return Ok(Self::liquidity_pool(farm_id, amm_pool_id).is_some());
+    // Claiming from `YieldFarm` is not possible(will fail) if metadata doesn't exist or there are
+    // no entries in the farm.
+    pub fn is_yield_farm_claimable(
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
+        amm_pool_id: T::AmmPoolId,
+    ) -> bool {
+        if let Some(yield_farm) = Self::yield_farm((amm_pool_id, global_farm_id, yield_farm_id)) {
+            return !yield_farm.is_deleted() && yield_farm.has_entries();
         }
 
-        Ok(false)
+        false
     }
 }

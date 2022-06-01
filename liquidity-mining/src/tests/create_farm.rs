@@ -19,9 +19,9 @@ use super::*;
 use test_ext::*;
 
 #[test]
-fn create_farm_should_work() {
+fn create_global_farm_should_work() {
     new_test_ext().execute_with(|| {
-        let pool_id = 1;
+        let global_farm_id = 1;
         let total_rewards: Balance = 50_000_000_000;
         let reward_currency = BSX;
         let planned_yielding_periods: BlockNumber = 1_000_000_000_u64;
@@ -35,11 +35,11 @@ fn create_farm_should_work() {
 
         set_block_number(created_at_block);
 
-        let pool_account = LiquidityMining::pool_account_id(pool_id).unwrap();
+        let global_farm_account = LiquidityMining::farm_account_id(global_farm_id).unwrap();
 
-        assert_eq!(Tokens::free_balance(reward_currency, &pool_account), 0);
+        assert_eq!(Tokens::free_balance(reward_currency, &global_farm_account), 0);
 
-        assert_ok!(LiquidityMining::create_farm(
+        assert_eq!(LiquidityMining::create_global_farm(
             total_rewards,
             planned_yielding_periods,
             blocks_per_period,
@@ -47,10 +47,10 @@ fn create_farm_should_work() {
             reward_currency,
             owner,
             yield_per_period
-        ));
+        ).unwrap(), (global_farm_id, max_reward_per_period));
 
-        //check if total_rewards was transferd to pool account
-        assert_eq!(Tokens::free_balance(reward_currency, &pool_account), total_rewards);
+        //check if total_rewards was transferd to farm's account
+        assert_eq!(Tokens::free_balance(reward_currency, &global_farm_account), total_rewards);
         assert_eq!(
             Tokens::free_balance(reward_currency, &ALICE),
             (INITIAL_BALANCE - total_rewards)
@@ -58,8 +58,8 @@ fn create_farm_should_work() {
 
         let updated_at = created_at_block / blocks_per_period;
 
-        let global_pool = GlobalPool::new(
-            pool_id,
+        let global_farm = GlobalFarmData::new(
+            global_farm_id,
             updated_at,
             reward_currency,
             yield_per_period,
@@ -70,12 +70,12 @@ fn create_farm_should_work() {
             max_reward_per_period,
         );
 
-        assert_eq!(LiquidityMining::global_pool(pool_id).unwrap(), global_pool);
+        assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
     });
 }
 
 #[test]
-fn create_farm_invalid_data_should_not_work() {
+fn create_global_farm_invalid_data_should_not_work() {
     new_test_ext().execute_with(|| {
         let created_at_block = 15_896;
 
@@ -83,36 +83,36 @@ fn create_farm_invalid_data_should_not_work() {
 
         //total_rewards bellow min. limit
         assert_noop!(
-            LiquidityMining::create_farm(100, 1_000, 300, BSX, BSX, ALICE, Permill::from_percent(20)),
+            LiquidityMining::create_global_farm(100, 1_000, 300, BSX, BSX, ALICE, Permill::from_percent(20)),
             Error::<Test>::InvalidTotalRewards
         );
 
         //planned_yielding_periods bellow min. limit
         assert_noop!(
-            LiquidityMining::create_farm(1_000_000, 10, 300, BSX, BSX, ALICE, Permill::from_percent(20)),
+            LiquidityMining::create_global_farm(1_000_000, 10, 300, BSX, BSX, ALICE, Permill::from_percent(20)),
             Error::<Test>::InvalidPlannedYieldingPeriods
         );
 
         //blocks_per_period is 0.
         assert_noop!(
-            LiquidityMining::create_farm(1_000_000, 1_000, 0, BSX, BSX, ALICE, Permill::from_percent(20)),
+            LiquidityMining::create_global_farm(1_000_000, 1_000, 0, BSX, BSX, ALICE, Permill::from_percent(20)),
             Error::<Test>::InvalidBlocksPerPeriod
         );
 
         //yield_per_period is 0.
         assert_noop!(
-            LiquidityMining::create_farm(1_000_000, 1_000, 1, BSX, BSX, ALICE, Permill::from_percent(0)),
+            LiquidityMining::create_global_farm(1_000_000, 1_000, 1, BSX, BSX, ALICE, Permill::from_percent(0)),
             Error::<Test>::InvalidYieldPerPeriod
         );
     });
 }
 
 #[test]
-fn create_farm_with_inssufficient_balance_should_not_work() {
+fn create_global_farm_with_inssufficient_balance_should_not_work() {
     //owner account balance is 1M BSX
     new_test_ext().execute_with(|| {
         assert_noop!(
-            LiquidityMining::create_farm(
+            LiquidityMining::create_global_farm(
                 1_000_001,
                 1_000,
                 1,

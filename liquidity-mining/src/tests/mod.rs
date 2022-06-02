@@ -99,7 +99,7 @@ const PREDEFINED_GLOBAL_FARMS: [GlobalFarmData<Test>; 4] = [
         incentivized_asset: KSM,
         max_reward_per_period: 60_000_000,
         accumulated_rpz: 0,
-        yield_farms_count: (2, 2),
+        yield_farms_count: (1, 1),
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
         accumulated_rewards: 0,
@@ -180,17 +180,18 @@ fn expect_on_accumulated_rpvs_update(expected: (GlobalFarmId, FarmId, Balance, B
     assert_eq!(expected, RPVS_UPDATED.with(|v| *v.borrow()));
 }
 
+pub mod claim_rewards;
 pub mod create_yield_farm;
 pub mod stop_yield_farm;
-//pub mod claim_rewards;
+//TODO: claim entry and claim all
 pub mod create_global_farm;
 pub mod deposit_lp_shares;
-//pub mod destroy_farm;
+//pub mod redeposit_lp_shares;
+pub mod destroy_global_farm;
 pub mod destroy_yield_farm;
 pub mod resume_yield_farm;
 pub mod test_ext;
 #[allow(clippy::module_inception)]
-pub mod tests;
-//pub mod update_liquidity_pool;
-//pub mod withdraw_shares;
-//pub mod withdraw_undistributed_rewards;
+pub mod tests; // <- add test do_deposit_shares
+pub mod update_yield_farm;
+pub mod withdraw_lp_shares;

@@ -124,35 +124,25 @@ fn claim_rewards_should_work() {
         assert_eq!(
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
-                id: GC_FARM,
                 updated_at: 30,
-                reward_currency: BSX,
-                yield_per_period: Permill::from_percent(50),
-                planned_yielding_periods: 500_u64,
-                blocks_per_period: 100_u64,
-                owner: GC,
-                incentivized_asset: BSX,
-                max_reward_per_period: 60_000_000,
                 accumulated_rpz: 14,
-                yield_farms_count: 2,
                 total_shares_z: 703_990,
                 accumulated_rewards: 1_039_045,
                 paid_accumulated_rewards: 2_116_980,
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, global_farm_id).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN2_YIELD_FARM_ID,
                 updated_at: 30,
                 accumulated_rpvs: 140,
                 accumulated_rpz: 14,
                 total_shares: 960,
                 total_valued_shares: 47_629,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(10_u128),
-                canceled: false,
+                entries_count: 4,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
             },
         );
 
@@ -164,7 +154,7 @@ fn claim_rewards_should_work() {
 
         assert_eq!(
             Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account),
-            bsx_tkn2_yield_farm_reward_balance + 952_580 - expected_claimed_rewards //952_580 liq. claim from global farm 
+            bsx_tkn2_yield_farm_reward_balance + 952_580 - expected_claimed_rewards //952_580 liq. claim from global farm
         );
 
         //run for log time(longer than planned_yielding_periods) without interaction or claim.
@@ -214,50 +204,39 @@ fn claim_rewards_should_work() {
         assert_eq!(
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
-                id: GC_FARM,
                 updated_at: 1_258,
-                reward_currency: BSX,
-                yield_per_period: Permill::from_percent(50),
-                planned_yielding_periods: 500_u64,
-                blocks_per_period: 100_u64,
-                owner: GC,
-                incentivized_asset: BSX,
                 max_reward_per_period: 60_000_000,
                 accumulated_rpz: 628,
-                yield_farms_count: 2,
                 total_shares_z: 703_990,
                 accumulated_rewards: 293_025_705,
                 paid_accumulated_rewards: 142_380_180,
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, global_farm_id).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN1_YIELD_FARM_ID,
                 updated_at: 1_258,
                 accumulated_rpvs: 3_140,
                 accumulated_rpz: 628,
                 total_shares: 616,
                 total_valued_shares: 45_540,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(5_u128),
-                canceled: false,
+                entries_count: 3,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
             },
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, global_farm_id).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN2_YIELD_FARM_ID,
                 updated_at: 30,
                 accumulated_rpvs: 140,
                 accumulated_rpz: 14,
                 total_shares: 960,
                 total_valued_shares: 47_629,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(10_u128),
-                canceled: false,
+                entries_count: 4,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
             },
         );
 
@@ -300,8 +279,9 @@ fn claim_rewards_should_work() {
         assert_ok!(LiquidityMining::deposit_lp_shares(
             ALICE,
             CHARLIE_FARM,
-            deposited_amount,
+            ACA_KSM_YIELD_FARM_ID,
             ACA_KSM_AMM,
+            deposited_amount,
         ));
 
         assert_eq!(
@@ -464,7 +444,12 @@ fn claim_rewards_from_removed_yield_farm_should_not_work() {
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM,));
 
         //remove yield farm before claim test
-        assert_ok!(LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+        assert_ok!(LiquidityMining::destroy_yield_farm(
+            GC,
+            GC_FARM,
+            BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM
+        ));
 
         assert_noop!(
             LiquidityMining::claim_rewards(

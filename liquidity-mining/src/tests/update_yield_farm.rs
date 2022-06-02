@@ -19,20 +19,20 @@ use super::*;
 use test_ext::*;
 
 #[test]
-fn update_liquidity_yield_farm_should_work() {
+fn update_yield_farm_should_work() {
     //yield farm without deposits
     predefined_test_ext().execute_with(|| {
         let new_multiplier: FarmMultiplier = FixedU128::from(5_000_u128);
-        let yield_farm = LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap();
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
 
         assert_eq!(
-            LiquidityMining::updated_yield_farm(GC, GC_FARM, new_multiplier, BSX_TKN1_AMM).unwrap(),
+            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, new_multiplier, BSX_TKN1_AMM).unwrap(),
             BSX_TKN1_YIELD_FARM_ID
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 multiplier: new_multiplier,
                 ..yield_farm
@@ -46,10 +46,10 @@ fn update_liquidity_yield_farm_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         //same period as last yield farm update so no farms(global or yield) need to be updated
         let new_multiplier: FarmMultiplier = FixedU128::from(10_000_u128);
-        let yield_farm = LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap();
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
 
-        assert_ok!(LiquidityMining::updated_yield_farm(
+        assert_ok!(LiquidityMining::update_yield_farm_multiplier(
             GC,
             GC_FARM,
             new_multiplier,
@@ -57,7 +57,7 @@ fn update_liquidity_yield_farm_should_work() {
         ));
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 multiplier: new_multiplier,
                 ..yield_farm
@@ -75,7 +75,7 @@ fn update_liquidity_yield_farm_should_work() {
         //different period so farms update should happen
         set_block_number(5_000);
         let new_multiplier: FarmMultiplier = FixedU128::from(5_000_u128);
-        let yield_farm = LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap();
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
 
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
@@ -84,7 +84,7 @@ fn update_liquidity_yield_farm_should_work() {
         let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
         let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
 
-        assert_ok!(LiquidityMining::updated_yield_farm(
+        assert_ok!(LiquidityMining::update_yield_farm_multiplier(
             GC,
             GC_FARM,
             new_multiplier,
@@ -92,7 +92,7 @@ fn update_liquidity_yield_farm_should_work() {
         ));
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 50,
                 accumulated_rpvs: 30_060,
@@ -129,20 +129,44 @@ fn update_liquidity_yield_farm_should_work() {
 fn update_yield_farm_zero_multiplier_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
-            LiquidityMining::updated_yield_farm(GC, GC_FARM, FixedU128::from(0_u128), BSX_TKN1_AMM,),
+            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, FixedU128::from(0_u128), BSX_TKN1_AMM,),
             Error::<Test>::InvalidMultiplier
         );
     });
 }
 
 #[test]
-fn update_yield_farm_canceled_farm_should_not_work() {
+fn update_yield_farm_stopped_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
+        //yield farm must be in the active yield farm storage to update works
         assert_noop!(
-            LiquidityMining::updated_yield_farm(GC, GC_FARM, FixedU128::from(10_001), BSX_TKN1_AMM,),
-            Error::<Test>::LiquidityMiningCanceled
+            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, FixedU128::from(10_001), BSX_TKN1_AMM,),
+            Error::<Test>::YieldFarmNotFound
+        );
+    });
+}
+
+#[test]
+fn update_yield_farm_deleted_farm_should_not_work() {
+    //NOTE: yield farm is in the storage but it's deleted
+    predefined_test_ext_with_deposits().execute_with(|| {
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+
+        assert_ok!(LiquidityMining::destroy_yield_farm(
+            GC,
+            GC_FARM,
+            BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM
+        ));
+
+        assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).is_some());
+
+        //yield farm must be in the active yield farm storage to update works
+        assert_noop!(
+            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, FixedU128::from(10_001), BSX_TKN1_AMM,),
+            Error::<Test>::YieldFarmNotFound
         );
     });
 }
@@ -150,12 +174,15 @@ fn update_yield_farm_canceled_farm_should_not_work() {
 #[test]
 fn update_yield_farm_not_owner_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
-
         let not_owner = ALICE;
         assert_noop!(
-            LiquidityMining::updated_yield_farm(not_owner, GC_FARM, FixedU128::from(10_001_u128), BSX_TKN1_AMM),
-            Error::<Test>::LiquidityMiningCanceled
+            LiquidityMining::update_yield_farm_multiplier(
+                not_owner,
+                GC_FARM,
+                FixedU128::from(10_001_u128),
+                BSX_TKN1_AMM
+            ),
+            Error::<Test>::Forbidden
         );
     });
 }

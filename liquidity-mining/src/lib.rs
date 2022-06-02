@@ -464,7 +464,7 @@ impl<T: Config> Pallet<T> {
     /// - `asset_pair`: asset pair identifying liq. pool in farm.
     /// - `multiplier`: new liq. pool multiplier in the farm.
     /// - `amm_pool_id`: identifier of the AMM.
-    pub fn updated_yield_farm(
+    pub fn update_yield_farm_multiplier(
         who: AccountIdOf<T>,
         global_farm_id: GlobalFarmId,
         multiplier: FarmMultiplier,

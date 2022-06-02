@@ -56,35 +56,26 @@ fn withdraw_shares_should_work() {
         assert_eq!(
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
-                id: GC_FARM,
                 updated_at: 25,
                 reward_currency: BSX,
-                yield_per_period: Permill::from_percent(50),
-                planned_yielding_periods: 500_u64,
-                blocks_per_period: 100_u64,
-                owner: GC,
-                incentivized_asset: BSX,
-                max_reward_per_period: 60_000_000,
                 accumulated_rpz: 12,
-                yield_farms_count: 2,
                 total_shares_z: 691_490,
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN1_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 60,
                 accumulated_rpz: 12,
                 total_shares: 566,
                 total_valued_shares: 43_040,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(5_u128),
-                canceled: false,
+                entries_count: 2,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
             },
         );
 
@@ -121,8 +112,6 @@ fn withdraw_shares_should_work() {
 
         assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]), None);
 
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID).unwrap(), 2);
-
         set_block_number(12_800);
 
         // withdraw 3B
@@ -154,38 +143,34 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 688_880,
-                ..PREDEFINED_GLOBAL_FARMS[2]
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         // this farm should not change
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN1_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 60,
                 accumulated_rpz: 12,
                 total_shares: 566,
                 total_valued_shares: 43_040,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(5_u128),
-                canceled: false,
+                entries_count: 2,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
             },
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN2_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 120,
                 accumulated_rpz: 12,
                 total_shares: 873,
                 total_valued_shares: 47_368,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(10_u128),
-                canceled: false,
+                entries_count: 3,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
             },
         );
 
@@ -223,8 +208,6 @@ fn withdraw_shares_should_work() {
 
         assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[4]), None);
 
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN2_YIELD_FARM_ID).unwrap(), 3);
-
         // withdraw 3A
         let bsx_tkn1_alice_amm_shares_balance = Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE);
         let bsx_tkn1_pallet_amm_shares_balance = Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH);
@@ -254,22 +237,20 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 494480,
-                ..PREDEFINED_GLOBAL_FARMS[2]
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN1_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 60,
                 accumulated_rpz: 12,
                 total_shares: 80,
                 total_valued_shares: 4_160,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(5_u128),
-                canceled: false,
+                entries_count: 1,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
             },
         );
 
@@ -307,8 +288,6 @@ fn withdraw_shares_should_work() {
 
         assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[6]), None);
 
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID).unwrap(), 1);
-
         // withdraw 2A
         let bsx_tkn1_bob_amm_shares_balance = Tokens::free_balance(BSX_TKN1_SHARE_ID, &BOB);
         let bsx_tkn2_pallet_amm_shares_balance = Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH);
@@ -337,22 +316,20 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 473_680,
-                ..PREDEFINED_GLOBAL_FARMS[2]
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN1_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 60,
                 accumulated_rpz: 12,
                 total_shares: 0,
                 total_valued_shares: 0,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(5_u128),
-                canceled: false,
+                entries_count: 0,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
             },
         );
 
@@ -386,8 +363,6 @@ fn withdraw_shares_should_work() {
 
         assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[1]), None);
 
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID).unwrap(), 0);
-
         // withdraw 1B
         let bsx_tkn2_bob_amm_shares_balance = Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB);
         let bsx_tkn2_pallet_amm_shares_balance = Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH);
@@ -412,37 +387,32 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 471_680,
-                ..PREDEFINED_GLOBAL_FARMS[2]
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN1_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 60,
                 accumulated_rpz: 12,
                 total_shares: 0,
                 total_valued_shares: 0,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(5_u128),
-                canceled: false,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
             },
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN2_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 120,
                 accumulated_rpz: 12,
                 total_shares: 848,
                 total_valued_shares: 47_168,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(10_u128),
-                canceled: false,
+                entries_count: 2,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
             },
         );
 
@@ -477,8 +447,6 @@ fn withdraw_shares_should_work() {
 
         assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]), None);
 
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN2_YIELD_FARM_ID).unwrap(), 2);
-
         // withdraw 4B
         let bsx_tkn2_alice_amm_shares_balance = Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE);
         let bsx_tkn2_pallet_amm_shares_balance = Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH);
@@ -507,22 +475,20 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 464_000,
-                ..PREDEFINED_GLOBAL_FARMS[2]
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN2_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 120,
                 accumulated_rpz: 12,
                 total_shares: 800,
                 total_valued_shares: 46_400,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(10_u128),
-                canceled: false,
+                entries_count: 1,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
             },
         );
 
@@ -556,8 +522,6 @@ fn withdraw_shares_should_work() {
 
         assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[5]), None);
 
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN2_YIELD_FARM_ID).unwrap(), 1);
-
         // withdraw 2B
         let bsx_tkn2_bob_amm_shares_balance = Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB);
         let global_farm_bsx_balance = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
@@ -584,22 +548,20 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 0,
-                ..PREDEFINED_GLOBAL_FARMS[2]
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN2_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 120,
                 accumulated_rpz: 12,
                 total_shares: 0,
                 total_valued_shares: 0,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(10_u128),
-                canceled: false,
+                entries_count: 0,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
             },
         );
 
@@ -625,8 +587,6 @@ fn withdraw_shares_should_work() {
         );
 
         assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]), None);
-
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN2_YIELD_FARM_ID).unwrap(), 0);
     });
 
     //charlie's farm inncetivize KSM and reward currency is ACA
@@ -651,8 +611,9 @@ fn withdraw_shares_should_work() {
         assert_ok!(LiquidityMining::deposit_lp_shares(
             ALICE,
             CHARLIE_FARM,
+            ACA_KSM_YIELD_FARM_ID,
+            ACA_KSM_AMM,
             deposited_amount,
-            ACA_KSM_AMM
         ));
 
         const DEPOSIT_ID: DepositId = 1;
@@ -695,53 +656,43 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
     //this is the case when yield farm was removed and global farm was destroyed. Only deposits stayed in
     //the storage. In this case only amm shares should be withdrawn
 
-    let bsx_tkn1_assets = AssetPair {
-        asset_in: BSX,
-        asset_out: TKN1,
-    };
-
-    let bsx_tkn2_assets = AssetPair {
-        asset_in: BSX,
-        asset_out: TKN2,
-    };
-
     predefined_test_ext_with_deposits().execute_with(|| {
-        let bsx_tkn1_amm_account = AMM_POOLS.with(|v| {
-            v.borrow()
-                .get(&asset_pair_to_map_key(bsx_tkn1_assets.clone()))
-                .unwrap()
-                .0
-        });
-        let bsx_tkn2_amm_account = AMM_POOLS.with(|v| {
-            v.borrow()
-                .get(&asset_pair_to_map_key(bsx_tkn2_assets.clone()))
-                .unwrap()
-                .0
-        });
-
-        //check if farms 
-        assert!(LiquidityMining::yield_farm(bsx_tkn1_amm_account, GC_FARM).is_some());
-        assert!(LiquidityMining::yield_farm(bsx_tkn2_amm_account, GC_FARM).is_some());
-        assert!(LiquidityMining::global_farm(GC_FARM).is_some());
-
         //cancel all yield farms in the farm
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
 
         //remove all yield farms from farm
-        assert_ok!(LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
-        assert_ok!(LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
-
-        //withdraw all undistributed rewards form global farm before destroying
-        assert_ok!(LiquidityMining::withdraw_undistributed_rewards(GC, GC_FARM));
+        assert_ok!(LiquidityMining::destroy_yield_farm(
+            GC,
+            GC_FARM,
+            BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM
+        ));
+        assert_ok!(LiquidityMining::destroy_yield_farm(
+            GC,
+            GC_FARM,
+            BSX_TKN2_YIELD_FARM_ID,
+            BSX_TKN2_AMM
+        ));
 
         //destroy farm
         assert_ok!(LiquidityMining::destroy_global_farm(GC, GC_FARM));
 
         //check if farms was removed from storage
-        assert!(LiquidityMining::yield_farm(bsx_tkn1_amm_account, GC_FARM).is_none());
-        assert!(LiquidityMining::yield_farm(bsx_tkn2_amm_account, GC_FARM).is_none());
-        assert!(LiquidityMining::global_farm(GC_FARM).is_none());
+        assert!(
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID))
+                .unwrap()
+                .is_deleted()
+        );
+        assert!(
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, BSX_TKN2_YIELD_FARM_ID))
+                .unwrap()
+                .is_deleted()
+        );
+        assert_eq!(
+            LiquidityMining::global_farm(GC_FARM).unwrap().state,
+            GlobalFarmState::Deleted
+        );
 
         let test_data = vec![
             (
@@ -823,6 +774,8 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
                 (GC_FARM, yield_farm_id, withdrawn_shares)
             );
 
+            //TODO: ckeck farms state  e.g. entries count
+
             let mut bsx_tkn1_shares_withdrawn = 0;
             let mut bsx_tkn2_shares_withdrawn = 0;
 
@@ -854,17 +807,6 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
 
             //check if deposit was removed
             assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[deposit_idx]), None);
-
-            //check if yield farm metadata was updated
-            if farm_entries_left.is_zero() {
-                // last deposit should remove yield farm metadata
-                assert!(LiquidityMining::yield_farm_metadata(yield_farm_id).is_none());
-            } else {
-                assert_eq!(
-                    LiquidityMining::yield_farm_metadata(yield_farm_id).unwrap(),
-                    farm_entries_left
-                );
-            }
         }
     });
 }
@@ -887,7 +829,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
         let bsx_tkn1_alice_amm_shares_balance = Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE);
 
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
-        let yield_farm = LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap();
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
 
         let unclaimable_rewards = 168_270;
         let withdrawn_amount = 50;
@@ -905,10 +847,11 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
         assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm);
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 total_shares: yield_farm.total_shares - withdrawn_amount,
                 total_valued_shares: yield_farm.total_valued_shares - 2500,
+                entries_count: 2,
                 ..yield_farm
             }
         );
@@ -935,8 +878,6 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
             yield_farm_bsx_balance - unclaimable_rewards
         );
 
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID).unwrap(), 2);
-
         //2-nd withdraw
         let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
         let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
@@ -944,7 +885,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
         let bsx_tkn1_alice_amm_shares_balance = Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE);
 
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
-        let yield_farm = LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap();
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
 
         let unclaimable_rewards = 2_055_086;
         let shares_amount = 486;
@@ -964,10 +905,11 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
         assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm);
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 total_shares: yield_farm.total_shares - shares_amount,
                 total_valued_shares: yield_farm.total_valued_shares - valued_shares_amount,
+                entries_count: 1,
                 ..yield_farm
             }
         );
@@ -994,8 +936,6 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
             yield_farm_bsx_balance - unclaimable_rewards
         );
 
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID).unwrap(), 1);
-
         //3-th withdraw
         let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
         let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
@@ -1003,7 +943,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
         let bsx_tkn1_bob_amm_shares_balance = Tokens::free_balance(BSX_TKN1_SHARE_ID, &BOB);
 
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
-        let yield_farm = LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap();
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
 
         let unclaimable_rewards = 228_572;
         let shares_amount = 80;
@@ -1022,10 +962,11 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
         assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm);
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 total_shares: 0,
                 total_valued_shares: 0,
+                entries_count: 0,
                 ..yield_farm
             }
         );
@@ -1051,10 +992,6 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
             Tokens::free_balance(BSX, &yield_farm_account),
             yield_farm_bsx_balance - unclaimable_rewards
         );
-
-        //Last withdraw should NOT remove yield farm's metadata because yield farm can be
-        //resumed in the future.
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID).unwrap(), 0);
     });
 }
 
@@ -1067,19 +1004,28 @@ fn withdraw_shares_from_removed_pool_should_work() {
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         //remove yield farm before test
-        assert_ok!(LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+        assert_ok!(LiquidityMining::destroy_yield_farm(
+            GC,
+            GC_FARM,
+            BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM
+        ));
 
-        assert_eq!(LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM), None);
+        assert!(
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID))
+                .unwrap()
+                .is_deleted(),
+        );
 
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
 
-        let yield_farm_id_removed: YieldFarmId = BSX_TKN1_YIELD_FARM_ID;
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
         let bsx_tkn1_pallet_amm_shares_balance = Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH);
         let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
         let bsx_tkn1_alice_amm_shares_balance = Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE);
         let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
 
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
         let shares_amount = 50;
         //1-th withdraw
         assert_eq!(
@@ -1089,7 +1035,15 @@ fn withdraw_shares_from_removed_pool_should_work() {
 
         assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]), None);
 
-        assert_eq!(LiquidityMining::yield_farm_metadata(yield_farm_id_removed).unwrap(), 2);
+        assert_eq!(
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
+            YieldFarmData {
+                total_shares: 566,
+                total_valued_shares: 43_040,
+                entries_count: 2,
+                ..yield_farm
+            }
+        );
 
         assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm);
 
@@ -1112,6 +1066,7 @@ fn withdraw_shares_from_removed_pool_should_work() {
         let bsx_tkn1_pallet_amm_shares_balance = Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH);
         let shares_amount = 486;
 
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
         assert_eq!(
             LiquidityMining::withdraw_lp_shares(ALICE, PREDEFINED_DEPOSIT_IDS[6], BSX_TKN1_YIELD_FARM_ID, 0,).unwrap(),
             (GC_FARM, BSX_TKN1_YIELD_FARM_ID, shares_amount)
@@ -1121,7 +1076,15 @@ fn withdraw_shares_from_removed_pool_should_work() {
 
         assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm);
 
-        assert_eq!(LiquidityMining::yield_farm_metadata(yield_farm_id_removed).unwrap(), 1);
+        assert_eq!(
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
+            YieldFarmData {
+                total_shares: 80,
+                total_valued_shares: 4_160,
+                entries_count: 1,
+                ..yield_farm
+            }
+        );
 
         assert_eq!(
             Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH),
@@ -1132,7 +1095,7 @@ fn withdraw_shares_from_removed_pool_should_work() {
             bsx_tkn1_alice_amm_shares_balance + shares_amount
         );
 
-        //removed yield farm don't pay rewards, only return LP shares 
+        //removed yield farm don't pay rewards, only return LP shares
         assert_eq!(Tokens::free_balance(BSX, &ALICE), alice_bsx_balance);
         assert_eq!(Tokens::free_balance(BSX, &global_farm_account), global_farm_bsx_balance);
 
@@ -1146,9 +1109,18 @@ fn withdraw_shares_from_removed_pool_should_work() {
             (GC_FARM, BSX_TKN1_YIELD_FARM_ID, shares_amount)
         );
 
+        //last withdraw whould flush yield farm if it's deleted
+        assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).is_none());
+
         assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[1]), None);
 
-        assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm);
+        assert_eq!(
+            LiquidityMining::global_farm(GC_FARM).unwrap(),
+            GlobalFarmData {
+                yield_farms_count: (1, 1), //this value changed because last deposit flushed deleted yield farm
+                ..global_farm
+            }
+        );
 
         assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH), 0);
         assert_eq!(
@@ -1159,20 +1131,17 @@ fn withdraw_shares_from_removed_pool_should_work() {
         //removed yield farm don't pay rewards, only return LP shares
         assert_eq!(Tokens::free_balance(BSX, &BOB), bob_bsx_balance);
         assert_eq!(Tokens::free_balance(BSX, &global_farm_account), global_farm_bsx_balance);
-
-        //last withdrawn from removed yield farm should remove yield farm metadata
-        assert_eq!(LiquidityMining::yield_farm_metadata(yield_farm_id_removed), None);
     });
 }
 
 #[test]
-fn withdraw_shares_pool_metadata_not_found_should_not_work() {
+fn withdraw_shares_yield_farm_entry_not_found_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         const DEPOSIT_ID: DepositId = 1;
-        const NOT_FOUND_METADATA: GlobalFarmId = 999_999;
+        const NOT_FOUND_ENTRY_ID: YieldFarmId = 999_999;
         assert_noop!(
-            LiquidityMining::withdraw_lp_shares(ALICE, DEPOSIT_ID, NOT_FOUND_METADATA, 0),
-            Error::<Test>::YieldFarmNotFound
+            LiquidityMining::withdraw_lp_shares(ALICE, DEPOSIT_ID, NOT_FOUND_ENTRY_ID, 0),
+            Error::<Test>::YieldFarmEntryNotFound
         );
     });
 }

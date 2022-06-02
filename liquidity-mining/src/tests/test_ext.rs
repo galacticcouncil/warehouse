@@ -142,46 +142,49 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
         assert_ok!(LiquidityMining::create_yield_farm(
             GC,
             GC_FARM,
-            PREDEVINED_YIELD_FARMS.with(|v| v[0].multiplier),
-            PREDEVINED_YIELD_FARMS.with(|v| v[0].loyalty_curve.clone()),
+            PREDEFINED_YIELD_FARMS.with(|v| v[0].multiplier),
+            PREDEFINED_YIELD_FARMS.with(|v| v[0].loyalty_curve.clone()),
             BSX_TKN1_AMM,
             BSX,
             TKN1,
         ));
 
+        let yield_farm_id = PREDEFINED_YIELD_FARMS.with(|v| v[0].id);
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
-            PREDEVINED_YIELD_FARMS.with(|v| v[0].clone())
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, yield_farm_id)).unwrap(),
+            PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
         );
 
         assert_ok!(LiquidityMining::create_yield_farm(
             GC,
             GC_FARM,
-            PREDEVINED_YIELD_FARMS.with(|v| v[1].multiplier),
-            PREDEVINED_YIELD_FARMS.with(|v| v[1].loyalty_curve.clone()),
+            PREDEFINED_YIELD_FARMS.with(|v| v[1].multiplier),
+            PREDEFINED_YIELD_FARMS.with(|v| v[1].loyalty_curve.clone()),
             BSX_TKN2_AMM,
             BSX,
             TKN2,
         ));
 
+        let yield_farm_id = PREDEFINED_YIELD_FARMS.with(|v| v[1].id);
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, GC_FARM).unwrap(),
-            PREDEVINED_YIELD_FARMS.with(|v| v[1].clone())
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, yield_farm_id)).unwrap(),
+            PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
         );
 
         assert_ok!(LiquidityMining::create_yield_farm(
             CHARLIE,
             CHARLIE_FARM,
-            PREDEVINED_YIELD_FARMS.with(|v| v[2].multiplier),
-            PREDEVINED_YIELD_FARMS.with(|v| v[2].loyalty_curve.clone()),
+            PREDEFINED_YIELD_FARMS.with(|v| v[2].multiplier),
+            PREDEFINED_YIELD_FARMS.with(|v| v[2].loyalty_curve.clone()),
             ACA_KSM_AMM,
             ACA,
             KSM,
         ));
 
+        let yield_farm_id = PREDEFINED_YIELD_FARMS.with(|v| v[2].id);
         assert_eq!(
-            LiquidityMining::yield_farm(ACA_KSM_AMM, CHARLIE_FARM).unwrap(),
-            PREDEVINED_YIELD_FARMS.with(|v| v[2].clone())
+            LiquidityMining::yield_farm((ACA_KSM_AMM, CHARLIE_FARM, yield_farm_id)).unwrap(),
+            PREDEFINED_YIELD_FARMS.with(|v| v[2].clone())
         );
 
         reset_rpvs_updated();
@@ -225,8 +228,9 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         assert_ok!(LiquidityMining::deposit_lp_shares(
             ALICE,
             farm_id,
+            BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM,
             deposited_amount,
-            BSX_TKN1_AMM
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).is_some());
@@ -237,12 +241,11 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 52, 0).unwrap();
 
         let deposited_amount = 80;
-        assert_ok!(LiquidityMining::deposit_lp_shares(
-            BOB,
-            farm_id,
-            deposited_amount,
-            BSX_TKN1_AMM
-        ));
+        assert_eq!(
+            LiquidityMining::deposit_lp_shares(BOB, farm_id, BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, deposited_amount,)
+                .unwrap(),
+            PREDEFINED_DEPOSIT_IDS[1]
+        );
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[1]).is_some());
 
@@ -255,8 +258,9 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         assert_ok!(LiquidityMining::deposit_lp_shares(
             BOB,
             farm_id,
-            deposited_amount,
+            BSX_TKN2_YIELD_FARM_ID,
             BSX_TKN2_AMM,
+            deposited_amount,
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]).is_some());
@@ -271,8 +275,9 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         assert_ok!(LiquidityMining::deposit_lp_shares(
             BOB,
             farm_id,
+            BSX_TKN2_YIELD_FARM_ID,
+            BSX_TKN2_AMM,
             deposited_amount,
-            BSX_TKN2_AMM
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[3]).is_some());
@@ -287,8 +292,9 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         assert_ok!(LiquidityMining::deposit_lp_shares(
             ALICE,
             farm_id,
+            BSX_TKN2_YIELD_FARM_ID,
+            BSX_TKN2_AMM,
             deposited_amount,
-            BSX_TKN2_AMM
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[4]).is_some());
@@ -303,8 +309,9 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         assert_ok!(LiquidityMining::deposit_lp_shares(
             ALICE,
             farm_id,
+            BSX_TKN2_YIELD_FARM_ID,
+            BSX_TKN2_AMM,
             deposited_amount,
-            BSX_TKN2_AMM
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[5]).is_some());
@@ -319,8 +326,9 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         assert_ok!(LiquidityMining::deposit_lp_shares(
             ALICE,
             farm_id,
+            BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM,
             deposited_amount,
-            BSX_TKN1_AMM
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[6]).is_some());
@@ -338,42 +346,41 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 incentivized_asset: BSX,
                 max_reward_per_period: 60_000_000,
                 accumulated_rpz: 12,
-                yield_farms_count: 2,
+                yield_farms_count: (2, 2),
                 total_shares_z: 703_990,
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
+                state: GlobalFarmState::Active,
             }
         );
 
+        let yield_farm_id = PREDEFINED_YIELD_FARMS.with(|v| v[0].id);
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, yield_farm_id)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
                 accumulated_rpvs: 60,
                 accumulated_rpz: 12,
                 total_shares: 616,
                 total_valued_shares: 45_540,
-                ..PREDEVINED_YIELD_FARMS.with(|v| v[0].clone())
+                entries_count: 3,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
             },
         );
 
+        let yield_farm_id = PREDEFINED_YIELD_FARMS.with(|v| v[1].id);
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, yield_farm_id)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
                 accumulated_rpvs: 120,
                 accumulated_rpz: 12,
                 total_shares: 960,
                 total_valued_shares: 47_629,
-                ..PREDEVINED_YIELD_FARMS.with(|v| v[1].clone())
+                entries_count: 4,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
             },
         );
-
-        //liq. pool meta check (deposits count)
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID).unwrap(), 3);
-
-        //liq. pool meta check (deposits count)
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN2_YIELD_FARM_ID).unwrap(), 4);
 
         //reward currency balance check. total_rewards - sum(claimes from global pool)
         assert_eq!(

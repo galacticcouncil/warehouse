@@ -39,18 +39,25 @@ fn create_global_farm_should_work() {
 
         assert_eq!(Tokens::free_balance(reward_currency, &global_farm_account), 0);
 
-        assert_eq!(LiquidityMining::create_global_farm(
-            total_rewards,
-            planned_yielding_periods,
-            blocks_per_period,
-            incentivized_token,
-            reward_currency,
-            owner,
-            yield_per_period
-        ).unwrap(), (global_farm_id, max_reward_per_period));
+        assert_eq!(
+            LiquidityMining::create_global_farm(
+                total_rewards,
+                planned_yielding_periods,
+                blocks_per_period,
+                incentivized_token,
+                reward_currency,
+                owner,
+                yield_per_period
+            )
+            .unwrap(),
+            (global_farm_id, max_reward_per_period)
+        );
 
         //check if total_rewards was transferd to farm's account
-        assert_eq!(Tokens::free_balance(reward_currency, &global_farm_account), total_rewards);
+        assert_eq!(
+            Tokens::free_balance(reward_currency, &global_farm_account),
+            total_rewards
+        );
         assert_eq!(
             Tokens::free_balance(reward_currency, &ALICE),
             (INITIAL_BALANCE - total_rewards)

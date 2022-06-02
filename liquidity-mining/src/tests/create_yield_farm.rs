@@ -36,14 +36,15 @@ fn create_yield_farm_should_work() {
                 accumulated_rpz: 0,
                 multiplier: FixedU128::from(20_000_u128),
                 loyalty_curve: Some(LoyaltyCurve::default()),
-                canceled: false,
+                entries_count: 0,
+                state: YieldFarmState::Active,
             },
             BSX_ACA_AMM,
             ALICE,
             ALICE_FARM,
             17_850,
             GlobalFarmData {
-                yield_farms_count: 1,
+                yield_farms_count: (1, 1),
                 ..PREDEFINED_GLOBAL_FARMS[0].clone()
             },
         ),
@@ -61,14 +62,15 @@ fn create_yield_farm_should_work() {
                 accumulated_rpz: 0,
                 multiplier: FixedU128::from(10_000_u128),
                 loyalty_curve: None,
-                canceled: false,
+                entries_count: 0,
+                state: YieldFarmState::Active,
             },
             BSX_KSM_AMM,
             ALICE,
             ALICE_FARM,
             17_850,
             GlobalFarmData {
-                yield_farms_count: 2,
+                yield_farms_count: (2, 2),
                 ..PREDEFINED_GLOBAL_FARMS[0].clone()
             },
         ),
@@ -89,14 +91,15 @@ fn create_yield_farm_should_work() {
                     initial_reward_percentage: FixedU128::from_inner(100_000_000_000_000_000),
                     scale_coef: 50,
                 }),
-                canceled: false,
+                state: YieldFarmState::Active,
+                entries_count: 0,
             },
             BSX_ETH_AMM,
             ALICE,
             ALICE_FARM,
             20_000,
             GlobalFarmData {
-                yield_farms_count: 3,
+                yield_farms_count: (3, 3),
                 ..PREDEFINED_GLOBAL_FARMS[0].clone()
             },
         ),
@@ -117,14 +120,15 @@ fn create_yield_farm_should_work() {
                     initial_reward_percentage: FixedU128::from_inner(1),
                     scale_coef: 0,
                 }),
-                canceled: false,
+                state: YieldFarmState::Active,
+                entries_count: 0,
             },
             BSX_ETH_AMM,
             BOB,
             BOB_FARM,
             20_000,
             GlobalFarmData {
-                yield_farms_count: 1,
+                yield_farms_count: (1, 1),
                 ..PREDEFINED_GLOBAL_FARMS[1].clone()
             },
         ),
@@ -134,25 +138,30 @@ fn create_yield_farm_should_work() {
         for (assets, yield_farm, amm_id, who, global_farm_id, now, global_farm) in test_data.clone() {
             set_block_number(now);
 
-            assert_eq!(LiquidityMining::create_yield_farm(
-                who,
-                global_farm_id,
-                yield_farm.multiplier,
-                yield_farm.loyalty_curve.clone(),
-                amm_id,
-                assets.asset_in,
-                assets.asset_out,
-            ).unwrap(), yield_farm.id);
+            assert_eq!(
+                LiquidityMining::create_yield_farm(
+                    who,
+                    global_farm_id,
+                    yield_farm.multiplier,
+                    yield_farm.loyalty_curve.clone(),
+                    amm_id,
+                    assets.asset_in,
+                    assets.asset_out,
+                )
+                .unwrap(),
+                yield_farm.id
+            );
 
             assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
-        }
 
-        const EXPECTED_FARM_ENTRIES_COUNT: u64 = 0;
-        for (_, yield_farm, amm_id, _, global_farm_id, _, _) in test_data {
-            assert_eq!(LiquidityMining::yield_farm(amm_id, global_farm_id).unwrap(), yield_farm);
             assert_eq!(
-                LiquidityMining::yield_farm_metadata(yield_farm.id).unwrap(),
-                EXPECTED_FARM_ENTRIES_COUNT
+                LiquidityMining::active_yield_farm(amm_id, global_farm_id).unwrap(),
+                yield_farm.id
+            );
+
+            assert_eq!(
+                LiquidityMining::yield_farm((amm_id, global_farm_id, yield_farm.id.clone())).unwrap(),
+                YieldFarmData { ..yield_farm }
             );
         }
     });
@@ -286,7 +295,7 @@ fn add_yield_farm_add_duplicate_amm_should_not_work() {
         let aca_ksm_amm_account = AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(aca_ksm_assets)).unwrap().0);
 
         //check if yeild farm for aca ksm assets pair exist
-        assert!(LiquidityMining::yield_farm(aca_ksm_amm_account, CHARLIE_FARM).is_some());
+        assert!(LiquidityMining::active_yield_farm(aca_ksm_amm_account, CHARLIE_FARM).is_some());
 
         //try to add same amm second time in the same block(period)
         assert_noop!(

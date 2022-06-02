@@ -19,7 +19,7 @@ use super::*;
 use test_ext::*;
 
 #[test]
-fn deposit_shares_should_work() {
+fn deposit_lp_shares_should_work() {
     //NOTE: farm incentivize BSX token
     predefined_test_ext().execute_with(|| {
         let global_farm_id = GC_FARM;
@@ -49,46 +49,30 @@ fn deposit_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 50, 0).unwrap();
 
         let deposited_amount = 50;
-        let res = LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, deposited_amount, BSX_TKN1_AMM).unwrap();
-
-        assert_eq!(res, (BSX_TKN1_YIELD_FARM_ID, PREDEFINED_DEPOSIT_IDS[0]));
+        let yield_farm_id = BSX_TKN1_YIELD_FARM_ID;
+        assert_eq!(
+            LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN1_AMM, deposited_amount)
+                .unwrap(),
+            PREDEFINED_DEPOSIT_IDS[0]
+        );
 
         assert_eq!(
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
-                id: GC_FARM,
-                updated_at: 0,
-                reward_currency: BSX,
-                yield_per_period: Permill::from_percent(50),
-                planned_yielding_periods: 500_u64,
-                blocks_per_period: 100_u64,
-                owner: GC,
-                incentivized_asset: BSX,
-                max_reward_per_period: 60_000_000,
-                accumulated_rpz: 0,
-                yield_farms_count: 2,
-                paid_accumulated_rewards: 0,
                 total_shares_z: 12_500,
-                accumulated_rewards: 0
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, global_farm_id).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN1_YIELD_FARM_ID,
-                updated_at: 0,
-                accumulated_rpvs: 0,
-                accumulated_rpz: 0,
-                total_shares: 50,
+                total_shares: deposited_amount,
                 total_valued_shares: 2_500,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(5_u128),
-                canceled: false,
+                entries_count: 1,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
             },
         );
-
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID).unwrap(), 1);
 
         assert_eq!(
             LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap(),
@@ -122,46 +106,36 @@ fn deposit_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 52, 0).unwrap();
 
         let deposited_amount = 80;
-        let res = LiquidityMining::deposit_lp_shares(BOB, global_farm_id, deposited_amount, BSX_TKN1_AMM).unwrap();
-
-        assert_eq!(res, (BSX_TKN1_YIELD_FARM_ID, PREDEFINED_DEPOSIT_IDS[1]));
+        let yield_farm_id = BSX_TKN1_YIELD_FARM_ID;
+        assert_eq!(
+            LiquidityMining::deposit_lp_shares(BOB, global_farm_id, yield_farm_id, BSX_TKN1_AMM, deposited_amount)
+                .unwrap(),
+            PREDEFINED_DEPOSIT_IDS[1]
+        );
 
         assert_eq!(
             LiquidityMining::global_farm(global_farm_id).unwrap(),
             GlobalFarmData {
-                id: GC_FARM,
-                updated_at: 18,
-                reward_currency: BSX,
-                yield_per_period: Permill::from_percent(50),
-                planned_yielding_periods: 500_u64,
-                blocks_per_period: 100_u64,
-                owner: GC,
-                incentivized_asset: BSX,
-                max_reward_per_period: 60_000_000,
                 accumulated_rpz: 9,
-                yield_farms_count: 2,
+                updated_at: 18,
                 paid_accumulated_rewards: 112_500,
                 total_shares_z: 33_300,
-                accumulated_rewards: 0,
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, global_farm_id).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN1_YIELD_FARM_ID,
                 updated_at: 18,
                 accumulated_rpvs: 45,
                 accumulated_rpz: 9,
                 total_shares: 130,
                 total_valued_shares: 6_660,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(5_u128),
-                canceled: false,
+                entries_count: 2,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
             },
         );
-
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID).unwrap(), 2);
 
         assert_eq!(
             LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[1]).unwrap(),
@@ -200,46 +174,35 @@ fn deposit_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 8, 0).unwrap();
 
         let deposited_amount = 25;
-        let res = LiquidityMining::deposit_lp_shares(BOB, global_farm_id, deposited_amount, BSX_TKN2_AMM).unwrap();
-
-        assert_eq!(res, (BSX_TKN2_YIELD_FARM_ID, PREDEFINED_DEPOSIT_IDS[2]));
+        let yield_farm_id = BSX_TKN2_YIELD_FARM_ID;
+        assert_eq!(
+            LiquidityMining::deposit_lp_shares(BOB, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
+                .unwrap(),
+            PREDEFINED_DEPOSIT_IDS[2]
+        );
 
         assert_eq!(
             LiquidityMining::global_farm(global_farm_id).unwrap(),
             GlobalFarmData {
-                id: GC_FARM,
                 updated_at: 18,
-                reward_currency: BSX,
-                yield_per_period: Permill::from_percent(50),
-                planned_yielding_periods: 500_u64,
-                blocks_per_period: 100_u64,
-                owner: GC,
-                incentivized_asset: BSX,
                 max_reward_per_period: 60_000_000,
                 accumulated_rpz: 9,
-                yield_farms_count: 2,
                 paid_accumulated_rewards: 112_500,
                 total_shares_z: 35_300,
-                accumulated_rewards: 0,
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, GC_FARM).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, yield_farm_id)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN2_YIELD_FARM_ID,
                 updated_at: 0,
-                accumulated_rpvs: 0,
-                accumulated_rpz: 0,
                 total_shares: 25,
                 total_valued_shares: 200,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(10_u128),
-                canceled: false,
+                entries_count: 1,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
             },
         );
-
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN2_YIELD_FARM_ID).unwrap(), 1);
 
         assert_eq!(
             LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]).unwrap(),
@@ -277,45 +240,37 @@ fn deposit_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 58, 0).unwrap();
 
         let deposited_amount = 800;
-        let res = LiquidityMining::deposit_lp_shares(BOB, global_farm_id, deposited_amount, BSX_TKN2_AMM).unwrap();
-        assert_eq!(res, (BSX_TKN2_YIELD_FARM_ID, PREDEFINED_DEPOSIT_IDS[3]));
+        let yield_farm_id = BSX_TKN2_YIELD_FARM_ID;
+        assert_eq!(
+            LiquidityMining::deposit_lp_shares(BOB, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
+                .unwrap(),
+            PREDEFINED_DEPOSIT_IDS[3]
+        );
 
         assert_eq!(
             LiquidityMining::global_farm(global_farm_id).unwrap(),
             GlobalFarmData {
-                id: global_farm_id,
                 updated_at: 20,
-                reward_currency: BSX,
-                yield_per_period: Permill::from_percent(50),
-                planned_yielding_periods: 500_u64,
-                blocks_per_period: 100_u64,
-                owner: GC,
-                incentivized_asset: BSX,
-                max_reward_per_period: 60_000_000,
                 accumulated_rpz: 10,
-                yield_farms_count: 2,
                 paid_accumulated_rewards: 132_500,
                 total_shares_z: 499_300,
                 accumulated_rewards: 15_300,
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, global_farm_id).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN2_YIELD_FARM_ID,
                 updated_at: 20,
                 accumulated_rpvs: 100,
                 accumulated_rpz: 10,
                 total_shares: 825,
                 total_valued_shares: 46_600,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(10_u128),
-                canceled: false,
+                entries_count: 2,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
             },
         );
-
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN2_YIELD_FARM_ID).unwrap(), 2);
 
         assert_eq!(
             LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[3]).unwrap(),
@@ -357,51 +312,37 @@ fn deposit_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 3, 0).unwrap();
 
         let deposited_amount = 87;
-        let res = LiquidityMining::deposit_lp_shares(
-            ALICE,
-            global_farm_id,
-            deposited_amount,
-            BSX_TKN2_AMM
-        ).unwrap();
-
-        assert_eq!(res, (BSX_TKN2_YIELD_FARM_ID ,PREDEFINED_DEPOSIT_IDS[4]));
+        let yield_farm_id = BSX_TKN2_YIELD_FARM_ID;
+        assert_eq!(
+            LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
+                .unwrap(),
+            PREDEFINED_DEPOSIT_IDS[4]
+        );
 
         assert_eq!(
             LiquidityMining::global_farm(global_farm_id).unwrap(),
             GlobalFarmData {
-                id: global_farm_id,
                 updated_at: 25,
-                reward_currency: BSX,
-                yield_per_period: Permill::from_percent(50),
-                planned_yielding_periods: 500_u64,
-                blocks_per_period: 100_u64,
-                owner: GC,
-                incentivized_asset: BSX,
-                max_reward_per_period: 60_000_000,
                 accumulated_rpz: 12,
-                yield_farms_count: 2,
                 total_shares_z: 501_910,
                 accumulated_rewards: 331_550,
                 paid_accumulated_rewards: 1_064_500,
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, global_farm_id).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN2_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 120,
                 accumulated_rpz: 12,
                 total_shares: 912,
                 total_valued_shares: 46_861,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(10_u128),
-                canceled: false,
+                entries_count: 3,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
             },
         );
-
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN2_YIELD_FARM_ID).unwrap(), 3);
 
         assert_eq!(
             LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[4]).unwrap(),
@@ -442,50 +383,37 @@ fn deposit_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 16, 0).unwrap();
 
         let deposited_amount = 48;
-        let res = LiquidityMining::deposit_lp_shares(
-            ALICE,
-            global_farm_id,
-            deposited_amount,
-            BSX_TKN2_AMM
-        ).unwrap();
-        assert_eq!(res, (BSX_TKN2_YIELD_FARM_ID, PREDEFINED_DEPOSIT_IDS[5]));
+        let yield_farm_id = BSX_TKN2_YIELD_FARM_ID;
+        assert_eq!(
+            LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
+                .unwrap(),
+            PREDEFINED_DEPOSIT_IDS[5]
+        );
 
         assert_eq!(
             LiquidityMining::global_farm(global_farm_id).unwrap(),
             GlobalFarmData {
-                id: global_farm_id,
                 updated_at: 25,
-                reward_currency: BSX,
-                yield_per_period: Permill::from_percent(50),
-                planned_yielding_periods: 500_u64,
-                blocks_per_period: 100_u64,
-                owner: GC,
-                incentivized_asset: BSX,
-                max_reward_per_period: 60_000_000,
                 accumulated_rpz: 12,
-                yield_farms_count: 2,
                 total_shares_z: 509_590,
                 accumulated_rewards: 331_550,
                 paid_accumulated_rewards: 1_064_500,
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN2_AMM, global_farm_id).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN2_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 120,
                 accumulated_rpz: 12,
                 total_shares: 960,
                 total_valued_shares: 47_629,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(10_u128),
-                canceled: false,
+                entries_count: 4,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
             },
         );
-
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN2_YIELD_FARM_ID).unwrap(), 4);
 
         assert_eq!(
             LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[5]).unwrap(),
@@ -525,50 +453,37 @@ fn deposit_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 80, 0).unwrap();
 
         let deposited_amount = 486;
-        let res = LiquidityMining::deposit_lp_shares(
-            ALICE,
-            global_farm_id,
-            486,
-            BSX_TKN1_AMM
-        ).unwrap();
-        assert_eq!(res, (BSX_TKN1_YIELD_FARM_ID, PREDEFINED_DEPOSIT_IDS[6]));
+        let yield_farm_id = BSX_TKN1_YIELD_FARM_ID;
+        assert_eq!(
+            LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN1_AMM, deposited_amount)
+                .unwrap(),
+            PREDEFINED_DEPOSIT_IDS[6]
+        );
 
         assert_eq!(
             LiquidityMining::global_farm(global_farm_id).unwrap(),
             GlobalFarmData {
-                id: global_farm_id,
                 updated_at: 25,
-                reward_currency: BSX,
-                yield_per_period: Permill::from_percent(50),
-                planned_yielding_periods: 500_u64,
-                blocks_per_period: 100_u64,
-                owner: GC,
-                incentivized_asset: BSX,
-                max_reward_per_period: 60_000_000,
                 accumulated_rpz: 12,
-                yield_farms_count: 2,
                 total_shares_z: 703_990,
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
+                ..PREDEFINED_GLOBAL_FARMS[2].clone()
             }
         );
 
         assert_eq!(
-            LiquidityMining::yield_farm(BSX_TKN1_AMM, global_farm_id).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap(),
             YieldFarmData {
-                id: BSX_TKN1_YIELD_FARM_ID,
                 updated_at: 25,
                 accumulated_rpvs: 60,
                 accumulated_rpz: 12,
                 total_shares: 616,
                 total_valued_shares: 45_540,
-                loyalty_curve: Some(LoyaltyCurve::default()),
-                multiplier: FixedU128::from(5_u128),
-                canceled: false,
+                entries_count: 3,
+                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
             },
         );
-
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID).unwrap(), 3);
 
         assert_eq!(
             LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[6]).unwrap(),
@@ -624,14 +539,13 @@ fn deposit_shares_should_work() {
 
         let deposited_amount = 1_000_000;
         let deposit_id = 1; //1 - because new test ext
-        let res = LiquidityMining::deposit_lp_shares(
-            ALICE,
-            CHARLIE_FARM,
-            deposited_amount,
-            ACA_KSM_AMM,
-        ).unwrap();
-        assert_eq!(res, (ACA_KSM_YIELD_FARM_ID, deposit_id));
-        
+        let yield_farm_id = ACA_KSM_YIELD_FARM_ID;
+        assert_eq!(
+            LiquidityMining::deposit_lp_shares(ALICE, CHARLIE_FARM, yield_farm_id, ACA_KSM_AMM, deposited_amount)
+                .unwrap(),
+            deposit_id
+        );
+
         assert_eq!(
             LiquidityMining::deposit(deposit_id).unwrap(),
             DepositData {
@@ -653,44 +567,52 @@ fn deposit_shares_should_work() {
 fn deposit_shares_bellow_min_deposit_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         //NOTE: min. deposit is 10
+        let yield_farm_id = BSX_TKN1_YIELD_FARM_ID;
+
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, 0, BSX_TKN1_AMM),
+            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, yield_farm_id, BSX_TKN1_AMM, 0),
             Error::<Test>::InvalidDepositAmount
         );
 
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, 1, BSX_TKN1_AMM),
+            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, yield_farm_id, BSX_TKN1_AMM, 1),
             Error::<Test>::InvalidDepositAmount
         );
 
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, 8, BSX_TKN1_AMM),
+            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, yield_farm_id, BSX_TKN1_AMM, 8),
             Error::<Test>::InvalidDepositAmount
         );
 
         //margin value should works
-        assert_ok!(LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, 10, BSX_TKN1_AMM));
+        assert_ok!(LiquidityMining::deposit_lp_shares(
+            ALICE,
+            GC_FARM,
+            yield_farm_id,
+            BSX_TKN1_AMM,
+            10
+        ));
     });
 }
 
 #[test]
-fn deposit_shares_non_existing_liq_pool_should_not_work() {
+fn deposit_shares_non_existing_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, 10_000, BSX_DOT_AMM),
+            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, BSX_DOT_YIELD_FARM_ID, BSX_DOT_AMM, 10_000),
             Error::<Test>::YieldFarmNotFound
         );
     });
 }
 
 #[test]
-fn deposit_shares_canceled_liq_pool_should_not_work() {
+fn deposit_shares_stop_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, 10_000, BSX_TKN1_AMM),
-            Error::<Test>::LiquidityMiningCanceled
+            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, 10_000),
+            Error::<Test>::LiquidityMiningIsNotActive
         );
     });
 }

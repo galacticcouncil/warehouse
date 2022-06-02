@@ -94,9 +94,9 @@ pub const DEFAULT_AMM: AccountId = 11_007;
 pub const KSM_DOT_AMM: AccountId = 11_008;
 pub const ACA_KSM_AMM: AccountId = 11_009;
 
-pub const BSX_ACA_YIELD_FARM: FarmId = 12_000;
-pub const BSX_KSM_YIELD_FARM: FarmId = 12_001;
-pub const BSX_DOT_YIELD_FARM: FarmId = 12_002;
+pub const BSX_ACA_YIELD_FARM_ID: FarmId = 12_000;
+pub const BSX_KSM_YIELD_FARM_ID: FarmId = 12_001;
+pub const BSX_DOT_YIELD_FARM_ID: FarmId = 12_002;
 
 pub const BSX_FARM: FarmId = 1;
 pub const KSM_FARM: FarmId = 2;

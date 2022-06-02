@@ -19,11 +19,11 @@ use super::*;
 use crate::mock::{
     asset_pair_to_map_key, reset_rpvs_updated, reset_rpz_updated, set_block_number, AssetId, AssetPair, Balance,
     BlockNumber, ExtBuilder, LiquidityMining, Origin, Test, Tokens, ACA, ACA_FARM, ACA_KSM_AMM, ACA_KSM_SHARE_ID,
-    ACCOUNT_WITH_1M, ALICE, AMM_POOLS, BOB, BSX, BSX_ACA_AMM, BSX_ACA_YIELD_FARM, BSX_ACA_SHARE_ID, BSX_DOT_AMM,
-    BSX_DOT_YIELD_FARM, BSX_DOT_SHARE_ID, BSX_ETH_AMM, BSX_ETH_SHARE_ID, BSX_FARM, BSX_HDX_AMM, BSX_HDX_SHARE_ID,
-    BSX_KSM_AMM, BSX_KSM_YIELD_FARM, BSX_KSM_SHARE_ID, BSX_TKN1_AMM, BSX_TKN1_SHARE_ID, BSX_TKN2_AMM, BSX_TKN2_SHARE_ID,
-    CHARLIE, DOT, ETH, GC, GC_FARM, HDX, INITIAL_BALANCE, KSM, KSM_DOT_AMM, KSM_DOT_SHARE_ID, KSM_FARM,
-    LP_SHARES_STASH, RPVS_UPDATED, RPZ_UPDATED, TKN1, TKN2, TREASURY,
+    ACCOUNT_WITH_1M, ALICE, AMM_POOLS, BOB, BSX, BSX_ACA_AMM, BSX_ACA_SHARE_ID, BSX_ACA_YIELD_FARM_ID, BSX_DOT_AMM,
+    BSX_DOT_SHARE_ID, BSX_DOT_YIELD_FARM_ID, BSX_ETH_AMM, BSX_ETH_SHARE_ID, BSX_FARM, BSX_HDX_AMM, BSX_HDX_SHARE_ID,
+    BSX_KSM_AMM, BSX_KSM_SHARE_ID, BSX_KSM_YIELD_FARM_ID, BSX_TKN1_AMM, BSX_TKN1_SHARE_ID, BSX_TKN2_AMM,
+    BSX_TKN2_SHARE_ID, CHARLIE, DOT, ETH, GC, GC_FARM, HDX, INITIAL_BALANCE, KSM, KSM_DOT_AMM, KSM_DOT_SHARE_ID,
+    KSM_FARM, LP_SHARES_STASH, RPVS_UPDATED, RPZ_UPDATED, TKN1, TKN2, TREASURY,
 };
 
 use frame_support::{assert_err, assert_noop, assert_ok};
@@ -112,7 +112,7 @@ const BSX_TKN2_YIELD_FARM_ID: u32 = 6;
 const ACA_KSM_YIELD_FARM_ID: u32 = 7;
 
 thread_local! {
-    static PREDEVINED_YIELD_FARMS: [YieldFarmData<Test>; 3] = [
+    static PREDEFINED_YIELD_FARMS: [YieldFarmData<Test>; 3] = [
         YieldFarmData {
             id: BSX_TKN1_YIELD_FARM_ID,
             updated_at: 0,
@@ -123,6 +123,7 @@ thread_local! {
             loyalty_curve: Some(LoyaltyCurve::default()),
             multiplier: FixedU128::from(5),
             state: YieldFarmState::Active,
+            entries_count: 0,
         },
         YieldFarmData {
             id: BSX_TKN2_YIELD_FARM_ID,
@@ -134,6 +135,7 @@ thread_local! {
             loyalty_curve: Some(LoyaltyCurve::default()),
             multiplier: FixedU128::from(10),
             state: YieldFarmState::Active,
+            entries_count: 0,
         },
         YieldFarmData {
             id: ACA_KSM_YIELD_FARM_ID,
@@ -144,7 +146,8 @@ thread_local! {
             accumulated_rpz: 0,
             loyalty_curve: Some(LoyaltyCurve::default()),
             multiplier: FixedU128::from(10),
-            status: YieldFarmState::Active,
+            state: YieldFarmState::Active,
+            entries_count: 0,
         },
     ]
 }
@@ -177,17 +180,17 @@ fn expect_on_accumulated_rpvs_update(expected: (GlobalFarmId, FarmId, Balance, B
     assert_eq!(expected, RPVS_UPDATED.with(|v| *v.borrow()));
 }
 
-//pub mod add_liquidity_pool;
-//pub mod cancel_liquidity_pool;
+pub mod create_yield_farm;
+pub mod stop_yield_farm;
 //pub mod claim_rewards;
-//pub mod create_farm;
-//pub mod deposit_shares;
+pub mod create_global_farm;
+pub mod deposit_lp_shares;
 //pub mod destroy_farm;
-//pub mod remove_liquidity_pool;
-//pub mod resume_liquidity_pool;
-//pub mod test_ext;
-//#[allow(clippy::module_inception)]
-//pub mod tests;
+pub mod destroy_yield_farm;
+pub mod resume_yield_farm;
+pub mod test_ext;
+#[allow(clippy::module_inception)]
+pub mod tests;
 //pub mod update_liquidity_pool;
 //pub mod withdraw_shares;
 //pub mod withdraw_undistributed_rewards;

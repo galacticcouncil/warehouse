@@ -67,7 +67,6 @@ impl<T: Config> GlobalFarmData<T> {
         }
     }
 
-    //TODO: add tests
     /// Fn update `yield_farms_count`(both `ActiveFarmsCount` and `TotalFarmsCount`). This fn
     /// should be called when new `YieldFarm` is added/created in the `GlobalFarm`
     pub fn yield_farm_added(&mut self) -> Result<(), Error<T>> {
@@ -114,7 +113,7 @@ impl<T: Config> GlobalFarmData<T> {
 pub struct YieldFarmData<T: Config> {
     pub id: FarmId,
     pub updated_at: PeriodOf<T>,
-    pub total_shares: Balance,
+    pub total_shares: Balance, //try to remove this.
     pub total_valued_shares: Balance,
     pub accumulated_rpvs: Balance,
     pub accumulated_rpz: Balance,
@@ -146,12 +145,11 @@ impl<T: Config> YieldFarmData<T> {
         }
     }
 
-    //TODO: add tests
     pub fn is_active(&self) -> bool {
         self.state == YieldFarmState::Active
     }
 
-    pub fn is_canceled(&self) -> bool {
+    pub fn is_stopped(&self) -> bool {
         self.state == YieldFarmState::Stopped
     }
 
@@ -164,14 +162,14 @@ impl<T: Config> YieldFarmData<T> {
         self.state == YieldFarmState::Deleted && self.entries_count.is_zero()
     }
 
-    pub fn entry_removed(&self) -> Result<(), Error<T>> {
-        self.entries_count.checked_add(1).ok_or(Error::<T>::Overflow)?;
+    pub fn entry_removed(&mut self) -> Result<(), Error<T>> {
+        self.entries_count = self.entries_count.checked_sub(1).ok_or(Error::<T>::Overflow)?;
 
         Ok(())
     }
 
-    pub fn entry_added(&self) -> Result<(), Error<T>> {
-        self.entries_count.checked_add(1).ok_or(Error::<T>::Overflow)?;
+    pub fn entry_added(&mut self) -> Result<(), Error<T>> {
+        self.entries_count = self.entries_count.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
         Ok(())
     }
@@ -200,12 +198,11 @@ impl Default for LoyaltyCurve {
 pub struct DepositData<T: Config> {
     pub shares: Balance,
     pub amm_pool_id: T::AmmPoolId,
-    pub yield_farm_entries: Vec<YieldFarmEntry<T>>, //TODO: try to look for better data struct.
-                                                    //NOTE: capacity of yield_farm_entries always MUST BE at least 1.
+    //NOTE: capacity of yield_farm_entries always MUST BE at least 1.
+    pub yield_farm_entries: Vec<YieldFarmEntry<T>>,
 }
 
 impl<T: Config> DepositData<T> {
-    //TODO: test this
     pub fn new(shares: Balance, amm_pool_id: T::AmmPoolId) -> Self {
         Self {
             shares,
@@ -218,14 +215,14 @@ impl<T: Config> DepositData<T> {
     pub fn add_yield_farm_entry(&mut self, entry: YieldFarmEntry<T>) -> Result<(), Error<T>> {
         let len = TryInto::<u8>::try_into(self.yield_farm_entries.len()).map_err(|_e| Error::<T>::Overflow)?;
         if len >= T::MaxFarmEntriesPerDeposit::get() {
-            return Err(Error::<T>::MaxLocksReachedForDeposit);
+            return Err(Error::<T>::MaxEntriesPerDeposit);
         }
 
         let idx = match self
             .yield_farm_entries
             .binary_search_by(|e| e.yield_farm_id.cmp(&entry.yield_farm_id))
         {
-            Ok(_) => return Err(Error::<T>::DuplicateLock),
+            Ok(_) => return Err(Error::<T>::DoubleLock),
             Err(idx) => idx,
         };
 
@@ -272,7 +269,7 @@ impl<T: Config> DepositData<T> {
 
     /// This fn return `true` if deposit can be flushed from storage.
     pub fn can_be_flushed(&self) -> bool {
-        //NOTE: deposit with no entries can be flushed
+        //NOTE: deposit with no entries can/must be flushed
         self.has_no_yield_farm_entries()
     }
 }

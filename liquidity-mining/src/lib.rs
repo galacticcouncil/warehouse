@@ -62,12 +62,10 @@ pub use crate::types::{
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
     ensure,
-    sp_runtime::traits::{BlockNumberProvider, MaybeSerializeDeserialize, One, Zero},
-    transactional, PalletId,
-};
-use frame_support::{
     pallet_prelude::*,
+    sp_runtime::traits::{BlockNumberProvider, MaybeSerializeDeserialize, One, Zero},
     sp_runtime::{traits::AccountIdConversion, RuntimeDebug},
+    PalletId,
 };
 
 use hydra_dx_math::liquidity_mining as math;
@@ -212,10 +210,10 @@ pub mod pallet {
         InvalidFarmId,
 
         /// Maximum number of locks reached for deposit.
-        MaxLocksReachedForDeposit,
+        MaxEntriesPerDeposit,
 
         /// Trying to lock LP shares into alredy locked yield farm.
-        DuplicateLock,
+        DoubleLock,
 
         /// Yield farm entry doesn't exist for given deposit.
         YieldFarmEntryNotFound,
@@ -286,7 +284,6 @@ impl<T: Config> Pallet<T> {
     /// - `owner`: liq. mining farm owner.
     /// - `yield_per_period`: percentage return on `reward_currency` of all pools
     #[allow(clippy::too_many_arguments)]
-    #[transactional]
     pub fn create_global_farm(
         total_rewards: Balance,
         planned_yielding_periods: PeriodOf<T>,
@@ -343,7 +340,6 @@ impl<T: Config> Pallet<T> {
     /// Parameters:
     /// - `who`: farm's owner.
     /// - `farm_id`: id of farm to be destroyed.
-    #[transactional]
     pub fn destroy_global_farm(
         who: AccountIdOf<T>,
         farm_id: GlobalFarmId,
@@ -396,7 +392,6 @@ impl<T: Config> Pallet<T> {
     /// - `amm_pool_id`: identifier of the AMM. It's used as a key in the storage.
     /// - `asset_a`: one of the assets in the AMM.
     /// - `asset_b`: second asset in the AMM.
-    #[transactional]
     pub fn create_yield_farm(
         who: AccountIdOf<T>,
         global_farm_id: GlobalFarmId,
@@ -428,31 +423,32 @@ impl<T: Config> Pallet<T> {
                 Error::<T>::MissingIncentivizedAsset
             );
 
-            ensure!(
-                !<ActiveYieldFarm<T>>::contains_key(amm_pool_id.clone(), &global_farm_id),
-                Error::<T>::YieldFarmAlreadyExists
-            );
+            <ActiveYieldFarm<T>>::try_mutate(amm_pool_id.clone(), &global_farm_id, |maybe_active_yield_farm| {
+                ensure!(maybe_active_yield_farm.is_none(), Error::<T>::YieldFarmAlreadyExists);
 
-            // update global farm accumulated RPZ
-            let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
-            if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
-                let reward_per_period = math::calculate_global_pool_reward_per_period(
-                    global_farm.yield_per_period.into(),
-                    global_farm.total_shares_z,
-                    global_farm.max_reward_per_period,
-                )
-                .map_err(|_e| Error::<T>::Overflow)?;
-                Self::update_global_farm(global_farm, current_period, reward_per_period)?;
-            }
+                // update global farm accumulated RPZ
+                let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
+                if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
+                    let reward_per_period = math::calculate_global_pool_reward_per_period(
+                        global_farm.yield_per_period.into(),
+                        global_farm.total_shares_z,
+                        global_farm.max_reward_per_period,
+                    )
+                    .map_err(|_e| Error::<T>::Overflow)?;
+                    Self::update_global_farm(global_farm, current_period, reward_per_period)?;
+                }
 
-            let yield_farm_id = Self::get_next_farm_id()?;
+                let yield_farm_id = Self::get_next_farm_id()?;
 
-            let yield_farm = YieldFarmData::new(yield_farm_id, current_period, loyalty_curve.clone(), multiplier);
+                let yield_farm = YieldFarmData::new(yield_farm_id, current_period, loyalty_curve.clone(), multiplier);
 
-            <YieldFarm<T>>::insert((amm_pool_id, global_farm_id, yield_farm_id), yield_farm);
-            global_farm.yield_farm_added()?;
+                <YieldFarm<T>>::insert((amm_pool_id, global_farm_id, yield_farm_id), yield_farm);
+                global_farm.yield_farm_added()?;
 
-            Ok(yield_farm_id)
+                *maybe_active_yield_farm = Some(yield_farm_id);
+
+                Ok(yield_farm_id)
+            })
         })
     }
 
@@ -468,7 +464,6 @@ impl<T: Config> Pallet<T> {
     /// - `asset_pair`: asset pair identifying liq. pool in farm.
     /// - `multiplier`: new liq. pool multiplier in the farm.
     /// - `amm_pool_id`: identifier of the AMM.
-    #[transactional]
     pub fn updated_yield_farm(
         who: AccountIdOf<T>,
         global_farm_id: GlobalFarmId,
@@ -532,7 +527,6 @@ impl<T: Config> Pallet<T> {
     /// - `who`: farm's owner.
     /// - `farm_id`: farm id in which liq. pool will be canceled.
     /// - `amm_pool_id`: identifier of the AMM pool.
-    #[transactional]
     pub fn stop_yield_farm(
         who: AccountIdOf<T>,
         global_farm_id: GlobalFarmId,
@@ -551,6 +545,8 @@ impl<T: Config> Pallet<T> {
                     |maybe_yield_farm| -> Result<(), DispatchError> {
                         let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
 
+                        //NOTE: this should never fail bacause farm MUST be in the
+                        //`ActiveYieldFarm` storage.
                         ensure!(yield_farm.is_active(), Error::<T>::LiquidityMiningIsNotActive);
 
                         <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
@@ -605,7 +601,6 @@ impl<T: Config> Pallet<T> {
     /// - `farm_id`: farm id in which liq. pool will be resumed.
     /// - `multiplier`: liq. pool multiplier in the farm.
     /// - `amm_pool_id`: indentifier of the AMM pool.
-    #[transactional]
     pub fn resume_yield_farm(
         who: AccountIdOf<T>,
         global_farm_id: GlobalFarmId,
@@ -622,7 +617,7 @@ impl<T: Config> Pallet<T> {
                 let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
 
                 //Active or deleted yield farms can't be resumed.
-                ensure!(yield_farm.is_canceled(), Error::<T>::LiquidityMiningIsNotCanceled);
+                ensure!(yield_farm.is_stopped(), Error::<T>::LiquidityMiningIsNotCanceled);
 
                 <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
                     let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
@@ -682,13 +677,12 @@ impl<T: Config> Pallet<T> {
     /// - `farm_id`: farm id from which liq. pool should be removed.
     /// - `asset_pair`: asset pair identifying liq. pool in the farm.
     /// - `amm_pool_id`: indentifier of the AMM pool.
-    #[transactional]
-    pub fn remove_yield_farm(
+    pub fn destroy_yield_farm(
         who: AccountIdOf<T>,
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         amm_pool_id: T::AmmPoolId,
-    ) -> Result<YieldFarmId, DispatchError> {
+    ) -> Result<(), DispatchError> {
         ensure!(
             !<ActiveYieldFarm<T>>::contains_key(amm_pool_id.clone(), global_farm_id),
             Error::<T>::LiquidityMiningIsNotCanceled
@@ -704,7 +698,7 @@ impl<T: Config> Pallet<T> {
                 |maybe_yield_farm| -> Result<(), DispatchError> {
                     let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
 
-                    ensure!(yield_farm.is_canceled(), Error::<T>::LiquidityMiningIsNotCanceled);
+                    ensure!(yield_farm.is_stopped(), Error::<T>::LiquidityMiningIsNotCanceled);
 
                     //transfer unpaid rewards back to global_pool
                     let global_farm_account = Self::farm_account_id(global_farm.id)?;
@@ -739,7 +733,7 @@ impl<T: Config> Pallet<T> {
                 *maybe_global_farm = None;
             }
 
-            Ok(yield_farm_id)
+            Ok(())
         })
     }
 
@@ -753,99 +747,124 @@ impl<T: Config> Pallet<T> {
     /// - `farm_id`: id of farm to which user want to deposit LP shares.
     /// - `shares_amount`: amount of LP shares user want to deposit.
     /// - `amm_pool_id`: identifier of the AMM pool.
-    #[transactional]
     pub fn deposit_lp_shares(
         who: AccountIdOf<T>,
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
-        shares_amount: Balance,
         amm_pool_id: T::AmmPoolId,
-        deposit_id: Option<DepositId>,
-    ) -> Result<(YieldFarmId, DepositId), DispatchError> {
-        //NOTE: add possibility for multiple farm entries for deposit. This is currently only for 1.
-        //This fn have to create new deposit or add entry to existing deposit
+        shares_amount: Balance,
+    ) -> Result<DepositId, DispatchError> {
         ensure!(
             shares_amount.ge(&T::MinDeposit::get()),
             Error::<T>::InvalidDepositAmount,
         );
 
-        let deposit_id = deposit_id.unwrap_or(Self::get_next_deposit_id()?);
+        let mut deposit = DepositData::new(shares_amount, amm_pool_id.clone());
 
+        Self::do_deposit_lp_shares(&mut deposit, global_farm_id, yield_farm_id, amm_pool_id.clone())?;
+
+        //save deposit to storage
+        let deposit_id = Self::get_next_deposit_id()?;
+        <Deposit<T>>::insert(deposit_id, deposit);
+
+        T::Handler::lock_lp_tokens(amm_pool_id, who, shares_amount, deposit_id)?;
+
+        Ok(deposit_id)
+    }
+
+    /// This fn only create yield farm entry for existing deposit. LP shares are not transfered in
+    /// this case. This fn require to deposit exist, It will NOT create new deposit.
+    pub fn redeposit_lp_shares(
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
+        amm_pool_id: T::AmmPoolId,
+        deposit_id: DepositId,
+    ) -> Result<(), DispatchError> {
+        //TODO: tests
         <Deposit<T>>::try_mutate(deposit_id, |maybe_deposit| {
-            let mut new_deposit = DepositData::new(shares_amount, amm_pool_id.clone()); //tmp variable to make rust happy
-            let deposit = maybe_deposit.as_mut().unwrap_or(&mut new_deposit);
+            let deposit = maybe_deposit.as_mut().ok_or(Error::<T>::DepositNotFound)?;
 
             //LP shares can be locked only once in the same yield farm
             ensure!(
                 !deposit.contains_yield_farm_entry(yield_farm_id),
-                Error::<T>::DuplicateLock
+                Error::<T>::DoubleLock
             );
 
-            let yield_farm_entry = <YieldFarm<T>>::try_mutate(
-                (amm_pool_id.clone(), global_farm_id, yield_farm_id),
-                |maybe_yield_farm| -> Result<YieldFarmEntry<T>, DispatchError> {
-                    let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
+            Self::do_deposit_lp_shares(deposit, global_farm_id, yield_farm_id, amm_pool_id.clone())?;
 
-                    ensure!(yield_farm.is_active(), Error::<T>::LiquidityMiningIsNotActive);
-
-                    <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
-                        let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
-
-                        let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
-
-                        Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
-
-                        let valued_shares = Self::get_valued_shares(
-                            shares_amount,
-                            amm_pool_id.clone(),
-                            global_farm.incentivized_asset,
-                        )?;
-                        let deposit_stake_in_global_farm =
-                            math::calculate_global_pool_shares(valued_shares, yield_farm.multiplier)
-                                .map_err(|_e| Error::<T>::Overflow)?;
-
-                        yield_farm.total_shares = yield_farm
-                            .total_shares
-                            .checked_add(shares_amount)
-                            .ok_or(Error::<T>::Overflow)?;
-
-                        yield_farm.total_valued_shares = yield_farm
-                            .total_valued_shares
-                            .checked_add(valued_shares)
-                            .ok_or(Error::<T>::Overflow)?;
-
-                        global_farm.total_shares_z = global_farm
-                            .total_shares_z
-                            .checked_add(deposit_stake_in_global_farm)
-                            .ok_or(Error::<T>::Overflow)?;
-
-                        let farm_entry = YieldFarmEntry::new(
-                            global_farm.id,
-                            yield_farm.id,
-                            valued_shares,
-                            yield_farm.accumulated_rpvs,
-                            current_period,
-                        );
-
-                        //Increment farm entries count
-                        yield_farm.entries_count =
-                            yield_farm.entries_count.checked_add(1).ok_or(Error::<T>::Overflow)?;
-
-                        Ok(farm_entry)
-                    })
-                },
-            )?;
-
-            deposit.add_yield_farm_entry(yield_farm_entry)?;
-
-            //NOTE: lp shares hould be transfered only if new deposit is created. Second deposit on
-            //the same LP shares should only create `YieldFarm` entry.(multiple incentives feature)
-            if maybe_deposit.is_none() {
-                T::Handler::lock_lp_tokens(amm_pool_id, who, shares_amount, deposit_id)?;
-            }
-
-            Ok((yield_farm_id, deposit_id))
+            Ok(())
         })
+    }
+
+    fn do_deposit_lp_shares(
+        deposit: &mut DepositData<T>,
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
+        amm_pool_id: T::AmmPoolId,
+    ) -> Result<(), DispatchError> {
+        //TODO: tests
+        //LP shares can be locked only once in the same yield farm
+        ensure!(
+            !deposit.contains_yield_farm_entry(yield_farm_id),
+            Error::<T>::DoubleLock
+        );
+
+        <YieldFarm<T>>::try_mutate(
+            (amm_pool_id.clone(), global_farm_id, yield_farm_id),
+            |maybe_yield_farm| {
+                let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
+
+                ensure!(yield_farm.is_active(), Error::<T>::LiquidityMiningIsNotActive);
+
+                <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
+                    let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
+
+                    //This should never fari. If yield_farm is active also global_farm MUST be
+                    //active.
+                    ensure!(global_farm.is_active(), Error::<T>::GlobalFarmNotFound);
+
+                    let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
+
+                    Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
+
+                    let valued_shares =
+                        Self::get_valued_shares(deposit.shares, amm_pool_id.clone(), global_farm.incentivized_asset)?;
+                    let deposit_stake_in_global_farm =
+                        math::calculate_global_pool_shares(valued_shares, yield_farm.multiplier)
+                            .map_err(|_e| Error::<T>::Overflow)?;
+
+                    yield_farm.total_shares = yield_farm
+                        .total_shares
+                        .checked_add(deposit.shares)
+                        .ok_or(Error::<T>::Overflow)?;
+
+                    yield_farm.total_valued_shares = yield_farm
+                        .total_valued_shares
+                        .checked_add(valued_shares)
+                        .ok_or(Error::<T>::Overflow)?;
+
+                    global_farm.total_shares_z = global_farm
+                        .total_shares_z
+                        .checked_add(deposit_stake_in_global_farm)
+                        .ok_or(Error::<T>::Overflow)?;
+
+                    let farm_entry = YieldFarmEntry::new(
+                        global_farm.id,
+                        yield_farm.id,
+                        valued_shares,
+                        yield_farm.accumulated_rpvs,
+                        current_period,
+                    );
+
+                    deposit.add_yield_farm_entry(farm_entry)?;
+
+                    //Increment farm's entries count
+                    yield_farm.entry_added()?;
+
+                    Ok(())
+                })
+            },
+        )
     }
 
     /// Claim rewards from liq. mining for given deposit.
@@ -866,7 +885,6 @@ impl<T: Config> Pallet<T> {
     /// - `amm_pool_id`: identifier of the AMM pool.
     /// - `check_double_claim`: fn failed on double claim if this is set to `true`. `fasle` is
     /// usefull for `withdraw_shares()` where we need `unclaimable_rewards` from this fn.
-    #[transactional]
     pub fn claim_rewards(
         who: AccountIdOf<T>,
         deposit_id: DepositId,
@@ -938,7 +956,6 @@ impl<T: Config> Pallet<T> {
                             )?;
                         }
 
-
                         Ok((
                             global_farm.id,
                             yield_farm.id,
@@ -952,7 +969,6 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-
     /// Withdraw LP shares from liq. mining.
     ///
     /// This function transfer user's unclaimable rewards back to global pool's account.
@@ -965,7 +981,6 @@ impl<T: Config> Pallet<T> {
     /// - `amm_pool_id`: identifier of the AMM pool.
     /// - `unclaimable_rewards`: amount of reward will be not claimed anymore. This amount is
     /// transfered from `LiquidityPoolYieldFarm` account to `GlobalPool` account.
-    #[transactional]
     pub fn withdraw_lp_shares(
         who: AccountIdOf<T>,
         deposit_id: DepositId,

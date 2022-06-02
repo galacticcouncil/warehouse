@@ -19,7 +19,7 @@ use super::*;
 use test_ext::*;
 
 #[test]
-fn remove_yield_farm_with_deposits_should_work() {
+fn destory_yield_farm_with_deposits_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
         let yield_farm_account = LiquidityMining::farm_account_id(BSX_TKN1_YIELD_FARM_ID).unwrap();
@@ -31,25 +31,34 @@ fn remove_yield_farm_with_deposits_should_work() {
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
 
-        assert_eq!(
-            LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN1_AMM).unwrap(),
-            (BSX_TKN1_YIELD_FARM_ID)
-        );
+        assert_ok!(LiquidityMining::destroy_yield_farm(
+            GC,
+            GC_FARM,
+            BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM
+        ));
 
         assert_eq!(
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
-                yield_farms_count: global_farm.yield_farms_count.checked_sub(1).unwrap(),
+                yield_farms_count: (
+                    global_farm.yield_farms_count.0.checked_sub(1).unwrap(),
+                    global_farm.yield_farms_count.1
+                ),
                 ..global_farm
             }
         );
 
-        //yield farm should be removed from storage
-        assert_eq!(LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM), None);
-
-        //yield farm meta should stay in storage until all deposits are withdrawn
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID).unwrap(), 3);
+        //yield farm is removed from storage only if there are no more farm entries.
+        assert_eq!(
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
+            YieldFarmData {
+                state: YieldFarmState::Deleted,
+                ..yield_farm
+            }
+        );
 
         assert_eq!(Tokens::free_balance(BSX, &yield_farm_account), 0);
 
@@ -62,7 +71,7 @@ fn remove_yield_farm_with_deposits_should_work() {
 }
 
 #[test]
-fn remove_yield_farm_without_deposits_should_work() {
+fn destory_yield_farm_without_deposits_should_work() {
     predefined_test_ext().execute_with(|| {
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
         let yield_farm_acoount = LiquidityMining::farm_account_id(BSX_TKN1_YIELD_FARM_ID).unwrap();
@@ -75,24 +84,26 @@ fn remove_yield_farm_without_deposits_should_work() {
 
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
 
-        assert_eq!(
-            LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN1_AMM).unwrap(),
-            BSX_TKN1_YIELD_FARM_ID
-        );
+        assert_ok!(LiquidityMining::destroy_yield_farm(
+            GC,
+            GC_FARM,
+            BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM
+        ));
 
         assert_eq!(
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
-                yield_farms_count: global_farm.yield_farms_count.checked_sub(1).unwrap(),
+                yield_farms_count: (
+                    global_farm.yield_farms_count.0.checked_sub(1).unwrap(),
+                    global_farm.yield_farms_count.1.checked_sub(1).unwrap(), //yield farm was flushed
+                ),
                 ..global_farm
             }
         );
 
-        //yield farm should be removed from storage
-        assert_eq!(LiquidityMining::yield_farm(BSX_TKN1_AMM, GC_FARM), None);
-
-        //yield farm metadata should be removed from storage if no deposits are left
-        assert_eq!(LiquidityMining::yield_farm_metadata(BSX_TKN1_YIELD_FARM_ID), None);
+        //yield farm without deposits should be flushed
+        assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).is_none());
 
         assert_eq!(Tokens::free_balance(BSX, &yield_farm_acoount), 0);
 
@@ -105,34 +116,34 @@ fn remove_yield_farm_without_deposits_should_work() {
 }
 
 #[test]
-fn remove_yield_farm_non_canceled_yield_farming_should_not_work() {
+fn destory_yield_farm_non_stopped_yield_farming_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
-            LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_TKN1_AMM),
+            LiquidityMining::destroy_yield_farm(GC, GC_FARM, BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM),
             Error::<Test>::LiquidityMiningIsNotCanceled
         );
     });
 }
 
 #[test]
-fn remove_yield_farm_not_owner_should_not_work() {
+fn destory_yield_farm_not_owner_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         const NOT_OWNER: u128 = ALICE;
 
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         assert_noop!(
-            LiquidityMining::kill_yield_farm(NOT_OWNER, GC_FARM, BSX_TKN1_AMM),
+            LiquidityMining::destroy_yield_farm(NOT_OWNER, GC_FARM, BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM),
             Error::<Test>::Forbidden
         );
     });
 }
 
 #[test]
-fn remove_yield_farm_yield_farm_does_not_exists_should_not_work() {
+fn destory_yield_farm_yield_farm_does_not_exists_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
-            LiquidityMining::kill_yield_farm(GC, GC_FARM, BSX_DOT_AMM),
+            LiquidityMining::destroy_yield_farm(GC, GC_FARM, BSX_DOT_YIELD_FARM_ID, BSX_DOT_AMM),
             Error::<Test>::YieldFarmNotFound
         );
     });

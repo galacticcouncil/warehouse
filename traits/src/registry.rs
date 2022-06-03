@@ -38,7 +38,9 @@ pub trait ShareTokenRegistry<AssetId, AssetName, Balance, Error>: Registry<Asset
     }
 }
 
-#[deprecated(since = "0.6.0", note = "Please use `AccountIdFor` instead")]
+// Deprecated.
+// TODO: the following macro is commented out for a reason for now - due to failing clippy in CI
+// #[deprecated(since = "0.6.0", note = "Please use `AccountIdFor` instead")]
 pub trait AssetPairAccountIdFor<AssetId, AccountId> {
     fn from_assets(asset_a: AssetId, asset_b: AssetId, identifier: &str) -> AccountId;
 }

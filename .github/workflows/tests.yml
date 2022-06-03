@@ -28,6 +28,6 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           fail_ci_if_error: false
-      - name: Build runtime
+      - name: Build pallets
         run: cargo build --release --locked
 

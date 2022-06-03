@@ -22,11 +22,11 @@ use test_ext::*;
 fn stop_yield_farm_should_work() {
     //same period
     predefined_test_ext_with_deposits().execute_with(|| {
-        let yield_farm_account = LiquidityMining::farm_account_id(BSX_TKN1_YIELD_FARM_ID).unwrap();
+        let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
         let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
         let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
-        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
 
         assert!(yield_farm.is_active());
@@ -42,7 +42,7 @@ fn stop_yield_farm_should_work() {
             .unwrap();
 
         assert_eq!(
-            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 state: YieldFarmState::Stopped,
                 multiplier: 0.into(),
@@ -66,11 +66,11 @@ fn stop_yield_farm_should_work() {
 
     //cancel yield farming with farms update
     predefined_test_ext_with_deposits().execute_with(|| {
-        let yield_farm_account = LiquidityMining::farm_account_id(BSX_TKN1_YIELD_FARM_ID).unwrap();
+        let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
         let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
         let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
-        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
 
         assert!(yield_farm.is_active());
@@ -87,7 +87,7 @@ fn stop_yield_farm_should_work() {
             .checked_mul_int(yield_farm.total_valued_shares)
             .unwrap();
         assert_eq!(
-            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 100,
                 accumulated_rpvs: 245,
@@ -138,7 +138,7 @@ fn stop_yield_farm_liquidity_mining_already_canceled() {
         //1-th cancel should pass ok
         assert_eq!(
             LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM).unwrap(),
-            BSX_TKN1_YIELD_FARM_ID
+            GC_BSX_TKN1_YIELD_FARM_ID
         );
 
         assert_noop!(

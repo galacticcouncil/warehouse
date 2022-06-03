@@ -34,8 +34,8 @@ fn deposit_lp_shares_should_work() {
         };
 
         let global_farm_account = LiquidityMining::farm_account_id(global_farm_id).unwrap();
-        let bsx_tnk1_yield_farm_account = LiquidityMining::farm_account_id(BSX_TKN1_YIELD_FARM_ID).unwrap();
-        let bsr_tkn2_yield_farm_account = LiquidityMining::farm_account_id(BSX_TKN2_YIELD_FARM_ID).unwrap();
+        let bsx_tnk1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
+        let bsr_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
         let bsx_tkn1_amm_account =
             AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(bsx_tkn1_assets)).unwrap().0);
         let bsx_tkn2_amm_account =
@@ -49,7 +49,7 @@ fn deposit_lp_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 50, 0).unwrap();
 
         let deposited_amount = 50;
-        let yield_farm_id = BSX_TKN1_YIELD_FARM_ID;
+        let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
         assert_eq!(
             LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN1_AMM, deposited_amount)
                 .unwrap(),
@@ -81,7 +81,7 @@ fn deposit_lp_shares_should_work() {
                 amm_pool_id: BSX_TKN1_AMM,
                 yield_farm_entries: vec![YieldFarmEntry::new(
                     global_farm_id,
-                    BSX_TKN1_YIELD_FARM_ID,
+                    GC_BSX_TKN1_YIELD_FARM_ID,
                     2_500,
                     0,
                     18
@@ -106,7 +106,7 @@ fn deposit_lp_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 52, 0).unwrap();
 
         let deposited_amount = 80;
-        let yield_farm_id = BSX_TKN1_YIELD_FARM_ID;
+        let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
         assert_eq!(
             LiquidityMining::deposit_lp_shares(BOB, global_farm_id, yield_farm_id, BSX_TKN1_AMM, deposited_amount)
                 .unwrap(),
@@ -144,7 +144,7 @@ fn deposit_lp_shares_should_work() {
                 amm_pool_id: BSX_TKN1_AMM,
                 yield_farm_entries: vec![YieldFarmEntry::new(
                     global_farm_id,
-                    BSX_TKN1_YIELD_FARM_ID,
+                    GC_BSX_TKN1_YIELD_FARM_ID,
                     4_160,
                     45,
                     18
@@ -174,7 +174,7 @@ fn deposit_lp_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 8, 0).unwrap();
 
         let deposited_amount = 25;
-        let yield_farm_id = BSX_TKN2_YIELD_FARM_ID;
+        let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
         assert_eq!(
             LiquidityMining::deposit_lp_shares(BOB, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
                 .unwrap(),
@@ -209,7 +209,13 @@ fn deposit_lp_shares_should_work() {
             DepositData {
                 shares: deposited_amount,
                 amm_pool_id: BSX_TKN2_AMM,
-                yield_farm_entries: vec![YieldFarmEntry::new(global_farm_id, BSX_TKN2_YIELD_FARM_ID, 200, 0, 18)],
+                yield_farm_entries: vec![YieldFarmEntry::new(
+                    global_farm_id,
+                    GC_BSX_TKN2_YIELD_FARM_ID,
+                    200,
+                    0,
+                    18
+                )],
             },
         );
 
@@ -240,7 +246,7 @@ fn deposit_lp_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 58, 0).unwrap();
 
         let deposited_amount = 800;
-        let yield_farm_id = BSX_TKN2_YIELD_FARM_ID;
+        let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
         assert_eq!(
             LiquidityMining::deposit_lp_shares(BOB, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
                 .unwrap(),
@@ -279,7 +285,7 @@ fn deposit_lp_shares_should_work() {
                 amm_pool_id: BSX_TKN2_AMM,
                 yield_farm_entries: vec![YieldFarmEntry::new(
                     global_farm_id,
-                    BSX_TKN2_YIELD_FARM_ID,
+                    GC_BSX_TKN2_YIELD_FARM_ID,
                     46_400,
                     100,
                     20
@@ -312,7 +318,7 @@ fn deposit_lp_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 3, 0).unwrap();
 
         let deposited_amount = 87;
-        let yield_farm_id = BSX_TKN2_YIELD_FARM_ID;
+        let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
         assert_eq!(
             LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
                 .unwrap(),
@@ -351,7 +357,7 @@ fn deposit_lp_shares_should_work() {
                 amm_pool_id: BSX_TKN2_AMM,
                 yield_farm_entries: vec![YieldFarmEntry::new(
                     global_farm_id,
-                    BSX_TKN2_YIELD_FARM_ID,
+                    GC_BSX_TKN2_YIELD_FARM_ID,
                     261,
                     120,
                     25
@@ -383,7 +389,7 @@ fn deposit_lp_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 16, 0).unwrap();
 
         let deposited_amount = 48;
-        let yield_farm_id = BSX_TKN2_YIELD_FARM_ID;
+        let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
         assert_eq!(
             LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
                 .unwrap(),
@@ -422,7 +428,7 @@ fn deposit_lp_shares_should_work() {
                 amm_pool_id: BSX_TKN2_AMM,
                 yield_farm_entries: vec![YieldFarmEntry::new(
                     global_farm_id,
-                    BSX_TKN2_YIELD_FARM_ID,
+                    GC_BSX_TKN2_YIELD_FARM_ID,
                     768,
                     120,
                     25
@@ -453,7 +459,7 @@ fn deposit_lp_shares_should_work() {
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 80, 0).unwrap();
 
         let deposited_amount = 486;
-        let yield_farm_id = BSX_TKN1_YIELD_FARM_ID;
+        let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
         assert_eq!(
             LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN1_AMM, deposited_amount)
                 .unwrap(),
@@ -492,7 +498,7 @@ fn deposit_lp_shares_should_work() {
                 amm_pool_id: BSX_TKN1_AMM,
                 yield_farm_entries: vec![YieldFarmEntry::new(
                     global_farm_id,
-                    BSX_TKN1_YIELD_FARM_ID,
+                    GC_BSX_TKN1_YIELD_FARM_ID,
                     38_880,
                     60,
                     25
@@ -539,7 +545,7 @@ fn deposit_lp_shares_should_work() {
 
         let deposited_amount = 1_000_000;
         let deposit_id = 1; //1 - because new test ext
-        let yield_farm_id = ACA_KSM_YIELD_FARM_ID;
+        let yield_farm_id = CHARLIE_ACA_KSM_YIELD_FARM_ID;
         assert_eq!(
             LiquidityMining::deposit_lp_shares(ALICE, CHARLIE_FARM, yield_farm_id, ACA_KSM_AMM, deposited_amount)
                 .unwrap(),
@@ -553,7 +559,7 @@ fn deposit_lp_shares_should_work() {
                 amm_pool_id: ACA_KSM_AMM,
                 yield_farm_entries: vec![YieldFarmEntry::new(
                     CHARLIE_FARM,
-                    ACA_KSM_YIELD_FARM_ID,
+                    CHARLIE_ACA_KSM_YIELD_FARM_ID,
                     deposited_amount * ksm_balance_in_amm,
                     0,
                     25
@@ -564,10 +570,10 @@ fn deposit_lp_shares_should_work() {
 }
 
 #[test]
-fn deposit_shares_bellow_min_deposit_should_not_work() {
+fn deposit_lp_shares_bellow_min_deposit_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         //NOTE: min. deposit is 10
-        let yield_farm_id = BSX_TKN1_YIELD_FARM_ID;
+        let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
 
         assert_noop!(
             LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, yield_farm_id, BSX_TKN1_AMM, 0),
@@ -596,7 +602,7 @@ fn deposit_shares_bellow_min_deposit_should_not_work() {
 }
 
 #[test]
-fn deposit_shares_non_existing_yield_farm_should_not_work() {
+fn deposit_lp_shares_non_existing_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
             LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, BSX_DOT_YIELD_FARM_ID, BSX_DOT_AMM, 10_000),
@@ -606,12 +612,12 @@ fn deposit_shares_non_existing_yield_farm_should_not_work() {
 }
 
 #[test]
-fn deposit_shares_stop_yield_farm_should_not_work() {
+fn deposit_lp_shares_stop_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, 10_000),
+            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, 10_000),
             Error::<Test>::LiquidityMiningIsNotActive
         );
     });

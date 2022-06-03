@@ -22,7 +22,7 @@ use test_ext::*;
 fn destory_yield_farm_with_deposits_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
-        let yield_farm_account = LiquidityMining::farm_account_id(BSX_TKN1_YIELD_FARM_ID).unwrap();
+        let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
 
         let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
         let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
@@ -31,12 +31,12 @@ fn destory_yield_farm_with_deposits_should_work() {
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
-        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap();
+        let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
 
         assert_ok!(LiquidityMining::destroy_yield_farm(
             GC,
             GC_FARM,
-            BSX_TKN1_YIELD_FARM_ID,
+            GC_BSX_TKN1_YIELD_FARM_ID,
             BSX_TKN1_AMM
         ));
 
@@ -53,7 +53,7 @@ fn destory_yield_farm_with_deposits_should_work() {
 
         //yield farm is removed from storage only if there are no more farm entries.
         assert_eq!(
-            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).unwrap(),
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 state: YieldFarmState::Deleted,
                 ..yield_farm
@@ -74,7 +74,7 @@ fn destory_yield_farm_with_deposits_should_work() {
 fn destory_yield_farm_without_deposits_should_work() {
     predefined_test_ext().execute_with(|| {
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
-        let yield_farm_acoount = LiquidityMining::farm_account_id(BSX_TKN1_YIELD_FARM_ID).unwrap();
+        let yield_farm_acoount = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
 
         let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_acoount);
         let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
@@ -87,7 +87,7 @@ fn destory_yield_farm_without_deposits_should_work() {
         assert_ok!(LiquidityMining::destroy_yield_farm(
             GC,
             GC_FARM,
-            BSX_TKN1_YIELD_FARM_ID,
+            GC_BSX_TKN1_YIELD_FARM_ID,
             BSX_TKN1_AMM
         ));
 
@@ -103,7 +103,7 @@ fn destory_yield_farm_without_deposits_should_work() {
         );
 
         //yield farm without deposits should be flushed
-        assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, BSX_TKN1_YIELD_FARM_ID)).is_none());
+        assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).is_none());
 
         assert_eq!(Tokens::free_balance(BSX, &yield_farm_acoount), 0);
 
@@ -119,7 +119,7 @@ fn destory_yield_farm_without_deposits_should_work() {
 fn destory_yield_farm_non_stopped_yield_farming_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
-            LiquidityMining::destroy_yield_farm(GC, GC_FARM, BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM),
+            LiquidityMining::destroy_yield_farm(GC, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM),
             Error::<Test>::LiquidityMiningIsNotCanceled
         );
     });
@@ -133,7 +133,7 @@ fn destory_yield_farm_not_owner_should_not_work() {
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         assert_noop!(
-            LiquidityMining::destroy_yield_farm(NOT_OWNER, GC_FARM, BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM),
+            LiquidityMining::destroy_yield_farm(NOT_OWNER, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM),
             Error::<Test>::Forbidden
         );
     });

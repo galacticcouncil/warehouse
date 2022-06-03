@@ -248,12 +248,8 @@ impl<T: Config> DepositData<T> {
             .yield_farm_entries
             .binary_search_by(|e| e.yield_farm_id.cmp(&yield_farm_id))
         {
-            Ok(idx) => {
-                return self.yield_farm_entries.get_mut(idx);
-            }
-            Err(_) => {
-                return None;
-            }
+            Ok(idx) => self.yield_farm_entries.get_mut(idx),
+            Err(_) => None,
         }
     }
 
@@ -269,7 +265,7 @@ impl<T: Config> DepositData<T> {
 
     /// This fn return `true` if deposit can be flushed from storage.
     pub fn can_be_flushed(&self) -> bool {
-        //NOTE: deposit with no entries can/must be flushed
+        //NOTE: deposit with no entries should/must be flushed
         self.has_no_yield_farm_entries()
     }
 }

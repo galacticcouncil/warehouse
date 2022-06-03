@@ -621,7 +621,7 @@ fn update_global_farm_should_work() {
         let mut ext = new_test_ext();
 
         ext.execute_with(|| {
-            reset_rpz_updated();
+            reset_on_rpz_update();
 
             let farm_account_id = LiquidityMining::farm_account_id(*id).unwrap();
             let _ = Tokens::transfer(
@@ -1400,7 +1400,7 @@ fn update_yield_farm_should_work() {
         let yield_farm_account_id = LiquidityMining::farm_account_id(*yield_farm_id).unwrap();
 
         ext.execute_with(|| {
-            reset_rpvs_updated();
+            reset_on_rpvs_update();
             let _ = Tokens::transfer(
                 Origin::signed(TREASURY),
                 global_farm_account_id,
@@ -1819,7 +1819,7 @@ fn deposit_has_no_yield_farm_entries_shoudl_work() {
 
     deposit.yield_farm_entries.push(YieldFarmEntry {
         global_farm_id: GC_FARM,
-        yield_farm_id: BSX_TKN1_YIELD_FARM_ID,
+        yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
         valued_shares: 1_000_000,
         accumulated_rpvs: 12,
         accumulated_claimed_rewards: 0,

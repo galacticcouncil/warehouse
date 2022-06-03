@@ -576,7 +576,7 @@ impl<T: Config> Pallet<T> {
                     },
                 )?;
 
-                let yield_farm_id = yield_farm_id.clone();
+                let yield_farm_id = *yield_farm_id;
                 //Remove yield farm from active farms storage.
                 *maybe_active_yield_farm_id = None;
 
@@ -761,7 +761,7 @@ impl<T: Config> Pallet<T> {
 
         let mut deposit = DepositData::new(shares_amount, amm_pool_id.clone());
 
-        Self::do_deposit_lp_shares(&mut deposit, global_farm_id, yield_farm_id, amm_pool_id.clone())?;
+        Self::do_deposit_lp_shares(&mut deposit, global_farm_id, yield_farm_id)?;
 
         //save deposit to storage
         let deposit_id = Self::get_next_deposit_id()?;
@@ -777,10 +777,8 @@ impl<T: Config> Pallet<T> {
     pub fn redeposit_lp_shares(
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
-        amm_pool_id: T::AmmPoolId,
         deposit_id: DepositId,
     ) -> Result<(), DispatchError> {
-        //TODO: tests
         <Deposit<T>>::try_mutate(deposit_id, |maybe_deposit| {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T>::DepositNotFound)?;
 
@@ -790,7 +788,7 @@ impl<T: Config> Pallet<T> {
                 Error::<T>::DoubleLock
             );
 
-            Self::do_deposit_lp_shares(deposit, global_farm_id, yield_farm_id, amm_pool_id.clone())?;
+            Self::do_deposit_lp_shares(deposit, global_farm_id, yield_farm_id)?;
 
             Ok(())
         })
@@ -800,9 +798,7 @@ impl<T: Config> Pallet<T> {
         deposit: &mut DepositData<T>,
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
-        amm_pool_id: T::AmmPoolId,
     ) -> Result<(), DispatchError> {
-        //TODO: tests
         //LP shares can be locked only once in the same yield farm
         ensure!(
             !deposit.contains_yield_farm_entry(yield_farm_id),
@@ -810,7 +806,7 @@ impl<T: Config> Pallet<T> {
         );
 
         <YieldFarm<T>>::try_mutate(
-            (amm_pool_id.clone(), global_farm_id, yield_farm_id),
+            (deposit.amm_pool_id.clone(), global_farm_id, yield_farm_id),
             |maybe_yield_farm| {
                 let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
 
@@ -827,8 +823,11 @@ impl<T: Config> Pallet<T> {
 
                     Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
 
-                    let valued_shares =
-                        Self::get_valued_shares(deposit.shares, amm_pool_id.clone(), global_farm.incentivized_asset)?;
+                    let valued_shares = Self::get_valued_shares(
+                        deposit.shares,
+                        deposit.amm_pool_id.clone(),
+                        global_farm.incentivized_asset,
+                    )?;
                     let deposit_stake_in_global_farm =
                         math::calculate_global_pool_shares(valued_shares, yield_farm.multiplier)
                             .map_err(|_e| Error::<T>::Overflow)?;
@@ -890,7 +889,7 @@ impl<T: Config> Pallet<T> {
         deposit_id: DepositId,
         yield_farm_id: YieldFarmId,
         check_double_claim: bool,
-    ) -> Result<(GlobalFarmId, YieldFarmId, T::CurrencyId, Balance, Balance), DispatchError> {
+    ) -> Result<(GlobalFarmId, T::CurrencyId, Balance, Balance), DispatchError> {
         <Deposit<T>>::try_mutate(deposit_id, |maybe_deposit| {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T>::DepositNotFound)?;
 
@@ -958,7 +957,6 @@ impl<T: Config> Pallet<T> {
 
                         Ok((
                             global_farm.id,
-                            yield_farm.id,
                             global_farm.reward_currency,
                             rewards,
                             unclaimable_rewards,
@@ -986,7 +984,7 @@ impl<T: Config> Pallet<T> {
         deposit_id: DepositId,
         yield_farm_id: YieldFarmId,
         unclaimable_rewards: Balance,
-    ) -> Result<(GlobalFarmId, YieldFarmId, Balance), DispatchError> {
+    ) -> Result<(GlobalFarmId, Balance), DispatchError> {
         <Deposit<T>>::try_mutate_exists(deposit_id, |maybe_deposit| {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T>::DepositNotFound)?;
 
@@ -1063,7 +1061,7 @@ impl<T: Config> Pallet<T> {
 
                 *maybe_deposit = None;
             }
-            Ok((farm_entry.global_farm_id, yield_farm_id, withdrawn_amount))
+            Ok((farm_entry.global_farm_id, withdrawn_amount))
         })
     }
 

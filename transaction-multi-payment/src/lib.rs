@@ -609,6 +609,12 @@ impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for RemoveTxAssetOnKilled
     fn happened((who, _currency): &(T::AccountId, AssetIdOf<T>)) {
         if !frame_system::Pallet::<T>::account_exists(&who) {
             AccountCurrencyMap::<T>::remove(&who);
+        } else {
+            if let Some(currency) = AccountCurrencyMap::<T>::get(&who) {
+                if T::Currencies::total_balance(currency, &who).is_zero() {
+                    AccountCurrencyMap::<T>::remove(&who);
+                }
+            }
         }
     }
 }

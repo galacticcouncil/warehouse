@@ -99,6 +99,8 @@ impl orml_tokens::Config for Test {
     type OnDust = ();
     type MaxLocks = ();
     type DustRemovalWhitelist = Nothing;
+    type OnNewTokenAccount = ();
+    type OnKilledTokenAccount = ();
 }
 
 parameter_types! {

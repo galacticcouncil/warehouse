@@ -13,3 +13,15 @@ members = [
 ]
 
 resolver = "2"
+
+[patch."https://github.com/open-web3-stack/open-runtime-module-library"]
+orml-currencies = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
+orml-tokens = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
+orml-traits = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
+orml-vesting = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
+orml-benchmarking = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17", optional = true }
+orml-xtokens = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
+orml-xcm-support = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
+orml-unknown-tokens = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
+orml-xcm = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
+orml-utilities = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }

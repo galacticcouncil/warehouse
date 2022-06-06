@@ -53,6 +53,9 @@ pub const SUPPORTED_CURRENCY: AssetId = 2000;
 pub const SUPPORTED_CURRENCY_WITH_PRICE: AssetId = 3000;
 pub const UNSUPPORTED_CURRENCY: AssetId = 4000;
 pub const SUPPORTED_CURRENCY_NO_BALANCE: AssetId = 5000; // Used for insufficient balance testing
+pub const HIGH_ED_CURRENCY: AssetId = 6000;
+
+pub const HIGH_ED: Balance = 5;
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 const MAX_BLOCK_WEIGHT: Weight = 1024;
@@ -208,8 +211,11 @@ impl SpotPriceProvider<AssetId> for SpotPrice {
 }
 
 parameter_type_with_key! {
-    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-        One::one()
+    pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
+        match currency_id {
+            &HIGH_ED_CURRENCY => HIGH_ED,
+            _ => One::one(),
+        }
     };
 }
 
@@ -223,6 +229,8 @@ impl orml_tokens::Config for Test {
     type OnDust = ();
     type MaxLocks = ();
     type DustRemovalWhitelist = Nothing;
+    type OnNewTokenAccount = AddTxAssetOnAccount<Test>;
+    type OnKilledTokenAccount = RemoveTxAssetOnKilled<Test>;
 }
 
 impl orml_currencies::Config for Test {
@@ -304,6 +312,7 @@ impl ExtBuilder {
                 (SUPPORTED_CURRENCY_NO_BALANCE, Price::from(1)),
                 (SUPPORTED_CURRENCY, Price::from_float(1.5)),
                 (SUPPORTED_CURRENCY_WITH_PRICE, Price::from_float(0.5)),
+                (HIGH_ED_CURRENCY, Price::from(3)),
             ],
             fallback_account: Some(FALLBACK_ACCOUNT),
             account_currencies: self.account_currencies,

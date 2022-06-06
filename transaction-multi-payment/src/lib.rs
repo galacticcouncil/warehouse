@@ -52,7 +52,7 @@ use frame_support::sp_runtime::FixedPointNumber;
 use frame_support::sp_runtime::FixedPointOperand;
 use frame_support::weights::{Pays, Weight};
 use hydradx_traits::pools::SpotPriceProvider;
-use orml_traits::{MultiCurrency, MultiCurrencyExtended};
+use orml_traits::{Happened, MultiCurrency, MultiCurrencyExtended};
 
 use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::SignedExtension;
@@ -574,5 +574,29 @@ impl<T: Config + Send + Sync> CurrencyBalanceCheck<T> {
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::new_without_default))]
     pub fn new() -> Self {
         Self(sp_std::marker::PhantomData)
+    }
+}
+
+/// Type to automatically add a fee currency for an account on account creation.
+pub struct AddTxAssetOnAccount<T>(PhantomData<T>);
+impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for AddTxAssetOnAccount<T> {
+    fn happened((who, currency): &(T::AccountId, AssetIdOf<T>)) {
+        if !AccountCurrencyMap::<T>::contains_key(&who)
+            && (*currency == T::NativeAssetId::get() || AcceptedCurrencies::<T>::contains_key(&currency))
+        {
+            AccountCurrencyMap::<T>::insert(&who, currency);
+        }
+    }
+}
+
+/// Type to automatically remove the fee currency for an account on account deletion.
+///
+/// Note: The fee currency is only removed if the system account is gone.
+pub struct RemoveTxAssetOnKilled<T>(PhantomData<T>);
+impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for RemoveTxAssetOnKilled<T> {
+    fn happened((who, _currency): &(T::AccountId, AssetIdOf<T>)) {
+        if !frame_system::Pallet::<T>::account_exists(&who) {
+            AccountCurrencyMap::<T>::remove(&who);
+        }
     }
 }

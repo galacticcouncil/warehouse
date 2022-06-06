@@ -36,11 +36,11 @@ const CALL: &<Test as frame_system::Config>::Call = &Call::Balances(BalancesCall
 fn set_unsupported_currency() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PaymentPallet::set_currency(Origin::signed(ALICE), UNSUPPORTED_CURRENCY),
+            PaymentPallet::set_currency(Origin::signed(BOB), UNSUPPORTED_CURRENCY),
             Error::<Test>::UnsupportedCurrency
         );
 
-        assert_eq!(PaymentPallet::get_currency(ALICE), None);
+        assert_eq!(PaymentPallet::get_currency(BOB), None);
     });
 }
 
@@ -80,11 +80,11 @@ fn set_supported_currency_with_price() {
 fn set_supported_currency_with_no_balance() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PaymentPallet::set_currency(Origin::signed(ALICE), SUPPORTED_CURRENCY_NO_BALANCE),
+            PaymentPallet::set_currency(Origin::signed(BOB), SUPPORTED_CURRENCY_NO_BALANCE),
             Error::<Test>::ZeroBalance
         );
 
-        assert_eq!(PaymentPallet::get_currency(ALICE), None);
+        assert_eq!(PaymentPallet::get_currency(BOB), None);
     });
 }
 
@@ -509,4 +509,57 @@ fn withdraw_should_not_work() {
             Error::<Test>::FallbackPriceNotFound
         );
     });
+}
+
+#[test]
+fn set_currency_on_account_creation() {
+    const CHARLIE: AccountId = 5;
+    const DAVE: AccountId = 6;
+
+    use frame_support::traits::fungibles::Balanced;
+
+    ExtBuilder::default()
+        .base_weight(5)
+        .account_native_balance(CHARLIE, 10)
+        .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10)
+        .build()
+        .execute_with(|| {
+            assert_ok!(Tokens::transfer(Some(CHARLIE).into(), BOB, SUPPORTED_CURRENCY, 5));
+
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 5);
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &BOB), 5);
+            // Bob's fee currency was set on transfer (due to account creation)
+            assert_eq!(PaymentPallet::get_currency(BOB), Some(SUPPORTED_CURRENCY));
+
+            // currency should be removed if account is killed
+            assert_ok!(Tokens::transfer_all(
+                Some(BOB).into(),
+                CHARLIE,
+                SUPPORTED_CURRENCY,
+                false
+            ));
+            assert_eq!(PaymentPallet::get_currency(BOB), None);
+
+            assert_ok!(<Tokens as Balanced<AccountId>>::deposit(HIGH_ED_CURRENCY, &DAVE, HIGH_ED * 2).map(|_| ()));
+            assert_eq!(Currencies::free_balance(HIGH_ED_CURRENCY, &DAVE), HIGH_ED * 2);
+            assert_eq!(PaymentPallet::get_currency(DAVE), Some(HIGH_ED_CURRENCY));
+            assert_ok!(Tokens::transfer(
+                Some(DAVE).into(),
+                BOB,
+                HIGH_ED_CURRENCY,
+                HIGH_ED + 1,
+            ));
+            // currency stays around until the account is reaped
+            assert_eq!(PaymentPallet::get_currency(DAVE), Some(HIGH_ED_CURRENCY));
+            assert_eq!(PaymentPallet::get_currency(BOB), Some(HIGH_ED_CURRENCY));
+
+            // ... and account is reaped when all funds are transferred
+            assert_ok!(Tokens::transfer_all(
+                Some(DAVE).into(),
+                BOB,
+                HIGH_ED_CURRENCY,
+                false
+            ));
+            assert_eq!(PaymentPallet::get_currency(DAVE), None);
+        });
 }

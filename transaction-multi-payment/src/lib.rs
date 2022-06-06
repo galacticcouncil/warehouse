@@ -593,10 +593,10 @@ impl<T: Config + Send + Sync> CurrencyBalanceCheck<T> {
 pub struct AddTxAssetOnAccount<T>(PhantomData<T>);
 impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for AddTxAssetOnAccount<T> {
     fn happened((who, currency): &(T::AccountId, AssetIdOf<T>)) {
-        if !AccountCurrencyMap::<T>::contains_key(&who)
+        if !AccountCurrencyMap::<T>::contains_key(who)
             && (*currency == T::NativeAssetId::get() || AcceptedCurrencies::<T>::contains_key(&currency))
         {
-            AccountCurrencyMap::<T>::insert(&who, currency);
+            AccountCurrencyMap::<T>::insert(who, currency);
         }
     }
 }
@@ -608,12 +608,12 @@ impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for AddTxAssetOnAccount<T
 pub struct RemoveTxAssetOnKilled<T>(PhantomData<T>);
 impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for RemoveTxAssetOnKilled<T> {
     fn happened((who, _currency): &(T::AccountId, AssetIdOf<T>)) {
-        if !frame_system::Pallet::<T>::account_exists(&who) {
-            AccountCurrencyMap::<T>::remove(&who);
+        if !frame_system::Pallet::<T>::account_exists(who) {
+            AccountCurrencyMap::<T>::remove(who);
         } else {
-            if let Some(currency) = AccountCurrencyMap::<T>::get(&who) {
-                if T::Currencies::total_balance(currency, &who).is_zero() {
-                    AccountCurrencyMap::<T>::remove(&who);
+            if let Some(currency) = AccountCurrencyMap::<T>::get(who) {
+                if T::Currencies::total_balance(currency, who).is_zero() {
+                    AccountCurrencyMap::<T>::remove(who);
                 }
             }
         }

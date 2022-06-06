@@ -12,13 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust
-        uses: actions-rs/toolchain@v1.0.7
+        uses: codota/toolchain@00a8bf2bdcfe93aefd70422d3dec07337959d3a4
         with:
           profile: minimal
-          toolchain: nightly-2021-11-07
-          target: wasm32-unknown-unknown
-          override: true
-          default: true
       - name: Install clippy
         run: rustup component add clippy
       - name: Run clippy
@@ -32,6 +28,6 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           fail_ci_if_error: false
-      - name: Build runtime
+      - name: Build pallets
         run: cargo build --release --locked
 

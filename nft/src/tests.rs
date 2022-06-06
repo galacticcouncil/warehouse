@@ -125,12 +125,7 @@ fn mint_works() {
 
         // invalid class ID
         assert_noop!(
-            NFTPallet::mint(
-                Origin::signed(ALICE),
-                NON_EXISTING_CLASS_ID,
-                INSTANCE_ID_0,
-                metadata
-            ),
+            NFTPallet::mint(Origin::signed(ALICE), NON_EXISTING_CLASS_ID, INSTANCE_ID_0, metadata),
             Error::<Test>::ClassUnknown
         );
     });

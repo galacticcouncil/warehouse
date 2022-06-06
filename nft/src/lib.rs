@@ -410,7 +410,7 @@ impl<T: Config> Pallet<T> {
 
         // witness struct is empty because we don't allow destroying a class with existing instances
         ensure!(witness.instances == 0u32, Error::<T>::TokenClassNotEmpty);
-        
+
         pallet_uniques::Pallet::<T>::do_destroy_class(class_id.into(), witness, Some(owner.clone()))?;
         Classes::<T>::remove(class_id);
 

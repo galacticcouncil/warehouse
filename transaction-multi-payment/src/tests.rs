@@ -536,7 +536,6 @@ fn set_and_remove_currency_on_lifecycle_callbacks() {
                 false
             ));
             assert_eq!(PaymentPallet::get_currency(BOB), None);
-
         });
 }
 
@@ -560,22 +559,12 @@ fn currency_stays_around_until_reaping() {
 
             // currency is not removed when account goes below existential deposit but stays around
             // until the account is reaped
-            assert_ok!(Tokens::transfer(
-                Some(DAVE).into(),
-                BOB,
-                HIGH_ED_CURRENCY,
-                HIGH_ED + 1,
-            ));
+            assert_ok!(Tokens::transfer(Some(DAVE).into(), BOB, HIGH_ED_CURRENCY, HIGH_ED + 1,));
             assert_eq!(PaymentPallet::get_currency(DAVE), Some(HIGH_ED_CURRENCY));
             assert_eq!(PaymentPallet::get_currency(BOB), Some(HIGH_ED_CURRENCY));
 
             // ... and account is reaped when all funds are transferred
-            assert_ok!(Tokens::transfer_all(
-                Some(DAVE).into(),
-                BOB,
-                HIGH_ED_CURRENCY,
-                false
-            ));
+            assert_ok!(Tokens::transfer_all(Some(DAVE).into(), BOB, HIGH_ED_CURRENCY, false));
             assert_eq!(PaymentPallet::get_currency(DAVE), None);
         });
 }
@@ -633,6 +622,11 @@ fn currency_is_not_changed_on_unrelated_account_activity() {
             assert_ok!(Tokens::transfer(Some(CHARLIE).into(), DAVE, SUPPORTED_CURRENCY, 2));
             assert_eq!(PaymentPallet::get_currency(DAVE), Some(SUPPORTED_CURRENCY_WITH_PRICE));
             // tx fee currency is not removed when an unrelated account is removed
-            assert_ok!(Tokens::transfer_all(Some(DAVE).into(), CHARLIE, SUPPORTED_CURRENCY, false));
+            assert_ok!(Tokens::transfer_all(
+                Some(DAVE).into(),
+                CHARLIE,
+                SUPPORTED_CURRENCY,
+                false
+            ));
         });
 }

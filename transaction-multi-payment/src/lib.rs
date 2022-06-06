@@ -603,7 +603,8 @@ impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for AddTxAssetOnAccount<T
 
 /// Type to automatically remove the fee currency for an account on account deletion.
 ///
-/// Note: The fee currency is only removed if the system account is gone.
+/// Note: The fee currency is only removed if the system account is gone or the account
+/// corresponding to the fee currency is empty.
 pub struct RemoveTxAssetOnKilled<T>(PhantomData<T>);
 impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for RemoveTxAssetOnKilled<T> {
     fn happened((who, _currency): &(T::AccountId, AssetIdOf<T>)) {

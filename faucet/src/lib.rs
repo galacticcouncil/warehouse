@@ -65,8 +65,14 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        RampageMint(T::AccountId, AssetId, Balance),
-        Mint(T::AccountId),
+        RampageMint {
+            account_id: T::AccountId,
+            asset_id: AssetId,
+            amount: Balance,
+        },
+        Mint {
+            account_id: T::AccountId,
+        },
     }
 
     #[pallet::error]
@@ -128,7 +134,11 @@ pub mod pallet {
             ensure!(Self::rampage(), Error::<T>::RampageMintNotAllowed);
 
             T::Currency::deposit(asset, &who, amount)?;
-            Self::deposit_event(Event::RampageMint(who, asset, amount));
+            Self::deposit_event(Event::RampageMint {
+                account_id: who,
+                asset_id: asset,
+                amount,
+            });
 
             Ok(().into())
         }
@@ -145,7 +155,7 @@ pub mod pallet {
 
             Minted::<T>::set(Self::minted() + 1);
 
-            Self::deposit_event(Event::Mint(who));
+            Self::deposit_event(Event::Mint { account_id: who });
 
             Ok(().into())
         }

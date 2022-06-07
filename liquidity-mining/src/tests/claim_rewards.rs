@@ -66,13 +66,13 @@ fn claim_rewards_should_work() {
             },
         );
 
-        //check if claimed rewards was transfered
+        //Check if claimed rewards are transferred.
         assert_eq!(
             Tokens::free_balance(BSX, &ALICE),
             alice_bsx_balance + expected_claimed_rewards
         );
 
-        //check balance on yield farm account
+        //Check balance on yield farm account.
         assert_eq!(
             Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account),
             bsx_tkn1_yield_farm_reward_balance - expected_claimed_rewards
@@ -144,18 +144,19 @@ fn claim_rewards_should_work() {
             },
         );
 
-        //check if claimed rewards was transfered
+        //Check if claimed rewards are transferred.
         assert_eq!(
             Tokens::free_balance(BSX, &ALICE),
             alice_bsx_balance + expected_claimed_rewards
         );
 
+        let yield_farm_claim_from_global_farm = 952_580;
         assert_eq!(
             Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account),
-            bsx_tkn2_yield_farm_reward_balance + 952_580 - expected_claimed_rewards //952_580 liq. claim from global farm
+            bsx_tkn2_yield_farm_reward_balance + yield_farm_claim_from_global_farm - expected_claimed_rewards
         );
 
-        //run for log time(longer than planned_yielding_periods) without interaction or claim.
+        //Run for log time(longer than planned_yielding_periods) without interactions with farms.
         //planned_yielding_periods = 500; 100 blocks per period
         //claim A1.2
         set_block_number(125_879);
@@ -237,21 +238,22 @@ fn claim_rewards_should_work() {
             },
         );
 
-        //check if claimed rewards was transfered
+        //Check if claimed rewards are transferred.
         assert_eq!(
             Tokens::free_balance(BSX, &ALICE),
             alice_bsx_balance + expected_claimed_rewards
         );
 
+        let yield_farm_claim_from_global_farm = 140_263_200;
         assert_eq!(
             Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account),
-            bst_tkn1_yield_farm_reward_balance + 140_263_200 - expected_claimed_rewards //140_263_200 liq. claim from global farm
+            bst_tkn1_yield_farm_reward_balance + yield_farm_claim_from_global_farm - expected_claimed_rewards
         );
     });
 
-    //charlie's farm inncetivize KSM and reward currency is ACA
-    //This test check if correct currency is tranfered if rewards and incetvized
-    //assts are different, otherwise farm behaviour is the same as in tests above.
+    //Charlie's farm incentivize KSM and reward currency is ACA.
+    //This test check if correct currency is transferred if rewards and incentivized
+    //assets are different, otherwise farm behavior is the same as in tests above.
     predefined_test_ext().execute_with(|| {
         const FAIL_ON_DOUBLE_CLAIM: bool = true;
         let aca_ksm_assets = AssetPair {
@@ -262,7 +264,7 @@ fn claim_rewards_should_work() {
         let aca_ksm_amm_account = AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(aca_ksm_assets)).unwrap().0);
 
         let ksm_balance_in_amm = 50;
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is done because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), aca_ksm_amm_account, KSM, ksm_balance_in_amm, 0).unwrap();
         Tokens::set_balance(Origin::root(), aca_ksm_amm_account, ACA, 20, 0).unwrap();
 
@@ -306,7 +308,7 @@ fn claim_rewards_should_work() {
             (CHARLIE_FARM, ACA, expected_claimed_rewards, unclaimable_rewards)
         );
 
-        //alice had 0 ACA before claim
+        //Alice had 0 ACA before claim.
         assert_eq!(Tokens::free_balance(ACA, &ALICE), expected_claimed_rewards);
     });
 }
@@ -315,7 +317,7 @@ fn claim_rewards_should_work() {
 fn claim_rewards_deposit_with_multiple_entries_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         const FAIL_ON_DOUBLE_CLAIM: bool = true;
-        //predefeinde_deposit[0] - GC_FARM, BSX_TKN1_AMM
+        //predefined_deposit[0] - GC_FARM, BSX_TKN1_AMM
         set_block_number(50_000);
         assert_ok!(LiquidityMining::redeposit_lp_shares(
             EVE_FARM,
@@ -324,7 +326,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
         ));
 
         set_block_number(800_000);
-        //dave's farm incentivize TKN1 - some balance must be set so `valued_shares` will not be `0`.
+        //Dave's farm incentivize TKN1 - some balance must be set so `valued_shares` will not be `0`.
         let bsx_tkn1_amm_account = AMM_POOLS.with(|v| {
             v.borrow()
                 .get(&asset_pair_to_map_key(AssetPair {
@@ -444,7 +446,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
             ]
         );
 
-        //same period different block
+        //Same period different block.
         set_block_number(1_000_050);
         assert_noop!(
             LiquidityMining::claim_rewards(
@@ -522,7 +524,7 @@ fn claim_rewards_double_claim_in_the_same_period_should_not_work() {
         let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
         let bsx_tkn1_yield_farm_reward_balance = Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account);
 
-        //1-th claim should work ok
+        //1-th claim should works.
         assert_ok!(LiquidityMining::claim_rewards(
             ALICE,
             PREDEFINED_DEPOSIT_IDS[0],
@@ -553,7 +555,7 @@ fn claim_rewards_double_claim_in_the_same_period_should_not_work() {
             bsx_tkn1_yield_farm_reward_balance - 79_906
         );
 
-        //second claim should fail
+        //Second claim should fail.
         assert_noop!(
             LiquidityMining::claim_rewards(
                 ALICE,
@@ -575,7 +577,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
         let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
         let bsx_tkn1_yield_farm_reward_balance = Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account);
 
-        //cancel yield farming before claim test
+        //Stop yield farming before claiming.
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         let expected_claimed_rewards = 79_906;
@@ -610,13 +612,13 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
             },
         );
 
-        //check if claimed rewards was transfered
+        //Check if claimed rewards are transferred.
         assert_eq!(
             Tokens::free_balance(BSX, &ALICE),
             alice_bsx_balance + expected_claimed_rewards
         );
 
-        //check balance on yield farm account
+        //Check balance on yield farm's account.
         assert_eq!(
             Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account),
             bsx_tkn1_yield_farm_reward_balance - expected_claimed_rewards
@@ -628,10 +630,10 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
 fn claim_rewards_from_removed_yield_farm_should_not_work() {
     const FAIL_ON_DOUBLE_CLAIM: bool = true;
     predefined_test_ext_with_deposits().execute_with(|| {
-        //cancel yield farming before removing
+        //Stop yield farming before removing.
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM,));
 
-        //remove yield farm before claim test
+        //Delete yield farm before claim test.
         assert_ok!(LiquidityMining::destroy_yield_farm(
             GC,
             GC_FARM,
@@ -667,7 +669,7 @@ fn claim_rewards_double_claim_should_work() {
         assert_eq!(claimable_rewards, 79_906);
         assert_eq!(unclaimable_rewards, 70_094);
 
-        //second claim in the same period should renurn 0 for `claimable_rewards` and real value for
+        //Second claim in the same period should return 0 for `claimable_rewards` and real value for
         //`unclaimable_rewards`
         let (_, _, claimable_rewards, unclaimable_rewards) = LiquidityMining::claim_rewards(
             ALICE,

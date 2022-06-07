@@ -27,7 +27,7 @@ fn destory_yield_farm_with_deposits_should_work() {
         let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
         let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
 
-        // cancel yield farm before removing
+        // Cancel yield farm before removing.
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
@@ -51,7 +51,7 @@ fn destory_yield_farm_with_deposits_should_work() {
             }
         );
 
-        //yield farm is removed from storage only if there are no more farm entries.
+        //Yield farm is removed from storage only if there are no more farm entries.
         assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
@@ -62,7 +62,7 @@ fn destory_yield_farm_with_deposits_should_work() {
 
         assert_eq!(Tokens::free_balance(BSX, &yield_farm_account), 0);
 
-        //unpaid rewards from yield farm account should be transfered back to yield farm account
+        //Unpaid rewards from yield farm account should be transferred back to yield farm account.
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
             global_farm_bsx_balance.checked_add(yield_farm_bsx_balance).unwrap()
@@ -79,7 +79,7 @@ fn destory_yield_farm_without_deposits_should_work() {
         let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_acoount);
         let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
 
-        //cancel yield farm before removing
+        //Stop yield farm before removing
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
@@ -96,18 +96,18 @@ fn destory_yield_farm_without_deposits_should_work() {
             GlobalFarmData {
                 yield_farms_count: (
                     global_farm.yield_farms_count.0.checked_sub(1).unwrap(),
-                    global_farm.yield_farms_count.1.checked_sub(1).unwrap(), //yield farm was flushed
+                    global_farm.yield_farms_count.1.checked_sub(1).unwrap(), //yield farm was flushed so this should change
                 ),
                 ..global_farm
             }
         );
 
-        //yield farm without deposits should be flushed
+        //Yield farm without deposits should be flushed.
         assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).is_none());
 
         assert_eq!(Tokens::free_balance(BSX, &yield_farm_acoount), 0);
 
-        //unpaid rewards from yield farm account should be transfered back to global farm account
+        //Unpaid rewards from yield farm account should be transferred back to global farm's account.
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
             global_farm_bsx_balance.checked_add(yield_farm_bsx_balance).unwrap()

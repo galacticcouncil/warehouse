@@ -29,7 +29,7 @@ fn withdraw_shares_should_work() {
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
 
         // This balance is used to transfer unclaimable_rewards from yield farm to global farm.
-        // Claiming is not part of withdraw_shares() so balance need to be set.
+        // Claiming is not part of withdraw_shares() so some balance need to be set.
         Tokens::set_balance(Origin::root(), bsx_tn1_yield_farm_account, BSX, 100_000_000_000, 0).unwrap();
         Tokens::set_balance(Origin::root(), bsx_tkn2_yield_farm_account, BSX, 100_000_000_000, 0).unwrap();
 
@@ -84,7 +84,7 @@ fn withdraw_shares_should_work() {
             bsx_tkn1_alice_amm_shares_balance + withdrawn_amount
         );
 
-        //stash shares account balances checks
+        //Stash shares account balances checks.
         assert_eq!(
             Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH),
             bsx_tkn1_stash_shares_balance - withdrawn_amount
@@ -94,7 +94,7 @@ fn withdraw_shares_should_work() {
             bsx_tkn2_stash_shares_balance
         );
 
-        //yield farm balance checks
+        //Yield farm balance checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &bsx_tn1_yield_farm_account),
             bsx_tkn2_yield_farm_bsx_balance - unclaimable_rewards
@@ -104,7 +104,7 @@ fn withdraw_shares_should_work() {
             bsx_tkn2_yield_farm_bsx_balance
         );
 
-        //global farm balance checks
+        //Global farm balance checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &global_farm_account),
             global_farm_bsx_balance + unclaimable_rewards
@@ -147,7 +147,7 @@ fn withdraw_shares_should_work() {
             }
         );
 
-        // this farm should not change
+        // This farm should not change.
         assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
@@ -174,13 +174,13 @@ fn withdraw_shares_should_work() {
             },
         );
 
-        //user balances checks
+        //User balances checks.
         assert_eq!(
             Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE),
             bsx_tkn2_alice_amm_shares_balance + withdrawn_amount
         );
 
-        //stash shares account balances checks
+        //Stash shares account balances checks.
         assert_eq!(
             Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH),
             bsx_tkn1_pallet_amm_shares_balance
@@ -190,7 +190,7 @@ fn withdraw_shares_should_work() {
             bsx_tkn2_pallet_amm_shares_balance - withdrawn_amount
         );
 
-        //yield farm balance checks
+        //Yield farm balance checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &bsx_tn1_yield_farm_account),
             bsx_tkn1_yield_farm_bsx_balance
@@ -254,7 +254,7 @@ fn withdraw_shares_should_work() {
             },
         );
 
-        //user balances checks
+        //User balances checks.
         assert_eq!(
             Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE),
             bsx_tkn1_alice_amm_shares_balance + withdrawn_amount
@@ -269,7 +269,7 @@ fn withdraw_shares_should_work() {
             bsx_tkn2_pallet_amm_shares_balance
         );
 
-        //yield farm balance checks
+        //Yield farm balance checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &bsx_tn1_yield_farm_account),
             bsx_tkn1_yield_farm_bsx_balance - unclaimable_rewards
@@ -280,7 +280,7 @@ fn withdraw_shares_should_work() {
             bsx_tkn2_yield_farm_bsx_balance
         );
 
-        //global farm balance checks
+        //Global farm balance checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &global_farm_account),
             global_farm_bsx_balance + unclaimable_rewards
@@ -333,7 +333,7 @@ fn withdraw_shares_should_work() {
             },
         );
 
-        //user balances checks
+        //User balances checks.
         assert_eq!(
             Tokens::free_balance(BSX_TKN1_SHARE_ID, &BOB),
             bsx_tkn1_bob_amm_shares_balance + withdrawn_amount
@@ -345,7 +345,7 @@ fn withdraw_shares_should_work() {
             bsx_tkn2_pallet_amm_shares_balance
         );
 
-        //yield farm balance checks
+        //Yield farm balance checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &bsx_tn1_yield_farm_account),
             bsx_tkn1_yield_farm_bsx_balance - unclaimable_rewards
@@ -416,7 +416,7 @@ fn withdraw_shares_should_work() {
             },
         );
 
-        //user balances checks
+        //User balances checks.
         assert_eq!(
             Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB),
             bsx_tkn2_bob_amm_shares_balance + withdrawn_shares
@@ -428,7 +428,7 @@ fn withdraw_shares_should_work() {
             bsx_tkn2_pallet_amm_shares_balance - withdrawn_shares
         );
 
-        //yield farm balance checks
+        //Yield farm balance checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &bsx_tn1_yield_farm_account),
             bsx_tkn1_yield_farm_bsx_balance
@@ -439,7 +439,7 @@ fn withdraw_shares_should_work() {
             bsx_tkn2_yield_farm_bsx_balance - unclaimable_rewards
         );
 
-        //global farm balance checks
+        //Global farm balance checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &global_farm_account),
             global_farm_bsx_balance + unclaimable_rewards
@@ -492,7 +492,7 @@ fn withdraw_shares_should_work() {
             },
         );
 
-        //user balances checks
+        //User balances checks.
         assert_eq!(
             Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE),
             bsx_tkn2_alice_amm_shares_balance + withdrawn_shares
@@ -504,7 +504,7 @@ fn withdraw_shares_should_work() {
             bsx_tkn2_pallet_amm_shares_balance - withdrawn_shares
         );
 
-        //yield farm balances checks
+        //Yield farm balances checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &bsx_tn1_yield_farm_account),
             bsx_tkn1_yield_farm_bsx_balance
@@ -514,7 +514,7 @@ fn withdraw_shares_should_work() {
             bsx_tkn2_yield_farm_bsx_balance - unclaimable_rewards
         );
 
-        //global farm balance checks
+        //Global farm balance checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &global_farm_account),
             global_farm_bsx_balance + unclaimable_rewards
@@ -565,7 +565,7 @@ fn withdraw_shares_should_work() {
             },
         );
 
-        //user balances checks
+        //User balances checks.
         assert_eq!(
             Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB),
             bsx_tkn2_bob_amm_shares_balance + withdrawn_shares
@@ -574,13 +574,13 @@ fn withdraw_shares_should_work() {
         assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH), 0);
         assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH), 0);
 
-        //yield farm balances checks
+        //Yield farm balances checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &bsx_tn1_yield_farm_account),
             bsx_tkn1_yield_farm_lp_shares_balance
         );
 
-        //global farm balance checks
+        //Global farm balance checks.
         assert_eq!(
             Tokens::free_balance(REWARD_CURRENCY, &global_farm_account),
             global_farm_bsx_balance + 5_911_539 //5_911_539 unclaimable rewards after withdrawn
@@ -589,9 +589,9 @@ fn withdraw_shares_should_work() {
         assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]), None);
     });
 
-    //charlie's farm inncetivize KSM and reward currency is ACA
-    //This test check if correct currency is tranfered if rewards and incetvized
-    //assts are different, otherwise farm behaviour is the same as in test above.
+    //Charlie's farm incentivize KSM and reward currency is ACA
+    //This test check if correct currency is transferred if rewards and incentvized
+    //assets are different, otherwise farm behavior is the same as in test above.
     predefined_test_ext().execute_with(|| {
         let aca_ksm_assets = AssetPair {
             asset_in: ACA,
@@ -601,7 +601,7 @@ fn withdraw_shares_should_work() {
         let aca_ksm_amm_account = AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(aca_ksm_assets)).unwrap().0);
 
         let ksm_balance_in_amm = 50;
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is done because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), aca_ksm_amm_account, KSM, ksm_balance_in_amm, 0).unwrap();
         Tokens::set_balance(Origin::root(), aca_ksm_amm_account, ACA, 20, 0).unwrap();
 
@@ -656,7 +656,7 @@ fn withdraw_with_multiple_entries_and_flush_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let alice_bsx_tkn1_lp_shares_balance = Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE);
 
-        //redeposit to multiple yield farms
+        //Redeposit to multiple yield farms.
         assert_ok!(LiquidityMining::redeposit_lp_shares(
             DAVE_FARM,
             DAVE_BSX_TKN1_YIELD_FARM_ID,
@@ -670,9 +670,9 @@ fn withdraw_with_multiple_entries_and_flush_should_work() {
         ));
         //NOTE: predefined_deposit_ids[0] is deposited in 3 yield farms now.
 
-        //stop yield farm
+        //Stop yield farm.
         assert_ok!(LiquidityMining::stop_yield_farm(EVE, EVE_FARM, BSX_TKN1_AMM));
-        //stop and destroy all yield farms so it can be flushed
+        //Stop and destroy all yield farms so it can be flushed.
         assert_ok!(LiquidityMining::stop_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM));
         assert_ok!(LiquidityMining::destroy_yield_farm(
             DAVE,
@@ -704,13 +704,13 @@ fn withdraw_with_multiple_entries_and_flush_should_work() {
             2
         );
 
-        //LP tokens should not be unlocked
+        //LP tokens should not be unlocked.
         assert_eq!(
             Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE),
             alice_bsx_tkn1_lp_shares_balance
         );
 
-        //this withdraw should flush yield and global farms
+        //This withdraw should flush yield and global farms.
         assert_eq!(
             LiquidityMining::withdraw_lp_shares(
                 ALICE,
@@ -730,7 +730,7 @@ fn withdraw_with_multiple_entries_and_flush_should_work() {
             1
         );
 
-        //LP tokens should not be unlocked
+        //LP tokens should not be unlocked.
         assert_eq!(
             Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE),
             alice_bsx_tkn1_lp_shares_balance
@@ -739,7 +739,7 @@ fn withdraw_with_multiple_entries_and_flush_should_work() {
         assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, DAVE_FARM, DAVE_BSX_TKN1_YIELD_FARM_ID)).is_none());
         assert!(LiquidityMining::global_farm(DAVE_FARM).is_none());
 
-        //this withdraw should flush yield and global farms
+        //This withdraw should flush yield and global farms.
         assert_eq!(
             LiquidityMining::withdraw_lp_shares(
                 ALICE,
@@ -751,10 +751,10 @@ fn withdraw_with_multiple_entries_and_flush_should_work() {
             (EVE_FARM, shares_amount)
         );
 
-        //last withdraw from deposit should flush deposit
+        //Last withdraw from deposit should flush deposit.
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).is_none());
 
-        //LP tokens should be unlocked, last withdrawn unlocking lp shares
+        //LP tokens should be unlocked, last withdrawn unlocking LP shares.
         assert_eq!(
             Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE),
             alice_bsx_tkn1_lp_shares_balance + shares_amount
@@ -764,15 +764,15 @@ fn withdraw_with_multiple_entries_and_flush_should_work() {
 
 #[test]
 fn withdraw_shares_from_destroyed_farm_should_work() {
-    //this is the case when yield farm was removed and global farm was destroyed. Only deposits stayed in
-    //the storage. In this case only amm shares should be withdrawn
+    //This is the case when yield farm is removed and global farm is destroyed.
+    //In this case only amm shares should be withdrawn.
 
     predefined_test_ext_with_deposits().execute_with(|| {
-        //cancel all yield farms in the farm
+        //Stop all yield farms in the global farm.
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
 
-        //remove all yield farms from farm
+        //Remove all yield farms from global farm.
         assert_ok!(LiquidityMining::destroy_yield_farm(
             GC,
             GC_FARM,
@@ -786,10 +786,9 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
             BSX_TKN2_AMM
         ));
 
-        //destroy farm
+        //Destroy farm.
         assert_ok!(LiquidityMining::destroy_global_farm(GC, GC_FARM));
 
-        //check if farms was removed from storage
         assert!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
                 .unwrap()
@@ -894,7 +893,7 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
                 bsx_tkn2_shares_withdrawn = withdrawn_shares;
             }
 
-            //check farm account shares balance
+            //Check farm's account shares balance.
             assert_eq!(
                 Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH),
                 bsx_tkn1_pallet_amm_shares_balance - bsx_tkn1_shares_withdrawn
@@ -904,7 +903,7 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
                 bsx_tkn2_pallet_amm_shares_balance - bsx_tkn2_shares_withdrawn
             );
 
-            //check user balances
+            //Check user balances.
             assert_eq!(
                 Tokens::free_balance(BSX_TKN1_SHARE_ID, &caller),
                 bsx_tkn1_caller_amm_shares_balance + bsx_tkn1_shares_withdrawn
@@ -914,7 +913,7 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
                 bsx_tkn2_caller_shares_balance + bsx_tkn2_shares_withdrawn
             );
 
-            //check if deposit was removed
+            //check if deposit was removed.
             assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[deposit_idx]), None);
         }
     });
@@ -925,7 +924,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         set_block_number(10_000);
 
-        // cancel yield farm before withdraw test
+        // Stop yield farm before withdraw test.
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
@@ -1109,10 +1108,10 @@ fn withdraw_shares_from_removed_pool_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         set_block_number(10_000);
 
-        //cancel yield farm before removing
+        //Stop yield farm before removing.
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
-        //remove yield farm before test
+        //Destroy yield farm before test
         assert_ok!(LiquidityMining::destroy_yield_farm(
             GC,
             GC_FARM,
@@ -1166,7 +1165,7 @@ fn withdraw_shares_from_removed_pool_should_work() {
             bsx_tkn1_alice_amm_shares_balance + shares_amount
         );
 
-        //removed yield farm don't pay rewards, only transfer amm shares
+        //Removed yield farm don't pay rewards, only transfers amm shares.
         assert_eq!(Tokens::free_balance(BSX, &ALICE), alice_bsx_balance);
         assert_eq!(Tokens::free_balance(BSX, &global_farm_account), global_farm_bsx_balance);
 
@@ -1220,7 +1219,7 @@ fn withdraw_shares_from_removed_pool_should_work() {
             (GC_FARM, shares_amount)
         );
 
-        //last withdraw whould flush yield farm if it's deleted
+        //Last withdraw should flush yield farm if it's deleted
         assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).is_none());
 
         assert_eq!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[1]), None);
@@ -1239,7 +1238,7 @@ fn withdraw_shares_from_removed_pool_should_work() {
             bsx_tkn1_bob_amm_shares_balance + shares_amount
         );
 
-        //removed yield farm don't pay rewards, only return LP shares
+        //Removed yield farm don't pay rewards, only return LP shares.
         assert_eq!(Tokens::free_balance(BSX, &BOB), bob_bsx_balance);
         assert_eq!(Tokens::free_balance(BSX, &global_farm_account), global_farm_bsx_balance);
     });

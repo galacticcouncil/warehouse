@@ -231,7 +231,6 @@ thread_local! {
     ]
 }
 
-//nft_ids for deposits from "predefined_test_ext_with_deposits()"
 const PREDEFINED_DEPOSIT_IDS: [u128; 7] = [1, 2, 3, 4, 5, 6, 7];
 
 //NOTE: look at approx pallet - https://github.com/brendanzab/approx
@@ -272,4 +271,4 @@ pub mod test_ext;
 #[allow(clippy::module_inception)]
 pub mod tests;
 pub mod update_yield_farm;
-pub mod withdraw_lp_shares; //<- test withdraw deposit with multiple entries, last should flush
+pub mod withdraw_lp_shares;

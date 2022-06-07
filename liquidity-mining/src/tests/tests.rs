@@ -134,7 +134,7 @@ fn get_period_number_should_not_work() {
     let block_num: BlockNumber = 10_u64;
     assert_err!(
         LiquidityMining::get_period_number(block_num, 0),
-        Error::<Test>::Overflow
+        ArithmeticError::DivisionByZero
     );
 }
 
@@ -272,28 +272,28 @@ fn get_loyalty_multiplier_should_work() {
     for (periods, expected_multiplier_1, expected_multiplier_2, expected_multiplier_3, expected_multiplier_4) in
         testing_values.iter()
     {
-        //1th curve test
+        //1-th curve test
         assert!(is_approx_eq_fixedu128(
             LiquidityMining::get_loyalty_multiplier(*periods, Some(loyalty_curve_1.clone())).unwrap(),
             *expected_multiplier_1,
             precission_delta
         ));
 
-        //2nd curve test
+        //2-nd curve test
         assert!(is_approx_eq_fixedu128(
             LiquidityMining::get_loyalty_multiplier(*periods, Some(loyalty_curve_2.clone())).unwrap(),
             *expected_multiplier_2,
             precission_delta
         ));
 
-        //3rd curve test
+        //3-rd curve test
         assert!(is_approx_eq_fixedu128(
             LiquidityMining::get_loyalty_multiplier(*periods, Some(loyalty_curve_3.clone())).unwrap(),
             *expected_multiplier_3,
             precission_delta
         ));
 
-        //4th curve test
+        //-4th curve test
         assert!(is_approx_eq_fixedu128(
             LiquidityMining::get_loyalty_multiplier(*periods, Some(loyalty_curve_4.clone())).unwrap(),
             *expected_multiplier_4,
@@ -1581,7 +1581,7 @@ fn maybe_update_farms_should_work() {
 
         let current_period = 30;
 
-        //I. - yield farming is canceled. Nothing should be updated if yield farming is canceled.
+        //I. - yield farming is stopped. Nothing should be updated if yield farm is stopped.
         assert_ok!(LiquidityMining::maybe_update_farms(
             &mut global_farm,
             &mut yield_farm,
@@ -1597,7 +1597,7 @@ fn maybe_update_farms_should_work() {
             }
         );
 
-        //II. - yield farm has 0 shares and was updated in this period
+        //II. - yield farm has 0 shares and was updated in this period.
         let current_period = 20;
         let mut yield_farm = YieldFarmData {
             ..expected_yield_farm.clone()
@@ -1612,7 +1612,7 @@ fn maybe_update_farms_should_work() {
         assert_eq!(yield_farm, expected_yield_farm);
 
         //III. - global farm has 0 shares and was updated in this period - only yield farm should
-        //be updated
+        //be updated.
         let current_period = 30;
         let mut global_farm = GlobalFarmData {
             total_shares_z: 0,
@@ -1637,7 +1637,7 @@ fn maybe_update_farms_should_work() {
         assert_ne!(yield_farm, expected_yield_farm);
         assert_eq!(yield_farm.updated_at, current_period);
 
-        //IV. - booth farms met conditions to update
+        //IV. - booth farms met conditions for update
         let current_period = 30;
         assert_ok!(LiquidityMining::maybe_update_farms(
             &mut global_farm,
@@ -1696,7 +1696,7 @@ fn depositdata_add_farm_entry_to_should_work() {
         DepositData::<Test> {
             shares: 10,
             amm_pool_id: BSX_TKN1_AMM,
-            //`yield_farm_entries` are ordered by `YieldFarmId` that's why order is different from insert order
+            //`yield_farm_entries` are ordered by `YieldFarmId` that's why order is different from inserted order.
             yield_farm_entries: vec![
                 test_farm_entries[3].clone(),
                 test_farm_entries[4].clone(),
@@ -1751,7 +1751,7 @@ fn deposit_remove_yield_farm_entry_should_work() {
     assert_ok!(deposit.remove_yield_farm_entry(4));
     assert_ok!(deposit.remove_yield_farm_entry(60));
 
-    //this state should never happen, deposit should be flushed from storage when have no more
+    //This state should never happen, deposit should be flushed from storage when have no more
     //entries.
     assert_eq!(deposit.yield_farm_entries, vec![]);
 
@@ -1827,13 +1827,13 @@ fn deposit_has_no_yield_farm_entries_shoudl_work() {
         updated_at: 12,
     });
 
-    //some yield farm entris
-    assert_eq!(deposit.has_no_yield_farm_entries(), false);
+    //some yield farm entries
+    assert!(!deposit.has_no_yield_farm_entries());
 }
 
 #[test]
 fn deposit_can_be_flushed_should_work() {
-    //not empty deposit can't be flushed
+    //non empty deposit can't be flushed
     let deposit = DepositData::<Test> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
@@ -1898,7 +1898,7 @@ fn yield_farm_data_should_work() {
     assert_ok!(yield_farm.entry_removed());
     assert_ok!(yield_farm.entry_removed());
     assert_eq!(yield_farm.entries_count, 0);
-    assert_err!(yield_farm.entry_removed(), Error::<Test>::Overflow);
+    assert_err!(yield_farm.entry_removed(), ArithmeticError::Underflow);
 
     //no entries in the farm
     yield_farm.entries_count = 0;

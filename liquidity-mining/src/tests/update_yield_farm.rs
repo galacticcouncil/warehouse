@@ -20,7 +20,7 @@ use test_ext::*;
 
 #[test]
 fn update_yield_farm_should_work() {
-    //yield farm without deposits
+    //Yield farm without deposits.
     predefined_test_ext().execute_with(|| {
         let new_multiplier: FarmMultiplier = FixedU128::from(5_000_u128);
         let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
@@ -42,9 +42,9 @@ fn update_yield_farm_should_work() {
         assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm);
     });
 
-    //yield farm with deposits
+    //Yield farm with deposits.
     predefined_test_ext_with_deposits().execute_with(|| {
-        //same period as last yield farm update so no farms(global or yield) need to be updated
+        //Same period as last yield farm update so no farms(global or yield) need to be updated.
         let new_multiplier: FarmMultiplier = FixedU128::from(10_000_u128);
         let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
@@ -72,7 +72,7 @@ fn update_yield_farm_should_work() {
             }
         );
 
-        //different period so farms update should happen
+        //Different period so farms update should happen.
         set_block_number(5_000);
         let new_multiplier: FarmMultiplier = FixedU128::from(5_000_u128);
         let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
@@ -140,7 +140,7 @@ fn update_yield_farm_stopped_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
-        //yield farm must be in the active yield farm storage to update works
+        //Yield farm must be in the active yield farm storage to update works.
         assert_noop!(
             LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, FixedU128::from(10_001), BSX_TKN1_AMM,),
             Error::<Test>::YieldFarmNotFound
@@ -150,7 +150,7 @@ fn update_yield_farm_stopped_farm_should_not_work() {
 
 #[test]
 fn update_yield_farm_deleted_farm_should_not_work() {
-    //NOTE: yield farm is in the storage but it's deleted
+    //NOTE: yield farm is in the storage but it's deleted.
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
@@ -163,7 +163,7 @@ fn update_yield_farm_deleted_farm_should_not_work() {
 
         assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).is_some());
 
-        //yield farm must be in the active yield farm storage to update works
+        //Yield farm must be in the active yield farm storage to update works
         assert_noop!(
             LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, FixedU128::from(10_001), BSX_TKN1_AMM,),
             Error::<Test>::YieldFarmNotFound

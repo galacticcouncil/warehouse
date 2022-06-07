@@ -21,7 +21,7 @@ use test_ext::*;
 #[test]
 fn redeposit_lp_shares_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        //predefeinde_deposit[0] - GC_FARM, BSX_TKN1_AMM
+        //predefined_deposit[0] - GC_FARM, BSX_TKN1_AMM
         set_block_number(50_000);
         assert_ok!(LiquidityMining::redeposit_lp_shares(
             EVE_FARM,
@@ -37,7 +37,7 @@ fn redeposit_lp_shares_should_work() {
         );
 
         set_block_number(800_000);
-        //dave's farm incentivize TKN1 - some balance must be set so `valued_shares` will not be `0`.
+        //Dave's farm incentivize TKN1 - some balance must be set so `valued_shares` will not be `0`.
         let bsx_tkn1_amm_account = AMM_POOLS.with(|v| {
             v.borrow()
                 .get(&asset_pair_to_map_key(AssetPair {
@@ -113,7 +113,7 @@ fn redeposit_lp_shares_deposit_not_found_should_not_work() {
 #[test]
 fn redeposit_lp_shares_to_wrong_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        // desired yield farm is for differnet assert pair than original deposit.
+        // Desired yield farm is for different assert pair than original deposit.
         let yield_farm_id = EVE_BSX_TKN2_YIELD_FARM_ID; //original deposit is for bsx/tkn1 assert pair
 
         assert_noop!(
@@ -121,14 +121,14 @@ fn redeposit_lp_shares_to_wrong_yield_farm_should_not_work() {
             Error::<Test>::YieldFarmNotFound
         );
 
-        //same global farm differen asset pair
+        // Same global farm different asset pair.
         let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
         assert_noop!(
             LiquidityMining::redeposit_lp_shares(GC_FARM, yield_farm_id, PREDEFINED_DEPOSIT_IDS[0]),
             Error::<Test>::YieldFarmNotFound
         );
 
-        //desired yield farm is not in the provided global farm
+        //Desired yield farm is not in the provided global farm.
         let yield_farm_id = EVE_BSX_TKN1_YIELD_FARM_ID;
         assert_noop!(
             LiquidityMining::redeposit_lp_shares(GC_FARM, yield_farm_id, PREDEFINED_DEPOSIT_IDS[0]),
@@ -140,9 +140,9 @@ fn redeposit_lp_shares_to_wrong_yield_farm_should_not_work() {
 #[test]
 fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        let yield_farm_id = EVE_BSX_TKN1_YIELD_FARM_ID; //original deposit is for bsx/tkn1 assert pair
+        let yield_farm_id = EVE_BSX_TKN1_YIELD_FARM_ID;
 
-        //deposit to yield farm to prevent flushing from storage on destroy.
+        //Deposit to yield farm to prevent flushing from storage on destroy.
         assert_ok!(LiquidityMining::deposit_lp_shares(
             ALICE,
             EVE_FARM,
@@ -151,7 +151,7 @@ fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
             1_000
         ));
 
-        //redeposit to stopped farm
+        // Redeposit to stopped farm.
         assert_ok!(LiquidityMining::stop_yield_farm(EVE, EVE_FARM, BSX_TKN1_AMM));
 
         assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, EVE_FARM, yield_farm_id))
@@ -163,7 +163,7 @@ fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
             Error::<Test>::LiquidityMiningIsNotActive
         );
 
-        //redeposit to deleted farm
+        // Redeposit to deleted farm
         assert_ok!(LiquidityMining::destroy_yield_farm(
             EVE,
             EVE_FARM,
@@ -199,7 +199,7 @@ fn redeposit_lp_shares_non_existing_farm_should_not_work() {
                 GC_BSX_TKN2_YIELD_FARM_ID,
                 PREDEFINED_DEPOSIT_IDS[0]
             ),
-            Error::<Test>::YieldFarmNotFound //NOTE: check for yield farm existence is first
+            Error::<Test>::YieldFarmNotFound //NOTE: check for yield farm existence is first that's why this error.
         );
     });
 }

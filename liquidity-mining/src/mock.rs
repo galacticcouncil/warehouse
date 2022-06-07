@@ -39,7 +39,6 @@ use sp_runtime::{
 pub enum ReserveIdentifier {
     Nft,
     Marketplace,
-
     // always the last, indicate number of variants
     Count,
 }
@@ -172,11 +171,11 @@ thread_local! {
     pub static AMM_POOLS: RefCell<HashMap<String, (AccountId, AssetId)>> = RefCell::new(HashMap::new());
 
     //This is used to check if `on_accumulated_rpvs_update()` was called with correct values
-    //`(global pool id, liq. pool yield farm id, accumulated rpvs, total valued shares)`
-    pub static RPVS_UPDATED: RefCell<(GlobalFarmId, FarmId, Balance, Balance)> = RefCell::new((0,0,0,0));
+    //`(global_farm_id, yield_farm_id, accumulated_rpvs, total_valued_shares)`
+    pub static RPVS_UPDATED: RefCell<(GlobalFarmId, YieldFarmId, Balance, Balance)> = RefCell::new((0,0,0,0));
 
     //This is used to check if `on_accumulated_rpz_update()` was called with correct values
-    //`(global farm id, accumulated rpz, total shares z)`
+    //`(global_farm_id, accumulated_rpz, total_shares_z)`
     pub static RPZ_UPDATED: RefCell<(GlobalFarmId, Balance, Balance)> = RefCell::new((0,0,0));
 }
 

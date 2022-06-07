@@ -20,7 +20,7 @@ use test_ext::*;
 
 #[test]
 fn destroy_global_farm_should_work() {
-    //test with flushing - global farm should be removed from storage if it has no yield farms.
+    //Test with flushing - global farm should be removed from storage if it has no yield farms.
     predefined_test_ext().execute_with(|| {
         let farm_account = LiquidityMining::farm_account_id(BOB_FARM).unwrap();
         let bob_reward_currency_balance = Tokens::free_balance(PREDEFINED_GLOBAL_FARMS[1].reward_currency, &BOB);
@@ -31,25 +31,25 @@ fn destroy_global_farm_should_work() {
             (PREDEFINED_GLOBAL_FARMS[1].reward_currency, undistributed_rewards, BOB)
         );
 
-        //global farm with no yield farms should be flushed
+        //Global farm with no yield farms should be flushed.
         assert!(LiquidityMining::global_farm(BOB_FARM).is_none());
 
-        //undistriburted rewards should be transfered to owner
+        //Undistributed rewards should be transferred to owner.
         assert_eq!(
             Tokens::free_balance(PREDEFINED_GLOBAL_FARMS[1].reward_currency, &BOB),
             bob_reward_currency_balance + undistributed_rewards
         );
     });
 
-    //withouth flushing - global farm should stay in the storage marked as deleted.
+    //Without flushing - global farm should stay in the storage marked as deleted.
     predefined_test_ext().execute_with(|| {
         let farm_account = LiquidityMining::farm_account_id(CHARLIE_FARM).unwrap();
         let charlie_reward_currency_balance =
             Tokens::free_balance(PREDEFINED_GLOBAL_FARMS[3].reward_currency, &CHARLIE);
         let undistributed_rewards = Tokens::free_balance(PREDEFINED_GLOBAL_FARMS[3].reward_currency, &farm_account);
-        let yield_farm_id = PREDEFINED_YIELD_FARMS.with(|v| v[2].id.clone());
+        let yield_farm_id = PREDEFINED_YIELD_FARMS.with(|v| v[2].id);
 
-        //add deposit to yield farm so it will not be flushed on destroy
+        //Add deposit to yield farm so it will not be flushed on destroy.
         assert_ok!(LiquidityMining::deposit_lp_shares(
             BOB,
             CHARLIE_FARM,
@@ -58,10 +58,10 @@ fn destroy_global_farm_should_work() {
             1_000
         ));
 
-        //stop farming
+        //Stop farming.
         assert_ok!(LiquidityMining::stop_yield_farm(CHARLIE, CHARLIE_FARM, ACA_KSM_AMM));
 
-        //destory yield farm (yield farm is destroyed but not flushed)
+        //Destroy yield farm (yield farm is destroyed but not flushed)
         assert_ok!(LiquidityMining::destroy_yield_farm(
             CHARLIE,
             CHARLIE_FARM,
@@ -69,10 +69,10 @@ fn destroy_global_farm_should_work() {
             ACA_KSM_AMM
         ));
 
-        //destory global farm
+        //Destroy global farm.
         assert_ok!(LiquidityMining::destroy_global_farm(CHARLIE, CHARLIE_FARM));
 
-        //global farm with yield farms should NOT be flushed
+        //Global farm with yield farms should NOT be flushed.
         assert_eq!(
             LiquidityMining::global_farm(CHARLIE_FARM).unwrap(),
             GlobalFarmData {
@@ -117,9 +117,10 @@ fn destroy_global_farm_farm_not_exists_should_not_work() {
 
 #[test]
 fn destroy_global_farm_with_yield_farms_should_not_work() {
-    //Glboal farm CAN'T be destroyed if it has active or stopped yield farms
+    //Global farm CAN'T be destroyed if it has active or stopped yield farms.
     predefined_test_ext().execute_with(|| {
-        let yield_farm_id = PREDEFINED_YIELD_FARMS.with(|v| v[2].id.clone());
+        //Destroy farm with active yield farms should not work.
+        let yield_farm_id = PREDEFINED_YIELD_FARMS.with(|v| v[2].id);
         assert_eq!(
             LiquidityMining::active_yield_farm(ACA_KSM_AMM, CHARLIE_FARM).unwrap(),
             yield_farm_id
@@ -135,8 +136,8 @@ fn destroy_global_farm_with_yield_farms_should_not_work() {
             PREDEFINED_GLOBAL_FARMS[3]
         );
 
-        //destory farm with stopped farm should not work
-        //stop yield farm
+        //Destroy farm with stopped yield farms should not work.
+        //Stop yield farm
         assert_ok!(LiquidityMining::stop_yield_farm(CHARLIE, CHARLIE_FARM, ACA_KSM_AMM));
         assert!(LiquidityMining::active_yield_farm(ACA_KSM_AMM, CHARLIE_FARM).is_none());
 
@@ -154,7 +155,6 @@ fn destroy_global_farm_with_yield_farms_should_not_work() {
 
 #[test]
 fn destroy_global_farm_healthy_farm_should_not_work() {
-    //farm with undistributed rewards and yield farms
     predefined_test_ext().execute_with(|| {
         let farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
         assert!(!Tokens::free_balance(PREDEFINED_GLOBAL_FARMS[2].reward_currency, &farm_account).is_zero());

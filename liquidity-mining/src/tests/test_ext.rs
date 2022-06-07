@@ -212,7 +212,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
     let mut ext = predefined_test_ext();
 
     ext.execute_with(|| {
-        let farm_id = GC_FARM; //global pool
+        let farm_id = GC_FARM;
 
         let bsx_tkn1_assets = AssetPair {
             asset_in: BSX,
@@ -224,9 +224,9 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             asset_out: TKN2,
         };
 
-        let global_pool_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
-        let bsx_tkn1_liq_pool_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
-        let bsx_tkn2_liq_pool_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
+        let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
+        let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
+        let bsx_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
         let bsx_tkn1_amm_account =
             AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(bsx_tkn1_assets)).unwrap().0);
         let bsx_tkn2_amm_account =
@@ -235,7 +235,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         //DEPOSIT 1:
         set_block_number(1_800); //18-th period
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is done because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 50, 0).unwrap();
 
         let deposited_amount = 50;
@@ -251,7 +251,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
 
         // DEPOSIT 2 (deposit in same period):
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is done because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 52, 0).unwrap();
 
         let deposited_amount = 80;
@@ -263,9 +263,9 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[1]).is_some());
 
-        // DEPOSIT 3 (same period, second liq pool yield farm):
+        // DEPOSIT 3 (same period, second yield farm):
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is done because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 8, 0).unwrap();
 
         let deposited_amount = 25;
@@ -282,7 +282,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         // DEPOSIT 4 (new period):
         set_block_number(2051); //period 20
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is done because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 58, 0).unwrap();
 
         let deposited_amount = 800;
@@ -296,10 +296,10 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[3]).is_some());
 
-        // DEPOSIT 5 (same period, second liq pool yield farm):
+        // DEPOSIT 5 (same period, second yield farm):
         set_block_number(2_586); //period 25
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is done because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 3, 0).unwrap();
 
         let deposited_amount = 87;
@@ -316,7 +316,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         // DEPOSIT 6 (same period):
         set_block_number(2_596); //period 25
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is done because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 16, 0).unwrap();
 
         let deposited_amount = 48;
@@ -330,10 +330,10 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[5]).is_some());
 
-        // DEPOSIT 7 : (same period differen liq poll farm)
+        // DEPOSIT 7 : (same period different liq poll farm)
         set_block_number(2_596); //period 25
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is done because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 80, 0).unwrap();
 
         let deposited_amount = 486;
@@ -396,21 +396,21 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             },
         );
 
-        //reward currency balance check. total_rewards - sum(claimes from global pool)
+        //Reward currency balance check. total_rewards - sum(claims from global farm).
         assert_eq!(
-            Tokens::free_balance(BSX, &global_pool_account),
+            Tokens::free_balance(BSX, &global_farm_account),
             (30_000_000_000 - 1_164_400)
         );
 
-        //check of claimed amount from global pool (sum of all claims)
-        assert_eq!(Tokens::free_balance(BSX, &bsx_tkn1_liq_pool_account), 212_400);
-        assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_liq_pool_account), 952_000);
+        //Check of claimed amount from global farm (sum of all claims).
+        assert_eq!(Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account), 212_400);
+        assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 952_000);
 
-        //balance check after transfer amm shares
+        //Balance check after transfer amm shares.
         assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE), 3_000_000 - 536);
         assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE), 3_000_000 - 135);
 
-        //balance check after transfer amm shares
+        //Balance check after transfer amm shares
         assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &BOB), 2_000_000 - 80);
         assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB), 2_000_000 - 825);
 

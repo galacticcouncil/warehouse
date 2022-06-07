@@ -21,7 +21,7 @@ use test_ext::*;
 #[test]
 fn resume_yield_farm_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        //cancel yield farming before resuming
+        //Stop yield farming before resuming.
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
@@ -105,15 +105,14 @@ fn resume_yield_farm_not_owner_should_not_work() {
     });
 }
 
-//resume deleted farm
 #[test]
 fn resume_yield_farm_deleted_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let new_multiplier = FixedU128::from(7_490_000);
 
-        //farm have to be stopped before delete
+        //Farm have to be stopped before delete.
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
-        //delete farm
+        //Delete farm.
         assert_ok!(LiquidityMining::destroy_yield_farm(
             GC,
             GC_FARM,
@@ -128,17 +127,17 @@ fn resume_yield_farm_deleted_farm_should_not_work() {
     });
 }
 
-//This fn is testing case when new yield farm for same asset pair farm was created in the global
+//This function is testing case when new yield farm for the same asset pair was created in the global
 //farm while first yield farm was stopped.
 #[test]
 fn resume_yield_farm_same_amm_farm_active_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let new_multiplier = FixedU128::from(7_490_000);
 
-        //stop the 1-th farm
+        //Stop 1-th farm.
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
-        //create new farm for same assert pair
+        //Create new farm for same assert pair.
         assert_ok!(LiquidityMining::create_yield_farm(
             GC,
             GC_FARM,

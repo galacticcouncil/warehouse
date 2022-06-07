@@ -20,7 +20,7 @@ use test_ext::*;
 
 #[test]
 fn create_yield_farm_should_work() {
-    //Note: global_farm.updated_at isn't changed because global farm is empty (no yield farm stake in global farm)
+    //NOTE: global_farm.updated_at isn't changed because global farm is empty.
     let test_data = vec![
         (
             AssetPair {
@@ -160,7 +160,7 @@ fn create_yield_farm_should_work() {
             );
 
             assert_eq!(
-                LiquidityMining::yield_farm((amm_id, global_farm_id, yield_farm.id.clone())).unwrap(),
+                LiquidityMining::yield_farm((amm_id, global_farm_id, yield_farm.id)).unwrap(),
                 YieldFarmData { ..yield_farm }
             );
         }
@@ -177,7 +177,7 @@ fn add_yield_farm_missing_incentivized_asset_should_not_work() {
                 FixedU128::from(10_000_u128),
                 None,
                 KSM_DOT_AMM,
-                //neither KSM nor DOT is incetivized in farm
+                //Neither KSM nor DOT is incentivized by the farm.
                 KSM,
                 DOT,
             ),
@@ -294,10 +294,9 @@ fn add_yield_farm_add_duplicate_amm_should_not_work() {
 
         let aca_ksm_amm_account = AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(aca_ksm_assets)).unwrap().0);
 
-        //check if yeild farm for aca ksm assets pair exist
         assert!(LiquidityMining::active_yield_farm(aca_ksm_amm_account, CHARLIE_FARM).is_some());
 
-        //try to add same amm second time in the same block(period)
+        //Try to add same amm second time in the same block(period)
         assert_noop!(
             LiquidityMining::create_yield_farm(
                 CHARLIE,
@@ -311,7 +310,7 @@ fn add_yield_farm_add_duplicate_amm_should_not_work() {
             Error::<Test>::YieldFarmAlreadyExists
         );
 
-        //try to add same amm second time in later block(period)
+        //Try to add same amm second time in later block(period).
         set_block_number(30_000);
 
         assert_noop!(

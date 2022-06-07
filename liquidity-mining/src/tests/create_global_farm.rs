@@ -53,7 +53,7 @@ fn create_global_farm_should_work() {
             (global_farm_id, max_reward_per_period)
         );
 
-        //check if total_rewards was transferd to farm's account
+        //Check if total_rewards are transferred to farm's account.
         assert_eq!(
             Tokens::free_balance(reward_currency, &global_farm_account),
             total_rewards
@@ -88,13 +88,13 @@ fn create_global_farm_invalid_data_should_not_work() {
 
         set_block_number(created_at_block);
 
-        //total_rewards bellow min. limit
+        //total_rewards bellow mini. limit.
         assert_noop!(
             LiquidityMining::create_global_farm(100, 1_000, 300, BSX, BSX, ALICE, Permill::from_percent(20)),
             Error::<Test>::InvalidTotalRewards
         );
 
-        //planned_yielding_periods bellow min. limit
+        //planned_yielding_periods bellow min. limit.
         assert_noop!(
             LiquidityMining::create_global_farm(1_000_000, 10, 300, BSX, BSX, ALICE, Permill::from_percent(20)),
             Error::<Test>::InvalidPlannedYieldingPeriods
@@ -116,7 +116,7 @@ fn create_global_farm_invalid_data_should_not_work() {
 
 #[test]
 fn create_global_farm_with_inssufficient_balance_should_not_work() {
-    //owner account balance is 1M BSX
+    //Owner's account balance is 1M BSX.
     new_test_ext().execute_with(|| {
         assert_noop!(
             LiquidityMining::create_global_farm(

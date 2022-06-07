@@ -20,7 +20,6 @@ use test_ext::*;
 
 #[test]
 fn stop_yield_farm_should_work() {
-    //same period
     predefined_test_ext_with_deposits().execute_with(|| {
         let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
@@ -64,7 +63,7 @@ fn stop_yield_farm_should_work() {
         assert_eq!(Tokens::free_balance(BSX, &global_farm_account), global_farm_bsx_balance);
     });
 
-    //cancel yield farming with farms update
+    //Cancel yield farming with farms update.
     predefined_test_ext_with_deposits().execute_with(|| {
         let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
@@ -135,7 +134,7 @@ fn stop_yield_farm_invalid_yield_farm_should_not_work() {
 #[test]
 fn stop_yield_farm_liquidity_mining_already_canceled() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        //1-th cancel should pass ok
+        //1-th stop should pass ok.
         assert_eq!(
             LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM).unwrap(),
             GC_BSX_TKN1_YIELD_FARM_ID

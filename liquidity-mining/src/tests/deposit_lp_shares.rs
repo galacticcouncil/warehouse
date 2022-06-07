@@ -20,7 +20,7 @@ use test_ext::*;
 
 #[test]
 fn deposit_lp_shares_should_work() {
-    //NOTE: farm incentivize BSX token
+    //NOTE: farm incentivize BSX token.
     predefined_test_ext().execute_with(|| {
         let global_farm_id = GC_FARM;
         let bsx_tkn1_assets = AssetPair {
@@ -35,7 +35,7 @@ fn deposit_lp_shares_should_work() {
 
         let global_farm_account = LiquidityMining::farm_account_id(global_farm_id).unwrap();
         let bsx_tnk1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
-        let bsr_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
+        let bsx_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
         let bsx_tkn1_amm_account =
             AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(bsx_tkn1_assets)).unwrap().0);
         let bsx_tkn2_amm_account =
@@ -45,7 +45,7 @@ fn deposit_lp_shares_should_work() {
 
         let bsx_tkn1_alice_shares = Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE);
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is necessary because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 50, 0).unwrap();
 
         let deposited_amount = 50;
@@ -102,7 +102,7 @@ fn deposit_lp_shares_should_work() {
         // DEPOSIT 2 (deposit in the same period):
         let bsx_tkn1_bob_shares = Tokens::free_balance(BSX_TKN1_SHARE_ID, &BOB);
 
-        //This is done because amount of incetivized token in AMM is used in calculations.
+        //This is necessary because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 52, 0).unwrap();
 
         let deposited_amount = 80;
@@ -152,25 +152,26 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //check if shares was transfered from deposit owner
+        //Check if LP shares are transferred from owner.
         assert_eq!(
             Tokens::free_balance(BSX_TKN1_SHARE_ID, &BOB),
             bsx_tkn1_bob_shares - deposited_amount
         );
         assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH), 130); //130 - sum of all deposited shares until now
 
+        let yield_farm_claims_from_global_farm = 112_500;
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - 112_500) //total_rewards - sum(claimed rewards by all liq. pools until now)
+            (30_000_000_000 - yield_farm_claims_from_global_farm)
         );
 
-        //check if claim from global pool was transfered to liq. pool account
+        //Check if claim from global farm is transferred to yield farm's account
         assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 112_500);
 
-        // DEPOSIT 3 (same period, second liq pool yield farm):
+        // DEPOSIT 3 (same period, second yield farm):
         let bsx_tkn2_bob_shares = Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB);
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //this is necessary because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 8, 0).unwrap();
 
         let deposited_amount = 25;
@@ -219,30 +220,30 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //check if shares was transfered from deposit owner
+        //Check if LP shares are transferred from owner.
         assert_eq!(
             Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB),
             bsx_tkn2_bob_shares - deposited_amount
         );
         assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH), 25); //25 - sum of all deposited shares until now
 
-        //pool wasn't updated in this period so no claim from global pool
+        //farm wasn't updated in this period so no claim from global farm happened.
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - 112_500) //total_rewards - claimed rewards by liq. pool
+            (30_000_000_000 - yield_farm_claims_from_global_farm)
         );
 
-        // no claim happed for this pool so this is same as after previous deposit
+        //No claims happened for this farm so this is same as after previous deposit
         assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 112_500);
-        //check if claim from global pool was transfered to liq. pool account
-        //(there was no clai for this pool)
-        assert_eq!(Tokens::free_balance(BSX, &bsr_tkn2_yield_farm_account), 0);
+        //Check if claim from global farm is transferred to yield farm's account
+        //(there was no claim for this farm)
+        assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 0);
 
         // DEPOSIT 4 (new period):
         set_block_number(2051); //period 20
         let bsx_tkn2_bob_shares = Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB);
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is necessary because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 58, 0).unwrap();
 
         let deposited_amount = 800;
@@ -293,28 +294,29 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //check if shares was transfered from deposit owner
+        //Check if LP shares are transferred from owner.
         assert_eq!(
             Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB),
             bsx_tkn2_bob_shares - deposited_amount
         );
         assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH), 825); //825 - sum of all deposited shares until now
 
+        let sum_yield_farm_claims_from_global_farm = 132_500;
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - 132_500) //total_rewards - sum(claimed rewards by all liq. pools until now)
+            (30_000_000_000 - sum_yield_farm_claims_from_global_farm)
         );
 
-        //check if claim from global pool was transfered to liq. pool account
+        //Check if claim from global farm is transferred to yield farm's account.
         assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 112_500);
-        //check if claim from global pool was transfered to liq. pool account
-        assert_eq!(Tokens::free_balance(BSX, &bsr_tkn2_yield_farm_account), 20_000);
+        //Check if claim from global farm is transferred to yield farm's account.
+        assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 20_000);
 
         // DEPOSIT 5 (same period, second liq pool yield farm):
         set_block_number(2_586); //period 20
         let bsx_tkn2_alice_shares = Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE);
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is necessary because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 3, 0).unwrap();
 
         let deposited_amount = 87;
@@ -365,27 +367,28 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //check if shares was transfered from deposit owner
+        //Check if LP shares are transferred from owner.
         assert_eq!(
             Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE),
             bsx_tkn2_alice_shares - 87
         );
         assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH), 912); //912 - sum of all deposited shares until now
 
+        let sum_yield_farm_claims_from_global_farm = 1_064_500;
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - 1_064_500) //total_rewards - sum(claimed rewards by all liq. pools until now)
+            (30_000_000_000 - sum_yield_farm_claims_from_global_farm)
         );
 
-        //check if claim from global pool was transfered to liq. pool account
-        assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 112_500); //total_rewards - sum(claimed rewards by all liq. pools until now)
-        assert_eq!(Tokens::free_balance(BSX, &bsr_tkn2_yield_farm_account), 952_000); //total_rewards - sum(claimed rewards by all liq. pools until now)
+        //Check if claim from global farm is transferred to yield farm's account.
+        assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 112_500); //total_rewards - sum(claimed rewards by all yield farms until now)
+        assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 952_000); //total_rewards - sum(claimed rewards by all yield farms until now)
 
         // DEPOSIT 6 (same period):
         set_block_number(2_596); //period 20
         let bsx_tkn2_alice_shares = Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE);
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is necessary because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 16, 0).unwrap();
 
         let deposited_amount = 48;
@@ -436,26 +439,27 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //check if shares was transfered from deposit owner
+        //Check if LP shares are transferred from owner.
         assert_eq!(
             Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE),
             bsx_tkn2_alice_shares - deposited_amount
         );
         assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH), 960); //960 - sum of all deposited shares until now
 
+        let sum_yield_farm_claims_from_global_farm = 1_064_500;
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - 1_064_500) //total_rewards - sum(claimed rewards by all liq. pools until now)
+            (30_000_000_000 - sum_yield_farm_claims_from_global_farm)
         );
 
-        assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 112_500); //total_rewards - sum(claimed rewards by all liq. pools until now)
-        assert_eq!(Tokens::free_balance(BSX, &bsr_tkn2_yield_farm_account), 952_000); //total_rewards - sum(claimed rewards by all liq. pools until now)
+        assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 112_500);
+        assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 952_000);
 
-        // DEPOSIT 7 : (same period differen liq poll farm)
+        // DEPOSIT 7 : (same period different yield farm)
         set_block_number(2_596); //period 20
         let bsx_tkn1_alice_shares = Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE);
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is necessary because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 80, 0).unwrap();
 
         let deposited_amount = 486;
@@ -506,28 +510,28 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //check if shares was transfered from deposit owner
+        //Check if LP shares are transferred from owner.
         assert_eq!(
             Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE),
             bsx_tkn1_alice_shares - deposited_amount
         );
         assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH), 616); //616 - sum of all deposited shares until now
 
+        let sum_yield_farm_claims_from_global_farm = 1_164_400;
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - 1_164_400) //total_rewards - sum(claimed rewards by all liq. pools until now)
+            (30_000_000_000 - sum_yield_farm_claims_from_global_farm)
         );
 
-        //check if claim from global pool was transfered to liq. pool account
-        assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 212_400); //total_rewards - sum(claimed rewards by all liq. pools until now)
-        assert_eq!(Tokens::free_balance(BSX, &bsr_tkn2_yield_farm_account), 952_000);
-        //total_rewards - sum(claimed rewards by all liq. pools until now)
+        //Check if claim from global farm is transferred to yield farm's account.
+        assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 212_400);
+        assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 952_000);
     });
 
-    //deposit to farm with different incentivized_asset and reward_currency
-    //charlie's farm inncetivize KSM and reward currency is ACA
+    //Deposit to farm with different incentivized_asset and reward_currency.
+    //Charlie's farm incentivize KSM and reward currency is ACA
     //This test only check if valued shares are correctly calculated if reward and incentivized
-    //assts are different, otherwise pool behaviour is same as in test above.
+    //assets are different, otherwise farm behavior is same as in test above.
     predefined_test_ext().execute_with(|| {
         let aca_ksm_assets = AssetPair {
             asset_in: ACA,
@@ -537,7 +541,7 @@ fn deposit_lp_shares_should_work() {
         let aca_ksm_amm_account = AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(aca_ksm_assets)).unwrap().0);
         let ksm_balance_in_amm = 16;
 
-        //this is done because amount of incetivized token in AMM is used in calculations.
+        //This is necessary because amount of incentivized token in AMM is used in calculations.
         Tokens::set_balance(Origin::root(), aca_ksm_amm_account, KSM, ksm_balance_in_amm, 0).unwrap();
         Tokens::set_balance(Origin::root(), aca_ksm_amm_account, ACA, 20, 0).unwrap();
 

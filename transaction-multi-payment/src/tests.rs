@@ -630,3 +630,22 @@ fn currency_is_not_changed_on_unrelated_account_activity() {
             ));
         });
 }
+
+#[test]
+fn only_set_fee_currency_for_supported_currency() {
+    const CHARLIE: AccountId = 5;
+
+    ExtBuilder::default()
+        .base_weight(5)
+        .account_native_balance(CHARLIE, 10)
+        .account_tokens(CHARLIE, UNSUPPORTED_CURRENCY, 10)
+        .build()
+        .execute_with(|| {
+            assert_ok!(Tokens::transfer(Some(CHARLIE).into(), BOB, UNSUPPORTED_CURRENCY, 5));
+
+            assert_eq!(Currencies::free_balance(UNSUPPORTED_CURRENCY, &CHARLIE), 5);
+            assert_eq!(Currencies::free_balance(UNSUPPORTED_CURRENCY, &BOB), 5);
+            // Bob's fee currency was set on transfer (due to account creation)
+            assert_eq!(PaymentPallet::get_currency(BOB), None);
+        });
+}

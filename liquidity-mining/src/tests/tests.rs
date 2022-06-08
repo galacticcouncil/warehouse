@@ -46,42 +46,42 @@ fn validate_create_farm_data_should_work() {
 fn validate_create_farm_data_should_not_work() {
     assert_err!(
         LiquidityMining::validate_create_global_farm_data(999_999, 100, 1, Permill::from_percent(50)),
-        Error::<Test>::InvalidTotalRewards
+        Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
         LiquidityMining::validate_create_global_farm_data(9, 100, 1, Permill::from_percent(50)),
-        Error::<Test>::InvalidTotalRewards
+        Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
         LiquidityMining::validate_create_global_farm_data(0, 100, 1, Permill::from_percent(50)),
-        Error::<Test>::InvalidTotalRewards
+        Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
         LiquidityMining::validate_create_global_farm_data(1_000_000, 99, 1, Permill::from_percent(50)),
-        Error::<Test>::InvalidPlannedYieldingPeriods
+        Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
         LiquidityMining::validate_create_global_farm_data(1_000_000, 0, 1, Permill::from_percent(50)),
-        Error::<Test>::InvalidPlannedYieldingPeriods
+        Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
         LiquidityMining::validate_create_global_farm_data(1_000_000, 87, 1, Permill::from_percent(50)),
-        Error::<Test>::InvalidPlannedYieldingPeriods
+        Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
         LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 0, Permill::from_percent(50)),
-        Error::<Test>::InvalidBlocksPerPeriod
+        Error::<Test, Instance1>::InvalidBlocksPerPeriod
     );
 
     assert_err!(
         LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 10, Permill::from_percent(0)),
-        Error::<Test>::InvalidYieldPerPeriod
+        Error::<Test, Instance1>::InvalidYieldPerPeriod
     );
 }
 #[test]
@@ -1364,7 +1364,7 @@ fn update_yield_farm_should_work() {
         let updated_at = 200_u64;
         let max_reward_per_period = Balance::from(10_000_u32);
 
-        let mut global_farm = GlobalFarmData::<Test>::new(
+        let mut global_farm = GlobalFarmData::<Test, Instance1>::new(
             *global_farm_id,
             updated_at,
             *reward_currency,
@@ -1392,6 +1392,7 @@ fn update_yield_farm_should_work() {
             multiplier: FixedU128::from(10_u128),
             state: YieldFarmState::Active,
             entries_count: 0,
+            _phantom: PhantomData::default(),
         };
 
         let mut ext = new_test_ext();
@@ -1455,6 +1456,7 @@ fn update_yield_farm_should_work() {
                     multiplier: FixedU128::from(10_u128),
                     state: YieldFarmState::Active,
                     entries_count: 0,
+                    _phantom: PhantomData::default(),
                 }
             );
 
@@ -1512,7 +1514,10 @@ fn farm_account_id_should_not_work() {
     let ids: Vec<FarmId> = vec![0];
 
     for id in ids {
-        assert_err!(LiquidityMining::farm_account_id(id), Error::<Test>::InvalidFarmId);
+        assert_err!(
+            LiquidityMining::farm_account_id(id),
+            Error::<Test, Instance1>::InvalidFarmId
+        );
     }
 }
 
@@ -1533,7 +1538,7 @@ fn maybe_update_farms_should_work() {
     //conditions are met.
 
     const LEFT_TO_DISTRIBUTE: Balance = 1_000_000_000;
-    const REWARD_CURRENCY: AssetId = PREDEFINED_GLOBAL_FARMS[0].reward_currency;
+    const REWARD_CURRENCY: AssetId = PREDEFINED_GLOBAL_FARMS_INS1[0].reward_currency;
     let mut ext = new_test_ext();
 
     let expected_global_farm = GlobalFarmData {
@@ -1543,7 +1548,7 @@ fn maybe_update_farms_should_work() {
         paid_accumulated_rewards: 1_000_000,
         total_shares_z: 1_000_000,
         accumulated_rewards: 20_000,
-        ..PREDEFINED_GLOBAL_FARMS[0].clone()
+        ..PREDEFINED_GLOBAL_FARMS_INS1[0].clone()
     };
 
     let expected_yield_farm = YieldFarmData {
@@ -1552,11 +1557,11 @@ fn maybe_update_farms_should_work() {
         total_valued_shares: 400_000,
         accumulated_rpvs: 15,
         accumulated_rpz: 20,
-        ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
+        ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
     };
 
     ext.execute_with(|| {
-        let farm_account_id = LiquidityMining::farm_account_id(PREDEFINED_GLOBAL_FARMS[0].id).unwrap();
+        let farm_account_id = LiquidityMining::farm_account_id(PREDEFINED_GLOBAL_FARMS_INS1[0].id).unwrap();
         let _ = Tokens::transfer(
             Origin::signed(TREASURY),
             farm_account_id,
@@ -1655,20 +1660,20 @@ fn maybe_update_farms_should_work() {
 
 #[test]
 fn depositdata_add_farm_entry_to_should_work() {
-    let mut deposit = DepositData::<Test> {
+    let mut deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
         yield_farm_entries: vec![],
     };
 
     let test_farm_entries = vec![
-        YieldFarmEntry::<Test>::new(1, 50, 20, 12, 2),
-        YieldFarmEntry::<Test>::new(2, 18, 20, 14, 18),
-        YieldFarmEntry::<Test>::new(3, 60, 20, 1, 1),
-        YieldFarmEntry::<Test>::new(4, 1, 20, 10, 13),
-        YieldFarmEntry::<Test>::new(7, 2, 20, 10, 13),
-        YieldFarmEntry::<Test>::new(5, 100, 20, 10, 13),
-        YieldFarmEntry::<Test>::new(6, 4, 20, 10, 13),
+        YieldFarmEntry::<Test, Instance1>::new(1, 50, 20, 12, 2),
+        YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, 14, 18),
+        YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, 1, 1),
+        YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, 10, 13),
+        YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, 10, 13),
+        YieldFarmEntry::<Test, Instance1>::new(5, 100, 20, 10, 13),
+        YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, 10, 13),
     ];
 
     assert_ok!(deposit.add_yield_farm_entry(test_farm_entries[0].clone()));
@@ -1680,11 +1685,11 @@ fn depositdata_add_farm_entry_to_should_work() {
     //`yield_farm_id` must be unique in `yield_farm_entries`
     assert_err!(
         deposit.add_yield_farm_entry(test_farm_entries[2].clone()),
-        Error::<Test>::DoubleLock
+        Error::<Test, Instance1>::DoubleLock
     );
     assert_err!(
-        deposit.add_yield_farm_entry(YieldFarmEntry::<Test>::new(1, 50, 10, 1, 1)),
-        Error::<Test>::DoubleLock
+        deposit.add_yield_farm_entry(YieldFarmEntry::<Test, Instance1>::new(1, 50, 10, 1, 1)),
+        Error::<Test, Instance1>::DoubleLock
     );
 
     assert_ok!(deposit.add_yield_farm_entry(test_farm_entries[4].clone()));
@@ -1693,7 +1698,7 @@ fn depositdata_add_farm_entry_to_should_work() {
 
     assert_eq!(
         deposit,
-        DepositData::<Test> {
+        DepositData::<Test, Instance1> {
             shares: 10,
             amm_pool_id: BSX_TKN1_AMM,
             //`yield_farm_entries` are ordered by `YieldFarmId` that's why order is different from inserted order.
@@ -1710,28 +1715,28 @@ fn depositdata_add_farm_entry_to_should_work() {
     //5 is max farm entries.
     assert_err!(
         deposit.add_yield_farm_entry(test_farm_entries[5].clone()),
-        Error::<Test>::MaxEntriesPerDeposit
+        Error::<Test, Instance1>::MaxEntriesPerDeposit
     );
 }
 
 #[test]
 fn deposit_remove_yield_farm_entry_should_work() {
-    let mut deposit = DepositData::<Test> {
+    let mut deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
         yield_farm_entries: vec![
-            YieldFarmEntry::<Test>::new(4, 1, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(7, 2, 20, 1, 13),
-            YieldFarmEntry::<Test>::new(6, 4, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(2, 18, 20, 14, 18),
-            YieldFarmEntry::<Test>::new(3, 60, 20, 1, 1),
+            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, 10, 13),
+            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, 1, 13),
+            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, 10, 13),
+            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, 14, 18),
+            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, 1, 1),
         ],
     };
 
     const NON_EXISTING_YIELD_FARM_ID: YieldFarmId = 999_999_999;
     assert_err!(
         deposit.remove_yield_farm_entry(NON_EXISTING_YIELD_FARM_ID),
-        Error::<Test>::YieldFarmEntryNotFound
+        Error::<Test, Instance1>::YieldFarmEntryNotFound
     );
 
     assert_ok!(deposit.remove_yield_farm_entry(2));
@@ -1741,9 +1746,9 @@ fn deposit_remove_yield_farm_entry_should_work() {
     assert_eq!(
         deposit.yield_farm_entries,
         vec![
-            YieldFarmEntry::<Test>::new(4, 1, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(6, 4, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(3, 60, 20, 1, 1),
+            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, 10, 13),
+            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, 10, 13),
+            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, 1, 1),
         ]
     );
 
@@ -1757,27 +1762,27 @@ fn deposit_remove_yield_farm_entry_should_work() {
 
     assert_err!(
         deposit.remove_yield_farm_entry(60),
-        Error::<Test>::YieldFarmEntryNotFound
+        Error::<Test, Instance1>::YieldFarmEntryNotFound
     );
 }
 
 #[test]
 fn deposit_get_yield_farm_entry_should_work() {
-    let mut deposit = DepositData::<Test> {
+    let mut deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
         yield_farm_entries: vec![
-            YieldFarmEntry::<Test>::new(4, 1, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(7, 2, 20, 1, 13),
-            YieldFarmEntry::<Test>::new(6, 4, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(2, 18, 20, 14, 18),
-            YieldFarmEntry::<Test>::new(3, 60, 20, 1, 1),
+            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, 10, 13),
+            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, 1, 13),
+            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, 10, 13),
+            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, 14, 18),
+            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, 1, 1),
         ],
     };
 
     assert_eq!(
         deposit.get_yield_farm_entry(18).unwrap(),
-        &mut YieldFarmEntry::<Test>::new(2, 18, 20, 14, 18)
+        &mut YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, 14, 18)
     );
 
     const NON_EXISTING_YIELD_FARM_ID: YieldFarmId = 98_908;
@@ -1786,15 +1791,15 @@ fn deposit_get_yield_farm_entry_should_work() {
 
 #[test]
 fn deposit_contains_yield_farm_entry_should_work() {
-    let deposit = DepositData::<Test> {
+    let deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
         yield_farm_entries: vec![
-            YieldFarmEntry::<Test>::new(4, 1, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(7, 2, 20, 1, 13),
-            YieldFarmEntry::<Test>::new(6, 4, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(2, 18, 20, 14, 18),
-            YieldFarmEntry::<Test>::new(3, 60, 20, 1, 1),
+            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, 10, 13),
+            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, 1, 13),
+            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, 10, 13),
+            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, 14, 18),
+            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, 1, 1),
         ],
     };
 
@@ -1808,7 +1813,7 @@ fn deposit_contains_yield_farm_entry_should_work() {
 
 #[test]
 fn deposit_has_no_yield_farm_entries_shoudl_work() {
-    let mut deposit = DepositData::<Test> {
+    let mut deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
         yield_farm_entries: vec![],
@@ -1825,6 +1830,7 @@ fn deposit_has_no_yield_farm_entries_shoudl_work() {
         accumulated_claimed_rewards: 0,
         entered_at: 12,
         updated_at: 12,
+        _phantom: PhantomData::default(),
     });
 
     //some yield farm entries
@@ -1834,30 +1840,30 @@ fn deposit_has_no_yield_farm_entries_shoudl_work() {
 #[test]
 fn deposit_can_be_flushed_should_work() {
     //non empty deposit can't be flushed
-    let deposit = DepositData::<Test> {
+    let deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
         yield_farm_entries: vec![
-            YieldFarmEntry::<Test>::new(4, 1, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(7, 2, 20, 1, 13),
-            YieldFarmEntry::<Test>::new(6, 4, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(2, 18, 20, 14, 18),
-            YieldFarmEntry::<Test>::new(3, 60, 20, 1, 1),
+            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, 10, 13),
+            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, 1, 13),
+            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, 10, 13),
+            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, 14, 18),
+            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, 1, 1),
         ],
     };
 
     assert!(!deposit.can_be_flushed());
 
-    let deposit = DepositData::<Test> {
+    let deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
-        yield_farm_entries: vec![YieldFarmEntry::<Test>::new(4, 1, 20, 10, 13)],
+        yield_farm_entries: vec![YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, 10, 13)],
     };
 
     assert!(!deposit.can_be_flushed());
 
     //deposit with no entries can be flushed
-    let deposit = DepositData::<Test> {
+    let deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
         yield_farm_entries: vec![],
@@ -1868,7 +1874,8 @@ fn deposit_can_be_flushed_should_work() {
 
 #[test]
 fn yield_farm_data_should_work() {
-    let mut yield_farm = YieldFarmData::<Test>::new(1, 10, Some(LoyaltyCurve::default()), FixedU128::from(10_000));
+    let mut yield_farm =
+        YieldFarmData::<Test, Instance1>::new(1, 10, Some(LoyaltyCurve::default()), FixedU128::from(10_000));
 
     //new farm should be created active
     assert!(yield_farm.is_active());
@@ -1928,7 +1935,7 @@ fn yield_farm_data_should_work() {
 #[test]
 fn global_farm_should_work() {
     let mut global_farm =
-        GlobalFarmData::<Test>::new(1, 10, BSX, Permill::from_float(0.2), 1_000, 100, GC, BSX, 1_000_000);
+        GlobalFarmData::<Test, Instance1>::new(1, 10, BSX, Permill::from_float(0.2), 1_000, 100, GC, BSX, 1_000_000);
 
     //new farm should be created active
     assert!(global_farm.is_active());

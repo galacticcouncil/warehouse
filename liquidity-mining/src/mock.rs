@@ -119,7 +119,8 @@ frame_support::construct_runtime!(
     UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        LiquidityMining: liq_mining::{Pallet, Storage},
+        LiquidityMining: liq_mining::<Instance1>::{Pallet, Storage},
+        LiquidityMining2: liq_mining::<Instance2>::{Pallet, Storage},
         Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
     }
@@ -271,7 +272,6 @@ pub fn asset_pair_to_map_key(assets: AssetPair) -> String {
 }
 
 parameter_types! {
-    pub const MaxLocks: u32 = 1;
     pub const LMPalletId: PalletId = PalletId(*b"TEST_lm_");
     pub const MinPlannedYieldingPeriods: BlockNumber = 100;
     pub const MinTotalFarmRewards: Balance = 1_000_000;
@@ -279,7 +279,7 @@ parameter_types! {
     pub const MaxEntriesPerDeposit: u8 = 5;
 }
 
-impl Config for Test {
+impl Config<Instance1> for Test {
     type CurrencyId = AssetId;
     type MultiCurrency = Tokens;
     type PalletId = LMPalletId;
@@ -290,6 +290,27 @@ impl Config for Test {
     type MinDeposit = MininumDeposit;
     type Handler = TestLiquidityMiningHandler;
     type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit;
+}
+
+parameter_types! {
+    pub const LMPalletId2: PalletId = PalletId(*b"TEST_lm2");
+    pub const MinPlannedYieldingPeriods2: BlockNumber = 100;
+    pub const MinTotalFarmRewards2: Balance = 1_000_000;
+    pub const MininumDeposit2: Balance = 1;
+    pub const MaxEntriesPerDeposit2: u8 = 1;
+}
+
+impl Config<Instance2> for Test {
+    type CurrencyId = AssetId;
+    type MultiCurrency = Tokens;
+    type PalletId = LMPalletId2;
+    type MinPlannedYieldingPeriods = MinPlannedYieldingPeriods2;
+    type MinTotalFarmRewards = MinTotalFarmRewards2;
+    type BlockNumberProvider = MockBlockNumberProvider;
+    type AmmPoolId = AccountId;
+    type MinDeposit = MininumDeposit2;
+    type Handler = TestLiquidityMiningHandler;
+    type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit2;
 }
 
 pub struct TestLiquidityMiningHandler {}
@@ -377,6 +398,7 @@ impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalFarmId,
 }
 
 parameter_types! {
+    pub const MaxLocks: u32 = 1;
     pub const ExistentialDeposit: u128 = 500;
     pub const MaxReserves: u32 = 50;
 }

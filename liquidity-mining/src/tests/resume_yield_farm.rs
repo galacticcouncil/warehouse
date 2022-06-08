@@ -74,7 +74,7 @@ fn resume_yield_farm_non_existing_yield_farm_should_not_work() {
 
         assert_noop!(
             LiquidityMining::resume_yield_farm(GC, GC_FARM, BSX_KSM_YIELD_FARM_ID, BSX_KSM_AMM, new_multiplier),
-            Error::<Test>::YieldFarmNotFound
+            Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
 }
@@ -86,7 +86,7 @@ fn resume_yield_farm_non_canceled_yield_farm_should_not_work() {
 
         assert_noop!(
             LiquidityMining::resume_yield_farm(GC, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, new_multiplier),
-            Error::<Test>::YieldFarmAlreadyExists
+            Error::<Test, Instance1>::YieldFarmAlreadyExists
         );
     });
 }
@@ -100,7 +100,7 @@ fn resume_yield_farm_not_owner_should_not_work() {
 
         assert_noop!(
             LiquidityMining::resume_yield_farm(ALICE, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, new_multiplier),
-            Error::<Test>::Forbidden
+            Error::<Test, Instance1>::Forbidden
         );
     });
 }
@@ -122,7 +122,7 @@ fn resume_yield_farm_deleted_farm_should_not_work() {
 
         assert_noop!(
             LiquidityMining::resume_yield_farm(ALICE, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, new_multiplier),
-            Error::<Test>::LiquidityMiningIsNotCanceled
+            Error::<Test, Instance1>::LiquidityMiningIsNotCanceled
         );
     });
 }
@@ -150,7 +150,7 @@ fn resume_yield_farm_same_amm_farm_active_should_not_work() {
 
         assert_noop!(
             LiquidityMining::resume_yield_farm(ALICE, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, new_multiplier),
-            Error::<Test>::YieldFarmAlreadyExists
+            Error::<Test, Instance1>::YieldFarmAlreadyExists
         );
     });
 }

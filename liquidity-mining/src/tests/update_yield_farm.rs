@@ -130,7 +130,7 @@ fn update_yield_farm_zero_multiplier_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
             LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, FixedU128::from(0_u128), BSX_TKN1_AMM,),
-            Error::<Test>::InvalidMultiplier
+            Error::<Test, Instance1>::InvalidMultiplier
         );
     });
 }
@@ -143,7 +143,7 @@ fn update_yield_farm_stopped_farm_should_not_work() {
         //Yield farm must be in the active yield farm storage to update works.
         assert_noop!(
             LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, FixedU128::from(10_001), BSX_TKN1_AMM,),
-            Error::<Test>::YieldFarmNotFound
+            Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
 }
@@ -166,7 +166,7 @@ fn update_yield_farm_deleted_farm_should_not_work() {
         //Yield farm must be in the active yield farm storage to update works
         assert_noop!(
             LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, FixedU128::from(10_001), BSX_TKN1_AMM,),
-            Error::<Test>::YieldFarmNotFound
+            Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
 }
@@ -182,7 +182,7 @@ fn update_yield_farm_not_owner_should_not_work() {
                 FixedU128::from(10_001_u128),
                 BSX_TKN1_AMM
             ),
-            Error::<Test>::Forbidden
+            Error::<Test, Instance1>::Forbidden
         );
     });
 }

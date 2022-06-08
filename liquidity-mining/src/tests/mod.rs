@@ -39,7 +39,7 @@ const CHARLIE_FARM: u32 = ACA_FARM;
 const DAVE_FARM: u32 = 5;
 const EVE_FARM: u32 = 6;
 
-const PREDEFINED_GLOBAL_FARMS: [GlobalFarmData<Test>; 6] = [
+const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
     GlobalFarmData {
         id: ALICE_FARM,
         updated_at: 0,
@@ -152,82 +152,43 @@ const EVE_BSX_TKN1_YIELD_FARM_ID: u32 = 11;
 const EVE_BSX_TKN2_YIELD_FARM_ID: u32 = 12;
 
 thread_local! {
-    static PREDEFINED_YIELD_FARMS: [YieldFarmData<Test>; 6] = [
-        YieldFarmData {
-            id: GC_BSX_TKN1_YIELD_FARM_ID,
-            updated_at: 0,
-            total_shares: 0,
-            total_valued_shares: 0,
-            accumulated_rpvs: 0,
-            accumulated_rpz: 0,
-            loyalty_curve: Some(LoyaltyCurve::default()),
-            multiplier: FixedU128::from(5),
-            state: YieldFarmState::Active,
-            entries_count: 0,
-        },
-        YieldFarmData {
-            id: GC_BSX_TKN2_YIELD_FARM_ID,
-            updated_at: 0,
-            total_shares: 0,
-            total_valued_shares: 0,
-            accumulated_rpvs: 0,
-            accumulated_rpz: 0,
-            loyalty_curve: Some(LoyaltyCurve::default()),
-            multiplier: FixedU128::from(10),
-            state: YieldFarmState::Active,
-            entries_count: 0,
-        },
-        YieldFarmData {
-            id: CHARLIE_ACA_KSM_YIELD_FARM_ID,
-            updated_at: 0,
-            total_shares: 0,
-            total_valued_shares: 0,
-            accumulated_rpvs: 0,
-            accumulated_rpz: 0,
-            loyalty_curve: Some(LoyaltyCurve::default()),
-            multiplier: FixedU128::from(10),
-            state: YieldFarmState::Active,
-            entries_count: 0,
-        },
-
-        YieldFarmData {
-            id: DAVE_BSX_TKN1_YIELD_FARM_ID,
-            updated_at: 0,
-            total_shares: 0,
-            total_valued_shares: 0,
-            accumulated_rpvs: 0,
-            accumulated_rpz: 0,
-            loyalty_curve: Some(LoyaltyCurve::default()),
-            multiplier: FixedU128::from(10),
-            state: YieldFarmState::Active,
-            entries_count: 0,
-        },
-
-        YieldFarmData {
-            id: EVE_BSX_TKN1_YIELD_FARM_ID,
-            updated_at: 0,
-            total_shares: 0,
-            total_valued_shares: 0,
-            accumulated_rpvs: 0,
-            accumulated_rpz: 0,
-            loyalty_curve: Some(LoyaltyCurve::default()),
-            multiplier: FixedU128::from(10),
-            state: YieldFarmState::Active,
-            entries_count: 0,
-        },
-
-        YieldFarmData {
-            id: EVE_BSX_TKN2_YIELD_FARM_ID,
-            updated_at: 0,
-            total_shares: 0,
-            total_valued_shares: 0,
-            accumulated_rpvs: 0,
-            accumulated_rpz: 0,
-            loyalty_curve: Some(LoyaltyCurve::default()),
-            multiplier: FixedU128::from(10),
-            state: YieldFarmState::Active,
-            entries_count: 0,
-        },
+    static PREDEFINED_YIELD_FARMS_INS1: [YieldFarmData<Test, Instance1>; 6] = [
+        YieldFarmData::new(
+            GC_BSX_TKN1_YIELD_FARM_ID,
+            0,
+            Some(LoyaltyCurve::default()),
+            FixedU128::from(5),
+        ),
+        YieldFarmData::new(
+             GC_BSX_TKN2_YIELD_FARM_ID,
+             0,
+             Some(LoyaltyCurve::default()),
+             FixedU128::from(10),
+        ),
+        YieldFarmData::new(
+             CHARLIE_ACA_KSM_YIELD_FARM_ID,
+             0,
+             Some(LoyaltyCurve::default()),
+             FixedU128::from(10),
+        ),
+        YieldFarmData::new(
+            DAVE_BSX_TKN1_YIELD_FARM_ID,
+             0,
+            Some(LoyaltyCurve::default()),
+            FixedU128::from(10),
+            ),
+        YieldFarmData::new(
+            EVE_BSX_TKN1_YIELD_FARM_ID,
+            0,
+            Some(LoyaltyCurve::default()),
+            FixedU128::from(10),
+        ),
+        YieldFarmData::new(
+            EVE_BSX_TKN2_YIELD_FARM_ID,
+            0,
+            Some(LoyaltyCurve::default()),
+            FixedU128::from(10),
+        ),
     ]
 }
 

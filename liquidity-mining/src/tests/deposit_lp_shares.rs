@@ -60,7 +60,7 @@ fn deposit_lp_shares_should_work() {
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 total_shares_z: 12_500,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -70,7 +70,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: deposited_amount,
                 total_valued_shares: 2_500,
                 entries_count: 1,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
             },
         );
 
@@ -120,7 +120,7 @@ fn deposit_lp_shares_should_work() {
                 updated_at: 18,
                 paid_accumulated_rewards: 112_500,
                 total_shares_z: 33_300,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -133,7 +133,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 130,
                 total_valued_shares: 6_660,
                 entries_count: 2,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
             },
         );
 
@@ -190,7 +190,7 @@ fn deposit_lp_shares_should_work() {
                 accumulated_rpz: 9,
                 paid_accumulated_rewards: 112_500,
                 total_shares_z: 35_300,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -201,7 +201,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 25,
                 total_valued_shares: 200,
                 entries_count: 1,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
             },
         );
 
@@ -262,7 +262,7 @@ fn deposit_lp_shares_should_work() {
                 paid_accumulated_rewards: 132_500,
                 total_shares_z: 499_300,
                 accumulated_rewards: 15_300,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -275,7 +275,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 825,
                 total_valued_shares: 46_600,
                 entries_count: 2,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
             },
         );
 
@@ -335,7 +335,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares_z: 501_910,
                 accumulated_rewards: 331_550,
                 paid_accumulated_rewards: 1_064_500,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -348,7 +348,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 912,
                 total_valued_shares: 46_861,
                 entries_count: 3,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
             },
         );
 
@@ -407,7 +407,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares_z: 509_590,
                 accumulated_rewards: 331_550,
                 paid_accumulated_rewards: 1_064_500,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -420,7 +420,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 960,
                 total_valued_shares: 47_629,
                 entries_count: 4,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
             },
         );
 
@@ -478,7 +478,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares_z: 703_990,
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -491,7 +491,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 616,
                 total_valued_shares: 45_540,
                 entries_count: 3,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
             },
         );
 
@@ -581,17 +581,17 @@ fn deposit_lp_shares_bellow_min_deposit_should_not_work() {
 
         assert_noop!(
             LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, yield_farm_id, BSX_TKN1_AMM, 0),
-            Error::<Test>::InvalidDepositAmount
+            Error::<Test, Instance1>::InvalidDepositAmount
         );
 
         assert_noop!(
             LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, yield_farm_id, BSX_TKN1_AMM, 1),
-            Error::<Test>::InvalidDepositAmount
+            Error::<Test, Instance1>::InvalidDepositAmount
         );
 
         assert_noop!(
             LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, yield_farm_id, BSX_TKN1_AMM, 8),
-            Error::<Test>::InvalidDepositAmount
+            Error::<Test, Instance1>::InvalidDepositAmount
         );
 
         //margin value should works
@@ -610,7 +610,7 @@ fn deposit_lp_shares_non_existing_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
             LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, BSX_DOT_YIELD_FARM_ID, BSX_DOT_AMM, 10_000),
-            Error::<Test>::YieldFarmNotFound
+            Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
 }
@@ -622,7 +622,7 @@ fn deposit_lp_shares_stop_yield_farm_should_not_work() {
 
         assert_noop!(
             LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, 10_000),
-            Error::<Test>::LiquidityMiningIsNotActive
+            Error::<Test, Instance1>::LiquidityMiningIsNotActive
         );
     });
 }

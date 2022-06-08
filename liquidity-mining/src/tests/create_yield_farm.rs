@@ -38,6 +38,7 @@ fn create_yield_farm_should_work() {
                 loyalty_curve: Some(LoyaltyCurve::default()),
                 entries_count: 0,
                 state: YieldFarmState::Active,
+                _phantom: PhantomData::default(),
             },
             BSX_ACA_AMM,
             ALICE,
@@ -45,7 +46,7 @@ fn create_yield_farm_should_work() {
             17_850,
             GlobalFarmData {
                 yield_farms_count: (1, 1),
-                ..PREDEFINED_GLOBAL_FARMS[0].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[0].clone()
             },
         ),
         (
@@ -64,6 +65,7 @@ fn create_yield_farm_should_work() {
                 loyalty_curve: None,
                 entries_count: 0,
                 state: YieldFarmState::Active,
+                _phantom: PhantomData::default(),
             },
             BSX_KSM_AMM,
             ALICE,
@@ -71,7 +73,7 @@ fn create_yield_farm_should_work() {
             17_850,
             GlobalFarmData {
                 yield_farms_count: (2, 2),
-                ..PREDEFINED_GLOBAL_FARMS[0].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[0].clone()
             },
         ),
         (
@@ -93,6 +95,7 @@ fn create_yield_farm_should_work() {
                 }),
                 state: YieldFarmState::Active,
                 entries_count: 0,
+                _phantom: PhantomData::default(),
             },
             BSX_ETH_AMM,
             ALICE,
@@ -100,7 +103,7 @@ fn create_yield_farm_should_work() {
             20_000,
             GlobalFarmData {
                 yield_farms_count: (3, 3),
-                ..PREDEFINED_GLOBAL_FARMS[0].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[0].clone()
             },
         ),
         (
@@ -122,6 +125,7 @@ fn create_yield_farm_should_work() {
                 }),
                 state: YieldFarmState::Active,
                 entries_count: 0,
+                _phantom: PhantomData::default(),
             },
             BSX_ETH_AMM,
             BOB,
@@ -129,7 +133,7 @@ fn create_yield_farm_should_work() {
             20_000,
             GlobalFarmData {
                 yield_farms_count: (1, 1),
-                ..PREDEFINED_GLOBAL_FARMS[1].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[1].clone()
             },
         ),
     ];
@@ -181,7 +185,7 @@ fn add_yield_farm_missing_incentivized_asset_should_not_work() {
                 KSM,
                 DOT,
             ),
-            Error::<Test>::MissingIncentivizedAsset
+            Error::<Test, Instance1>::MissingIncentivizedAsset
         );
     });
 }
@@ -199,7 +203,7 @@ fn add_yield_farm_not_owner_should_not_work() {
                 BSX,
                 HDX,
             ),
-            Error::<Test>::Forbidden
+            Error::<Test, Instance1>::Forbidden
         );
 
         assert_noop!(
@@ -212,7 +216,7 @@ fn add_yield_farm_not_owner_should_not_work() {
                 BSX,
                 HDX,
             ),
-            Error::<Test>::Forbidden
+            Error::<Test, Instance1>::Forbidden
         );
     });
 }
@@ -258,7 +262,7 @@ fn add_yield_farm_invalid_loyalty_curve_should_not_work() {
                     BSX,
                     HDX,
                 ),
-                Error::<Test>::InvalidInitialRewardPercentage
+                Error::<Test, Instance1>::InvalidInitialRewardPercentage
             );
         }
     });
@@ -277,7 +281,7 @@ fn add_yield_farm_invalid_multiplier_should_not_work() {
                 BSX,
                 HDX,
             ),
-            Error::<Test>::InvalidMultiplier
+            Error::<Test, Instance1>::InvalidMultiplier
         );
     });
 }
@@ -307,7 +311,7 @@ fn add_yield_farm_add_duplicate_amm_should_not_work() {
                 ACA,
                 KSM,
             ),
-            Error::<Test>::YieldFarmAlreadyExists
+            Error::<Test, Instance1>::YieldFarmAlreadyExists
         );
 
         //Try to add same amm second time in later block(period).
@@ -323,7 +327,7 @@ fn add_yield_farm_add_duplicate_amm_should_not_work() {
                 ACA,
                 KSM,
             ),
-            Error::<Test>::YieldFarmAlreadyExists
+            Error::<Test, Instance1>::YieldFarmAlreadyExists
         );
     });
 }

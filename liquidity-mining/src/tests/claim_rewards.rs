@@ -61,7 +61,8 @@ fn claim_rewards_should_work() {
                     accumulated_claimed_rewards: expected_claimed_rewards,
                     entered_at: 18,
                     updated_at: 25,
-                    valued_shares: 2_500
+                    valued_shares: 2_500,
+                    _phantom: PhantomData::default(),
                 }],
             },
         );
@@ -115,6 +116,7 @@ fn claim_rewards_should_work() {
                     accumulated_claimed_rewards: expected_claimed_rewards,
                     entered_at: 25,
                     updated_at: 30,
+                    _phantom: PhantomData::default(),
                 }],
             },
         );
@@ -127,7 +129,7 @@ fn claim_rewards_should_work() {
                 total_shares_z: 703_990,
                 accumulated_rewards: 1_039_045,
                 paid_accumulated_rewards: 2_116_980,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -140,7 +142,7 @@ fn claim_rewards_should_work() {
                 total_shares: 960,
                 total_valued_shares: 47_629,
                 entries_count: 4,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
             },
         );
 
@@ -195,6 +197,7 @@ fn claim_rewards_should_work() {
                     accumulated_claimed_rewards: 7_557_089,
                     entered_at: 18,
                     updated_at: 1_258,
+                    _phantom: PhantomData::default(),
                 }],
             },
         );
@@ -208,7 +211,7 @@ fn claim_rewards_should_work() {
                 total_shares_z: 703_990,
                 accumulated_rewards: 293_025_705,
                 paid_accumulated_rewards: 142_380_180,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -221,7 +224,7 @@ fn claim_rewards_should_work() {
                 total_shares: 616,
                 total_valued_shares: 45_540,
                 entries_count: 3,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
             },
         );
 
@@ -234,7 +237,7 @@ fn claim_rewards_should_work() {
                 total_shares: 960,
                 total_valued_shares: 47_629,
                 entries_count: 4,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
             },
         );
 
@@ -295,7 +298,8 @@ fn claim_rewards_should_work() {
                     accumulated_claimed_rewards: 0,
                     entered_at: 18,
                     updated_at: 18,
-                    valued_shares: 2_500
+                    valued_shares: 2_500,
+                    _phantom: PhantomData::default(),
                 }],
             },
         );
@@ -355,7 +359,8 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_claimed_rewards: 0,
                     accumulated_rpvs: 0,
                     entered_at: 18,
-                    updated_at: 18
+                    updated_at: 18,
+                    _phantom: PhantomData::default(),
                 },
                 YieldFarmEntry {
                     global_farm_id: DAVE_FARM,
@@ -364,7 +369,8 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_claimed_rewards: 0,
                     accumulated_rpvs: 0,
                     entered_at: 800,
-                    updated_at: 800
+                    updated_at: 800,
+                    _phantom: PhantomData::default(),
                 },
                 YieldFarmEntry {
                     global_farm_id: EVE_FARM,
@@ -373,7 +379,8 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_claimed_rewards: 0,
                     accumulated_rpvs: 0,
                     entered_at: 50,
-                    updated_at: 50
+                    updated_at: 50,
+                    _phantom: PhantomData::default(),
                 },
             ]
         );
@@ -398,7 +405,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 EVE_BSX_TKN1_YIELD_FARM_ID,
                 FAIL_ON_DOUBLE_CLAIM
             ),
-            Error::<Test>::DoubleClaimInThePeriod
+            Error::<Test, Instance1>::DoubleClaimInThePeriod
         );
 
         assert_eq!(
@@ -423,7 +430,8 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_claimed_rewards: 62_177_603,
                     accumulated_rpvs: 0,
                     entered_at: 18,
-                    updated_at: 10_000
+                    updated_at: 10_000,
+                    _phantom: PhantomData::default(),
                 },
                 YieldFarmEntry {
                     global_farm_id: DAVE_FARM,
@@ -432,7 +440,8 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_claimed_rewards: 0,
                     accumulated_rpvs: 0,
                     entered_at: 800,
-                    updated_at: 800
+                    updated_at: 800,
+                    _phantom: PhantomData::default(),
                 },
                 YieldFarmEntry {
                     global_farm_id: EVE_FARM,
@@ -441,7 +450,8 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_claimed_rewards: 7_619_047,
                     accumulated_rpvs: 0,
                     entered_at: 50,
-                    updated_at: 1_000
+                    updated_at: 1_000,
+                    _phantom: PhantomData::default(),
                 },
             ]
         );
@@ -455,7 +465,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 EVE_BSX_TKN1_YIELD_FARM_ID,
                 FAIL_ON_DOUBLE_CLAIM
             ),
-            Error::<Test>::DoubleClaimInThePeriod
+            Error::<Test, Instance1>::DoubleClaimInThePeriod
         );
 
         assert_noop!(
@@ -465,7 +475,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 FAIL_ON_DOUBLE_CLAIM
             ),
-            Error::<Test>::DoubleClaimInThePeriod
+            Error::<Test, Instance1>::DoubleClaimInThePeriod
         );
 
         assert_eq!(
@@ -490,7 +500,8 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_claimed_rewards: 62_177_603,
                     accumulated_rpvs: 0,
                     entered_at: 18,
-                    updated_at: 10_000
+                    updated_at: 10_000,
+                    _phantom: PhantomData::default(),
                 },
                 YieldFarmEntry {
                     global_farm_id: DAVE_FARM,
@@ -499,7 +510,8 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_claimed_rewards: 8_333_333,
                     accumulated_rpvs: 0,
                     entered_at: 800,
-                    updated_at: 1_000
+                    updated_at: 1_000,
+                    _phantom: PhantomData::default(),
                 },
                 YieldFarmEntry {
                     global_farm_id: EVE_FARM,
@@ -508,7 +520,8 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_claimed_rewards: 7_619_047,
                     accumulated_rpvs: 0,
                     entered_at: 50,
-                    updated_at: 1_000
+                    updated_at: 1_000,
+                    _phantom: PhantomData::default(),
                 },
             ]
         );
@@ -545,6 +558,7 @@ fn claim_rewards_double_claim_in_the_same_period_should_not_work() {
                     accumulated_claimed_rewards: 79_906,
                     entered_at: 18,
                     updated_at: 25,
+                    _phantom: PhantomData::default(),
                 }],
             },
         );
@@ -563,7 +577,7 @@ fn claim_rewards_double_claim_in_the_same_period_should_not_work() {
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 FAIL_ON_DOUBLE_CLAIM
             ),
-            Error::<Test>::DoubleClaimInThePeriod
+            Error::<Test, Instance1>::DoubleClaimInThePeriod
         );
     });
 }
@@ -608,6 +622,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                     accumulated_claimed_rewards: expected_claimed_rewards,
                     entered_at: 18,
                     updated_at: 25,
+                    _phantom: PhantomData::default(),
                 }],
             },
         );
@@ -648,7 +663,7 @@ fn claim_rewards_from_removed_yield_farm_should_not_work() {
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 FAIL_ON_DOUBLE_CLAIM
             ),
-            Error::<Test>::YieldFarmNotFound
+            Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
 }
@@ -691,7 +706,7 @@ fn claim_rewards_double_claim_should_work() {
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 FAIL_ON_DOUBLE_CLAIM,
             ),
-            Error::<Test>::DoubleClaimInThePeriod
+            Error::<Test, Instance1>::DoubleClaimInThePeriod
         );
     });
 }

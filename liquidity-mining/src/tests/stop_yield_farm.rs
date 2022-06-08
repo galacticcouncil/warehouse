@@ -126,7 +126,7 @@ fn stop_yield_farm_invalid_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
             LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_DOT_AMM),
-            Error::<Test>::YieldFarmNotFound
+            Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
 }
@@ -142,7 +142,7 @@ fn stop_yield_farm_liquidity_mining_already_canceled() {
 
         assert_noop!(
             LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM),
-            Error::<Test>::YieldFarmNotFound
+            Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
 }
@@ -154,7 +154,7 @@ fn stop_yield_farm_not_owner_should_not_work() {
 
         assert_noop!(
             LiquidityMining::stop_yield_farm(NOT_FARMS_OWNER, GC_FARM, BSX_TKN1_AMM),
-            Error::<Test>::Forbidden
+            Error::<Test, Instance1>::Forbidden
         );
     });
 }

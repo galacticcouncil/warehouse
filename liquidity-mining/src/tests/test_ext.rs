@@ -28,62 +28,62 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
     ext.execute_with(|| {
         assert_ok!(LiquidityMining::create_global_farm(
             100_000_000_000,
-            PREDEFINED_GLOBAL_FARMS[0].planned_yielding_periods,
-            PREDEFINED_GLOBAL_FARMS[0].blocks_per_period,
-            PREDEFINED_GLOBAL_FARMS[0].incentivized_asset,
-            PREDEFINED_GLOBAL_FARMS[0].reward_currency,
+            PREDEFINED_GLOBAL_FARMS_INS1[0].planned_yielding_periods,
+            PREDEFINED_GLOBAL_FARMS_INS1[0].blocks_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[0].incentivized_asset,
+            PREDEFINED_GLOBAL_FARMS_INS1[0].reward_currency,
             ALICE,
-            PREDEFINED_GLOBAL_FARMS[0].yield_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[0].yield_per_period,
         ));
 
         assert_ok!(LiquidityMining::create_global_farm(
             1_000_000_000,
-            PREDEFINED_GLOBAL_FARMS[1].planned_yielding_periods,
-            PREDEFINED_GLOBAL_FARMS[1].blocks_per_period,
-            PREDEFINED_GLOBAL_FARMS[1].incentivized_asset,
-            PREDEFINED_GLOBAL_FARMS[1].reward_currency,
+            PREDEFINED_GLOBAL_FARMS_INS1[1].planned_yielding_periods,
+            PREDEFINED_GLOBAL_FARMS_INS1[1].blocks_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[1].incentivized_asset,
+            PREDEFINED_GLOBAL_FARMS_INS1[1].reward_currency,
             BOB,
-            PREDEFINED_GLOBAL_FARMS[1].yield_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[1].yield_per_period,
         ));
 
         assert_ok!(LiquidityMining::create_global_farm(
             30_000_000_000,
-            PREDEFINED_GLOBAL_FARMS[2].planned_yielding_periods,
-            PREDEFINED_GLOBAL_FARMS[2].blocks_per_period,
-            PREDEFINED_GLOBAL_FARMS[2].incentivized_asset,
-            PREDEFINED_GLOBAL_FARMS[2].reward_currency,
+            PREDEFINED_GLOBAL_FARMS_INS1[2].planned_yielding_periods,
+            PREDEFINED_GLOBAL_FARMS_INS1[2].blocks_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[2].incentivized_asset,
+            PREDEFINED_GLOBAL_FARMS_INS1[2].reward_currency,
             GC,
-            PREDEFINED_GLOBAL_FARMS[2].yield_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[2].yield_per_period,
         ));
 
         assert_ok!(LiquidityMining::create_global_farm(
             30_000_000_000,
-            PREDEFINED_GLOBAL_FARMS[3].planned_yielding_periods,
-            PREDEFINED_GLOBAL_FARMS[3].blocks_per_period,
-            PREDEFINED_GLOBAL_FARMS[3].incentivized_asset,
-            PREDEFINED_GLOBAL_FARMS[3].reward_currency,
+            PREDEFINED_GLOBAL_FARMS_INS1[3].planned_yielding_periods,
+            PREDEFINED_GLOBAL_FARMS_INS1[3].blocks_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[3].incentivized_asset,
+            PREDEFINED_GLOBAL_FARMS_INS1[3].reward_currency,
             CHARLIE,
-            PREDEFINED_GLOBAL_FARMS[3].yield_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[3].yield_per_period,
         ));
 
         assert_ok!(LiquidityMining::create_global_farm(
             30_000_000_000,
-            PREDEFINED_GLOBAL_FARMS[4].planned_yielding_periods,
-            PREDEFINED_GLOBAL_FARMS[4].blocks_per_period,
-            PREDEFINED_GLOBAL_FARMS[4].incentivized_asset,
-            PREDEFINED_GLOBAL_FARMS[4].reward_currency,
+            PREDEFINED_GLOBAL_FARMS_INS1[4].planned_yielding_periods,
+            PREDEFINED_GLOBAL_FARMS_INS1[4].blocks_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[4].incentivized_asset,
+            PREDEFINED_GLOBAL_FARMS_INS1[4].reward_currency,
             DAVE,
-            PREDEFINED_GLOBAL_FARMS[4].yield_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[4].yield_per_period,
         ));
 
         assert_ok!(LiquidityMining::create_global_farm(
             30_000_000_000,
-            PREDEFINED_GLOBAL_FARMS[5].planned_yielding_periods,
-            PREDEFINED_GLOBAL_FARMS[5].blocks_per_period,
-            PREDEFINED_GLOBAL_FARMS[5].incentivized_asset,
-            PREDEFINED_GLOBAL_FARMS[5].reward_currency,
+            PREDEFINED_GLOBAL_FARMS_INS1[5].planned_yielding_periods,
+            PREDEFINED_GLOBAL_FARMS_INS1[5].blocks_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[5].incentivized_asset,
+            PREDEFINED_GLOBAL_FARMS_INS1[5].reward_currency,
             EVE,
-            PREDEFINED_GLOBAL_FARMS[5].yield_per_period,
+            PREDEFINED_GLOBAL_FARMS_INS1[5].yield_per_period,
         ));
 
         let amm_mock_data = vec![
@@ -159,23 +159,23 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
             }
         });
 
-        let yield_farm = PREDEFINED_YIELD_FARMS.with(|v| v[0].clone());
-        init_yield_farm(GC, GC_FARM, BSX_TKN1_AMM, BSX, TKN1, yield_farm);
+        let yield_farm = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone());
+        init_yield_farm_ins1(GC, GC_FARM, BSX_TKN1_AMM, BSX, TKN1, yield_farm);
 
-        let yield_farm = PREDEFINED_YIELD_FARMS.with(|v| v[1].clone());
-        init_yield_farm(GC, GC_FARM, BSX_TKN2_AMM, BSX, TKN2, yield_farm);
+        let yield_farm = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone());
+        init_yield_farm_ins1(GC, GC_FARM, BSX_TKN2_AMM, BSX, TKN2, yield_farm);
 
-        let yield_farm = PREDEFINED_YIELD_FARMS.with(|v| v[2].clone());
-        init_yield_farm(CHARLIE, CHARLIE_FARM, ACA_KSM_AMM, ACA, KSM, yield_farm);
+        let yield_farm = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[2].clone());
+        init_yield_farm_ins1(CHARLIE, CHARLIE_FARM, ACA_KSM_AMM, ACA, KSM, yield_farm);
 
-        let yield_farm = PREDEFINED_YIELD_FARMS.with(|v| v[3].clone());
-        init_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM, BSX, TKN1, yield_farm);
+        let yield_farm = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[3].clone());
+        init_yield_farm_ins1(DAVE, DAVE_FARM, BSX_TKN1_AMM, BSX, TKN1, yield_farm);
 
-        let yield_farm = PREDEFINED_YIELD_FARMS.with(|v| v[4].clone());
-        init_yield_farm(EVE, EVE_FARM, BSX_TKN1_AMM, BSX, TKN1, yield_farm);
+        let yield_farm = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[4].clone());
+        init_yield_farm_ins1(EVE, EVE_FARM, BSX_TKN1_AMM, BSX, TKN1, yield_farm);
 
-        let yield_farm = PREDEFINED_YIELD_FARMS.with(|v| v[5].clone());
-        init_yield_farm(EVE, EVE_FARM, BSX_TKN2_AMM, BSX, TKN2, yield_farm);
+        let yield_farm = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[5].clone());
+        init_yield_farm_ins1(EVE, EVE_FARM, BSX_TKN2_AMM, BSX, TKN2, yield_farm);
 
         reset_on_rpvs_update();
         reset_on_rpz_update();
@@ -184,13 +184,13 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
     ext
 }
 
-fn init_yield_farm(
+fn init_yield_farm_ins1(
     owner: AccountId,
     farm_id: GlobalFarmId,
     amm_id: AccountId,
     asset_a: AssetId,
     asset_b: AssetId,
-    yield_farm: YieldFarmData<Test>,
+    yield_farm: YieldFarmData<Test, Instance1>,
 ) {
     assert_ok!(LiquidityMining::create_yield_farm(
         owner,
@@ -368,7 +368,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             }
         );
 
-        let yield_farm_id = PREDEFINED_YIELD_FARMS.with(|v| v[0].id);
+        let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].id);
         assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, yield_farm_id)).unwrap(),
             YieldFarmData {
@@ -378,11 +378,11 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 total_shares: 616,
                 total_valued_shares: 45_540,
                 entries_count: 3,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
             },
         );
 
-        let yield_farm_id = PREDEFINED_YIELD_FARMS.with(|v| v[1].id);
+        let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].id);
         assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, yield_farm_id)).unwrap(),
             YieldFarmData {
@@ -392,7 +392,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 total_shares: 960,
                 total_valued_shares: 47_629,
                 entries_count: 4,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
             },
         );
 

@@ -62,7 +62,7 @@ fn withdraw_shares_should_work() {
                 total_shares_z: 691_490,
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -75,7 +75,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 566,
                 total_valued_shares: 43_040,
                 entries_count: 2,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
             },
         );
 
@@ -143,7 +143,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 688_880,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -157,7 +157,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 566,
                 total_valued_shares: 43_040,
                 entries_count: 2,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
             },
         );
 
@@ -170,7 +170,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 873,
                 total_valued_shares: 47_368,
                 entries_count: 3,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
             },
         );
 
@@ -237,7 +237,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 494480,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -250,7 +250,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 80,
                 total_valued_shares: 4_160,
                 entries_count: 1,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
             },
         );
 
@@ -316,7 +316,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 473_680,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -329,7 +329,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 0,
                 total_valued_shares: 0,
                 entries_count: 0,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
             },
         );
 
@@ -387,7 +387,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 471_680,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -399,7 +399,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rpz: 12,
                 total_shares: 0,
                 total_valued_shares: 0,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[0].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
             },
         );
 
@@ -412,7 +412,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 848,
                 total_valued_shares: 47_168,
                 entries_count: 2,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
             },
         );
 
@@ -475,7 +475,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 464_000,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -488,7 +488,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 800,
                 total_valued_shares: 46_400,
                 entries_count: 1,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
             },
         );
 
@@ -548,7 +548,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 0,
-                ..PREDEFINED_GLOBAL_FARMS[2].clone()
+                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
             }
         );
 
@@ -561,7 +561,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 0,
                 total_valued_shares: 0,
                 entries_count: 0,
-                ..PREDEFINED_YIELD_FARMS.with(|v| v[1].clone())
+                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
             },
         );
 
@@ -630,7 +630,8 @@ fn withdraw_shares_should_work() {
                     accumulated_claimed_rewards: 0,
                     entered_at: 18,
                     updated_at: 18,
-                    valued_shares: 2_500
+                    valued_shares: 2_500,
+                    _phantom: PhantomData::default(),
                 }],
             },
         );
@@ -1251,7 +1252,7 @@ fn withdraw_shares_yield_farm_entry_not_found_should_not_work() {
         const NOT_FOUND_ENTRY_ID: YieldFarmId = 999_999;
         assert_noop!(
             LiquidityMining::withdraw_lp_shares(ALICE, DEPOSIT_ID, NOT_FOUND_ENTRY_ID, 0),
-            Error::<Test>::YieldFarmEntryNotFound
+            Error::<Test, Instance1>::YieldFarmEntryNotFound
         );
     });
 }
@@ -1261,7 +1262,7 @@ fn withdraw_shares_deposit_not_found_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
             LiquidityMining::withdraw_lp_shares(ALICE, 72_334_321_125_861_359_621, GC_BSX_TKN1_YIELD_FARM_ID, 0),
-            Error::<Test>::DepositNotFound
+            Error::<Test, Instance1>::DepositNotFound
         );
     });
 }

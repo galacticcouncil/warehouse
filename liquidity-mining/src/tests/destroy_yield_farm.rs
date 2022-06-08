@@ -120,7 +120,7 @@ fn destory_yield_farm_non_stopped_yield_farming_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
             LiquidityMining::destroy_yield_farm(GC, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM),
-            Error::<Test>::LiquidityMiningIsNotCanceled
+            Error::<Test, Instance1>::LiquidityMiningIsNotCanceled
         );
     });
 }
@@ -134,7 +134,7 @@ fn destory_yield_farm_not_owner_should_not_work() {
 
         assert_noop!(
             LiquidityMining::destroy_yield_farm(NOT_OWNER, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM),
-            Error::<Test>::Forbidden
+            Error::<Test, Instance1>::Forbidden
         );
     });
 }
@@ -144,7 +144,7 @@ fn destory_yield_farm_yield_farm_does_not_exists_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
             LiquidityMining::destroy_yield_farm(GC, GC_FARM, BSX_DOT_YIELD_FARM_ID, BSX_DOT_AMM),
-            Error::<Test>::YieldFarmNotFound
+            Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
 }

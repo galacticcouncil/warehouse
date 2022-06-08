@@ -145,7 +145,7 @@ pub struct YieldFarmData<T: Config<I>, I: 'static = ()> {
     pub multiplier: FarmMultiplier,
     pub state: YieldFarmState,
     pub entries_count: u64,
-    _phantom: PhantomData<I>,
+    pub _phantom: PhantomData<I>, //pub because of tests
 }
 
 impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
@@ -325,7 +325,7 @@ pub struct YieldFarmEntry<T: Config<I>, I: 'static = ()> {
     pub accumulated_claimed_rewards: Balance,
     pub entered_at: PeriodOf<T>,
     pub updated_at: PeriodOf<T>,
-    _phantom: PhantomData<I>,
+    pub _phantom: PhantomData<I>, //pub because of tests
 }
 
 impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {

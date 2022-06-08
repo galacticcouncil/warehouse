@@ -126,7 +126,7 @@ use sp_arithmetic::{
 use sp_std::convert::{From, Into, TryInto};
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-type AssetIdOf<T> = <T as pallet::Config>::CurrencyId;
+type AssetIdOf<T, I = ()> = <T as pallet::Config<I>>::CurrencyId;
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 type PeriodOf<T> = <T as frame_system::Config>::BlockNumber;
 
@@ -137,13 +137,13 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
-    pub struct Pallet<T>(_);
+    pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+    impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {}
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + TypeInfo {
+    pub trait Config<I: 'static = ()>: frame_system::Config + TypeInfo {
         /// Asset type.
         type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize + Ord + From<u32>;
 
@@ -189,7 +189,7 @@ pub mod pallet {
 
     #[pallet::error]
     #[cfg_attr(test, derive(PartialEq))]
-    pub enum Error<T> {
+    pub enum Error<T, I = ()> {
         /// Global farm does not exist.
         GlobalFarmNotFound,
 
@@ -266,46 +266,48 @@ pub mod pallet {
     /// Id sequencer for `GlobalFarm` and `YieldFarm`.
     #[pallet::storage]
     #[pallet::getter(fn farm_id)]
-    pub type FarmSequencer<T: Config> = StorageValue<_, FarmId, ValueQuery>;
+    pub type FarmSequencer<T: Config<I>, I: 'static = ()> = StorageValue<_, FarmId, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn deposit_id)]
-    pub type DepositSequencer<T: Config> = StorageValue<_, DepositId, ValueQuery>;
+    pub type DepositSequencer<T: Config<I>, I: 'static = ()> = StorageValue<_, DepositId, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn global_farm)]
-    pub type GlobalFarm<T: Config> = StorageMap<_, Blake2_128Concat, GlobalFarmId, GlobalFarmData<T>, OptionQuery>;
+    pub type GlobalFarm<T: Config<I>, I: 'static = ()> =
+        StorageMap<_, Blake2_128Concat, GlobalFarmId, GlobalFarmData<T, I>, OptionQuery>;
 
     /// Yield farm details.
     #[pallet::storage]
     #[pallet::getter(fn yield_farm)]
-    pub type YieldFarm<T: Config> = StorageNMap<
+    pub type YieldFarm<T: Config<I>, I: 'static = ()> = StorageNMap<
         _,
         (
             NMapKey<Blake2_128Concat, T::AmmPoolId>,
             NMapKey<Blake2_128Concat, GlobalFarmId>,
             NMapKey<Blake2_128Concat, YieldFarmId>,
         ),
-        YieldFarmData<T>,
+        YieldFarmData<T, I>,
         OptionQuery,
     >;
 
     /// Deposit details.
     #[pallet::storage]
     #[pallet::getter(fn deposit)]
-    pub type Deposit<T: Config> = StorageMap<_, Blake2_128Concat, DepositId, DepositData<T>, OptionQuery>;
+    pub type Deposit<T: Config<I>, I: 'static = ()> =
+        StorageMap<_, Blake2_128Concat, DepositId, DepositData<T, I>, OptionQuery>;
 
     /// Active(farms able to receive LP shares deposits) yield farms.
     #[pallet::storage]
     #[pallet::getter(fn active_yield_farm)]
-    pub type ActiveYieldFarm<T: Config> =
+    pub type ActiveYieldFarm<T: Config<I>, I: 'static = ()> =
         StorageDoubleMap<_, Blake2_128Concat, T::AmmPoolId, Blake2_128Concat, GlobalFarmId, YieldFarmId>;
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {}
+    impl<T: Config<I>, I: 'static> Pallet<T, I> {}
 }
 
-impl<T: Config> Pallet<T> {
+impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// Create new liquidity mining program with provided parameters.
     ///
     /// `owner` account have to have at least `total_rewards` balance. This funds will be
@@ -331,8 +333,8 @@ impl<T: Config> Pallet<T> {
         total_rewards: Balance,
         planned_yielding_periods: PeriodOf<T>,
         blocks_per_period: BlockNumberFor<T>,
-        incentivized_asset: AssetIdOf<T>,
-        reward_currency: AssetIdOf<T>,
+        incentivized_asset: AssetIdOf<T, I>,
+        reward_currency: AssetIdOf<T, I>,
         owner: AccountIdOf<T>,
         yield_per_period: Permill,
     ) -> Result<(GlobalFarmId, Balance), DispatchError> {
@@ -345,7 +347,7 @@ impl<T: Config> Pallet<T> {
 
         ensure!(
             T::MultiCurrency::free_balance(reward_currency, &owner) >= total_rewards,
-            Error::<T>::InsufficientRewardCurrencyBalance
+            Error::<T, I>::InsufficientRewardCurrencyBalance
         );
 
         let planned_periods =
@@ -368,7 +370,7 @@ impl<T: Config> Pallet<T> {
             max_reward_per_period,
         );
 
-        <GlobalFarm<T>>::insert(&global_farm.id, &global_farm);
+        <GlobalFarm<T, I>>::insert(&global_farm.id, &global_farm);
 
         let global_farm_account = Self::farm_account_id(global_farm.id)?;
         T::MultiCurrency::transfer(reward_currency, &global_farm.owner, &global_farm_account, total_rewards)?;
@@ -393,12 +395,12 @@ impl<T: Config> Pallet<T> {
         who: AccountIdOf<T>,
         farm_id: GlobalFarmId,
     ) -> Result<(T::CurrencyId, Balance, AccountIdOf<T>), DispatchError> {
-        <GlobalFarm<T>>::try_mutate_exists(farm_id, |maybe_global_farm| {
-            let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
+        <GlobalFarm<T, I>>::try_mutate_exists(farm_id, |maybe_global_farm| {
+            let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
 
-            ensure!(who == global_farm.owner, Error::<T>::Forbidden);
+            ensure!(who == global_farm.owner, Error::<T, I>::Forbidden);
 
-            ensure!(global_farm.has_no_live_farms(), Error::<T>::GlobalFarmIsNotEmpty);
+            ensure!(global_farm.has_no_live_farms(), Error::<T, I>::GlobalFarmIsNotEmpty);
 
             let global_farm_account = Self::farm_account_id(global_farm.id)?;
             let undistributed_rewards =
@@ -448,32 +450,32 @@ impl<T: Config> Pallet<T> {
         asset_a: T::CurrencyId,
         asset_b: T::CurrencyId,
     ) -> Result<YieldFarmId, DispatchError> {
-        ensure!(!multiplier.is_zero(), Error::<T>::InvalidMultiplier);
+        ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
 
         if let Some(ref curve) = loyalty_curve {
             ensure!(
                 curve.initial_reward_percentage.lt(&FixedU128::one()),
-                Error::<T>::InvalidInitialRewardPercentage
+                Error::<T, I>::InvalidInitialRewardPercentage
             );
         }
 
-        <GlobalFarm<T>>::try_mutate(
+        <GlobalFarm<T, I>>::try_mutate(
             global_farm_id,
             |maybe_global_farm| -> Result<YieldFarmId, DispatchError> {
-                let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
+                let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
 
                 //This is basically same as farm not found.
-                ensure!(global_farm.is_active(), Error::<T>::GlobalFarmNotFound);
+                ensure!(global_farm.is_active(), Error::<T, I>::GlobalFarmNotFound);
 
-                ensure!(who == global_farm.owner, Error::<T>::Forbidden);
+                ensure!(who == global_farm.owner, Error::<T, I>::Forbidden);
 
                 ensure!(
                     asset_a == global_farm.incentivized_asset || asset_b == global_farm.incentivized_asset,
-                    Error::<T>::MissingIncentivizedAsset
+                    Error::<T, I>::MissingIncentivizedAsset
                 );
 
-                <ActiveYieldFarm<T>>::try_mutate(amm_pool_id.clone(), &global_farm_id, |maybe_active_yield_farm| {
-                    ensure!(maybe_active_yield_farm.is_none(), Error::<T>::YieldFarmAlreadyExists);
+                <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id.clone(), &global_farm_id, |maybe_active_yield_farm| {
+                    ensure!(maybe_active_yield_farm.is_none(), Error::<T, I>::YieldFarmAlreadyExists);
 
                     // update global farm accumulated RPZ
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
@@ -492,7 +494,7 @@ impl<T: Config> Pallet<T> {
                     let yield_farm =
                         YieldFarmData::new(yield_farm_id, current_period, loyalty_curve.clone(), multiplier);
 
-                    <YieldFarm<T>>::insert((amm_pool_id, global_farm_id, yield_farm_id), yield_farm);
+                    <YieldFarm<T, I>>::insert((amm_pool_id, global_farm_id, yield_farm_id), yield_farm);
                     global_farm.yield_farm_added()?;
 
                     *maybe_active_yield_farm = Some(yield_farm_id);
@@ -518,22 +520,22 @@ impl<T: Config> Pallet<T> {
         multiplier: FarmMultiplier,
         amm_pool_id: T::AmmPoolId,
     ) -> Result<YieldFarmId, DispatchError> {
-        ensure!(!multiplier.is_zero(), Error::<T>::InvalidMultiplier);
+        ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
 
         let yield_farm_id =
-            Self::active_yield_farm(amm_pool_id.clone(), global_farm_id).ok_or(Error::<T>::YieldFarmNotFound)?;
+            Self::active_yield_farm(amm_pool_id.clone(), global_farm_id).ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
-        <YieldFarm<T>>::try_mutate((amm_pool_id, global_farm_id, yield_farm_id), |maybe_yield_farm| {
-            let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
+        <YieldFarm<T, I>>::try_mutate((amm_pool_id, global_farm_id, yield_farm_id), |maybe_yield_farm| {
+            let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
             //This should never fail. If farm is in the `ActiveYieldFarm` storage, it MUST be
             //active.
-            ensure!(yield_farm.is_active(), Error::<T>::LiquidityMiningIsNotActive);
+            ensure!(yield_farm.is_active(), Error::<T, I>::LiquidityMiningIsNotActive);
 
-            <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
-                let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
+            <GlobalFarm<T, I>>::try_mutate(global_farm_id, |maybe_global_farm| {
+                let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
 
-                ensure!(who == global_farm.owner, Error::<T>::Forbidden);
+                ensure!(who == global_farm.owner, Error::<T, I>::Forbidden);
 
                 let old_stake_in_global_farm =
                     math::calculate_global_pool_shares(yield_farm.total_valued_shares, yield_farm.multiplier)
@@ -578,27 +580,27 @@ impl<T: Config> Pallet<T> {
         global_farm_id: GlobalFarmId,
         amm_pool_id: T::AmmPoolId,
     ) -> Result<YieldFarmId, DispatchError> {
-        <ActiveYieldFarm<T>>::try_mutate_exists(
+        <ActiveYieldFarm<T, I>>::try_mutate_exists(
             amm_pool_id.clone(),
             global_farm_id,
             |maybe_active_yield_farm_id| -> Result<YieldFarmId, DispatchError> {
                 let yield_farm_id = maybe_active_yield_farm_id
                     .as_ref()
-                    .ok_or(Error::<T>::YieldFarmNotFound)?;
+                    .ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
-                <YieldFarm<T>>::try_mutate(
+                <YieldFarm<T, I>>::try_mutate(
                     (amm_pool_id, global_farm_id, yield_farm_id),
                     |maybe_yield_farm| -> Result<(), DispatchError> {
-                        let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
+                        let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
                         //NOTE: this should never fail because yield farm MUST be in the
                         //`ActiveYieldFarm` store.
-                        ensure!(yield_farm.is_active(), Error::<T>::LiquidityMiningIsNotActive);
+                        ensure!(yield_farm.is_active(), Error::<T, I>::LiquidityMiningIsNotActive);
 
-                        <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
-                            let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
+                        <GlobalFarm<T, I>>::try_mutate(global_farm_id, |maybe_global_farm| {
+                            let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
 
-                            ensure!(global_farm.owner == who, Error::<T>::Forbidden);
+                            ensure!(global_farm.owner == who, Error::<T, I>::Forbidden);
 
                             let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
                             Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
@@ -653,21 +655,24 @@ impl<T: Config> Pallet<T> {
         amm_pool_id: T::AmmPoolId,
         multiplier: FarmMultiplier,
     ) -> Result<YieldFarmId, DispatchError> {
-        ensure!(!multiplier.is_zero(), Error::<T>::InvalidMultiplier);
+        ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
 
-        <ActiveYieldFarm<T>>::try_mutate(amm_pool_id.clone(), global_farm_id, |maybe_active_yield_farm_id| {
-            ensure!(maybe_active_yield_farm_id.is_none(), Error::<T>::YieldFarmAlreadyExists);
+        <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id.clone(), global_farm_id, |maybe_active_yield_farm_id| {
+            ensure!(
+                maybe_active_yield_farm_id.is_none(),
+                Error::<T, I>::YieldFarmAlreadyExists
+            );
 
-            <YieldFarm<T>>::try_mutate((amm_pool_id, global_farm_id, yield_farm_id), |maybe_yield_farm| {
-                let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
+            <YieldFarm<T, I>>::try_mutate((amm_pool_id, global_farm_id, yield_farm_id), |maybe_yield_farm| {
+                let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
                 //Active or deleted yield farms can't be resumed.
-                ensure!(yield_farm.is_stopped(), Error::<T>::LiquidityMiningIsNotCanceled);
+                ensure!(yield_farm.is_stopped(), Error::<T, I>::LiquidityMiningIsNotCanceled);
 
-                <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
-                    let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
+                <GlobalFarm<T, I>>::try_mutate(global_farm_id, |maybe_global_farm| {
+                    let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
 
-                    ensure!(global_farm.owner == who, Error::<T>::Forbidden);
+                    ensure!(global_farm.owner == who, Error::<T, I>::Forbidden);
 
                     //update `GlobalFarm` accumulated_rpz
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
@@ -726,21 +731,21 @@ impl<T: Config> Pallet<T> {
         amm_pool_id: T::AmmPoolId,
     ) -> Result<(), DispatchError> {
         ensure!(
-            !<ActiveYieldFarm<T>>::contains_key(amm_pool_id.clone(), global_farm_id),
-            Error::<T>::LiquidityMiningIsNotCanceled
+            !<ActiveYieldFarm<T, I>>::contains_key(amm_pool_id.clone(), global_farm_id),
+            Error::<T, I>::LiquidityMiningIsNotCanceled
         );
 
-        <GlobalFarm<T>>::try_mutate_exists(global_farm_id, |maybe_global_farm| {
-            let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
+        <GlobalFarm<T, I>>::try_mutate_exists(global_farm_id, |maybe_global_farm| {
+            let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
 
-            ensure!(global_farm.owner == who, Error::<T>::Forbidden);
+            ensure!(global_farm.owner == who, Error::<T, I>::Forbidden);
 
-            <YieldFarm<T>>::try_mutate_exists(
+            <YieldFarm<T, I>>::try_mutate_exists(
                 (amm_pool_id, global_farm_id, yield_farm_id),
                 |maybe_yield_farm| -> Result<(), DispatchError> {
-                    let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
+                    let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
-                    ensure!(yield_farm.is_stopped(), Error::<T>::LiquidityMiningIsNotCanceled);
+                    ensure!(yield_farm.is_stopped(), Error::<T, I>::LiquidityMiningIsNotCanceled);
 
                     //Transfer unpaid rewards back to global_pool.
                     let global_farm_account = Self::farm_account_id(global_farm.id)?;
@@ -800,7 +805,7 @@ impl<T: Config> Pallet<T> {
     ) -> Result<DepositId, DispatchError> {
         ensure!(
             shares_amount.ge(&T::MinDeposit::get()),
-            Error::<T>::InvalidDepositAmount,
+            Error::<T, I>::InvalidDepositAmount,
         );
 
         let mut deposit = DepositData::new(shares_amount, amm_pool_id.clone());
@@ -809,7 +814,7 @@ impl<T: Config> Pallet<T> {
 
         //Save deposit to storage.
         let deposit_id = Self::get_next_deposit_id()?;
-        <Deposit<T>>::insert(deposit_id, deposit);
+        <Deposit<T, I>>::insert(deposit_id, deposit);
 
         T::Handler::lock_lp_tokens(amm_pool_id, who, shares_amount, deposit_id)?;
 
@@ -830,8 +835,8 @@ impl<T: Config> Pallet<T> {
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
     ) -> Result<(), DispatchError> {
-        <Deposit<T>>::try_mutate(deposit_id, |maybe_deposit| {
-            let deposit = maybe_deposit.as_mut().ok_or(Error::<T>::DepositNotFound)?;
+        <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
+            let deposit = maybe_deposit.as_mut().ok_or(Error::<T, I>::DepositNotFound)?;
 
             Self::do_deposit_lp_shares(deposit, global_farm_id, yield_farm_id)?;
 
@@ -861,25 +866,25 @@ impl<T: Config> Pallet<T> {
         yield_farm_id: YieldFarmId,
         check_double_claim: bool,
     ) -> Result<(GlobalFarmId, T::CurrencyId, Balance, Balance), DispatchError> {
-        <Deposit<T>>::try_mutate(deposit_id, |maybe_deposit| {
-            let deposit = maybe_deposit.as_mut().ok_or(Error::<T>::DepositNotFound)?;
+        <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
+            let deposit = maybe_deposit.as_mut().ok_or(Error::<T, I>::DepositNotFound)?;
 
             let amm_pool_id = deposit.amm_pool_id.clone();
             let farm_entry = deposit
                 .get_yield_farm_entry(yield_farm_id)
-                .ok_or(Error::<T>::YieldFarmEntryNotFound)?;
+                .ok_or(Error::<T, I>::YieldFarmEntryNotFound)?;
 
-            <YieldFarm<T>>::try_mutate(
+            <YieldFarm<T, I>>::try_mutate(
                 (amm_pool_id, farm_entry.global_farm_id, yield_farm_id),
                 |maybe_yield_farm| {
-                    let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
+                    let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
                     //NOTE: claiming from removed yield farm should NOT work. This is same as yield
                     //farm doesn't exist.
-                    ensure!(!yield_farm.is_deleted(), Error::<T>::YieldFarmNotFound);
+                    ensure!(!yield_farm.is_deleted(), Error::<T, I>::YieldFarmNotFound);
 
-                    <GlobalFarm<T>>::try_mutate(farm_entry.global_farm_id, |maybe_global_farm| {
-                        let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
+                    <GlobalFarm<T, I>>::try_mutate(farm_entry.global_farm_id, |maybe_global_farm| {
+                        let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
 
                         let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
                         //Double claim should be allowed in some case e.g withdraw_lp_shares need
@@ -887,7 +892,7 @@ impl<T: Config> Pallet<T> {
                         if check_double_claim {
                             ensure!(
                                 farm_entry.updated_at != current_period,
-                                Error::<T>::DoubleClaimInThePeriod
+                                Error::<T, I>::DoubleClaimInThePeriod
                             );
                         }
 
@@ -960,20 +965,20 @@ impl<T: Config> Pallet<T> {
         yield_farm_id: YieldFarmId,
         unclaimable_rewards: Balance,
     ) -> Result<(GlobalFarmId, Balance), DispatchError> {
-        <Deposit<T>>::try_mutate_exists(deposit_id, |maybe_deposit| {
-            let deposit = maybe_deposit.as_mut().ok_or(Error::<T>::DepositNotFound)?;
+        <Deposit<T, I>>::try_mutate_exists(deposit_id, |maybe_deposit| {
+            let deposit = maybe_deposit.as_mut().ok_or(Error::<T, I>::DepositNotFound)?;
 
             let farm_entry = deposit.remove_yield_farm_entry(yield_farm_id)?;
             let amm_pool_id = deposit.amm_pool_id.clone();
 
-            <GlobalFarm<T>>::try_mutate_exists(
+            <GlobalFarm<T, I>>::try_mutate_exists(
                 farm_entry.global_farm_id,
                 |maybe_global_farm| -> Result<(), DispatchError> {
-                    let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
-                    <YieldFarm<T>>::try_mutate_exists(
+                    let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
+                    <YieldFarm<T, I>>::try_mutate_exists(
                         (&amm_pool_id, farm_entry.global_farm_id, yield_farm_id),
                         |maybe_yield_farm| -> Result<(), DispatchError> {
-                            let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
+                            let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
                             yield_farm.total_shares = yield_farm
                                 .total_shares
@@ -1043,29 +1048,29 @@ impl<T: Config> Pallet<T> {
 
     /// Helper function to create yield farm entry.
     fn do_deposit_lp_shares(
-        deposit: &mut DepositData<T>,
+        deposit: &mut DepositData<T, I>,
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
     ) -> Result<(), DispatchError> {
         //LP shares can be locked only once in the same yield farm.
         ensure!(
             !deposit.contains_yield_farm_entry(yield_farm_id),
-            Error::<T>::DoubleLock
+            Error::<T, I>::DoubleLock
         );
 
-        <YieldFarm<T>>::try_mutate(
+        <YieldFarm<T, I>>::try_mutate(
             (deposit.amm_pool_id.clone(), global_farm_id, yield_farm_id),
             |maybe_yield_farm| {
-                let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T>::YieldFarmNotFound)?;
+                let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
-                ensure!(yield_farm.is_active(), Error::<T>::LiquidityMiningIsNotActive);
+                ensure!(yield_farm.is_active(), Error::<T, I>::LiquidityMiningIsNotActive);
 
-                <GlobalFarm<T>>::try_mutate(global_farm_id, |maybe_global_farm| {
-                    let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T>::GlobalFarmNotFound)?;
+                <GlobalFarm<T, I>>::try_mutate(global_farm_id, |maybe_global_farm| {
+                    let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
 
                     //This should never fail. If yield farm is active also global farm MUST be
                     //active.
-                    ensure!(global_farm.is_active(), Error::<T>::GlobalFarmNotFound);
+                    ensure!(global_farm.is_active(), Error::<T, I>::GlobalFarmNotFound);
 
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
 
@@ -1116,7 +1121,7 @@ impl<T: Config> Pallet<T> {
 
     /// This function returns new unused `FarmId` usable for yield global farm or error.
     fn get_next_farm_id() -> Result<FarmId, ArithmeticError> {
-        FarmSequencer::<T>::try_mutate(|current_id| {
+        FarmSequencer::<T, I>::try_mutate(|current_id| {
             *current_id = current_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
             Ok(*current_id)
@@ -1125,7 +1130,7 @@ impl<T: Config> Pallet<T> {
 
     /// This function returns new unused `DepositId`or error.
     fn get_next_deposit_id() -> Result<DepositId, ArithmeticError> {
-        DepositSequencer::<T>::try_mutate(|current_id| {
+        DepositSequencer::<T, I>::try_mutate(|current_id| {
             *current_id = current_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
             Ok(*current_id)
@@ -1135,7 +1140,7 @@ impl<T: Config> Pallet<T> {
     /// This function returns account from `FarmId` or error.
     ///
     /// WARN: farm_id = 0 is same as `T::PalletId::get().into_account()`. 0 is not valid value.
-    pub fn farm_account_id(farm_id: FarmId) -> Result<AccountIdOf<T>, Error<T>> {
+    pub fn farm_account_id(farm_id: FarmId) -> Result<AccountIdOf<T>, Error<T, I>> {
         Self::validate_farm_id(farm_id)?;
 
         Ok(T::PalletId::get().into_sub_account(farm_id))
@@ -1175,7 +1180,7 @@ impl<T: Config> Pallet<T> {
     /// This function calculate and update `accumulated_rpz` and all associated properties of `GlobalFar` if
     /// conditions are met.
     fn update_global_farm(
-        global_pool: &mut GlobalFarmData<T>,
+        global_pool: &mut GlobalFarmData<T, I>,
         now_period: PeriodOf<T>,
         reward_per_period: Balance,
     ) -> Result<(), DispatchError> {
@@ -1227,8 +1232,8 @@ impl<T: Config> Pallet<T> {
 
     /// This function calculate and returns yield farm's reward from `GlobalFarm`.
     fn claim_from_global_farm(
-        global_farm: &mut GlobalFarmData<T>,
-        yield_farm: &mut YieldFarmData<T>,
+        global_farm: &mut GlobalFarmData<T, I>,
+        yield_farm: &mut YieldFarmData<T, I>,
         stake_in_global_pool: Balance,
     ) -> Result<Balance, ArithmeticError> {
         let reward = math::calculate_reward(
@@ -1258,7 +1263,7 @@ impl<T: Config> Pallet<T> {
     /// `YieldFarm`
     /// account.
     fn update_yield_farm(
-        yield_farm: &mut YieldFarmData<T>,
+        yield_farm: &mut YieldFarmData<T, I>,
         yield_farm_rewards: Balance,
         current_period: BlockNumberFor<T>,
         global_farm_id: FarmId,
@@ -1285,7 +1290,7 @@ impl<T: Config> Pallet<T> {
 
         ensure!(
             global_pool_balance >= yield_farm_rewards,
-            Error::<T>::InsufficientBalanceInGlobalFarm
+            Error::<T, I>::InsufficientBalanceInGlobalFarm
         );
 
         let global_pool_account = Self::farm_account_id(global_farm_id)?;
@@ -1303,9 +1308,9 @@ impl<T: Config> Pallet<T> {
     }
 
     /// This function return error if `farm_id` is not valid.
-    fn validate_farm_id(farm_id: FarmId) -> Result<(), Error<T>> {
+    fn validate_farm_id(farm_id: FarmId) -> Result<(), Error<T, I>> {
         if farm_id.is_zero() {
-            return Err(Error::<T>::InvalidFarmId);
+            return Err(Error::<T, I>::InvalidFarmId);
         }
 
         Ok(())
@@ -1320,17 +1325,17 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResult {
         ensure!(
             total_rewards >= T::MinTotalFarmRewards::get(),
-            Error::<T>::InvalidTotalRewards
+            Error::<T, I>::InvalidTotalRewards
         );
 
         ensure!(
             planned_yielding_periods >= T::MinPlannedYieldingPeriods::get(),
-            Error::<T>::InvalidPlannedYieldingPeriods
+            Error::<T, I>::InvalidPlannedYieldingPeriods
         );
 
-        ensure!(!blocks_per_period.is_zero(), Error::<T>::InvalidBlocksPerPeriod);
+        ensure!(!blocks_per_period.is_zero(), Error::<T, I>::InvalidBlocksPerPeriod);
 
-        ensure!(!yield_per_period.is_zero(), Error::<T>::InvalidYieldPerPeriod);
+        ensure!(!yield_per_period.is_zero(), Error::<T, I>::InvalidYieldPerPeriod);
 
         Ok(())
     }
@@ -1350,8 +1355,8 @@ impl<T: Config> Pallet<T> {
 
     /// This function update both (global and yield) farms if conditions are met.
     fn maybe_update_farms(
-        global_farm: &mut GlobalFarmData<T>,
-        yield_farm: &mut YieldFarmData<T>,
+        global_farm: &mut GlobalFarmData<T, I>,
+        yield_farm: &mut YieldFarmData<T, I>,
         current_period: PeriodOf<T>,
     ) -> Result<(), DispatchError> {
         if !yield_farm.is_active() {

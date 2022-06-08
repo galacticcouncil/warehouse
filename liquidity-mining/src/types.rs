@@ -18,19 +18,20 @@ pub type TotalFarmsCount = u32;
 /// users stake in `YieldFarm`.
 /// Yield farm is considered live from global farm view if yield farm is `active` or `stopped`.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
-pub struct GlobalFarmData<T: Config> {
+#[scale_info(skip_type_params(I))]
+pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
     pub id: GlobalFarmId,
     pub owner: AccountIdOf<T>,
     pub updated_at: PeriodOf<T>,
     pub total_shares_z: Balance,
     pub accumulated_rpz: Balance,
-    pub reward_currency: AssetIdOf<T>,
+    pub reward_currency: AssetIdOf<T, I>,
     pub accumulated_rewards: Balance,
     pub paid_accumulated_rewards: Balance,
     pub yield_per_period: Permill,
     pub planned_yielding_periods: PeriodOf<T>,
     pub blocks_per_period: BlockNumberFor<T>,
-    pub incentivized_asset: AssetIdOf<T>,
+    pub incentivized_asset: AssetIdOf<T, I>,
     pub max_reward_per_period: Balance,
     //`TotalFarmsCount` includes active, stopped and deleted. Total count is decreased only if yield farms
     //is flushed. `LiveFarmsCount` includes `active` and `stopped` yield farms.
@@ -38,7 +39,7 @@ pub struct GlobalFarmData<T: Config> {
     pub state: GlobalFarmState,
 }
 
-impl<T: Config> GlobalFarmData<T> {
+impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: GlobalFarmId,
@@ -132,7 +133,8 @@ impl<T: Config> GlobalFarmData<T> {
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
-pub struct YieldFarmData<T: Config> {
+#[scale_info(skip_type_params(I))]
+pub struct YieldFarmData<T: Config<I>, I: 'static = ()> {
     pub id: FarmId,
     pub updated_at: PeriodOf<T>,
     pub total_shares: Balance,
@@ -143,9 +145,10 @@ pub struct YieldFarmData<T: Config> {
     pub multiplier: FarmMultiplier,
     pub state: YieldFarmState,
     pub entries_count: u64,
+    _phantom: PhantomData<I>,
 }
 
-impl<T: Config> YieldFarmData<T> {
+impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         id: FarmId,
@@ -164,6 +167,7 @@ impl<T: Config> YieldFarmData<T> {
             total_valued_shares: Zero::zero(),
             state: YieldFarmState::Active,
             entries_count: Default::default(),
+            _phantom: PhantomData::default(),
         }
     }
 
@@ -210,6 +214,7 @@ impl<T: Config> YieldFarmData<T> {
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[scale_info(skip_type_params(I))]
 pub struct LoyaltyCurve {
     pub initial_reward_percentage: FixedU128,
     pub scale_coef: u32,
@@ -225,14 +230,15 @@ impl Default for LoyaltyCurve {
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebugNoBound, TypeInfo, PartialEq)]
-pub struct DepositData<T: Config> {
+#[scale_info(skip_type_params(I))]
+pub struct DepositData<T: Config<I>, I: 'static = ()> {
     pub shares: Balance,
     pub amm_pool_id: T::AmmPoolId,
     //NOTE: Capacity of this vector MUST BE at least 1.
-    pub yield_farm_entries: Vec<YieldFarmEntry<T>>,
+    pub yield_farm_entries: Vec<YieldFarmEntry<T, I>>,
 }
 
-impl<T: Config> DepositData<T> {
+impl<T: Config<I>, I: 'static> DepositData<T, I> {
     pub fn new(shares: Balance, amm_pool_id: T::AmmPoolId) -> Self {
         Self {
             shares,
@@ -245,17 +251,17 @@ impl<T: Config> DepositData<T> {
     /// This function add new yield farm entry into the deposit.
     /// This function returns error if deposit reached max entries in the deposit or
     /// `entry.yield_farm_id` is not unique.
-    pub fn add_yield_farm_entry(&mut self, entry: YieldFarmEntry<T>) -> Result<(), DispatchError> {
+    pub fn add_yield_farm_entry(&mut self, entry: YieldFarmEntry<T, I>) -> Result<(), DispatchError> {
         let len = TryInto::<u8>::try_into(self.yield_farm_entries.len()).map_err(|_e| ArithmeticError::Overflow)?;
         if len >= T::MaxFarmEntriesPerDeposit::get() {
-            return Err(Error::<T>::MaxEntriesPerDeposit.into());
+            return Err(Error::<T, I>::MaxEntriesPerDeposit.into());
         }
 
         let idx = match self
             .yield_farm_entries
             .binary_search_by(|e| e.yield_farm_id.cmp(&entry.yield_farm_id))
         {
-            Ok(_) => return Err(Error::<T>::DoubleLock.into()),
+            Ok(_) => return Err(Error::<T, I>::DoubleLock.into()),
             Err(idx) => idx,
         };
 
@@ -266,13 +272,13 @@ impl<T: Config> DepositData<T> {
 
     /// This function remove yield farm entry from the deposit. This function returns error if
     /// yield farm entry in not found in the deposit.
-    pub fn remove_yield_farm_entry(&mut self, yield_farm_id: YieldFarmId) -> Result<YieldFarmEntry<T>, Error<T>> {
+    pub fn remove_yield_farm_entry(&mut self, yield_farm_id: YieldFarmId) -> Result<YieldFarmEntry<T, I>, Error<T, I>> {
         let idx = match self
             .yield_farm_entries
             .binary_search_by(|e| e.yield_farm_id.cmp(&yield_farm_id))
         {
             Ok(idx) => idx,
-            Err(_) => return Err(Error::<T>::YieldFarmEntryNotFound),
+            Err(_) => return Err(Error::<T, I>::YieldFarmEntryNotFound),
         };
 
         Ok(self.yield_farm_entries.remove(idx))
@@ -280,7 +286,7 @@ impl<T: Config> DepositData<T> {
 
     /// This function return yield farm entry from deposit of `None` if yield farm entry is not
     /// found.
-    pub fn get_yield_farm_entry(&mut self, yield_farm_id: FarmId) -> Option<&mut YieldFarmEntry<T>> {
+    pub fn get_yield_farm_entry(&mut self, yield_farm_id: FarmId) -> Option<&mut YieldFarmEntry<T, I>> {
         match self
             .yield_farm_entries
             .binary_search_by(|e| e.yield_farm_id.cmp(&yield_farm_id))
@@ -310,17 +316,19 @@ impl<T: Config> DepositData<T> {
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
-pub struct YieldFarmEntry<T: Config> {
+#[scale_info(skip_type_params(I))]
+pub struct YieldFarmEntry<T: Config<I>, I: 'static = ()> {
     pub global_farm_id: GlobalFarmId,
-    pub yield_farm_id: FarmId,
+    pub yield_farm_id: YieldFarmId,
     pub valued_shares: Balance,
     pub accumulated_rpvs: Balance,
     pub accumulated_claimed_rewards: Balance,
     pub entered_at: PeriodOf<T>,
     pub updated_at: PeriodOf<T>,
+    _phantom: PhantomData<I>,
 }
 
-impl<T: Config> YieldFarmEntry<T> {
+impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
     pub fn new(
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
@@ -336,6 +344,7 @@ impl<T: Config> YieldFarmEntry<T> {
             accumulated_claimed_rewards: Zero::zero(),
             entered_at,
             updated_at: entered_at,
+            _phantom: PhantomData,
         }
     }
 }

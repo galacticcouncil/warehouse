@@ -1,7 +1,5 @@
-use frame_support::dispatch::DispatchError;
-
 pub trait Handler<AssetId, AmmPoolId, GlobaFarmId, YieldFarmId, Balance, DepositId, AccountId> {
-    type Error: Into<DispatchError> ;
+    type Error;
 
     /// Returns balance of asset in amm pool
     fn get_balance_in_amm(asset: AssetId, amm_pool: AmmPoolId) -> Balance;

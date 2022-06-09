@@ -1696,13 +1696,12 @@ fn depositdata_add_farm_entry_to_should_work() {
         DepositData::<Test> {
             shares: 10,
             amm_pool_id: BSX_TKN1_AMM,
-            //`yield_farm_entries` are ordered by `YieldFarmId` that's why order is different from inserted order.
             yield_farm_entries: vec![
+                test_farm_entries[0].clone(),
+                test_farm_entries[2].clone(),
                 test_farm_entries[3].clone(),
                 test_farm_entries[4].clone(),
                 test_farm_entries[6].clone(),
-                test_farm_entries[0].clone(),
-                test_farm_entries[2].clone(),
             ],
         }
     );
@@ -1736,16 +1735,6 @@ fn deposit_remove_yield_farm_entry_should_work() {
 
     assert_ok!(deposit.remove_yield_farm_entry(2));
     assert_ok!(deposit.remove_yield_farm_entry(18));
-
-    //check if it stilled ordered
-    assert_eq!(
-        deposit.yield_farm_entries,
-        vec![
-            YieldFarmEntry::<Test>::new(4, 1, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(6, 4, 20, 10, 13),
-            YieldFarmEntry::<Test>::new(3, 60, 20, 1, 1),
-        ]
-    );
 
     assert_ok!(deposit.remove_yield_farm_entry(1));
     assert_ok!(deposit.remove_yield_farm_entry(4));
@@ -1798,12 +1787,12 @@ fn deposit_contains_yield_farm_entry_should_work() {
         ],
     };
 
-    assert!(deposit.contains_yield_farm_entry(1));
-    assert!(deposit.contains_yield_farm_entry(60));
-    assert!(deposit.contains_yield_farm_entry(4));
+    assert!(deposit.search_yield_farm_entry(1).is_some());
+    assert!(deposit.search_yield_farm_entry(60).is_some());
+    assert!(deposit.search_yield_farm_entry(4).is_some());
 
     const NON_EXISTING_YIELD_FARM_ID: YieldFarmId = 98_908;
-    assert!(!deposit.contains_yield_farm_entry(NON_EXISTING_YIELD_FARM_ID));
+    assert!(deposit.search_yield_farm_entry(NON_EXISTING_YIELD_FARM_ID).is_none());
 }
 
 #[test]
@@ -1815,7 +1804,7 @@ fn deposit_has_no_yield_farm_entries_shoudl_work() {
     };
 
     //no yield farm entries
-    assert!(deposit.has_no_yield_farm_entries());
+    assert!(deposit.yield_farm_entries.is_empty());
 
     deposit.yield_farm_entries.push(YieldFarmEntry {
         global_farm_id: GC_FARM,
@@ -1828,7 +1817,7 @@ fn deposit_has_no_yield_farm_entries_shoudl_work() {
     });
 
     //some yield farm entries
-    assert!(!deposit.has_no_yield_farm_entries());
+    assert!(!deposit.yield_farm_entries.is_empty());
 }
 
 #[test]

@@ -264,15 +264,11 @@ impl<T: Config> DepositData<T> {
             return Err(Error::<T>::MaxEntriesPerDeposit.into());
         }
 
-        let idx = match self
-            .yield_farm_entries
-            .binary_search_by(|e| e.yield_farm_id.cmp(&entry.yield_farm_id))
-        {
-            Ok(_) => return Err(Error::<T>::DoubleLock.into()),
-            Err(idx) => idx,
-        };
+        if let Some(_) = self.search_yield_farm_entry(entry.yield_farm_id) {
+            return Err(Error::<T>::DoubleLock.into());
+        }
 
-        self.yield_farm_entries.insert(idx, entry);
+        self.yield_farm_entries.push(entry);
 
         Ok(())
     }
@@ -280,45 +276,32 @@ impl<T: Config> DepositData<T> {
     /// This function remove yield farm entry from the deposit. This function returns error if
     /// yield farm entry in not found in the deposit.
     pub fn remove_yield_farm_entry(&mut self, yield_farm_id: YieldFarmId) -> Result<YieldFarmEntry<T>, Error<T>> {
-        let idx = match self
-            .yield_farm_entries
-            .binary_search_by(|e| e.yield_farm_id.cmp(&yield_farm_id))
-        {
-            Ok(idx) => idx,
-            Err(_) => return Err(Error::<T>::YieldFarmEntryNotFound),
-        };
+        if let Some(idx) = self.search_yield_farm_entry(yield_farm_id) {
+            return Ok(self.yield_farm_entries.swap_remove(idx));
+        }
 
-        Ok(self.yield_farm_entries.remove(idx))
+        Err(Error::<T>::YieldFarmEntryNotFound)
     }
 
     /// This function return yield farm entry from deposit of `None` if yield farm entry is not
     /// found.
     pub fn get_yield_farm_entry(&mut self, yield_farm_id: FarmId) -> Option<&mut YieldFarmEntry<T>> {
-        match self
-            .yield_farm_entries
-            .binary_search_by(|e| e.yield_farm_id.cmp(&yield_farm_id))
-        {
-            Ok(idx) => self.yield_farm_entries.get_mut(idx),
-            Err(_) => None,
-        }
+        self.yield_farm_entries
+            .iter_mut()
+            .find(|e| e.yield_farm_id == yield_farm_id)
     }
 
     /// This function returns `true` if deposit contains yield farm entry with given yield farm id.
-    pub fn contains_yield_farm_entry(&self, yield_farm_id: YieldFarmId) -> bool {
+    pub fn search_yield_farm_entry(&self, yield_farm_id: YieldFarmId) -> Option<usize> {
         self.yield_farm_entries
-            .binary_search_by(|e| e.yield_farm_id.cmp(&yield_farm_id))
-            .is_ok()
-    }
-
-    /// This function returns `true` if deposit has no yield farm entries.
-    pub fn has_no_yield_farm_entries(&self) -> bool {
-        self.yield_farm_entries.is_empty()
+            .iter()
+            .position(|e| e.yield_farm_id == yield_farm_id)
     }
 
     /// This function returns `true` if deposit can be flushed from storage.
     pub fn can_be_flushed(&self) -> bool {
         //NOTE: deposit with no entries should/must be flushed
-        self.has_no_yield_farm_entries()
+        self.yield_farm_entries.is_empty()
     }
 }
 

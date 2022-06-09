@@ -358,15 +358,6 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     updated_at: 18
                 },
                 YieldFarmEntry {
-                    global_farm_id: DAVE_FARM,
-                    valued_shares: 5_000,
-                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
-                    accumulated_claimed_rewards: 0,
-                    accumulated_rpvs: 0,
-                    entered_at: 800,
-                    updated_at: 800
-                },
-                YieldFarmEntry {
                     global_farm_id: EVE_FARM,
                     valued_shares: 4_000,
                     yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
@@ -374,6 +365,15 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_rpvs: 0,
                     entered_at: 50,
                     updated_at: 50
+                },
+                YieldFarmEntry {
+                    global_farm_id: DAVE_FARM,
+                    valued_shares: 5_000,
+                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
+                    accumulated_claimed_rewards: 0,
+                    accumulated_rpvs: 0,
+                    entered_at: 800,
+                    updated_at: 800
                 },
             ]
         );
@@ -426,15 +426,6 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     updated_at: 10_000
                 },
                 YieldFarmEntry {
-                    global_farm_id: DAVE_FARM,
-                    valued_shares: 5_000,
-                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
-                    accumulated_claimed_rewards: 0,
-                    accumulated_rpvs: 0,
-                    entered_at: 800,
-                    updated_at: 800
-                },
-                YieldFarmEntry {
                     global_farm_id: EVE_FARM,
                     valued_shares: 4_000,
                     yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
@@ -442,6 +433,15 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_rpvs: 0,
                     entered_at: 50,
                     updated_at: 1_000
+                },
+                YieldFarmEntry {
+                    global_farm_id: DAVE_FARM,
+                    valued_shares: 5_000,
+                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
+                    accumulated_claimed_rewards: 0,
+                    accumulated_rpvs: 0,
+                    entered_at: 800,
+                    updated_at: 800
                 },
             ]
         );
@@ -493,21 +493,21 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     updated_at: 10_000
                 },
                 YieldFarmEntry {
-                    global_farm_id: DAVE_FARM,
-                    valued_shares: 5_000,
-                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
-                    accumulated_claimed_rewards: 8_333_333,
-                    accumulated_rpvs: 0,
-                    entered_at: 800,
-                    updated_at: 1_000
-                },
-                YieldFarmEntry {
                     global_farm_id: EVE_FARM,
                     valued_shares: 4_000,
                     yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
                     accumulated_claimed_rewards: 7_619_047,
                     accumulated_rpvs: 0,
                     entered_at: 50,
+                    updated_at: 1_000
+                },
+                YieldFarmEntry {
+                    global_farm_id: DAVE_FARM,
+                    valued_shares: 5_000,
+                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
+                    accumulated_claimed_rewards: 8_333_333,
+                    accumulated_rpvs: 0,
+                    entered_at: 800,
                     updated_at: 1_000
                 },
             ]

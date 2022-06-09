@@ -1049,7 +1049,7 @@ impl<T: Config> Pallet<T> {
     ) -> Result<(), DispatchError> {
         //LP shares can be locked only once in the same yield farm.
         ensure!(
-            !deposit.contains_yield_farm_entry(yield_farm_id),
+            deposit.search_yield_farm_entry(yield_farm_id).is_none(),
             Error::<T>::DoubleLock
         );
 

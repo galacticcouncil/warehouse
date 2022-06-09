@@ -116,7 +116,7 @@ use frame_support::{
 use sp_runtime::ArithmeticError;
 
 use hydra_dx_math::liquidity_mining as math;
-use hydradx_traits::liquidity_mining::Handler;
+use hydradx_traits::liquidity_mining::{AmmProvider, LockableLpShares, OnUpdateHandler};
 use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
 use sp_arithmetic::{
@@ -171,16 +171,9 @@ pub mod pallet {
         /// Id used to identify amm pool in liquidity mining pallet.
         type AmmPoolId: Parameter + Member + Clone + FullCodec;
 
-        type Handler: hydradx_traits::liquidity_mining::Handler<
-            Self::CurrencyId,
-            Self::AmmPoolId,
-            GlobalFarmId,
-            FarmId,
-            Balance,
-            DepositId,
-            Self::AccountId,
-            Error = DispatchError,
-        >;
+        type Handler: AmmProvider<Self::CurrencyId, Self::AmmPoolId, Balance>
+            + OnUpdateHandler<GlobalFarmId, FarmId, Balance>
+            + LockableLpShares<Self::AmmPoolId, Self::AccountId, Balance, DepositId, Error = DispatchError>;
 
         /// Maximum number of yield farms same LP shares can be re/deposited into. This value always
         /// MUST BE >= 1.         
@@ -812,7 +805,7 @@ impl<T: Config> Pallet<T> {
         let deposit_id = Self::get_next_deposit_id()?;
         <Deposit<T>>::insert(deposit_id, deposit);
 
-        T::Handler::lock_lp_tokens(amm_pool_id, who, shares_amount, deposit_id)?;
+        T::Handler::lock_lp_shares(amm_pool_id, who, shares_amount, deposit_id)?;
 
         Ok(deposit_id)
     }
@@ -1034,7 +1027,7 @@ impl<T: Config> Pallet<T> {
             let withdrawn_amount = deposit.shares;
             if deposit.can_be_flushed() {
                 //NOTE: LP shares should be unlocked only if deposit is destroyed.
-                T::Handler::unlock_lp_tokens(deposit.amm_pool_id.clone(), who, withdrawn_amount, deposit_id)?;
+                T::Handler::unlock_lp_shares(deposit.amm_pool_id.clone(), who, withdrawn_amount, deposit_id)?;
 
                 *maybe_deposit = None;
             }

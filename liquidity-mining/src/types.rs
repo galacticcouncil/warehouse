@@ -264,7 +264,7 @@ impl<T: Config> DepositData<T> {
             return Err(Error::<T>::MaxEntriesPerDeposit.into());
         }
 
-        if let Some(_) = self.search_yield_farm_entry(entry.yield_farm_id) {
+        if self.search_yield_farm_entry(entry.yield_farm_id).is_some() {
             return Err(Error::<T>::DoubleLock.into());
         }
 

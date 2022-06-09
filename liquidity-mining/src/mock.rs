@@ -294,15 +294,15 @@ impl Config for Test {
 
 pub struct TestLiquidityMiningHandler {}
 
-impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalFarmId, FarmId, Balance, DepositId, AccountId>
-    for TestLiquidityMiningHandler
-{
-    type Error = frame_support::dispatch::DispatchError;
-
+impl hydradx_traits::liquidity_mining::AmmProvider<AssetId, AccountId, Balance> for TestLiquidityMiningHandler {
     fn get_balance_in_amm(asset: AssetId, amm_pool: AccountId) -> Balance {
         Tokens::free_balance(asset, &amm_pool)
     }
+}
 
+impl hydradx_traits::liquidity_mining::OnUpdateHandler<GlobalFarmId, YieldFarmId, Balance>
+    for TestLiquidityMiningHandler
+{
     fn on_accumulated_rpvs_update(
         farm_id: GlobalFarmId,
         liq_pool_farm_id: FarmId,
@@ -326,8 +326,14 @@ impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalFarmId,
             p.2 = total_shares_z;
         });
     }
+}
 
-    fn lock_lp_tokens(
+impl hydradx_traits::liquidity_mining::LockableLpShares<AccountId, AccountId, Balance, DepositId>
+    for TestLiquidityMiningHandler
+{
+    type Error = frame_support::dispatch::DispatchError;
+
+    fn lock_lp_shares(
         amm_pool_id: AccountId,
         who: AccountId,
         amount: Balance,
@@ -352,7 +358,7 @@ impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalFarmId,
         Ok(())
     }
 
-    fn unlock_lp_tokens(
+    fn unlock_lp_shares(
         amm_pool_id: AccountId,
         who: AccountId,
         amount: Balance,

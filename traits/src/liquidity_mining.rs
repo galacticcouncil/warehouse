@@ -1,6 +1,8 @@
 use frame_support::dispatch::DispatchError;
 
 pub trait Handler<AssetId, AmmPoolId, GlobaFarmId, YieldFarmId, Balance, DepositId, AccountId> {
+    type Error: Into<DispatchError> ;
+
     /// Returns balance of asset in amm pool
     fn get_balance_in_amm(asset: AssetId, amm_pool: AmmPoolId) -> Balance;
 
@@ -21,7 +23,7 @@ pub trait Handler<AssetId, AmmPoolId, GlobaFarmId, YieldFarmId, Balance, Deposit
         who: AccountId,
         amount: Balance,
         deposit_id: DepositId,
-    ) -> Result<(), DispatchError>;
+    ) -> Result<(), Self::Error>;
 
     /// This function should unlock LP shares.
     fn unlock_lp_tokens(
@@ -29,5 +31,5 @@ pub trait Handler<AssetId, AmmPoolId, GlobaFarmId, YieldFarmId, Balance, Deposit
         who: AccountId,
         amount: Balance,
         deposit_id: DepositId,
-    ) -> Result<(), DispatchError>;
+    ) -> Result<(), Self::Error>;
 }

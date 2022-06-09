@@ -14,7 +14,6 @@ serde = { features = ["derive"], optional = true, version = "1.0.136" }
 
 # Substrate dependencies
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 
 [features]
@@ -24,5 +23,4 @@ std = [
     "codec/std",
     "frame-support/std",
     "sp-std/std",
-    "sp-runtime/std",
 ]

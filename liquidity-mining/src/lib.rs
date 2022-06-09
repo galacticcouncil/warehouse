@@ -811,7 +811,7 @@ impl<T: Config> Pallet<T> {
         let deposit_id = Self::get_next_deposit_id()?;
         <Deposit<T>>::insert(deposit_id, deposit);
 
-        T::Handler::lock_lp_tokens(amm_pool_id, who, shares_amount, deposit_id)?;
+        T::Handler::lock_lp_tokens(amm_pool_id, who, shares_amount, deposit_id).map_err(|e| e.into())?;
 
         Ok(deposit_id)
     }
@@ -1033,7 +1033,8 @@ impl<T: Config> Pallet<T> {
             let withdrawn_amount = deposit.shares;
             if deposit.can_be_flushed() {
                 //NOTE: LP shares should be unlocked only if deposit is destroyed.
-                T::Handler::unlock_lp_tokens(deposit.amm_pool_id.clone(), who, withdrawn_amount, deposit_id)?;
+                T::Handler::unlock_lp_tokens(deposit.amm_pool_id.clone(), who, withdrawn_amount, deposit_id)
+                    .map_err(|e| e.into())?;
 
                 *maybe_deposit = None;
             }

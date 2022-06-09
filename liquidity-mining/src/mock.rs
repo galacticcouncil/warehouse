@@ -297,6 +297,8 @@ pub struct TestLiquidityMiningHandler {}
 impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalFarmId, FarmId, Balance, DepositId, AccountId>
     for TestLiquidityMiningHandler
 {
+    type Error = frame_support::dispatch::DispatchError;
+
     fn get_balance_in_amm(asset: AssetId, amm_pool: AccountId) -> Balance {
         Tokens::free_balance(asset, &amm_pool)
     }

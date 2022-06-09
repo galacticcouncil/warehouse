@@ -1885,25 +1885,25 @@ fn yield_farm_data_should_work() {
     assert!(!yield_farm.is_stopped());
     assert!(yield_farm.is_deleted());
 
-    assert_ok!(yield_farm.entry_added());
+    assert_ok!(yield_farm.increase_entries_count());
     assert_eq!(yield_farm.entries_count, 1);
-    assert_ok!(yield_farm.entry_added());
-    assert_ok!(yield_farm.entry_added());
-    assert_ok!(yield_farm.entry_added());
+    assert_ok!(yield_farm.increase_entries_count());
+    assert_ok!(yield_farm.increase_entries_count());
+    assert_ok!(yield_farm.increase_entries_count());
     assert_eq!(yield_farm.entries_count, 4);
 
-    assert_ok!(yield_farm.entry_removed());
+    assert_ok!(yield_farm.decrease_entries_count());
     assert_eq!(yield_farm.entries_count, 3);
-    assert_ok!(yield_farm.entry_removed());
-    assert_ok!(yield_farm.entry_removed());
-    assert_ok!(yield_farm.entry_removed());
+    assert_ok!(yield_farm.decrease_entries_count());
+    assert_ok!(yield_farm.decrease_entries_count());
+    assert_ok!(yield_farm.decrease_entries_count());
     assert_eq!(yield_farm.entries_count, 0);
-    assert_err!(yield_farm.entry_removed(), ArithmeticError::Underflow);
+    assert_err!(yield_farm.decrease_entries_count(), ArithmeticError::Underflow);
 
     //no entries in the farm
     yield_farm.entries_count = 0;
     assert!(!yield_farm.has_entries());
-    assert_ok!(yield_farm.entry_added());
+    assert_ok!(yield_farm.increase_entries_count());
     assert!(yield_farm.has_entries());
 
     yield_farm.state = YieldFarmState::Active;
@@ -1937,27 +1937,27 @@ fn global_farm_should_work() {
 
     global_farm.state = GlobalFarmState::Active;
 
-    assert_ok!(global_farm.yield_farm_added());
-    assert_ok!(global_farm.yield_farm_added());
+    assert_ok!(global_farm.increase_yield_farm_counts());
+    assert_ok!(global_farm.increase_yield_farm_counts());
     assert_eq!(global_farm.yield_farms_count, (2, 2));
-    assert_ok!(global_farm.yield_farm_added());
-    assert_ok!(global_farm.yield_farm_added());
+    assert_ok!(global_farm.increase_yield_farm_counts());
+    assert_ok!(global_farm.increase_yield_farm_counts());
     assert_eq!(global_farm.yield_farms_count, (4, 4));
-    assert_ok!(global_farm.yield_farm_removed());
-    assert_ok!(global_farm.yield_farm_removed());
+    assert_ok!(global_farm.decrease_live_yield_farm_count());
+    assert_ok!(global_farm.decrease_live_yield_farm_count());
     //removing farm changes only live farms, total count is not changed
     assert_eq!(global_farm.yield_farms_count, (2, 4));
-    assert_ok!(global_farm.yield_farm_added());
+    assert_ok!(global_farm.increase_yield_farm_counts());
     assert_eq!(global_farm.yield_farms_count, (3, 5));
-    assert_ok!(global_farm.yield_farm_flushed());
-    assert_ok!(global_farm.yield_farm_flushed());
+    assert_ok!(global_farm.decrease_total_yield_farm_count());
+    assert_ok!(global_farm.decrease_total_yield_farm_count());
     //removing farm changes only total count(farm has to removed and deleted before it can be
     //flushed)
     assert_eq!(global_farm.yield_farms_count, (3, 3));
 
-    assert!(!global_farm.has_no_live_farms());
+    assert!(global_farm.has_live_farms());
     global_farm.yield_farms_count = (0, 3);
-    assert!(global_farm.has_no_live_farms());
+    assert!(!global_farm.has_live_farms());
 
     //active farm can't be flushed
     assert!(!global_farm.can_be_flushed());

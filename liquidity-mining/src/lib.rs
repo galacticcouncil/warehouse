@@ -398,7 +398,7 @@ impl<T: Config> Pallet<T> {
 
             ensure!(who == global_farm.owner, Error::<T>::Forbidden);
 
-            ensure!(global_farm.has_no_live_farms(), Error::<T>::GlobalFarmIsNotEmpty);
+            ensure!(!global_farm.has_live_farms(), Error::<T>::GlobalFarmIsNotEmpty);
 
             let global_farm_account = Self::farm_account_id(global_farm.id)?;
             let undistributed_rewards =
@@ -493,7 +493,7 @@ impl<T: Config> Pallet<T> {
                         YieldFarmData::new(yield_farm_id, current_period, loyalty_curve.clone(), multiplier);
 
                     <YieldFarm<T>>::insert((amm_pool_id, global_farm_id, yield_farm_id), yield_farm);
-                    global_farm.yield_farm_added()?;
+                    global_farm.increase_yield_farm_counts()?;
 
                     *maybe_active_yield_farm = Some(yield_farm_id);
 
@@ -757,11 +757,11 @@ impl<T: Config> Pallet<T> {
 
                     //Delete yield farm.
                     yield_farm.state = YieldFarmState::Deleted;
-                    global_farm.yield_farm_removed()?;
+                    global_farm.decrease_live_yield_farm_count()?;
 
                     //Cleanup if it's possible
                     if yield_farm.can_be_flushed() {
-                        global_farm.yield_farm_flushed()?;
+                        global_farm.decrease_total_yield_farm_count()?;
 
                         *maybe_yield_farm = None;
                     }
@@ -1011,9 +1011,9 @@ impl<T: Config> Pallet<T> {
                                 )?;
                             }
 
-                            yield_farm.entry_removed()?;
+                            yield_farm.decrease_entries_count()?;
                             if yield_farm.can_be_flushed() {
-                                global_farm.yield_farm_flushed()?;
+                                global_farm.decrease_total_yield_farm_count()?;
 
                                 *maybe_yield_farm = None;
                             }
@@ -1106,7 +1106,7 @@ impl<T: Config> Pallet<T> {
                     deposit.add_yield_farm_entry(farm_entry)?;
 
                     //Increment farm's entries count
-                    yield_farm.entry_added()?;
+                    yield_farm.increase_entries_count()?;
 
                     Ok(())
                 })

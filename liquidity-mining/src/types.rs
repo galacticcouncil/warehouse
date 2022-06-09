@@ -25,11 +25,6 @@ pub type YieldFarmId = FarmId;
 pub type FarmMultiplier = FixedU128;
 pub type DepositId = u128;
 
-/// This type represent number of live(active and stopped)` yield farms in global farm.
-pub type LiveFarmsCount = u32;
-/// This type represent number of total(active, stopped and deleted)` yield farms in global farm.
-pub type TotalFarmsCount = u32;
-
 /// This struct represents the state a of single liquidity mining program. `YieldFarm`s are rewarded from
 /// `GlobalFarm` based on their stake in `GlobalFarm`. `YieldFarm` stake in `GlobalFarm` is derived from
 /// users stake in `YieldFarm`.
@@ -49,9 +44,10 @@ pub struct GlobalFarmData<T: Config> {
     pub blocks_per_period: BlockNumberFor<T>,
     pub incentivized_asset: AssetIdOf<T>,
     pub max_reward_per_period: Balance,
-    //`TotalFarmsCount` includes active, stopped and deleted. Total count is decreased only if yield farms
-    //is flushed. `LiveFarmsCount` includes `active` and `stopped` yield farms.
-    pub yield_farms_count: (LiveFarmsCount, TotalFarmsCount),
+    //live counts includes `active` and `stopped` yield farms.
+    //total count includes `active`, `stopped`, `deleted` - this count is decreased only if yield
+    //farm is flushed from storage.
+    pub yield_farms_count: (u32, u32), //`(live count, total count)`
     pub state: GlobalFarmState,
 }
 
@@ -90,7 +86,7 @@ impl<T: Config> GlobalFarmData<T> {
     /// This function updates yields_farm_count when new yield farm is added into the global farm.
     /// This function should be called only when new yield farm is created/added into the global
     /// farm.
-    pub fn yield_farm_added(&mut self) -> Result<(), ArithmeticError> {
+    pub fn increase_yield_farm_counts(&mut self) -> Result<(), ArithmeticError> {
         self.yield_farms_count = (
             self.yield_farms_count
                 .0
@@ -107,7 +103,7 @@ impl<T: Config> GlobalFarmData<T> {
 
     /// This function updates `yield_farms_count` when yield farm is removed from global farm.
     /// This function should be called only when yield farm is removed from global farm.
-    pub fn yield_farm_removed(&mut self) -> Result<(), ArithmeticError> {
+    pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), ArithmeticError> {
         //Note: only live count should change
         self.yield_farms_count.0 = self
             .yield_farms_count
@@ -120,8 +116,8 @@ impl<T: Config> GlobalFarmData<T> {
 
     /// This function updates `yield_farms_count` when yield farm is flushed from storage.
     /// This function should be called only if yield farm is flushed.
-    /// DON'T call this function if yield farm is in stopped or deleted state.
-    pub fn yield_farm_flushed(&mut self) -> Result<(), DispatchError> {
+    /// !!! DON'T call this function if yield farm is in stopped or deleted.
+    pub fn decrease_total_yield_farm_count(&mut self) -> Result<(), DispatchError> {
         self.yield_farms_count.1 = self
             .yield_farms_count
             .1
@@ -131,9 +127,9 @@ impl<T: Config> GlobalFarmData<T> {
         Ok(())
     }
 
-    /// Function returns `true` if global farm has no live yield farms.
-    pub fn has_no_live_farms(&self) -> bool {
-        self.yield_farms_count.0.is_zero()
+    /// Function returns `true` if global farm has live yield farms.
+    pub fn has_live_farms(&self) -> bool {
+        !self.yield_farms_count.0.is_zero()
     }
 
     /// Function return `true` if global farm can be flushed(removed) from storage.
@@ -206,7 +202,7 @@ impl<T: Config> YieldFarmData<T> {
 
     /// This function updates entries count in the yield farm. This function should be called if  
     /// entry is removed from the yield farm.
-    pub fn entry_removed(&mut self) -> Result<(), ArithmeticError> {
+    pub fn decrease_entries_count(&mut self) -> Result<(), ArithmeticError> {
         self.entries_count = self.entries_count.checked_sub(1).ok_or(ArithmeticError::Underflow)?;
 
         Ok(())
@@ -214,7 +210,7 @@ impl<T: Config> YieldFarmData<T> {
 
     /// This function updates entries count in the yield farm. This function should be called if
     /// entry is added into the yield farm.
-    pub fn entry_added(&mut self) -> Result<(), ArithmeticError> {
+    pub fn increase_entries_count(&mut self) -> Result<(), ArithmeticError> {
         self.entries_count = self.entries_count.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
         Ok(())

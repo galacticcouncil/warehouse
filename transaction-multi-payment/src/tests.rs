@@ -621,6 +621,7 @@ fn currency_is_not_changed_on_unrelated_account_activity() {
             // tx fee currency is not changed when a new currency is added to the account
             assert_ok!(Tokens::transfer(Some(CHARLIE).into(), DAVE, SUPPORTED_CURRENCY, 2));
             assert_eq!(PaymentPallet::get_currency(DAVE), Some(SUPPORTED_CURRENCY_WITH_PRICE));
+
             // tx fee currency is not removed when an unrelated account is removed
             assert_ok!(Tokens::transfer_all(
                 Some(DAVE).into(),
@@ -628,6 +629,7 @@ fn currency_is_not_changed_on_unrelated_account_activity() {
                 SUPPORTED_CURRENCY,
                 false
             ));
+            assert_eq!(PaymentPallet::get_currency(DAVE), Some(SUPPORTED_CURRENCY_WITH_PRICE));
         });
 }
 

@@ -178,7 +178,7 @@ pub mod pallet {
         /// Maximum number of yield farms same LP shares can be re/deposited into. This value always
         /// MUST BE >= 1.         
         #[pallet::constant]
-        type MaxFarmEntriesPerDeposit: Get<u8>;
+        type MaxFarmEntriesPerDeposit: Get<u32>;
     }
 
     #[pallet::error]

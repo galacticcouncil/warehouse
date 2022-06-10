@@ -85,7 +85,9 @@ fn deposit_lp_shares_should_work() {
                     2_500,
                     0,
                     18
-                )],
+                )]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -148,7 +150,9 @@ fn deposit_lp_shares_should_work() {
                     4_160,
                     45,
                     18
-                )],
+                )]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -216,7 +220,9 @@ fn deposit_lp_shares_should_work() {
                     200,
                     0,
                     18
-                )],
+                )]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -290,7 +296,9 @@ fn deposit_lp_shares_should_work() {
                     46_400,
                     100,
                     20
-                )],
+                )]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -363,7 +371,9 @@ fn deposit_lp_shares_should_work() {
                     261,
                     120,
                     25
-                )],
+                )]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -435,7 +445,9 @@ fn deposit_lp_shares_should_work() {
                     768,
                     120,
                     25
-                )],
+                )]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -506,7 +518,9 @@ fn deposit_lp_shares_should_work() {
                     38_880,
                     60,
                     25
-                )],
+                )]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -567,7 +581,9 @@ fn deposit_lp_shares_should_work() {
                     deposited_amount * ksm_balance_in_amm,
                     0,
                     25
-                )],
+                )]
+                .try_into()
+                .unwrap(),
             },
         );
     });

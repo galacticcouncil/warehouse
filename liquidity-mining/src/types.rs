@@ -16,7 +16,6 @@
 // limitations under the License.
 
 use super::*;
-use sp_std::vec;
 
 pub type Balance = u128;
 pub type FarmId = u32;
@@ -47,7 +46,8 @@ pub struct GlobalFarmData<T: Config> {
     //live counts includes `active` and `stopped` yield farms.
     //total count includes `active`, `stopped`, `deleted` - this count is decreased only if yield
     //farm is flushed from storage.
-    pub yield_farms_count: (u32, u32), //`(live count, total count)`
+    pub yield_farms_count: (u32, u32), //`(live farms count, total farms count)`
+
     pub state: GlobalFarmState,
 }
 
@@ -242,7 +242,7 @@ pub struct DepositData<T: Config> {
     pub shares: Balance,
     pub amm_pool_id: T::AmmPoolId,
     //NOTE: Capacity of this vector MUST BE at least 1.
-    pub yield_farm_entries: Vec<YieldFarmEntry<T>>,
+    pub yield_farm_entries: BoundedVec<YieldFarmEntry<T>, T::MaxFarmEntriesPerDeposit>,
 }
 
 impl<T: Config> DepositData<T> {
@@ -251,7 +251,7 @@ impl<T: Config> DepositData<T> {
             shares,
             amm_pool_id,
             //NOTE: Capacity of this vector MUST BE at least 1.
-            yield_farm_entries: vec![],
+            yield_farm_entries: BoundedVec::default(),
         }
     }
 
@@ -259,16 +259,13 @@ impl<T: Config> DepositData<T> {
     /// This function returns error if deposit reached max entries in the deposit or
     /// `entry.yield_farm_id` is not unique.
     pub fn add_yield_farm_entry(&mut self, entry: YieldFarmEntry<T>) -> Result<(), DispatchError> {
-        let len = TryInto::<u8>::try_into(self.yield_farm_entries.len()).map_err(|_e| ArithmeticError::Overflow)?;
-        if len >= T::MaxFarmEntriesPerDeposit::get() {
-            return Err(Error::<T>::MaxEntriesPerDeposit.into());
-        }
-
         if self.search_yield_farm_entry(entry.yield_farm_id).is_some() {
             return Err(Error::<T>::DoubleLock.into());
         }
 
-        self.yield_farm_entries.push(entry);
+        self.yield_farm_entries
+            .try_push(entry)
+            .map_err(|_e| Error::<T>::MaxEntriesPerDeposit)?;
 
         Ok(())
     }
@@ -285,10 +282,12 @@ impl<T: Config> DepositData<T> {
 
     /// This function return yield farm entry from deposit of `None` if yield farm entry is not
     /// found.
-    pub fn get_yield_farm_entry(&mut self, yield_farm_id: FarmId) -> Option<&mut YieldFarmEntry<T>> {
-        self.yield_farm_entries
-            .iter_mut()
-            .find(|e| e.yield_farm_id == yield_farm_id)
+    pub fn get_yield_farm_entry(&mut self, yield_farm_id: YieldFarmId) -> Option<&mut YieldFarmEntry<T>> {
+        if let Some(idx) = self.search_yield_farm_entry(yield_farm_id) {
+            return self.yield_farm_entries.get_mut(idx);
+        }
+
+        None
     }
 
     /// This function returns `true` if deposit contains yield farm entry with given yield farm id.

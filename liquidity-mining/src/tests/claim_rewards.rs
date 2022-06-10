@@ -62,7 +62,9 @@ fn claim_rewards_should_work() {
                     entered_at: 18,
                     updated_at: 25,
                     valued_shares: 2_500
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -115,7 +117,9 @@ fn claim_rewards_should_work() {
                     accumulated_claimed_rewards: expected_claimed_rewards,
                     entered_at: 25,
                     updated_at: 30,
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -195,7 +199,9 @@ fn claim_rewards_should_work() {
                     accumulated_claimed_rewards: 7_557_089,
                     entered_at: 18,
                     updated_at: 1_258,
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -296,7 +302,9 @@ fn claim_rewards_should_work() {
                     entered_at: 18,
                     updated_at: 18,
                     valued_shares: 2_500
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -545,7 +553,9 @@ fn claim_rewards_double_claim_in_the_same_period_should_not_work() {
                     accumulated_claimed_rewards: 79_906,
                     entered_at: 18,
                     updated_at: 25,
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -608,7 +618,9 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                     accumulated_claimed_rewards: expected_claimed_rewards,
                     entered_at: 18,
                     updated_at: 25,
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 

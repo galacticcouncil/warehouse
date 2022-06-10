@@ -631,7 +631,9 @@ fn withdraw_shares_should_work() {
                     entered_at: 18,
                     updated_at: 18,
                     valued_shares: 2_500
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 

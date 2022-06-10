@@ -276,6 +276,7 @@ parameter_types! {
     pub const MinPlannedYieldingPeriods: BlockNumber = 100;
     pub const MinTotalFarmRewards: Balance = 1_000_000;
     pub const MininumDeposit: Balance = 10;
+    #[derive(PartialEq)]
     pub const MaxEntriesPerDeposit: u8 = 5;
 }
 

@@ -1658,7 +1658,7 @@ fn depositdata_add_farm_entry_to_should_work() {
     let mut deposit = DepositData::<Test> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
-        yield_farm_entries: vec![],
+        yield_farm_entries: vec![].try_into().unwrap(),
     };
 
     let test_farm_entries = vec![
@@ -1702,7 +1702,9 @@ fn depositdata_add_farm_entry_to_should_work() {
                 test_farm_entries[3].clone(),
                 test_farm_entries[4].clone(),
                 test_farm_entries[6].clone(),
-            ],
+            ]
+            .try_into()
+            .unwrap(),
         }
     );
 
@@ -1724,7 +1726,9 @@ fn deposit_remove_yield_farm_entry_should_work() {
             YieldFarmEntry::<Test>::new(6, 4, 20, 10, 13),
             YieldFarmEntry::<Test>::new(2, 18, 20, 14, 18),
             YieldFarmEntry::<Test>::new(3, 60, 20, 1, 1),
-        ],
+        ]
+        .try_into()
+        .unwrap(),
     };
 
     const NON_EXISTING_YIELD_FARM_ID: YieldFarmId = 999_999_999;
@@ -1761,7 +1765,9 @@ fn deposit_get_yield_farm_entry_should_work() {
             YieldFarmEntry::<Test>::new(6, 4, 20, 10, 13),
             YieldFarmEntry::<Test>::new(2, 18, 20, 14, 18),
             YieldFarmEntry::<Test>::new(3, 60, 20, 1, 1),
-        ],
+        ]
+        .try_into()
+        .unwrap(),
     };
 
     assert_eq!(
@@ -1784,7 +1790,9 @@ fn deposit_contains_yield_farm_entry_should_work() {
             YieldFarmEntry::<Test>::new(6, 4, 20, 10, 13),
             YieldFarmEntry::<Test>::new(2, 18, 20, 14, 18),
             YieldFarmEntry::<Test>::new(3, 60, 20, 1, 1),
-        ],
+        ]
+        .try_into()
+        .unwrap(),
     };
 
     assert!(deposit.search_yield_farm_entry(1).is_some());
@@ -1793,31 +1801,6 @@ fn deposit_contains_yield_farm_entry_should_work() {
 
     const NON_EXISTING_YIELD_FARM_ID: YieldFarmId = 98_908;
     assert!(deposit.search_yield_farm_entry(NON_EXISTING_YIELD_FARM_ID).is_none());
-}
-
-#[test]
-fn deposit_has_no_yield_farm_entries_shoudl_work() {
-    let mut deposit = DepositData::<Test> {
-        shares: 10,
-        amm_pool_id: BSX_TKN1_AMM,
-        yield_farm_entries: vec![],
-    };
-
-    //no yield farm entries
-    assert!(deposit.yield_farm_entries.is_empty());
-
-    deposit.yield_farm_entries.push(YieldFarmEntry {
-        global_farm_id: GC_FARM,
-        yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
-        valued_shares: 1_000_000,
-        accumulated_rpvs: 12,
-        accumulated_claimed_rewards: 0,
-        entered_at: 12,
-        updated_at: 12,
-    });
-
-    //some yield farm entries
-    assert!(!deposit.yield_farm_entries.is_empty());
 }
 
 #[test]
@@ -1832,7 +1815,9 @@ fn deposit_can_be_flushed_should_work() {
             YieldFarmEntry::<Test>::new(6, 4, 20, 10, 13),
             YieldFarmEntry::<Test>::new(2, 18, 20, 14, 18),
             YieldFarmEntry::<Test>::new(3, 60, 20, 1, 1),
-        ],
+        ]
+        .try_into()
+        .unwrap(),
     };
 
     assert!(!deposit.can_be_flushed());
@@ -1840,7 +1825,7 @@ fn deposit_can_be_flushed_should_work() {
     let deposit = DepositData::<Test> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
-        yield_farm_entries: vec![YieldFarmEntry::<Test>::new(4, 1, 20, 10, 13)],
+        yield_farm_entries: vec![YieldFarmEntry::<Test>::new(4, 1, 20, 10, 13)].try_into().unwrap(),
     };
 
     assert!(!deposit.can_be_flushed());
@@ -1849,7 +1834,7 @@ fn deposit_can_be_flushed_should_work() {
     let deposit = DepositData::<Test> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
-        yield_farm_entries: vec![],
+        yield_farm_entries: vec![].try_into().unwrap(),
     };
 
     assert!(deposit.can_be_flushed());

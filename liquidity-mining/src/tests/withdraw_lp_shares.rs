@@ -801,10 +801,7 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
                 .unwrap()
                 .is_deleted()
         );
-        assert_eq!(
-            LiquidityMining::global_farm(GC_FARM).unwrap().state,
-            GlobalFarmState::Deleted
-        );
+        assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap().state, FarmState::Deleted);
 
         let test_data = vec![
             (

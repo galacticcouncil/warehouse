@@ -77,7 +77,7 @@ fn destroy_global_farm_should_work() {
             LiquidityMining::global_farm(CHARLIE_FARM).unwrap(),
             GlobalFarmData {
                 yield_farms_count: (0, 1),
-                state: GlobalFarmState::Deleted,
+                state: FarmState::Deleted,
                 ..PREDEFINED_GLOBAL_FARMS[3]
             }
         );

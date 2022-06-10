@@ -46,7 +46,7 @@ fn resume_yield_farm_should_work() {
         assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                state: YieldFarmState::Active,
+                state: FarmState::Active,
                 accumulated_rpz: 62_996,
                 multiplier: new_multiplier,
                 updated_at: 134_200,

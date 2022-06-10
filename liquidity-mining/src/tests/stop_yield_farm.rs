@@ -43,7 +43,7 @@ fn stop_yield_farm_should_work() {
         assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                state: YieldFarmState::Stopped,
+                state: FarmState::Stopped,
                 multiplier: 0.into(),
                 ..yield_farm
             }
@@ -91,7 +91,7 @@ fn stop_yield_farm_should_work() {
                 updated_at: 100,
                 accumulated_rpvs: 245,
                 accumulated_rpz: 49,
-                state: YieldFarmState::Stopped,
+                state: FarmState::Stopped,
                 multiplier: 0.into(),
                 ..yield_farm
             }

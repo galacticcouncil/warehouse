@@ -1390,7 +1390,7 @@ fn update_yield_farm_should_work() {
             accumulated_rpz: 200_u128,
             loyalty_curve: None,
             multiplier: FixedU128::from(10_u128),
-            state: YieldFarmState::Active,
+            state: FarmState::Active,
             entries_count: 0,
         };
 
@@ -1453,7 +1453,7 @@ fn update_yield_farm_should_work() {
                     accumulated_rpz: 200_u128,
                     loyalty_curve: None,
                     multiplier: FixedU128::from(10_u128),
-                    state: YieldFarmState::Active,
+                    state: FarmState::Active,
                     entries_count: 0,
                 }
             );
@@ -1575,7 +1575,7 @@ fn maybe_update_farms_should_work() {
         };
 
         let mut yield_farm = YieldFarmData {
-            state: YieldFarmState::Stopped,
+            state: FarmState::Stopped,
             ..expected_yield_farm.clone()
         };
 
@@ -1592,7 +1592,7 @@ fn maybe_update_farms_should_work() {
         assert_eq!(
             yield_farm,
             YieldFarmData {
-                state: YieldFarmState::Stopped,
+                state: FarmState::Stopped,
                 ..expected_yield_farm.clone()
             }
         );
@@ -1849,12 +1849,12 @@ fn yield_farm_data_should_work() {
     assert!(!yield_farm.is_stopped());
     assert!(!yield_farm.is_deleted());
 
-    yield_farm.state = YieldFarmState::Stopped;
+    yield_farm.state = FarmState::Stopped;
     assert!(!yield_farm.is_active());
     assert!(yield_farm.is_stopped());
     assert!(!yield_farm.is_deleted());
 
-    yield_farm.state = YieldFarmState::Deleted;
+    yield_farm.state = FarmState::Deleted;
     assert!(!yield_farm.is_active());
     assert!(!yield_farm.is_stopped());
     assert!(yield_farm.is_deleted());
@@ -1880,17 +1880,17 @@ fn yield_farm_data_should_work() {
     assert_ok!(yield_farm.increase_entries_count());
     assert!(yield_farm.has_entries());
 
-    yield_farm.state = YieldFarmState::Active;
+    yield_farm.state = FarmState::Active;
     yield_farm.entries_count = 0;
     //active farm can't be flushed
     assert!(!yield_farm.can_be_flushed());
 
     //stopped farm can't be flushed
-    yield_farm.state = YieldFarmState::Stopped;
+    yield_farm.state = FarmState::Stopped;
     assert!(!yield_farm.can_be_flushed());
 
     //deleted farm with entries can't be flushed
-    yield_farm.state = YieldFarmState::Deleted;
+    yield_farm.state = FarmState::Deleted;
     yield_farm.entries_count = 1;
     assert!(!yield_farm.can_be_flushed());
 
@@ -1906,10 +1906,10 @@ fn global_farm_should_work() {
 
     //new farm should be created active
     assert!(global_farm.is_active());
-    global_farm.state = GlobalFarmState::Deleted;
+    global_farm.state = FarmState::Deleted;
     assert!(!global_farm.is_active());
 
-    global_farm.state = GlobalFarmState::Active;
+    global_farm.state = FarmState::Active;
 
     assert_ok!(global_farm.increase_yield_farm_counts());
     assert_ok!(global_farm.increase_yield_farm_counts());
@@ -1935,7 +1935,7 @@ fn global_farm_should_work() {
 
     //active farm can't be flushed
     assert!(!global_farm.can_be_flushed());
-    global_farm.state = GlobalFarmState::Deleted;
+    global_farm.state = FarmState::Deleted;
     //deleted farm with yield farm can't be flushed
     assert!(!global_farm.can_be_flushed());
     //deleted farm with no yield farms can be flushed

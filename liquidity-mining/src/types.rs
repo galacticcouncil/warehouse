@@ -48,7 +48,7 @@ pub struct GlobalFarmData<T: Config> {
     //farm is flushed from storage.
     pub yield_farms_count: (u32, u32), //`(live farms count, total farms count)`
 
-    pub state: GlobalFarmState,
+    pub state: FarmState,
 }
 
 impl<T: Config> GlobalFarmData<T> {
@@ -79,7 +79,7 @@ impl<T: Config> GlobalFarmData<T> {
             owner,
             incentivized_asset,
             max_reward_per_period,
-            state: GlobalFarmState::Active,
+            state: FarmState::Active,
         }
     }
 
@@ -135,12 +135,12 @@ impl<T: Config> GlobalFarmData<T> {
     /// Function return `true` if global farm can be flushed(removed) from storage.
     pub fn can_be_flushed(&self) -> bool {
         //farm can be flushed only if all yield farms are flushed.
-        self.state == GlobalFarmState::Deleted && self.yield_farms_count.1.is_zero()
+        self.state == FarmState::Deleted && self.yield_farms_count.1.is_zero()
     }
 
     /// Function return `true` if global farm is in active state.
     pub fn is_active(&self) -> bool {
-        self.state == GlobalFarmState::Active
+        self.state == FarmState::Active
     }
 }
 
@@ -154,7 +154,7 @@ pub struct YieldFarmData<T: Config> {
     pub accumulated_rpz: Balance,
     pub loyalty_curve: Option<LoyaltyCurve>,
     pub multiplier: FarmMultiplier,
-    pub state: YieldFarmState,
+    pub state: FarmState,
     pub entries_count: u64,
 }
 
@@ -175,29 +175,29 @@ impl<T: Config> YieldFarmData<T> {
             accumulated_rpz: Zero::zero(),
             total_shares: Zero::zero(),
             total_valued_shares: Zero::zero(),
-            state: YieldFarmState::Active,
+            state: FarmState::Active,
             entries_count: Default::default(),
         }
     }
 
     /// Function returns `true` if yield farm is in active state.
     pub fn is_active(&self) -> bool {
-        self.state == YieldFarmState::Active
+        self.state == FarmState::Active
     }
 
     /// Function returns `true` if yield farm is in stopped state.
     pub fn is_stopped(&self) -> bool {
-        self.state == YieldFarmState::Stopped
+        self.state == FarmState::Stopped
     }
 
     /// Function returns `true` if yield farm is in deleted state.
     pub fn is_deleted(&self) -> bool {
-        self.state == YieldFarmState::Deleted
+        self.state == FarmState::Deleted
     }
 
     /// Returns `true` if yield farm can be removed from storage, `false` otherwise.
     pub fn can_be_flushed(&self) -> bool {
-        self.state == YieldFarmState::Deleted && self.entries_count.is_zero()
+        self.state == FarmState::Deleted && self.entries_count.is_zero()
     }
 
     /// This function updates entries count in the yield farm. This function should be called if  
@@ -336,13 +336,7 @@ impl<T: Config> YieldFarmEntry<T> {
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
-pub enum GlobalFarmState {
-    Active,
-    Deleted,
-}
-
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
-pub enum YieldFarmState {
+pub enum FarmState {
     Active,
     Stopped,
     Deleted,

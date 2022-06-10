@@ -99,8 +99,8 @@ mod types;
 pub use pallet::*;
 
 pub use crate::types::{
-    Balance, DepositData, DepositId, FarmId, FarmMultiplier, GlobalFarmData, GlobalFarmId, GlobalFarmState,
-    LoyaltyCurve, YieldFarmData, YieldFarmEntry, YieldFarmId, YieldFarmState,
+    Balance, DepositData, DepositId, FarmId, FarmMultiplier, FarmState, GlobalFarmData, GlobalFarmId, LoyaltyCurve,
+    YieldFarmData, YieldFarmEntry, YieldFarmId,
 };
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
@@ -406,7 +406,7 @@ impl<T: Config> Pallet<T> {
             )?;
 
             //Mark for flush from storage on last `YieldFarm` in the farm flush.
-            global_farm.state = GlobalFarmState::Deleted;
+            global_farm.state = FarmState::Deleted;
 
             let reward_currency = global_farm.reward_currency;
             if global_farm.can_be_flushed() {
@@ -608,7 +608,7 @@ impl<T: Config> Pallet<T> {
                                 .checked_sub(old_stake_in_global_pool)
                                 .ok_or(ArithmeticError::Overflow)?;
 
-                            yield_farm.state = YieldFarmState::Stopped;
+                            yield_farm.state = FarmState::Stopped;
                             yield_farm.multiplier = 0.into();
 
                             Ok(())
@@ -686,7 +686,7 @@ impl<T: Config> Pallet<T> {
 
                     yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
                     yield_farm.updated_at = current_period;
-                    yield_farm.state = YieldFarmState::Active;
+                    yield_farm.state = FarmState::Active;
                     yield_farm.multiplier = multiplier;
 
                     //add yield farm to active farms.
@@ -750,7 +750,7 @@ impl<T: Config> Pallet<T> {
                     )?;
 
                     //Delete yield farm.
-                    yield_farm.state = YieldFarmState::Deleted;
+                    yield_farm.state = FarmState::Deleted;
                     global_farm.decrease_live_yield_farm_count()?;
 
                     //Cleanup if it's possible

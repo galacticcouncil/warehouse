@@ -55,7 +55,7 @@ fn destory_yield_farm_with_deposits_should_work() {
         assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
-                state: YieldFarmState::Deleted,
+                state: FarmState::Deleted,
                 ..yield_farm
             }
         );

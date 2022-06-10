@@ -364,7 +364,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 total_shares_z: 703_990,
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
-                state: GlobalFarmState::Active,
+                state: FarmState::Active,
             }
         );
 

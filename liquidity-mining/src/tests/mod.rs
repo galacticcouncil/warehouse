@@ -55,7 +55,7 @@ const PREDEFINED_GLOBAL_FARMS: [GlobalFarmData<Test>; 6] = [
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
         accumulated_rewards: 0,
-        state: GlobalFarmState::Active,
+        state: FarmState::Active,
     },
     GlobalFarmData {
         id: BOB_FARM,
@@ -72,7 +72,7 @@ const PREDEFINED_GLOBAL_FARMS: [GlobalFarmData<Test>; 6] = [
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
         accumulated_rewards: 0,
-        state: GlobalFarmState::Active,
+        state: FarmState::Active,
     },
     GlobalFarmData {
         id: GC_FARM,
@@ -89,7 +89,7 @@ const PREDEFINED_GLOBAL_FARMS: [GlobalFarmData<Test>; 6] = [
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
         accumulated_rewards: 0,
-        state: GlobalFarmState::Active,
+        state: FarmState::Active,
     },
     GlobalFarmData {
         id: CHARLIE_FARM,
@@ -106,7 +106,7 @@ const PREDEFINED_GLOBAL_FARMS: [GlobalFarmData<Test>; 6] = [
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
         accumulated_rewards: 0,
-        state: GlobalFarmState::Active,
+        state: FarmState::Active,
     },
     GlobalFarmData {
         id: DAVE_FARM,
@@ -123,7 +123,7 @@ const PREDEFINED_GLOBAL_FARMS: [GlobalFarmData<Test>; 6] = [
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
         accumulated_rewards: 0,
-        state: GlobalFarmState::Active,
+        state: FarmState::Active,
     },
     GlobalFarmData {
         id: EVE_FARM,
@@ -140,7 +140,7 @@ const PREDEFINED_GLOBAL_FARMS: [GlobalFarmData<Test>; 6] = [
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
         accumulated_rewards: 0,
-        state: GlobalFarmState::Active,
+        state: FarmState::Active,
     },
 ];
 
@@ -162,7 +162,7 @@ thread_local! {
             accumulated_rpz: 0,
             loyalty_curve: Some(LoyaltyCurve::default()),
             multiplier: FixedU128::from(5),
-            state: YieldFarmState::Active,
+            state: FarmState::Active,
             entries_count: 0,
         },
         YieldFarmData {
@@ -174,7 +174,7 @@ thread_local! {
             accumulated_rpz: 0,
             loyalty_curve: Some(LoyaltyCurve::default()),
             multiplier: FixedU128::from(10),
-            state: YieldFarmState::Active,
+            state: FarmState::Active,
             entries_count: 0,
         },
         YieldFarmData {
@@ -186,7 +186,7 @@ thread_local! {
             accumulated_rpz: 0,
             loyalty_curve: Some(LoyaltyCurve::default()),
             multiplier: FixedU128::from(10),
-            state: YieldFarmState::Active,
+            state: FarmState::Active,
             entries_count: 0,
         },
 
@@ -199,7 +199,7 @@ thread_local! {
             accumulated_rpz: 0,
             loyalty_curve: Some(LoyaltyCurve::default()),
             multiplier: FixedU128::from(10),
-            state: YieldFarmState::Active,
+            state: FarmState::Active,
             entries_count: 0,
         },
 
@@ -212,7 +212,7 @@ thread_local! {
             accumulated_rpz: 0,
             loyalty_curve: Some(LoyaltyCurve::default()),
             multiplier: FixedU128::from(10),
-            state: YieldFarmState::Active,
+            state: FarmState::Active,
             entries_count: 0,
         },
 
@@ -225,7 +225,7 @@ thread_local! {
             accumulated_rpz: 0,
             loyalty_curve: Some(LoyaltyCurve::default()),
             multiplier: FixedU128::from(10),
-            state: YieldFarmState::Active,
+            state: FarmState::Active,
             entries_count: 0,
         },
     ]

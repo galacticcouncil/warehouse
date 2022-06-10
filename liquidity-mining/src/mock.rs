@@ -1,13 +1,13 @@
-// This file is part of Basilisk-node.
+// This file is part of galacticcouncil/warehouse.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -276,6 +276,7 @@ parameter_types! {
     pub const MinPlannedYieldingPeriods: BlockNumber = 100;
     pub const MinTotalFarmRewards: Balance = 1_000_000;
     pub const MininumDeposit: Balance = 10;
+    #[derive(PartialEq)]
     pub const MaxEntriesPerDeposit: u8 = 5;
 }
 
@@ -315,13 +316,15 @@ impl Config<Instance2> for Test {
 
 pub struct TestLiquidityMiningHandler {}
 
-impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalFarmId, FarmId, Balance, DepositId, AccountId>
-    for TestLiquidityMiningHandler
-{
+impl hydradx_traits::liquidity_mining::AmmProvider<AssetId, AccountId, Balance> for TestLiquidityMiningHandler {
     fn get_balance_in_amm(asset: AssetId, amm_pool: AccountId) -> Balance {
         Tokens::free_balance(asset, &amm_pool)
     }
+}
 
+impl hydradx_traits::liquidity_mining::OnUpdateHandler<GlobalFarmId, YieldFarmId, Balance>
+    for TestLiquidityMiningHandler
+{
     fn on_accumulated_rpvs_update(
         farm_id: GlobalFarmId,
         liq_pool_farm_id: FarmId,
@@ -345,8 +348,14 @@ impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalFarmId,
             p.2 = total_shares_z;
         });
     }
+}
 
-    fn lock_lp_tokens(
+impl hydradx_traits::liquidity_mining::LockableLpShares<AccountId, AccountId, Balance, DepositId>
+    for TestLiquidityMiningHandler
+{
+    type Error = frame_support::dispatch::DispatchError;
+
+    fn lock_lp_shares(
         amm_pool_id: AccountId,
         who: AccountId,
         amount: Balance,
@@ -371,7 +380,7 @@ impl hydradx_traits::liquidity_mining::Handler<AssetId, AccountId, GlobalFarmId,
         Ok(())
     }
 
-    fn unlock_lp_tokens(
+    fn unlock_lp_shares(
         amm_pool_id: AccountId,
         who: AccountId,
         amount: Balance,

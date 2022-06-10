@@ -1,5 +1,21 @@
+// This file is part of galacticcouncil/warehouse.
+
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use super::*;
-use sp_std::vec;
 
 pub type Balance = u128;
 pub type FarmId = u32;
@@ -7,11 +23,6 @@ pub type GlobalFarmId = FarmId;
 pub type YieldFarmId = FarmId;
 pub type FarmMultiplier = FixedU128;
 pub type DepositId = u128;
-
-/// This type represent number of live(active and stopped)` yield farms in global farm.
-pub type LiveFarmsCount = u32;
-/// This type represent number of total(active, stopped and deleted)` yield farms in global farm.
-pub type TotalFarmsCount = u32;
 
 /// This struct represents the state a of single liquidity mining program. `YieldFarm`s are rewarded from
 /// `GlobalFarm` based on their stake in `GlobalFarm`. `YieldFarm` stake in `GlobalFarm` is derived from
@@ -33,10 +44,12 @@ pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
     pub blocks_per_period: BlockNumberFor<T>,
     pub incentivized_asset: AssetIdOf<T, I>,
     pub max_reward_per_period: Balance,
-    //`TotalFarmsCount` includes active, stopped and deleted. Total count is decreased only if yield farms
-    //is flushed. `LiveFarmsCount` includes `active` and `stopped` yield farms.
-    pub yield_farms_count: (LiveFarmsCount, TotalFarmsCount),
-    pub state: GlobalFarmState,
+    //live counts includes `active` and `stopped` yield farms.
+    //total count includes `active`, `stopped`, `deleted` - this count is decreased only if yield
+    //farm is flushed from storage.
+    pub yield_farms_count: (u32, u32), //`(live farms count, total farms count)`
+
+    pub state: FarmState,
 }
 
 impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
@@ -67,14 +80,14 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
             owner,
             incentivized_asset,
             max_reward_per_period,
-            state: GlobalFarmState::Active,
+            state: FarmState::Active,
         }
     }
 
     /// This function updates yields_farm_count when new yield farm is added into the global farm.
     /// This function should be called only when new yield farm is created/added into the global
     /// farm.
-    pub fn yield_farm_added(&mut self) -> Result<(), ArithmeticError> {
+    pub fn increase_yield_farm_counts(&mut self) -> Result<(), ArithmeticError> {
         self.yield_farms_count = (
             self.yield_farms_count
                 .0
@@ -91,7 +104,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
 
     /// This function updates `yield_farms_count` when yield farm is removed from global farm.
     /// This function should be called only when yield farm is removed from global farm.
-    pub fn yield_farm_removed(&mut self) -> Result<(), ArithmeticError> {
+    pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), ArithmeticError> {
         //Note: only live count should change
         self.yield_farms_count.0 = self
             .yield_farms_count
@@ -104,8 +117,8 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
 
     /// This function updates `yield_farms_count` when yield farm is flushed from storage.
     /// This function should be called only if yield farm is flushed.
-    /// DON'T call this function if yield farm is in stopped or deleted state.
-    pub fn yield_farm_flushed(&mut self) -> Result<(), DispatchError> {
+    /// !!! DON'T call this function if yield farm is in stopped or deleted.
+    pub fn decrease_total_yield_farm_count(&mut self) -> Result<(), DispatchError> {
         self.yield_farms_count.1 = self
             .yield_farms_count
             .1
@@ -115,20 +128,20 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         Ok(())
     }
 
-    /// Function returns `true` if global farm has no live yield farms.
-    pub fn has_no_live_farms(&self) -> bool {
-        self.yield_farms_count.0.is_zero()
+    /// Function returns `true` if global farm has live yield farms.
+    pub fn has_live_farms(&self) -> bool {
+        !self.yield_farms_count.0.is_zero()
     }
 
     /// Function return `true` if global farm can be flushed(removed) from storage.
     pub fn can_be_flushed(&self) -> bool {
         //farm can be flushed only if all yield farms are flushed.
-        self.state == GlobalFarmState::Deleted && self.yield_farms_count.1.is_zero()
+        self.state == FarmState::Deleted && self.yield_farms_count.1.is_zero()
     }
 
     /// Function return `true` if global farm is in active state.
     pub fn is_active(&self) -> bool {
-        self.state == GlobalFarmState::Active
+        self.state == FarmState::Active
     }
 }
 
@@ -143,7 +156,7 @@ pub struct YieldFarmData<T: Config<I>, I: 'static = ()> {
     pub accumulated_rpz: Balance,
     pub loyalty_curve: Option<LoyaltyCurve>,
     pub multiplier: FarmMultiplier,
-    pub state: YieldFarmState,
+    pub state: FarmState,
     pub entries_count: u64,
     pub _phantom: PhantomData<I>, //pub because of tests
 }
@@ -165,7 +178,7 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
             accumulated_rpz: Zero::zero(),
             total_shares: Zero::zero(),
             total_valued_shares: Zero::zero(),
-            state: YieldFarmState::Active,
+            state: FarmState::Active,
             entries_count: Default::default(),
             _phantom: PhantomData::default(),
         }
@@ -173,27 +186,27 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
 
     /// Function returns `true` if yield farm is in active state.
     pub fn is_active(&self) -> bool {
-        self.state == YieldFarmState::Active
+        self.state == FarmState::Active
     }
 
     /// Function returns `true` if yield farm is in stopped state.
     pub fn is_stopped(&self) -> bool {
-        self.state == YieldFarmState::Stopped
+        self.state == FarmState::Stopped
     }
 
     /// Function returns `true` if yield farm is in deleted state.
     pub fn is_deleted(&self) -> bool {
-        self.state == YieldFarmState::Deleted
+        self.state == FarmState::Deleted
     }
 
     /// Returns `true` if yield farm can be removed from storage, `false` otherwise.
     pub fn can_be_flushed(&self) -> bool {
-        self.state == YieldFarmState::Deleted && self.entries_count.is_zero()
+        self.state == FarmState::Deleted && self.entries_count.is_zero()
     }
 
     /// This function updates entries count in the yield farm. This function should be called if  
     /// entry is removed from the yield farm.
-    pub fn entry_removed(&mut self) -> Result<(), ArithmeticError> {
+    pub fn decrease_entries_count(&mut self) -> Result<(), ArithmeticError> {
         self.entries_count = self.entries_count.checked_sub(1).ok_or(ArithmeticError::Underflow)?;
 
         Ok(())
@@ -201,7 +214,7 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
 
     /// This function updates entries count in the yield farm. This function should be called if
     /// entry is added into the yield farm.
-    pub fn entry_added(&mut self) -> Result<(), ArithmeticError> {
+    pub fn increase_entries_count(&mut self) -> Result<(), ArithmeticError> {
         self.entries_count = self.entries_count.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
         Ok(())
@@ -235,7 +248,7 @@ pub struct DepositData<T: Config<I>, I: 'static = ()> {
     pub shares: Balance,
     pub amm_pool_id: T::AmmPoolId,
     //NOTE: Capacity of this vector MUST BE at least 1.
-    pub yield_farm_entries: Vec<YieldFarmEntry<T, I>>,
+    pub yield_farm_entries: BoundedVec<YieldFarmEntry<T, I>, T::MaxFarmEntriesPerDeposit>,
 }
 
 impl<T: Config<I>, I: 'static> DepositData<T, I> {
@@ -244,7 +257,7 @@ impl<T: Config<I>, I: 'static> DepositData<T, I> {
             shares,
             amm_pool_id,
             //NOTE: Capacity of this vector MUST BE at least 1.
-            yield_farm_entries: vec![],
+            yield_farm_entries: BoundedVec::default(),
         }
     }
 
@@ -252,20 +265,13 @@ impl<T: Config<I>, I: 'static> DepositData<T, I> {
     /// This function returns error if deposit reached max entries in the deposit or
     /// `entry.yield_farm_id` is not unique.
     pub fn add_yield_farm_entry(&mut self, entry: YieldFarmEntry<T, I>) -> Result<(), DispatchError> {
-        let len = TryInto::<u8>::try_into(self.yield_farm_entries.len()).map_err(|_e| ArithmeticError::Overflow)?;
-        if len >= T::MaxFarmEntriesPerDeposit::get() {
-            return Err(Error::<T, I>::MaxEntriesPerDeposit.into());
+        if self.search_yield_farm_entry(entry.yield_farm_id).is_some() {
+            return Err(Error::<T, I>::DoubleLock.into());
         }
 
-        let idx = match self
-            .yield_farm_entries
-            .binary_search_by(|e| e.yield_farm_id.cmp(&entry.yield_farm_id))
-        {
-            Ok(_) => return Err(Error::<T, I>::DoubleLock.into()),
-            Err(idx) => idx,
-        };
-
-        self.yield_farm_entries.insert(idx, entry);
+        self.yield_farm_entries
+            .try_push(entry)
+            .map_err(|_e| Error::<T, I>::MaxEntriesPerDeposit)?;
 
         Ok(())
     }
@@ -273,45 +279,34 @@ impl<T: Config<I>, I: 'static> DepositData<T, I> {
     /// This function remove yield farm entry from the deposit. This function returns error if
     /// yield farm entry in not found in the deposit.
     pub fn remove_yield_farm_entry(&mut self, yield_farm_id: YieldFarmId) -> Result<YieldFarmEntry<T, I>, Error<T, I>> {
-        let idx = match self
-            .yield_farm_entries
-            .binary_search_by(|e| e.yield_farm_id.cmp(&yield_farm_id))
-        {
-            Ok(idx) => idx,
-            Err(_) => return Err(Error::<T, I>::YieldFarmEntryNotFound),
-        };
+        if let Some(idx) = self.search_yield_farm_entry(yield_farm_id) {
+            return Ok(self.yield_farm_entries.swap_remove(idx));
+        }
 
-        Ok(self.yield_farm_entries.remove(idx))
+        Err(Error::<T, I>::YieldFarmEntryNotFound)
     }
 
     /// This function return yield farm entry from deposit of `None` if yield farm entry is not
     /// found.
-    pub fn get_yield_farm_entry(&mut self, yield_farm_id: FarmId) -> Option<&mut YieldFarmEntry<T, I>> {
-        match self
-            .yield_farm_entries
-            .binary_search_by(|e| e.yield_farm_id.cmp(&yield_farm_id))
-        {
-            Ok(idx) => self.yield_farm_entries.get_mut(idx),
-            Err(_) => None,
+    pub fn get_yield_farm_entry(&mut self, yield_farm_id: YieldFarmId) -> Option<&mut YieldFarmEntry<T, I>> {
+        if let Some(idx) = self.search_yield_farm_entry(yield_farm_id) {
+            return self.yield_farm_entries.get_mut(idx);
         }
+
+        None
     }
 
     /// This function returns `true` if deposit contains yield farm entry with given yield farm id.
-    pub fn contains_yield_farm_entry(&self, yield_farm_id: YieldFarmId) -> bool {
+    pub fn search_yield_farm_entry(&self, yield_farm_id: YieldFarmId) -> Option<usize> {
         self.yield_farm_entries
-            .binary_search_by(|e| e.yield_farm_id.cmp(&yield_farm_id))
-            .is_ok()
-    }
-
-    /// This function returns `true` if deposit has no yield farm entries.
-    pub fn has_no_yield_farm_entries(&self) -> bool {
-        self.yield_farm_entries.is_empty()
+            .iter()
+            .position(|e| e.yield_farm_id == yield_farm_id)
     }
 
     /// This function returns `true` if deposit can be flushed from storage.
     pub fn can_be_flushed(&self) -> bool {
         //NOTE: deposit with no entries should/must be flushed
-        self.has_no_yield_farm_entries()
+        self.yield_farm_entries.is_empty()
     }
 }
 
@@ -350,13 +345,7 @@ impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
-pub enum GlobalFarmState {
-    Active,
-    Deleted,
-}
-
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
-pub enum YieldFarmState {
+pub enum FarmState {
     Active,
     Stopped,
     Deleted,

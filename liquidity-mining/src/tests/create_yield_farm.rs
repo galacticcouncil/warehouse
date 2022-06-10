@@ -1,13 +1,13 @@
-// This file is part of Basilisk-node.
+// This file is part of galacticcouncil/warehouse.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,7 +37,7 @@ fn create_yield_farm_should_work() {
                 multiplier: FixedU128::from(20_000_u128),
                 loyalty_curve: Some(LoyaltyCurve::default()),
                 entries_count: 0,
-                state: YieldFarmState::Active,
+                state: FarmState::Active,
                 _phantom: PhantomData::default(),
             },
             BSX_ACA_AMM,
@@ -64,7 +64,7 @@ fn create_yield_farm_should_work() {
                 multiplier: FixedU128::from(10_000_u128),
                 loyalty_curve: None,
                 entries_count: 0,
-                state: YieldFarmState::Active,
+                state: FarmState::Active,
                 _phantom: PhantomData::default(),
             },
             BSX_KSM_AMM,
@@ -93,7 +93,7 @@ fn create_yield_farm_should_work() {
                     initial_reward_percentage: FixedU128::from_inner(100_000_000_000_000_000),
                     scale_coef: 50,
                 }),
-                state: YieldFarmState::Active,
+                state: FarmState::Active,
                 entries_count: 0,
                 _phantom: PhantomData::default(),
             },
@@ -123,7 +123,7 @@ fn create_yield_farm_should_work() {
                     initial_reward_percentage: FixedU128::from_inner(1),
                     scale_coef: 0,
                 }),
-                state: YieldFarmState::Active,
+                state: FarmState::Active,
                 entries_count: 0,
                 _phantom: PhantomData::default(),
             },

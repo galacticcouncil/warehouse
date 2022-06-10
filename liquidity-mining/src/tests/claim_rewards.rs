@@ -1,13 +1,13 @@
-// This file is part of Basilisk-node.
+// This file is part of galacticcouncil/warehouse.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -63,7 +63,9 @@ fn claim_rewards_should_work() {
                     updated_at: 25,
                     valued_shares: 2_500,
                     _phantom: PhantomData::default(),
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -117,7 +119,9 @@ fn claim_rewards_should_work() {
                     entered_at: 25,
                     updated_at: 30,
                     _phantom: PhantomData::default(),
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -198,7 +202,9 @@ fn claim_rewards_should_work() {
                     entered_at: 18,
                     updated_at: 1_258,
                     _phantom: PhantomData::default(),
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -300,7 +306,9 @@ fn claim_rewards_should_work() {
                     updated_at: 18,
                     valued_shares: 2_500,
                     _phantom: PhantomData::default(),
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -363,16 +371,6 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     _phantom: PhantomData::default(),
                 },
                 YieldFarmEntry {
-                    global_farm_id: DAVE_FARM,
-                    valued_shares: 5_000,
-                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
-                    accumulated_claimed_rewards: 0,
-                    accumulated_rpvs: 0,
-                    entered_at: 800,
-                    updated_at: 800,
-                    _phantom: PhantomData::default(),
-                },
-                YieldFarmEntry {
                     global_farm_id: EVE_FARM,
                     valued_shares: 4_000,
                     yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
@@ -380,6 +378,16 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_rpvs: 0,
                     entered_at: 50,
                     updated_at: 50,
+                    _phantom: PhantomData::default(),
+                },
+                YieldFarmEntry {
+                    global_farm_id: DAVE_FARM,
+                    valued_shares: 5_000,
+                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
+                    accumulated_claimed_rewards: 0,
+                    accumulated_rpvs: 0,
+                    entered_at: 800,
+                    updated_at: 800,
                     _phantom: PhantomData::default(),
                 },
             ]
@@ -434,16 +442,6 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     _phantom: PhantomData::default(),
                 },
                 YieldFarmEntry {
-                    global_farm_id: DAVE_FARM,
-                    valued_shares: 5_000,
-                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
-                    accumulated_claimed_rewards: 0,
-                    accumulated_rpvs: 0,
-                    entered_at: 800,
-                    updated_at: 800,
-                    _phantom: PhantomData::default(),
-                },
-                YieldFarmEntry {
                     global_farm_id: EVE_FARM,
                     valued_shares: 4_000,
                     yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
@@ -451,6 +449,16 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     accumulated_rpvs: 0,
                     entered_at: 50,
                     updated_at: 1_000,
+                    _phantom: PhantomData::default(),
+                },
+                YieldFarmEntry {
+                    global_farm_id: DAVE_FARM,
+                    valued_shares: 5_000,
+                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
+                    accumulated_claimed_rewards: 0,
+                    accumulated_rpvs: 0,
+                    entered_at: 800,
+                    updated_at: 800,
                     _phantom: PhantomData::default(),
                 },
             ]
@@ -504,22 +512,22 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     _phantom: PhantomData::default(),
                 },
                 YieldFarmEntry {
-                    global_farm_id: DAVE_FARM,
-                    valued_shares: 5_000,
-                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
-                    accumulated_claimed_rewards: 8_333_333,
-                    accumulated_rpvs: 0,
-                    entered_at: 800,
-                    updated_at: 1_000,
-                    _phantom: PhantomData::default(),
-                },
-                YieldFarmEntry {
                     global_farm_id: EVE_FARM,
                     valued_shares: 4_000,
                     yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
                     accumulated_claimed_rewards: 7_619_047,
                     accumulated_rpvs: 0,
                     entered_at: 50,
+                    updated_at: 1_000,
+                    _phantom: PhantomData::default(),
+                },
+                YieldFarmEntry {
+                    global_farm_id: DAVE_FARM,
+                    valued_shares: 5_000,
+                    yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
+                    accumulated_claimed_rewards: 8_333_333,
+                    accumulated_rpvs: 0,
+                    entered_at: 800,
                     updated_at: 1_000,
                     _phantom: PhantomData::default(),
                 },
@@ -559,7 +567,9 @@ fn claim_rewards_double_claim_in_the_same_period_should_not_work() {
                     entered_at: 18,
                     updated_at: 25,
                     _phantom: PhantomData::default(),
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -623,7 +633,9 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                     entered_at: 18,
                     updated_at: 25,
                     _phantom: PhantomData::default(),
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 

@@ -1,13 +1,13 @@
-// This file is part of Basilisk-node.
+// This file is part of galacticcouncil/warehouse.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -632,7 +632,9 @@ fn withdraw_shares_should_work() {
                     updated_at: 18,
                     valued_shares: 2_500,
                     _phantom: PhantomData::default(),
-                }],
+                }]
+                .try_into()
+                .unwrap(),
             },
         );
 
@@ -800,10 +802,7 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
                 .unwrap()
                 .is_deleted()
         );
-        assert_eq!(
-            LiquidityMining::global_farm(GC_FARM).unwrap().state,
-            GlobalFarmState::Deleted
-        );
+        assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap().state, FarmState::Deleted);
 
         let test_data = vec![
             (

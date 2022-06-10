@@ -1,13 +1,13 @@
-// This file is part of Basilisk-node.
+// This file is part of galacticcouncil/warehouse.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -1390,7 +1390,7 @@ fn update_yield_farm_should_work() {
             accumulated_rpz: 200_u128,
             loyalty_curve: None,
             multiplier: FixedU128::from(10_u128),
-            state: YieldFarmState::Active,
+            state: FarmState::Active,
             entries_count: 0,
             _phantom: PhantomData::default(),
         };
@@ -1454,7 +1454,7 @@ fn update_yield_farm_should_work() {
                     accumulated_rpz: 200_u128,
                     loyalty_curve: None,
                     multiplier: FixedU128::from(10_u128),
-                    state: YieldFarmState::Active,
+                    state: FarmState::Active,
                     entries_count: 0,
                     _phantom: PhantomData::default(),
                 }
@@ -1580,7 +1580,7 @@ fn maybe_update_farms_should_work() {
         };
 
         let mut yield_farm = YieldFarmData {
-            state: YieldFarmState::Stopped,
+            state: FarmState::Stopped,
             ..expected_yield_farm.clone()
         };
 
@@ -1597,7 +1597,7 @@ fn maybe_update_farms_should_work() {
         assert_eq!(
             yield_farm,
             YieldFarmData {
-                state: YieldFarmState::Stopped,
+                state: FarmState::Stopped,
                 ..expected_yield_farm.clone()
             }
         );
@@ -1663,7 +1663,7 @@ fn depositdata_add_farm_entry_to_should_work() {
     let mut deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
-        yield_farm_entries: vec![],
+        yield_farm_entries: vec![].try_into().unwrap(),
     };
 
     let test_farm_entries = vec![
@@ -1701,14 +1701,15 @@ fn depositdata_add_farm_entry_to_should_work() {
         DepositData::<Test, Instance1> {
             shares: 10,
             amm_pool_id: BSX_TKN1_AMM,
-            //`yield_farm_entries` are ordered by `YieldFarmId` that's why order is different from inserted order.
             yield_farm_entries: vec![
+                test_farm_entries[0].clone(),
+                test_farm_entries[2].clone(),
                 test_farm_entries[3].clone(),
                 test_farm_entries[4].clone(),
                 test_farm_entries[6].clone(),
-                test_farm_entries[0].clone(),
-                test_farm_entries[2].clone(),
-            ],
+            ]
+            .try_into()
+            .unwrap(),
         }
     );
 
@@ -1730,7 +1731,9 @@ fn deposit_remove_yield_farm_entry_should_work() {
             YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, 10, 13),
             YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, 14, 18),
             YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, 1, 1),
-        ],
+        ]
+        .try_into()
+        .unwrap(),
     };
 
     const NON_EXISTING_YIELD_FARM_ID: YieldFarmId = 999_999_999;
@@ -1741,24 +1744,16 @@ fn deposit_remove_yield_farm_entry_should_work() {
 
     assert_ok!(deposit.remove_yield_farm_entry(2));
     assert_ok!(deposit.remove_yield_farm_entry(18));
-
-    //check if it stilled ordered
-    assert_eq!(
-        deposit.yield_farm_entries,
-        vec![
-            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, 10, 13),
-            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, 10, 13),
-            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, 1, 1),
-        ]
-    );
-
     assert_ok!(deposit.remove_yield_farm_entry(1));
     assert_ok!(deposit.remove_yield_farm_entry(4));
     assert_ok!(deposit.remove_yield_farm_entry(60));
 
     //This state should never happen, deposit should be flushed from storage when have no more
     //entries.
-    assert_eq!(deposit.yield_farm_entries, vec![]);
+    assert_eq!(
+        deposit.yield_farm_entries,
+        TryInto::<BoundedVec<YieldFarmEntry<Test, Instance1>, ConstU32<5>>>::try_into(vec![]).unwrap()
+    );
 
     assert_err!(
         deposit.remove_yield_farm_entry(60),
@@ -1777,7 +1772,9 @@ fn deposit_get_yield_farm_entry_should_work() {
             YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, 10, 13),
             YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, 14, 18),
             YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, 1, 1),
-        ],
+        ]
+        .try_into()
+        .unwrap(),
     };
 
     assert_eq!(
@@ -1790,7 +1787,7 @@ fn deposit_get_yield_farm_entry_should_work() {
 }
 
 #[test]
-fn deposit_contains_yield_farm_entry_should_work() {
+fn deposit_search_yield_farm_entry_should_work() {
     let deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
@@ -1800,41 +1797,18 @@ fn deposit_contains_yield_farm_entry_should_work() {
             YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, 10, 13),
             YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, 14, 18),
             YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, 1, 1),
-        ],
+        ]
+        .try_into()
+        .unwrap(),
     };
 
-    assert!(deposit.contains_yield_farm_entry(1));
-    assert!(deposit.contains_yield_farm_entry(60));
-    assert!(deposit.contains_yield_farm_entry(4));
+    assert!(deposit.search_yield_farm_entry(1).is_some());
+    assert!(deposit.search_yield_farm_entry(60).is_some());
+    assert!(deposit.search_yield_farm_entry(4).is_some());
 
     const NON_EXISTING_YIELD_FARM_ID: YieldFarmId = 98_908;
-    assert!(!deposit.contains_yield_farm_entry(NON_EXISTING_YIELD_FARM_ID));
-}
 
-#[test]
-fn deposit_has_no_yield_farm_entries_shoudl_work() {
-    let mut deposit = DepositData::<Test, Instance1> {
-        shares: 10,
-        amm_pool_id: BSX_TKN1_AMM,
-        yield_farm_entries: vec![],
-    };
-
-    //no yield farm entries
-    assert!(deposit.has_no_yield_farm_entries());
-
-    deposit.yield_farm_entries.push(YieldFarmEntry {
-        global_farm_id: GC_FARM,
-        yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
-        valued_shares: 1_000_000,
-        accumulated_rpvs: 12,
-        accumulated_claimed_rewards: 0,
-        entered_at: 12,
-        updated_at: 12,
-        _phantom: PhantomData::default(),
-    });
-
-    //some yield farm entries
-    assert!(!deposit.has_no_yield_farm_entries());
+    assert!(deposit.search_yield_farm_entry(NON_EXISTING_YIELD_FARM_ID).is_none());
 }
 
 #[test]
@@ -1849,7 +1823,9 @@ fn deposit_can_be_flushed_should_work() {
             YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, 10, 13),
             YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, 14, 18),
             YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, 1, 1),
-        ],
+        ]
+        .try_into()
+        .unwrap(),
     };
 
     assert!(!deposit.can_be_flushed());
@@ -1857,7 +1833,9 @@ fn deposit_can_be_flushed_should_work() {
     let deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
-        yield_farm_entries: vec![YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, 10, 13)],
+        yield_farm_entries: vec![YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, 10, 13)]
+            .try_into()
+            .unwrap(),
     };
 
     assert!(!deposit.can_be_flushed());
@@ -1866,7 +1844,7 @@ fn deposit_can_be_flushed_should_work() {
     let deposit = DepositData::<Test, Instance1> {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
-        yield_farm_entries: vec![],
+        yield_farm_entries: vec![].try_into().unwrap(),
     };
 
     assert!(deposit.can_be_flushed());
@@ -1882,48 +1860,48 @@ fn yield_farm_data_should_work() {
     assert!(!yield_farm.is_stopped());
     assert!(!yield_farm.is_deleted());
 
-    yield_farm.state = YieldFarmState::Stopped;
+    yield_farm.state = FarmState::Stopped;
     assert!(!yield_farm.is_active());
     assert!(yield_farm.is_stopped());
     assert!(!yield_farm.is_deleted());
 
-    yield_farm.state = YieldFarmState::Deleted;
+    yield_farm.state = FarmState::Deleted;
     assert!(!yield_farm.is_active());
     assert!(!yield_farm.is_stopped());
     assert!(yield_farm.is_deleted());
 
-    assert_ok!(yield_farm.entry_added());
+    assert_ok!(yield_farm.increase_entries_count());
     assert_eq!(yield_farm.entries_count, 1);
-    assert_ok!(yield_farm.entry_added());
-    assert_ok!(yield_farm.entry_added());
-    assert_ok!(yield_farm.entry_added());
+    assert_ok!(yield_farm.increase_entries_count());
+    assert_ok!(yield_farm.increase_entries_count());
+    assert_ok!(yield_farm.increase_entries_count());
     assert_eq!(yield_farm.entries_count, 4);
 
-    assert_ok!(yield_farm.entry_removed());
+    assert_ok!(yield_farm.decrease_entries_count());
     assert_eq!(yield_farm.entries_count, 3);
-    assert_ok!(yield_farm.entry_removed());
-    assert_ok!(yield_farm.entry_removed());
-    assert_ok!(yield_farm.entry_removed());
+    assert_ok!(yield_farm.decrease_entries_count());
+    assert_ok!(yield_farm.decrease_entries_count());
+    assert_ok!(yield_farm.decrease_entries_count());
     assert_eq!(yield_farm.entries_count, 0);
-    assert_err!(yield_farm.entry_removed(), ArithmeticError::Underflow);
+    assert_err!(yield_farm.decrease_entries_count(), ArithmeticError::Underflow);
 
     //no entries in the farm
     yield_farm.entries_count = 0;
     assert!(!yield_farm.has_entries());
-    assert_ok!(yield_farm.entry_added());
+    assert_ok!(yield_farm.increase_entries_count());
     assert!(yield_farm.has_entries());
 
-    yield_farm.state = YieldFarmState::Active;
+    yield_farm.state = FarmState::Active;
     yield_farm.entries_count = 0;
     //active farm can't be flushed
     assert!(!yield_farm.can_be_flushed());
 
     //stopped farm can't be flushed
-    yield_farm.state = YieldFarmState::Stopped;
+    yield_farm.state = FarmState::Stopped;
     assert!(!yield_farm.can_be_flushed());
 
     //deleted farm with entries can't be flushed
-    yield_farm.state = YieldFarmState::Deleted;
+    yield_farm.state = FarmState::Deleted;
     yield_farm.entries_count = 1;
     assert!(!yield_farm.can_be_flushed());
 
@@ -1939,36 +1917,36 @@ fn global_farm_should_work() {
 
     //new farm should be created active
     assert!(global_farm.is_active());
-    global_farm.state = GlobalFarmState::Deleted;
+    global_farm.state = FarmState::Deleted;
     assert!(!global_farm.is_active());
 
-    global_farm.state = GlobalFarmState::Active;
+    global_farm.state = FarmState::Active;
 
-    assert_ok!(global_farm.yield_farm_added());
-    assert_ok!(global_farm.yield_farm_added());
+    assert_ok!(global_farm.increase_yield_farm_counts());
+    assert_ok!(global_farm.increase_yield_farm_counts());
     assert_eq!(global_farm.yield_farms_count, (2, 2));
-    assert_ok!(global_farm.yield_farm_added());
-    assert_ok!(global_farm.yield_farm_added());
+    assert_ok!(global_farm.increase_yield_farm_counts());
+    assert_ok!(global_farm.increase_yield_farm_counts());
     assert_eq!(global_farm.yield_farms_count, (4, 4));
-    assert_ok!(global_farm.yield_farm_removed());
-    assert_ok!(global_farm.yield_farm_removed());
+    assert_ok!(global_farm.decrease_live_yield_farm_count());
+    assert_ok!(global_farm.decrease_live_yield_farm_count());
     //removing farm changes only live farms, total count is not changed
     assert_eq!(global_farm.yield_farms_count, (2, 4));
-    assert_ok!(global_farm.yield_farm_added());
+    assert_ok!(global_farm.increase_yield_farm_counts());
     assert_eq!(global_farm.yield_farms_count, (3, 5));
-    assert_ok!(global_farm.yield_farm_flushed());
-    assert_ok!(global_farm.yield_farm_flushed());
+    assert_ok!(global_farm.decrease_total_yield_farm_count());
+    assert_ok!(global_farm.decrease_total_yield_farm_count());
     //removing farm changes only total count(farm has to removed and deleted before it can be
     //flushed)
     assert_eq!(global_farm.yield_farms_count, (3, 3));
 
-    assert!(!global_farm.has_no_live_farms());
+    assert!(global_farm.has_live_farms());
     global_farm.yield_farms_count = (0, 3);
-    assert!(global_farm.has_no_live_farms());
+    assert!(!global_farm.has_live_farms());
 
     //active farm can't be flushed
     assert!(!global_farm.can_be_flushed());
-    global_farm.state = GlobalFarmState::Deleted;
+    global_farm.state = FarmState::Deleted;
     //deleted farm with yield farm can't be flushed
     assert!(!global_farm.can_be_flushed());
     //deleted farm with no yield farms can be flushed

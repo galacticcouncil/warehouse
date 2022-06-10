@@ -1,13 +1,13 @@
-// This file is part of HydraDX
+// This file is part of galacticcouncil/warehouse.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -99,8 +99,8 @@ mod types;
 pub use pallet::*;
 
 pub use crate::types::{
-    Balance, DepositData, DepositId, FarmId, FarmMultiplier, GlobalFarmData, GlobalFarmId, GlobalFarmState,
-    LoyaltyCurve, YieldFarmData, YieldFarmEntry, YieldFarmId, YieldFarmState,
+    Balance, DepositData, DepositId, FarmId, FarmMultiplier, FarmState, GlobalFarmData, GlobalFarmId, LoyaltyCurve,
+    YieldFarmData, YieldFarmEntry, YieldFarmId,
 };
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
@@ -116,7 +116,7 @@ use frame_support::{
 use sp_runtime::ArithmeticError;
 
 use hydra_dx_math::liquidity_mining as math;
-use hydradx_traits::liquidity_mining::Handler;
+use hydradx_traits::liquidity_mining::{AmmProvider, LockableLpShares, OnUpdateHandler};
 use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
 use sp_arithmetic::{
@@ -171,20 +171,14 @@ pub mod pallet {
         /// Id used to identify amm pool in liquidity mining pallet.
         type AmmPoolId: Parameter + Member + Clone + FullCodec;
 
-        type Handler: hydradx_traits::liquidity_mining::Handler<
-            Self::CurrencyId,
-            Self::AmmPoolId,
-            GlobalFarmId,
-            FarmId,
-            Balance,
-            DepositId,
-            Self::AccountId,
-        >;
+        type Handler: AmmProvider<Self::CurrencyId, Self::AmmPoolId, Balance>
+            + OnUpdateHandler<GlobalFarmId, FarmId, Balance>
+            + LockableLpShares<Self::AmmPoolId, Self::AccountId, Balance, DepositId, Error = DispatchError>;
 
         /// Maximum number of yield farms same LP shares can be re/deposited into. This value always
         /// MUST BE >= 1.         
         #[pallet::constant]
-        type MaxFarmEntriesPerDeposit: Get<u8>;
+        type MaxFarmEntriesPerDeposit: Get<u32>;
     }
 
     #[pallet::error]
@@ -400,7 +394,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
             ensure!(who == global_farm.owner, Error::<T, I>::Forbidden);
 
-            ensure!(global_farm.has_no_live_farms(), Error::<T, I>::GlobalFarmIsNotEmpty);
+            ensure!(!global_farm.has_live_farms(), Error::<T, I>::GlobalFarmIsNotEmpty);
 
             let global_farm_account = Self::farm_account_id(global_farm.id)?;
             let undistributed_rewards =
@@ -414,7 +408,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             )?;
 
             //Mark for flush from storage on last `YieldFarm` in the farm flush.
-            global_farm.state = GlobalFarmState::Deleted;
+            global_farm.state = FarmState::Deleted;
 
             let reward_currency = global_farm.reward_currency;
             if global_farm.can_be_flushed() {
@@ -495,7 +489,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         YieldFarmData::new(yield_farm_id, current_period, loyalty_curve.clone(), multiplier);
 
                     <YieldFarm<T, I>>::insert((amm_pool_id, global_farm_id, yield_farm_id), yield_farm);
-                    global_farm.yield_farm_added()?;
+                    global_farm.increase_yield_farm_counts()?;
 
                     *maybe_active_yield_farm = Some(yield_farm_id);
 
@@ -616,7 +610,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                                 .checked_sub(old_stake_in_global_pool)
                                 .ok_or(ArithmeticError::Overflow)?;
 
-                            yield_farm.state = YieldFarmState::Stopped;
+                            yield_farm.state = FarmState::Stopped;
                             yield_farm.multiplier = 0.into();
 
                             Ok(())
@@ -697,7 +691,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                     yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
                     yield_farm.updated_at = current_period;
-                    yield_farm.state = YieldFarmState::Active;
+                    yield_farm.state = FarmState::Active;
                     yield_farm.multiplier = multiplier;
 
                     //add yield farm to active farms.
@@ -761,12 +755,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     )?;
 
                     //Delete yield farm.
-                    yield_farm.state = YieldFarmState::Deleted;
-                    global_farm.yield_farm_removed()?;
+                    yield_farm.state = FarmState::Deleted;
+                    global_farm.decrease_live_yield_farm_count()?;
 
                     //Cleanup if it's possible
                     if yield_farm.can_be_flushed() {
-                        global_farm.yield_farm_flushed()?;
+                        global_farm.decrease_total_yield_farm_count()?;
 
                         *maybe_yield_farm = None;
                     }
@@ -816,7 +810,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         let deposit_id = Self::get_next_deposit_id()?;
         <Deposit<T, I>>::insert(deposit_id, deposit);
 
-        T::Handler::lock_lp_tokens(amm_pool_id, who, shares_amount, deposit_id)?;
+        T::Handler::lock_lp_shares(amm_pool_id, who, shares_amount, deposit_id)?;
 
         Ok(deposit_id)
     }
@@ -1016,9 +1010,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                                 )?;
                             }
 
-                            yield_farm.entry_removed()?;
+                            yield_farm.decrease_entries_count()?;
                             if yield_farm.can_be_flushed() {
-                                global_farm.yield_farm_flushed()?;
+                                global_farm.decrease_total_yield_farm_count()?;
 
                                 *maybe_yield_farm = None;
                             }
@@ -1038,7 +1032,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             let withdrawn_amount = deposit.shares;
             if deposit.can_be_flushed() {
                 //NOTE: LP shares should be unlocked only if deposit is destroyed.
-                T::Handler::unlock_lp_tokens(deposit.amm_pool_id.clone(), who, withdrawn_amount, deposit_id)?;
+                T::Handler::unlock_lp_shares(deposit.amm_pool_id.clone(), who, withdrawn_amount, deposit_id)?;
 
                 *maybe_deposit = None;
             }
@@ -1054,7 +1048,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     ) -> Result<(), DispatchError> {
         //LP shares can be locked only once in the same yield farm.
         ensure!(
-            !deposit.contains_yield_farm_entry(yield_farm_id),
+            deposit.search_yield_farm_entry(yield_farm_id).is_none(),
             Error::<T, I>::DoubleLock
         );
 
@@ -1111,7 +1105,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     deposit.add_yield_farm_entry(farm_entry)?;
 
                     //Increment farm's entries count
-                    yield_farm.entry_added()?;
+                    yield_farm.increase_entries_count()?;
 
                     Ok(())
                 })

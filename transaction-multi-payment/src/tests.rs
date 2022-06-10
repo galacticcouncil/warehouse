@@ -645,7 +645,7 @@ fn only_set_fee_currency_for_supported_currency() {
 
             assert_eq!(Currencies::free_balance(UNSUPPORTED_CURRENCY, &CHARLIE), 5);
             assert_eq!(Currencies::free_balance(UNSUPPORTED_CURRENCY, &BOB), 5);
-            // Bob's fee currency was set on transfer (due to account creation)
+            // Bob's fee currency was not set on transfer (due to the currency being unsupported)
             assert_eq!(PaymentPallet::get_currency(BOB), None);
         });
 }

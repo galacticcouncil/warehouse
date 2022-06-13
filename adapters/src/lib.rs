@@ -34,10 +34,12 @@ pub type Price = FixedU128;
 #[cfg(test)]
 mod tests;
 
-/// Weight trader which uses `WeightToFee` in combination with a `PriceOracle` to set the right
-/// price for weight. Keeps track of the assets used to pay for weight and can refund them one
-/// by one (interface only allows returning one asset per refund).
-/// Will pass any remaining assets on `Drop` to `TakeRevenue`.
+/// Weight trader that accepts multiple assets as weight fee payment.
+///
+/// It uses `WeightToFee` in combination with a `PriceOracle` to set the right price for weight.
+/// Keeps track of the assets used to pay for weight and can refund them one by one (interface only
+/// allows returning one asset per refund). Will pass any remaining assets on `Drop` to
+/// `TakeRevenue`.
 pub struct MultiCurrencyTrader<
     AssetId,
     Balance: FixedPointOperand + TryInto<u128>,
@@ -102,6 +104,9 @@ impl<
     }
 
     /// Will try to buy weight with the first asset in `payment`.
+    ///
+    /// This is a reasonable strategy as the `BuyExecution` XCM instruction only passes one asset
+    /// per buy.
     /// The fee is determined by `WeightToFee` in combination with the price determined by
     /// `AcceptedCurrencyPrices`.
     fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
@@ -152,6 +157,8 @@ impl<
     }
 }
 
+/// We implement `Drop` so that when the weight trader is dropped at the end of XCM execution, the
+/// generated revenue is stored on-chain. This is configurable via the `Revenue` generic.
 impl<
         AssetId,
         Balance: FixedPointOperand + TryInto<u128>,
@@ -168,7 +175,7 @@ impl<
     }
 }
 
-/// Implements `TakeRevenue` by sending the assets to the fee receiver, using and implementor of
+/// Implements `TakeRevenue` by sending the assets to the fee receiver, using an implementor of
 /// `DepositFee`.
 ///
 /// Note: Only supports concrete fungible assets.

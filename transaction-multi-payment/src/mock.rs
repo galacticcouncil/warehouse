@@ -17,14 +17,14 @@
 
 use super::*;
 pub use crate as multi_payment;
-use crate::{Config, MultiCurrencyAdapter};
+use crate::{Config, TransferFees};
 use frame_support::{parameter_types, weights::DispatchClass};
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup, One},
+    traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
 
@@ -46,7 +46,7 @@ pub const INITIAL_BALANCE: Balance = 1_000_000_000_000_000u128;
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub const FALLBACK_ACCOUNT: AccountId = 300;
+pub const FEE_RECEIVER: AccountId = 300;
 
 pub const HDX: AssetId = 0;
 pub const SUPPORTED_CURRENCY: AssetId = 2000;
@@ -95,10 +95,11 @@ parameter_types! {
     pub const SS58Prefix: u8 = 63;
 
     pub const HdxAssetId: u32 = 0;
-    pub const ExistentialDeposit: u128 = 1;
+    pub const ExistentialDeposit: u128 = 2;
     pub const MaxLocks: u32 = 50;
     pub const TransactionByteFee: Balance = 1;
     pub const RegistryStringLimit: u32 = 100;
+    pub const FeeReceiver: AccountId = FEE_RECEIVER;
 
     pub RuntimeBlockWeights: system::limits::BlockWeights = system::limits::BlockWeights::builder()
         .base_block(10)
@@ -157,6 +158,7 @@ impl Config for Test {
     type WithdrawFeeForSetCurrency = PayForSetCurrency;
     type WeightToFee = IdentityFee<Balance>;
     type NativeAssetId = HdxAssetId;
+    type FeeReceiver = FeeReceiver;
 }
 
 impl pallet_balances::Config for Test {
@@ -174,7 +176,7 @@ impl pallet_balances::Config for Test {
 }
 
 impl pallet_transaction_payment::Config for Test {
-    type OnChargeTransaction = MultiCurrencyAdapter<Balances, (), PaymentPallet>;
+    type OnChargeTransaction = TransferFees<Currencies, PaymentPallet, DepositAll<Test>>;
     type TransactionByteFee = TransactionByteFee;
     type OperationalFeeMultiplier = ();
     type WeightToFee = IdentityFee<Balance>;
@@ -214,7 +216,7 @@ parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
         match currency_id {
             &HIGH_ED_CURRENCY => HIGH_ED,
-            _ => One::one(),
+            _ => One::one() + One::one(),
         }
     };
 }
@@ -314,7 +316,6 @@ impl ExtBuilder {
                 (SUPPORTED_CURRENCY_WITH_PRICE, Price::from_float(0.5)),
                 (HIGH_ED_CURRENCY, Price::from(3)),
             ],
-            fallback_account: Some(FALLBACK_ACCOUNT),
             account_currencies: self.account_currencies,
         }
         .assimilate_storage(&mut t)

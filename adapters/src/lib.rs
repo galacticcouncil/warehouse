@@ -190,7 +190,7 @@ impl<
             } => {
                 C::convert(loc).and_then(|id| {
                     let receiver = F::get_fee_receiver();
-                    D::deposit_fee(&receiver, Some((id, amount.saturated_into::<Balance>())).into_iter())
+                    D::deposit_fee(&receiver, id, amount.saturated_into::<Balance>())
                         .map_err(|e| log::trace!(target: "xcm::take_revenue", "Could not deposit fee: {:?}", e))
                         .ok()
                 });
@@ -498,15 +498,13 @@ mod tests {
             }
 
             impl DepositFee<AccountId, AssetId, Balance> for $name {
-                fn deposit_fee(who: &AccountId, amounts: impl Iterator<Item = (AssetId, Balance)>) -> DispatchResult {
-                    for (currency, amount) in amounts {
-                        log::trace!("Depositing {} of {} to {}", amount, currency, who);
-                        assert!(
-                            EXPECTED.lock().unwrap().remove(&(*who, currency, amount)),
-                            "Unexpected combination of receiver and fee {:?} deposited that was not expected.",
-                            (*who, currency, amount)
-                        );
-                    }
+                fn deposit_fee(who: &AccountId, asset: AssetId, amount: Balance) -> DispatchResult {
+                    log::trace!("Depositing {} of {} to {}", amount, asset, who);
+                    assert!(
+                        EXPECTED.lock().unwrap().remove(&(*who, asset, amount)),
+                        "Unexpected combination of receiver and fee {:?} deposited that was not expected.",
+                        (*who, asset, amount)
+                    );
                     let remaining = EXPECTED.lock().unwrap();
                     assert!(
                         remaining.is_empty(),

@@ -20,8 +20,8 @@ use codec::{Decode, Encode};
 use frame_support::weights::IdentityFee;
 use smallvec::smallvec;
 use sp_runtime::{traits::One, DispatchError, DispatchResult, Perbill};
+use sp_std::cell::RefCell;
 use sp_std::collections::btree_set::BTreeSet;
-use std::sync::Mutex;
 
 type AccountId = u32;
 type AssetId = u32;
@@ -32,6 +32,7 @@ const TEST_ASSET_ID: AssetId = 123;
 const CHEAP_ASSET_ID: AssetId = 420;
 const OVERFLOW_ASSET_ID: AssetId = 1_000;
 
+/// Mock price oracle which returns prices for the hard-coded assets.
 struct MockOracle;
 impl PriceOracle<AssetId, Price> for MockOracle {
     fn price(currency: AssetId) -> Option<Price> {
@@ -92,52 +93,91 @@ impl Convert<MultiAsset, Option<AssetId>> for MockConvert {
     }
 }
 
-macro_rules! generate_revenue_type {
-    ($name:ident) => {
-        lazy_static::lazy_static! {
-            pub static ref TAKEN: Mutex<BTreeSet<MultiAsset>> = Mutex::new(BTreeSet::new());
-            pub static ref EXPECTED: Mutex<BTreeSet<MultiAsset>> = Mutex::new(BTreeSet::new());
-        };
+thread_local! {
+    pub static TAKEN_REVENUE: RefCell<BTreeSet<MultiAsset>> = RefCell::new(BTreeSet::new());
+    pub static EXPECTED_REVENUE: RefCell<BTreeSet<MultiAsset>> = RefCell::new(BTreeSet::new());
+}
 
-        struct $name;
-        impl $name {
-            #[allow(unused)]
-            fn register_expected_asset(asset: MultiAsset) {
-                EXPECTED.lock().unwrap().insert(asset);
-            }
+struct ExpectRevenue;
+impl ExpectRevenue {
+    /// Register an asset to be expected.
+    fn register_expected_asset(asset: MultiAsset) {
+        EXPECTED_REVENUE.with(|e| e.borrow_mut().insert(asset));
+    }
 
-            #[allow(unused)]
-            fn expect_revenue() {
-                for asset in EXPECTED.lock().unwrap().iter() {
-                    assert!(TAKEN.lock().unwrap().contains(dbg!(asset)));
-                }
+    /// Check the taken revenue contains all expected assets.
+    ///
+    /// Note: Will not notice if extra assets were taken (that were not expected).
+    fn expect_revenue() {
+        EXPECTED_REVENUE.with(|e| {
+            let expected = e.borrow();
+            for asset in expected.iter() {
+                assert!(TAKEN_REVENUE.with(|t| t.borrow().contains(dbg!(asset))));
             }
+        });
+    }
 
-            #[allow(unused)]
-            fn expect_no_revenue() {
-                assert!(TAKEN.lock().unwrap().is_empty(), "There should be no revenue taken.");
-            }
+    /// Expect there to be no tracked revenue.
+    fn expect_no_revenue() {
+        assert!(
+            TAKEN_REVENUE.with(|t| t.borrow().is_empty()),
+            "There should be no revenue taken."
+        );
+    }
 
-            /// Reset the global mutable state.
-            #[allow(unused)]
-            fn reset() {
-                *TAKEN.lock().unwrap() = BTreeSet::new();
-                *EXPECTED.lock().unwrap() = BTreeSet::new();
-            }
-        }
+    /// Reset the global mutable state.
+    fn reset() {
+        TAKEN_REVENUE.with(|t| *t.borrow_mut() = BTreeSet::new());
+        EXPECTED_REVENUE.with(|e| *e.borrow_mut() = BTreeSet::new());
+    }
+}
 
-        impl TakeRevenue for $name {
-            fn take_revenue(asset: MultiAsset) {
-                TAKEN.lock().unwrap().insert(asset);
-            }
-        }
-    };
+impl TakeRevenue for ExpectRevenue {
+    fn take_revenue(asset: MultiAsset) {
+        TAKEN_REVENUE.with(|t| t.borrow_mut().insert(asset));
+    }
+}
+
+thread_local! {
+    pub static EXPECTED_DEPOSITS: RefCell<BTreeSet<(AccountId, AssetId, Balance)>> = RefCell::new(BTreeSet::new());
+}
+
+struct ExpectDeposit;
+impl ExpectDeposit {
+    /// Register an asset to be expected. The `DepositFee` implementation will panic if it receives
+    /// an unexpected asset.
+    fn register_expected_fee(who: AccountId, asset: AssetId, amount: Balance) {
+        EXPECTED_DEPOSITS.with(|e| e.borrow_mut().insert((who, asset, amount)));
+    }
+
+    /// Reset the global mutable state.
+    fn reset() {
+        EXPECTED_DEPOSITS.with(|e| *e.borrow_mut() = BTreeSet::new());
+    }
+}
+
+impl DepositFee<AccountId, AssetId, Balance> for ExpectDeposit {
+    fn deposit_fee(who: &AccountId, asset: AssetId, amount: Balance) -> DispatchResult {
+        log::trace!("Depositing {} of {} to {}", amount, asset, who);
+        assert!(
+            EXPECTED_DEPOSITS.with(|e| e.borrow_mut().remove(&(*who, asset, amount))),
+            "Unexpected combination of receiver and fee {:?} deposited that was not expected.",
+            (*who, asset, amount)
+        );
+        EXPECTED_DEPOSITS.with(|remaining| {
+            assert!(
+                remaining.borrow().is_empty(),
+                "There should be no expected fees remaining. Remaining: {:?}",
+                remaining
+            );
+        });
+        Ok(())
+    }
 }
 
 #[test]
 fn can_buy_weight() {
-    generate_revenue_type!(ExpectRevenue);
-
+    ExpectRevenue::reset();
     type Trader = MultiCurrencyTrader<AssetId, Balance, IdentityFee<Balance>, MockOracle, MockConvert, ExpectRevenue>;
 
     let core_id = MockConvert::convert(CORE_ASSET_ID).unwrap();
@@ -228,7 +268,7 @@ fn overflow_errors() {
 
 #[test]
 fn refunds_first_asset_completely() {
-    generate_revenue_type!(ExpectRevenue);
+    ExpectRevenue::reset();
 
     type Trader = MultiCurrencyTrader<AssetId, Balance, IdentityFee<Balance>, MockOracle, MockConvert, ExpectRevenue>;
 
@@ -251,7 +291,7 @@ fn refunds_first_asset_completely() {
 
 #[test]
 fn needs_multiple_refunds_for_multiple_currencies() {
-    generate_revenue_type!(ExpectRevenue);
+    ExpectRevenue::reset();
 
     type Trader = MultiCurrencyTrader<AssetId, Balance, IdentityFee<Balance>, MockOracle, MockConvert, ExpectRevenue>;
 
@@ -280,50 +320,9 @@ fn needs_multiple_refunds_for_multiple_currencies() {
     ExpectRevenue::expect_no_revenue();
 }
 
-macro_rules! generate_deposit_type {
-    ($name:ident) => {
-        lazy_static::lazy_static! {
-            pub static ref EXPECTED: Mutex<BTreeSet<(AccountId, AssetId, Balance)>> =
-                Mutex::new(BTreeSet::new());
-        };
-
-        struct $name;
-        impl $name {
-            #[allow(unused)]
-            fn register_expected_fee(who: AccountId, asset: AssetId, amount: Balance) {
-                EXPECTED.lock().unwrap().insert((who, asset, amount));
-            }
-
-            /// Reset the global mutable state.
-            #[allow(unused)]
-            fn reset() {
-                *EXPECTED.lock().unwrap() = BTreeSet::new();
-            }
-        }
-
-        impl DepositFee<AccountId, AssetId, Balance> for $name {
-            fn deposit_fee(who: &AccountId, asset: AssetId, amount: Balance) -> DispatchResult {
-                log::trace!("Depositing {} of {} to {}", amount, asset, who);
-                assert!(
-                    EXPECTED.lock().unwrap().remove(&(*who, asset, amount)),
-                    "Unexpected combination of receiver and fee {:?} deposited that was not expected.",
-                    (*who, asset, amount)
-                );
-                let remaining = EXPECTED.lock().unwrap();
-                assert!(
-                    remaining.is_empty(),
-                    "There should be no expected fees remaining. Remaining: {:?}",
-                    remaining
-                );
-                Ok(())
-            }
-        }
-    };
-}
-
 #[test]
 fn revenue_goes_to_fee_receiver() {
-    generate_deposit_type!(ExpectDeposit);
+    ExpectDeposit::reset();
 
     struct MockFeeReceiver;
     impl TransactionMultiPaymentDataProvider<AccountId, AssetId, Price> for MockFeeReceiver {

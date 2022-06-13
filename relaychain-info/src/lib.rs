@@ -51,7 +51,10 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// Current block numbers
         /// [ Parachain block number, Relaychain Block number ]
-        CurrentBlockNumbers(T::BlockNumber, T::BlockNumber),
+        CurrentBlockNumbers {
+            parachain_block_number: T::BlockNumber,
+            relaychain_block_number: T::BlockNumber,
+        },
     }
 
     #[pallet::call]
@@ -62,10 +65,10 @@ pub struct OnValidationDataHandler<T>(sp_std::marker::PhantomData<T>);
 
 impl<T: Config> cumulus_pallet_parachain_system::OnSystemEvent for OnValidationDataHandler<T> {
     fn on_validation_data(data: &PersistedValidationData) {
-        crate::Pallet::<T>::deposit_event(crate::Event::CurrentBlockNumbers(
-            frame_system::Pallet::<T>::current_block_number(),
-            data.relay_parent_number.into(),
-        ));
+        crate::Pallet::<T>::deposit_event(crate::Event::CurrentBlockNumbers {
+            parachain_block_number: frame_system::Pallet::<T>::current_block_number(),
+            relaychain_block_number: data.relay_parent_number.into(),
+        });
     }
 
     fn on_validation_code_applied() {}

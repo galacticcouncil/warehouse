@@ -63,7 +63,6 @@ use scale_info::TypeInfo;
 
 pub use crate::traits::*;
 use frame_support::dispatch::DispatchError;
-use itertools::Itertools;
 
 type AssetIdOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 type BalanceOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -148,19 +147,28 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// CurrencySet
         /// [who, currency]
-        CurrencySet(T::AccountId, AssetIdOf<T>),
+        CurrencySet {
+            account_id: T::AccountId,
+            asset_id: AssetIdOf<T>,
+        },
 
         /// New accepted currency added
         /// [currency]
-        CurrencyAdded(AssetIdOf<T>),
+        CurrencyAdded { asset_id: AssetIdOf<T> },
 
         /// Accepted currency removed
         /// [currency]
-        CurrencyRemoved(AssetIdOf<T>),
+        CurrencyRemoved { asset_id: AssetIdOf<T> },
 
         /// Transaction fee paid in non-native currency
         /// [Account, Currency, Native fee amount, Non-native fee amount, Destination account]
-        FeeWithdrawn(T::AccountId, AssetIdOf<T>, BalanceOf<T>, BalanceOf<T>, T::AccountId),
+        FeeWithdrawn {
+            account_id: T::AccountId,
+            asset_id: AssetIdOf<T>,
+            native_fee_amount: BalanceOf<T>,
+            non_native_fee_amount: BalanceOf<T>,
+            destination_account_id: T::AccountId,
+        },
     }
 
     #[pallet::error]
@@ -261,7 +269,10 @@ pub mod pallet {
                     Self::transfer_set_fee(&who)?;
                 }
 
-                Self::deposit_event(Event::CurrencySet(who, currency));
+                Self::deposit_event(Event::CurrencySet {
+                    account_id: who,
+                    asset_id: currency,
+                });
 
                 return Ok(());
             }
@@ -288,7 +299,7 @@ pub mod pallet {
                 }
 
                 *maybe_price = Some(price);
-                Self::deposit_event(Event::CurrencyAdded(currency));
+                Self::deposit_event(Event::CurrencyAdded { asset_id: currency });
                 Ok(())
             })
         }
@@ -312,7 +323,7 @@ pub mod pallet {
 
                 *x = None;
 
-                Self::deposit_event(Event::CurrencyRemoved(currency));
+                Self::deposit_event(Event::CurrencyRemoved { asset_id: currency });
 
                 Ok(())
             })
@@ -342,13 +353,13 @@ where
 
         T::Currencies::transfer(currency, who, &T::FeeReceiver::get(), amount)?;
 
-        Self::deposit_event(Event::FeeWithdrawn(
-            who.clone(),
-            currency,
-            fee,
-            amount,
-            T::FeeReceiver::get(),
-        ));
+        Self::deposit_event(Event::FeeWithdrawn {
+            account_id: who.clone(),
+            asset_id: currency,
+            native_fee_amount: fee,
+            non_native_fee_amount: amount,
+            destination_account_id: T::FeeReceiver::get(),
+        });
 
         Ok(())
     }
@@ -386,6 +397,7 @@ where
                     Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?
                 }
             };
+
             Ok((currency, Some(price)))
         }
     }
@@ -407,21 +419,12 @@ where
     }
 }
 
+/// Deposits all fees to some account
 pub struct DepositAll<T>(PhantomData<T>);
 
-impl<T: Config> DepositFee<T::AccountId, AssetIdOf<T>, BalanceOf<T>> for DepositAll<T>
-where
-    AssetIdOf<T>: Ord,
-{
-    fn deposit_fee(who: &T::AccountId, amounts: impl Iterator<Item = (AssetIdOf<T>, BalanceOf<T>)>) -> DispatchResult {
-        // merge items with the same asset ID
-        let amounts = amounts
-            .sorted_unstable_by(|a, b| Ord::cmp(&a.0, &b.0))
-            .coalesce(|a, b| if a.0 == b.0 { Ok((a.0, a.1 + b.1)) } else { Err((a, b)) });
-
-        for (currency, amount) in amounts {
-            <T as Config>::Currencies::deposit(currency, who, amount)?;
-        }
+impl<T: Config> DepositFee<T::AccountId, AssetIdOf<T>, BalanceOf<T>> for DepositAll<T> {
+    fn deposit_fee(who: &T::AccountId, currency: AssetIdOf<T>, amount: BalanceOf<T>) -> DispatchResult {
+        <T as Config>::Currencies::deposit(currency, who, amount)?;
         Ok(())
     }
 }
@@ -521,15 +524,7 @@ where
                 .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
             // deposit the fee
-            let mut fee_amounts = Vec::new();
-            if !fee.is_zero() {
-                fee_amounts.push((currency, fee));
-            }
-            if !tip.is_zero() {
-                fee_amounts.push((currency, tip));
-            }
-
-            DF::deposit_fee(&fee_receiver, fee_amounts.into_iter())
+            DF::deposit_fee(&fee_receiver, currency, fee + tip)
                 .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
         }
 

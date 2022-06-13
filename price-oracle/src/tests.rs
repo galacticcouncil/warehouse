@@ -126,9 +126,21 @@ fn add_new_asset_pair_should_work() {
         assert_eq!(PriceOracle::new_assets(), vec![AssetPairId::new(); 0]);
 
         expect_events(vec![
-            Event::PoolRegistered(HDX, DOT).into(),
-            Event::PoolRegistered(HDX, ACA).into(),
-            Event::PoolRegistered(HDX, ETH).into(),
+            Event::PoolRegistered {
+                asset_a: HDX,
+                asset_b: DOT,
+            }
+            .into(),
+            Event::PoolRegistered {
+                asset_a: HDX,
+                asset_b: ACA,
+            }
+            .into(),
+            Event::PoolRegistered {
+                asset_a: HDX,
+                asset_b: ETH,
+            }
+            .into(),
         ]);
     });
 }
@@ -167,8 +179,16 @@ fn on_create_pool_should_work() {
         PriceOracle::on_finalize(5);
 
         expect_events(vec![
-            Event::PoolRegistered(HDX, DOT).into(),
-            Event::PoolRegistered(HDX, ACA).into(),
+            Event::PoolRegistered {
+                asset_a: HDX,
+                asset_b: DOT,
+            }
+            .into(),
+            Event::PoolRegistered {
+                asset_a: HDX,
+                asset_b: ACA,
+            }
+            .into(),
         ]);
     });
 }

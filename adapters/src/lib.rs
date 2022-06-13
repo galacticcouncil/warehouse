@@ -43,6 +43,7 @@ mod tests;
 pub struct MultiCurrencyTrader<
     AssetId,
     Balance: FixedPointOperand + TryInto<u128>,
+    Price: FixedPointNumber,
     WeightToFee: WeightToFeePolynomial<Balance = Balance>,
     AcceptedCurrencyPrices: PriceOracle<AssetId, Price>,
     ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
@@ -53,6 +54,7 @@ pub struct MultiCurrencyTrader<
     _phantom: PhantomData<(
         AssetId,
         Balance,
+        Price,
         WeightToFee,
         AcceptedCurrencyPrices,
         ConvertCurrency,
@@ -63,11 +65,12 @@ pub struct MultiCurrencyTrader<
 impl<
         AssetId,
         Balance: FixedPointOperand + TryInto<u128>,
+        Price: FixedPointNumber,
         WeightToFee: WeightToFeePolynomial<Balance = Balance>,
         AcceptedCurrencyPrices: PriceOracle<AssetId, Price>,
         ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
         Revenue: TakeRevenue,
-    > MultiCurrencyTrader<AssetId, Balance, WeightToFee, AcceptedCurrencyPrices, ConvertCurrency, Revenue>
+    > MultiCurrencyTrader<AssetId, Balance, Price, WeightToFee, AcceptedCurrencyPrices, ConvertCurrency, Revenue>
 {
     /// Get the asset id of the first asset in `payment` and try to determine its price via the
     /// price oracle.
@@ -88,12 +91,13 @@ impl<
 impl<
         AssetId,
         Balance: FixedPointOperand + TryInto<u128>,
+        Price: FixedPointNumber,
         WeightToFee: WeightToFeePolynomial<Balance = Balance>,
         AcceptedCurrencyPrices: PriceOracle<AssetId, Price>,
         ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
         Revenue: TakeRevenue,
     > WeightTrader
-    for MultiCurrencyTrader<AssetId, Balance, WeightToFee, AcceptedCurrencyPrices, ConvertCurrency, Revenue>
+    for MultiCurrencyTrader<AssetId, Balance, Price, WeightToFee, AcceptedCurrencyPrices, ConvertCurrency, Revenue>
 {
     fn new() -> Self {
         Self {
@@ -162,11 +166,13 @@ impl<
 impl<
         AssetId,
         Balance: FixedPointOperand + TryInto<u128>,
+        Price: FixedPointNumber,
         WeightToFee: WeightToFeePolynomial<Balance = Balance>,
         AcceptedCurrencyPrices: PriceOracle<AssetId, Price>,
         ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
         Revenue: TakeRevenue,
-    > Drop for MultiCurrencyTrader<AssetId, Balance, WeightToFee, AcceptedCurrencyPrices, ConvertCurrency, Revenue>
+    > Drop
+    for MultiCurrencyTrader<AssetId, Balance, Price, WeightToFee, AcceptedCurrencyPrices, ConvertCurrency, Revenue>
 {
     fn drop(&mut self) {
         for ((asset_loc, _), amount) in self.paid_assets.iter() {

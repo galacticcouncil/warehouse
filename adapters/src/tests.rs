@@ -26,6 +26,7 @@ use sp_std::collections::btree_set::BTreeSet;
 type AccountId = u32;
 type AssetId = u32;
 type Balance = u128;
+type Price = FixedU128;
 
 const CORE_ASSET_ID: AssetId = 0;
 const TEST_ASSET_ID: AssetId = 123;
@@ -178,7 +179,8 @@ impl DepositFee<AccountId, AssetId, Balance> for ExpectDeposit {
 #[test]
 fn can_buy_weight() {
     ExpectRevenue::reset();
-    type Trader = MultiCurrencyTrader<AssetId, Balance, IdentityFee<Balance>, MockOracle, MockConvert, ExpectRevenue>;
+    type Trader =
+        MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ExpectRevenue>;
 
     let core_id = MockConvert::convert(CORE_ASSET_ID).unwrap();
     let test_id = MockConvert::convert(TEST_ASSET_ID).unwrap();
@@ -213,7 +215,7 @@ fn can_buy_weight() {
 
 #[test]
 fn cannot_buy_with_too_few_tokens() {
-    type Trader = MultiCurrencyTrader<AssetId, Balance, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
+    type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
 
     let core_id = MockConvert::convert(CORE_ASSET_ID).unwrap();
 
@@ -226,7 +228,7 @@ fn cannot_buy_with_too_few_tokens() {
 
 #[test]
 fn cannot_buy_with_unknown_token() {
-    type Trader = MultiCurrencyTrader<AssetId, Balance, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
+    type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
 
     let unknown_token = GeneralKey(9876u32.encode());
 
@@ -253,7 +255,7 @@ fn overflow_errors() {
             })
         }
     }
-    type Trader = MultiCurrencyTrader<AssetId, Balance, MaxFee, MockOracle, MockConvert, ()>;
+    type Trader = MultiCurrencyTrader<AssetId, Balance, Price, MaxFee, MockOracle, MockConvert, ()>;
 
     let overflow_id = MockConvert::convert(OVERFLOW_ASSET_ID).unwrap();
 
@@ -270,7 +272,8 @@ fn overflow_errors() {
 fn refunds_first_asset_completely() {
     ExpectRevenue::reset();
 
-    type Trader = MultiCurrencyTrader<AssetId, Balance, IdentityFee<Balance>, MockOracle, MockConvert, ExpectRevenue>;
+    type Trader =
+        MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ExpectRevenue>;
 
     let core_id = MockConvert::convert(CORE_ASSET_ID).unwrap();
 
@@ -293,7 +296,8 @@ fn refunds_first_asset_completely() {
 fn needs_multiple_refunds_for_multiple_currencies() {
     ExpectRevenue::reset();
 
-    type Trader = MultiCurrencyTrader<AssetId, Balance, IdentityFee<Balance>, MockOracle, MockConvert, ExpectRevenue>;
+    type Trader =
+        MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ExpectRevenue>;
 
     let core_id = MockConvert::convert(CORE_ASSET_ID).unwrap();
     let test_id = MockConvert::convert(TEST_ASSET_ID).unwrap();

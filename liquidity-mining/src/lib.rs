@@ -161,10 +161,6 @@ pub mod pallet {
         #[pallet::constant]
         type MinPlannedYieldingPeriods: Get<Self::BlockNumber>;
 
-        /// Minimum user's deposit to start yield farming.
-        #[pallet::constant]
-        type MinDeposit: Get<Balance>;
-
         /// The block number provider
         type BlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
 
@@ -179,6 +175,11 @@ pub mod pallet {
         /// MUST BE >= 1.         
         #[pallet::constant]
         type MaxFarmEntriesPerDeposit: Get<u32>;
+
+        /// Max number of yield farms can exist in global farm. This includes all farms in the
+        /// storage(active, stopped, deleted).
+        #[pallet::constant]
+        type MaxYieldFarmsPerGlobalFarm: Get<u32>;
     }
 
     #[pallet::error]
@@ -255,6 +256,13 @@ pub mod pallet {
 
         /// Yield farm entry doesn't exist for given deposit.
         YieldFarmEntryNotFound,
+
+        /// Max number of yield farms in global farm was reached. Global farm can't accept new
+        /// yield farms until some yield farm is not removed from storage.
+        GlobalFarmIsFull,
+
+        /// Invalid min. deposit was set for global farm.
+        InvalidMinDeposit,
     }
 
     /// Id sequencer for `GlobalFarm` and `YieldFarm`.
@@ -323,6 +331,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `reward_currency`: payoff currency of rewards.
     /// - `owner`: liq. mining farm owner.
     /// - `yield_per_period`: percentage return on `reward_currency` of all pools
+    #[allow(clippy::too_many_arguments)]
     pub fn create_global_farm(
         total_rewards: Balance,
         planned_yielding_periods: PeriodOf<T>,
@@ -331,12 +340,14 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         reward_currency: AssetIdOf<T, I>,
         owner: AccountIdOf<T>,
         yield_per_period: Permill,
+        min_deposit: Balance,
     ) -> Result<(GlobalFarmId, Balance), DispatchError> {
         Self::validate_create_global_farm_data(
             total_rewards,
             planned_yielding_periods,
             blocks_per_period,
             yield_per_period,
+            min_deposit,
         )?;
 
         ensure!(
@@ -362,6 +373,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             owner,
             incentivized_asset,
             max_reward_per_period,
+            min_deposit,
         );
 
         <GlobalFarm<T, I>>::insert(&global_farm.id, &global_farm);
@@ -462,6 +474,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                 ensure!(global_farm.is_active(), Error::<T, I>::GlobalFarmNotFound);
 
                 ensure!(who == global_farm.owner, Error::<T, I>::Forbidden);
+
+                ensure!(!global_farm.is_full(), Error::<T, I>::GlobalFarmIsFull);
 
                 ensure!(
                     asset_a == global_farm.incentivized_asset || asset_b == global_farm.incentivized_asset,
@@ -797,11 +811,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
         shares_amount: Balance,
     ) -> Result<DepositId, DispatchError> {
-        ensure!(
-            shares_amount.ge(&T::MinDeposit::get()),
-            Error::<T, I>::InvalidDepositAmount,
-        );
-
         let mut deposit = DepositData::new(shares_amount, amm_pool_id.clone());
 
         Self::do_deposit_lp_shares(&mut deposit, global_farm_id, yield_farm_id)?;
@@ -820,6 +829,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     ///
     /// This function DOESN'T create new deposit.
     ///
+    /// Returns: `(redeposited shares amount)`
+    ///
     /// Parameters:
     /// - `global_farm_id`: global farm identifier.
     /// - `yield_farm_id`: yield farm identifier redepositing to.
@@ -828,13 +839,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
-    ) -> Result<(), DispatchError> {
+    ) -> Result<Balance, DispatchError> {
         <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T, I>::DepositNotFound)?;
 
             Self::do_deposit_lp_shares(deposit, global_farm_id, yield_farm_id)?;
 
-            Ok(())
+            Ok(deposit.shares)
         })
     }
 
@@ -1061,6 +1072,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                 <GlobalFarm<T, I>>::try_mutate(global_farm_id, |maybe_global_farm| {
                     let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
+
+                    ensure!(
+                        deposit.shares.ge(&global_farm.min_deposit),
+                        Error::<T, I>::InvalidDepositAmount,
+                    );
 
                     //This should never fail. If yield farm is active also global farm MUST be
                     //active.
@@ -1316,7 +1332,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         planned_yielding_periods: PeriodOf<T>,
         blocks_per_period: BlockNumberFor<T>,
         yield_per_period: Permill,
+        min_deposit: Balance,
     ) -> DispatchResult {
+        ensure!(min_deposit.ge(&1), Error::<T, I>::InvalidMinDeposit);
+
         ensure!(
             total_rewards >= T::MinTotalFarmRewards::get(),
             Error::<T, I>::InvalidTotalRewards

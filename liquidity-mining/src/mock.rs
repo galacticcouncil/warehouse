@@ -275,9 +275,9 @@ parameter_types! {
     pub const LMPalletId: PalletId = PalletId(*b"TEST_lm_");
     pub const MinPlannedYieldingPeriods: BlockNumber = 100;
     pub const MinTotalFarmRewards: Balance = 1_000_000;
-    pub const MininumDeposit: Balance = 10;
     #[derive(PartialEq)]
     pub const MaxEntriesPerDeposit: u8 = 5;
+    pub const MaxYieldFarmsPerGlobalFarm: u8 = 4;
 }
 
 impl Config<Instance1> for Test {
@@ -288,9 +288,9 @@ impl Config<Instance1> for Test {
     type MinTotalFarmRewards = MinTotalFarmRewards;
     type BlockNumberProvider = MockBlockNumberProvider;
     type AmmPoolId = AccountId;
-    type MinDeposit = MininumDeposit;
     type Handler = TestLiquidityMiningHandler;
     type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit;
+    type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
 }
 
 parameter_types! {
@@ -309,9 +309,9 @@ impl Config<Instance2> for Test {
     type MinTotalFarmRewards = MinTotalFarmRewards2;
     type BlockNumberProvider = MockBlockNumberProvider;
     type AmmPoolId = AccountId;
-    type MinDeposit = MininumDeposit2;
     type Handler = TestLiquidityMiningHandler;
     type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit2;
+    type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
 }
 
 pub struct TestLiquidityMiningHandler {}

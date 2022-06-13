@@ -18,7 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::weights::{Weight, WeightToFeePolynomial};
-use hydradx_traits::PriceOracle;
+use hydradx_traits::NativePriceOracle;
 use pallet_transaction_multi_payment::{DepositFee, TransactionMultiPaymentDataProvider};
 use polkadot_xcm::latest::prelude::*;
 use sp_runtime::{
@@ -34,7 +34,7 @@ mod tests;
 
 /// Weight trader that accepts multiple assets as weight fee payment.
 ///
-/// It uses `WeightToFee` in combination with a `PriceOracle` to set the right price for weight.
+/// It uses `WeightToFee` in combination with a `NativePriceOracle` to set the right price for weight.
 /// Keeps track of the assets used to pay for weight and can refund them one by one (interface only
 /// allows returning one asset per refund). Will pass any remaining assets on `Drop` to
 /// `TakeRevenue`.
@@ -43,7 +43,7 @@ pub struct MultiCurrencyTrader<
     Balance: FixedPointOperand + TryInto<u128>,
     Price: FixedPointNumber,
     WeightToFee: WeightToFeePolynomial<Balance = Balance>,
-    AcceptedCurrencyPrices: PriceOracle<AssetId, Price>,
+    AcceptedCurrencyPrices: NativePriceOracle<AssetId, Price>,
     ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
     Revenue: TakeRevenue,
 > {
@@ -65,7 +65,7 @@ impl<
         Balance: FixedPointOperand + TryInto<u128>,
         Price: FixedPointNumber,
         WeightToFee: WeightToFeePolynomial<Balance = Balance>,
-        AcceptedCurrencyPrices: PriceOracle<AssetId, Price>,
+        AcceptedCurrencyPrices: NativePriceOracle<AssetId, Price>,
         ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
         Revenue: TakeRevenue,
     > MultiCurrencyTrader<AssetId, Balance, Price, WeightToFee, AcceptedCurrencyPrices, ConvertCurrency, Revenue>
@@ -91,7 +91,7 @@ impl<
         Balance: FixedPointOperand + TryInto<u128>,
         Price: FixedPointNumber,
         WeightToFee: WeightToFeePolynomial<Balance = Balance>,
-        AcceptedCurrencyPrices: PriceOracle<AssetId, Price>,
+        AcceptedCurrencyPrices: NativePriceOracle<AssetId, Price>,
         ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
         Revenue: TakeRevenue,
     > WeightTrader
@@ -166,7 +166,7 @@ impl<
         Balance: FixedPointOperand + TryInto<u128>,
         Price: FixedPointNumber,
         WeightToFee: WeightToFeePolynomial<Balance = Balance>,
-        AcceptedCurrencyPrices: PriceOracle<AssetId, Price>,
+        AcceptedCurrencyPrices: NativePriceOracle<AssetId, Price>,
         ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
         Revenue: TakeRevenue,
     > Drop

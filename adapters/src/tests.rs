@@ -35,7 +35,7 @@ const OVERFLOW_ASSET_ID: AssetId = 1_000;
 
 /// Mock price oracle which returns prices for the hard-coded assets.
 struct MockOracle;
-impl PriceOracle<AssetId, Price> for MockOracle {
+impl NativePriceOracle<AssetId, Price> for MockOracle {
     fn price(currency: AssetId) -> Option<Price> {
         match currency {
             CORE_ASSET_ID => Some(Price::one()),

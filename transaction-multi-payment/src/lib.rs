@@ -51,7 +51,7 @@ use sp_std::marker::PhantomData;
 use frame_support::sp_runtime::FixedPointNumber;
 use frame_support::sp_runtime::FixedPointOperand;
 use frame_support::weights::{Pays, Weight};
-use hydradx_traits::{pools::SpotPriceProvider, PriceOracle};
+use hydradx_traits::{pools::SpotPriceProvider, NativePriceOracle};
 use orml_traits::{MultiCurrency, MultiCurrencyExtended};
 
 use codec::{Decode, Encode};
@@ -690,7 +690,8 @@ impl<T: Config + Send + Sync> CurrencyBalanceCheck<T> {
     }
 }
 
-impl<T: Config> PriceOracle<AssetIdOf<T>, Price> for Pallet<T> {
+/// We provide an oracle for the price of all currencies accepted as fee payment.
+impl<T: Config> NativePriceOracle<AssetIdOf<T>, Price> for Pallet<T> {
     fn price(currency: AssetIdOf<T>) -> Option<Price> {
         Pallet::<T>::currency_price(currency)
     }

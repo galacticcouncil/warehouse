@@ -216,7 +216,7 @@ parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
         match currency_id {
             &HIGH_ED_CURRENCY => HIGH_ED,
-            _ => One::one() + One::one(),
+            _ => 2u128
         }
     };
 }

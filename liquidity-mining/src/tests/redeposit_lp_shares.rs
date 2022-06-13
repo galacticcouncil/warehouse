@@ -23,11 +23,11 @@ fn redeposit_lp_shares_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         //predefined_deposit[0] - GC_FARM, BSX_TKN1_AMM
         set_block_number(50_000);
-        assert_ok!(LiquidityMining::redeposit_lp_shares(
-            EVE_FARM,
-            EVE_BSX_TKN1_YIELD_FARM_ID,
-            PREDEFINED_DEPOSIT_IDS[0]
-        ));
+        assert_eq!(
+            LiquidityMining::redeposit_lp_shares(EVE_FARM, EVE_BSX_TKN1_YIELD_FARM_ID, PREDEFINED_DEPOSIT_IDS[0])
+                .unwrap(),
+            50
+        );
 
         assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, EVE_FARM, EVE_BSX_TKN1_YIELD_FARM_ID))
@@ -48,11 +48,11 @@ fn redeposit_lp_shares_should_work() {
                 .0
         });
         Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, TKN1, 100, 0).unwrap();
-        assert_ok!(LiquidityMining::redeposit_lp_shares(
-            DAVE_FARM,
-            DAVE_BSX_TKN1_YIELD_FARM_ID,
-            PREDEFINED_DEPOSIT_IDS[0]
-        ));
+        assert_eq!(
+            LiquidityMining::redeposit_lp_shares(DAVE_FARM, DAVE_BSX_TKN1_YIELD_FARM_ID, PREDEFINED_DEPOSIT_IDS[0])
+                .unwrap(),
+            50
+        );
 
         assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, DAVE_FARM, DAVE_BSX_TKN1_YIELD_FARM_ID))

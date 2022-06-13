@@ -327,3 +327,123 @@ fn add_yield_farm_add_duplicate_amm_should_not_work() {
         );
     });
 }
+
+#[test]
+fn add_yield_farm_global_farm_full_should_not_work() {
+    predefined_test_ext().execute_with(|| {
+        //GC FARM is initialized with 2 yield farms and mock limit is 4.
+
+        // This should works 3-rd yield farm
+        assert_ok!(LiquidityMining::create_yield_farm(
+            GC,
+            GC_FARM,
+            10_000.into(),
+            Some(LoyaltyCurve::default()),
+            BSX_ACA_AMM,
+            BSX,
+            ACA
+        ));
+
+        // This should works 4-th yield farm
+        let bsx_dot_yield_farm_id = LiquidityMining::create_yield_farm(
+            GC,
+            GC_FARM,
+            10_000.into(),
+            Some(LoyaltyCurve::default()),
+            BSX_DOT_AMM,
+            BSX,
+            DOT,
+        )
+        .unwrap();
+
+        // This should fail.
+        assert_noop!(
+            LiquidityMining::create_yield_farm(
+                GC,
+                GC_FARM,
+                10_000.into(),
+                Some(LoyaltyCurve::default()),
+                BSX_HDX_AMM,
+                BSX,
+                HDX
+            ),
+            Error::<Test>::GlobalFarmIsFull
+        );
+
+        //Stop farm
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_DOT_AMM));
+
+        //This still should now work because yield farms in storage are included in counts.
+        assert_noop!(
+            LiquidityMining::create_yield_farm(
+                GC,
+                GC_FARM,
+                10_000.into(),
+                Some(LoyaltyCurve::default()),
+                BSX_HDX_AMM,
+                BSX,
+                HDX
+            ),
+            Error::<Test>::GlobalFarmIsFull
+        );
+
+        //Stop and destroy yield farm (destroyed farm stays in the storage because of deposit)
+        //deposit to yield so it's not flushed on destroy
+        assert_ok!(LiquidityMining::deposit_lp_shares(
+            ALICE,
+            GC_FARM,
+            GC_BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM,
+            1_000
+        ));
+
+        //stop and destroy
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+        assert_ok!(LiquidityMining::destroy_yield_farm(
+            GC,
+            GC_FARM,
+            GC_BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM
+        ));
+
+        assert_eq!(
+            LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
+                .unwrap()
+                .state,
+            FarmState::Deleted
+        );
+
+        //This still should now work because deleted yield farms in storage are included in counts.
+        assert_noop!(
+            LiquidityMining::create_yield_farm(
+                GC,
+                GC_FARM,
+                10_000.into(),
+                Some(LoyaltyCurve::default()),
+                BSX_HDX_AMM,
+                BSX,
+                HDX
+            ),
+            Error::<Test>::GlobalFarmIsFull
+        );
+
+        //Destroy stopped empty farm(it will be flushed from storage).
+        assert_ok!(LiquidityMining::destroy_yield_farm(
+            GC,
+            GC_FARM,
+            bsx_dot_yield_farm_id,
+            BSX_DOT_AMM
+        ));
+
+        //This should pass because yield farm was flushed from storage.
+        assert_ok!(LiquidityMining::create_yield_farm(
+            GC,
+            GC_FARM,
+            10_000.into(),
+            Some(LoyaltyCurve::default()),
+            BSX_HDX_AMM,
+            BSX,
+            HDX
+        ));
+    });
+}

@@ -43,6 +43,8 @@ pub struct GlobalFarmData<T: Config> {
     pub blocks_per_period: BlockNumberFor<T>,
     pub incentivized_asset: AssetIdOf<T>,
     pub max_reward_per_period: Balance,
+    // min. LP shares user must deposit to star yield farming.
+    pub min_deposit: Balance,
     //live counts includes `active` and `stopped` yield farms.
     //total count includes `active`, `stopped`, `deleted` - this count is decreased only if yield
     //farm is flushed from storage.
@@ -63,6 +65,7 @@ impl<T: Config> GlobalFarmData<T> {
         owner: AccountIdOf<T>,
         incentivized_asset: T::CurrencyId,
         max_reward_per_period: Balance,
+        min_deposit: Balance,
     ) -> Self {
         Self {
             accumulated_rewards: Zero::zero(),
@@ -79,6 +82,7 @@ impl<T: Config> GlobalFarmData<T> {
             owner,
             incentivized_asset,
             max_reward_per_period,
+            min_deposit,
             state: FarmState::Active,
         }
     }
@@ -141,6 +145,12 @@ impl<T: Config> GlobalFarmData<T> {
     /// Function return `true` if global farm is in active state.
     pub fn is_active(&self) -> bool {
         self.state == FarmState::Active
+    }
+
+    /// This function returns `true` if farm has no capacity for next yield farm(yield farm can't
+    /// be added into global farm until some yield farm is not removed from storage).
+    pub fn is_full(&self) -> bool {
+        self.yield_farms_count.1.ge(&<T>::MaxYieldFarmsPerGlobalFarm::get())
     }
 }
 

@@ -23,13 +23,11 @@ use pallet_transaction_multi_payment::{DepositFee, TransactionMultiPaymentDataPr
 use polkadot_xcm::latest::prelude::*;
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, Convert, Saturating, Zero},
-    FixedPointNumber, FixedPointOperand, FixedU128, SaturatedConversion,
+    FixedPointNumber, FixedPointOperand, SaturatedConversion,
 };
 use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
 use xcm_builder::TakeRevenue;
 use xcm_executor::{traits::WeightTrader, Assets};
-
-pub type Price = FixedU128;
 
 #[cfg(test)]
 mod tests;

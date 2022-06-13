@@ -19,7 +19,7 @@ use super::*;
 use codec::{Decode, Encode};
 use frame_support::weights::IdentityFee;
 use smallvec::smallvec;
-use sp_runtime::{traits::One, DispatchError, DispatchResult, Perbill};
+use sp_runtime::{traits::One, DispatchError, DispatchResult, FixedU128, Perbill};
 use sp_std::cell::RefCell;
 use sp_std::collections::btree_set::BTreeSet;
 

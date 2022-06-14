@@ -16,7 +16,7 @@
 // limitations under the License.
 
 use super::*;
-use crate::mock::{
+use mock::{
     asset_pair_to_map_key, reset_on_rpvs_update, reset_on_rpz_update, set_block_number, AccountId, AssetId, AssetPair,
     Balance, BlockNumber, ExtBuilder, LiquidityMining, Origin, Test, Tokens, ACA, ACA_FARM, ACA_KSM_AMM,
     ACA_KSM_SHARE_ID, ACCOUNT_WITH_1M, ALICE, AMM_POOLS, BOB, BSX, BSX_ACA_AMM, BSX_ACA_SHARE_ID,
@@ -231,6 +231,7 @@ pub mod create_yield_farm;
 pub mod deposit_lp_shares;
 pub mod destroy_global_farm;
 pub mod destroy_yield_farm;
+pub mod mock;
 pub mod redeposit_lp_shares;
 pub mod resume_yield_farm;
 pub mod stop_yield_farm;

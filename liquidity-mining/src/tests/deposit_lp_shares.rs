@@ -638,7 +638,7 @@ fn deposit_lp_shares_stop_yield_farm_should_not_work() {
 
         assert_noop!(
             LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, 10_000),
-            Error::<Test, Instance1>::LiquidityMiningIsNotActive
+            Error::<Test, Instance1>::LiquidityMiningCanceled
         );
     });
 }

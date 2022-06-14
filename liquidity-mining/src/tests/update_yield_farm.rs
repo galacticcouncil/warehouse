@@ -27,7 +27,7 @@ fn update_yield_farm_should_work() {
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
 
         assert_eq!(
-            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, new_multiplier, BSX_TKN1_AMM).unwrap(),
+            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, BSX_TKN1_AMM, new_multiplier).unwrap(),
             GC_BSX_TKN1_YIELD_FARM_ID
         );
 
@@ -52,8 +52,8 @@ fn update_yield_farm_should_work() {
         assert_ok!(LiquidityMining::update_yield_farm_multiplier(
             GC,
             GC_FARM,
+            BSX_TKN1_AMM,
             new_multiplier,
-            BSX_TKN1_AMM
         ));
 
         assert_eq!(
@@ -87,8 +87,8 @@ fn update_yield_farm_should_work() {
         assert_ok!(LiquidityMining::update_yield_farm_multiplier(
             GC,
             GC_FARM,
+            BSX_TKN1_AMM,
             new_multiplier,
-            BSX_TKN1_AMM
         ));
 
         assert_eq!(
@@ -129,7 +129,7 @@ fn update_yield_farm_should_work() {
 fn update_yield_farm_zero_multiplier_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
-            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, FixedU128::from(0_u128), BSX_TKN1_AMM,),
+            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, BSX_TKN1_AMM, FixedU128::from(0_u128),),
             Error::<Test, Instance1>::InvalidMultiplier
         );
     });
@@ -142,7 +142,7 @@ fn update_yield_farm_stopped_farm_should_not_work() {
 
         //Yield farm must be in the active yield farm storage to update works.
         assert_noop!(
-            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, FixedU128::from(10_001), BSX_TKN1_AMM,),
+            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, BSX_TKN1_AMM, FixedU128::from(10_001),),
             Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
@@ -165,7 +165,7 @@ fn update_yield_farm_deleted_farm_should_not_work() {
 
         //Yield farm must be in the active yield farm storage to update works
         assert_noop!(
-            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, FixedU128::from(10_001), BSX_TKN1_AMM,),
+            LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, BSX_TKN1_AMM, FixedU128::from(10_001),),
             Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
@@ -179,8 +179,8 @@ fn update_yield_farm_not_owner_should_not_work() {
             LiquidityMining::update_yield_farm_multiplier(
                 not_owner,
                 GC_FARM,
+                BSX_TKN1_AMM,
                 FixedU128::from(10_001_u128),
-                BSX_TKN1_AMM
             ),
             Error::<Test, Instance1>::Forbidden
         );

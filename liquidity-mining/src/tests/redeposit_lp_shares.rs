@@ -163,7 +163,7 @@ fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
 
         assert_noop!(
             LiquidityMining::redeposit_lp_shares(EVE_FARM, yield_farm_id, PREDEFINED_DEPOSIT_IDS[0]),
-            Error::<Test, Instance1>::LiquidityMiningIsNotActive
+            Error::<Test, Instance1>::LiquidityMiningCanceled
         );
 
         // Redeposit to deleted farm
@@ -180,7 +180,7 @@ fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
 
         assert_noop!(
             LiquidityMining::redeposit_lp_shares(EVE_FARM, yield_farm_id, PREDEFINED_DEPOSIT_IDS[0]),
-            Error::<Test, Instance1>::LiquidityMiningIsNotActive
+            Error::<Test, Instance1>::LiquidityMiningCanceled
         );
     });
 }

@@ -288,7 +288,7 @@ impl Config<Instance1> for Test {
     type MinTotalFarmRewards = MinTotalFarmRewards;
     type BlockNumberProvider = MockBlockNumberProvider;
     type AmmPoolId = AccountId;
-    type Handler = TestLiquidityMiningHandler;
+    type LiquidityMiningHandler = TestLiquidityMiningHandler;
     type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit;
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
 }
@@ -309,7 +309,7 @@ impl Config<Instance2> for Test {
     type MinTotalFarmRewards = MinTotalFarmRewards2;
     type BlockNumberProvider = MockBlockNumberProvider;
     type AmmPoolId = AccountId;
-    type Handler = TestLiquidityMiningHandler;
+    type LiquidityMiningHandler = TestLiquidityMiningHandler;
     type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit2;
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
 }

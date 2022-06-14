@@ -120,7 +120,7 @@ fn destory_yield_farm_non_stopped_yield_farming_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
             LiquidityMining::destroy_yield_farm(GC, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM),
-            Error::<Test, Instance1>::LiquidityMiningIsNotCanceled
+            Error::<Test, Instance1>::LiquidityMiningIsActive
         );
     });
 }

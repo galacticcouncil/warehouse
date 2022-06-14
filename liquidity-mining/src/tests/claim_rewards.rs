@@ -413,7 +413,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 EVE_BSX_TKN1_YIELD_FARM_ID,
                 FAIL_ON_DOUBLE_CLAIM
             ),
-            Error::<Test, Instance1>::DoubleClaimInThePeriod
+            Error::<Test, Instance1>::DoubleClaimInPeriod
         );
 
         assert_eq!(
@@ -473,7 +473,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 EVE_BSX_TKN1_YIELD_FARM_ID,
                 FAIL_ON_DOUBLE_CLAIM
             ),
-            Error::<Test, Instance1>::DoubleClaimInThePeriod
+            Error::<Test, Instance1>::DoubleClaimInPeriod
         );
 
         assert_noop!(
@@ -483,7 +483,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 FAIL_ON_DOUBLE_CLAIM
             ),
-            Error::<Test, Instance1>::DoubleClaimInThePeriod
+            Error::<Test, Instance1>::DoubleClaimInPeriod
         );
 
         assert_eq!(
@@ -587,7 +587,7 @@ fn claim_rewards_double_claim_in_the_same_period_should_not_work() {
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 FAIL_ON_DOUBLE_CLAIM
             ),
-            Error::<Test, Instance1>::DoubleClaimInThePeriod
+            Error::<Test, Instance1>::DoubleClaimInPeriod
         );
     });
 }
@@ -718,7 +718,7 @@ fn claim_rewards_double_claim_should_work() {
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 FAIL_ON_DOUBLE_CLAIM,
             ),
-            Error::<Test, Instance1>::DoubleClaimInThePeriod
+            Error::<Test, Instance1>::DoubleClaimInPeriod
         );
     });
 }

@@ -122,7 +122,7 @@ fn resume_yield_farm_deleted_farm_should_not_work() {
 
         assert_noop!(
             LiquidityMining::resume_yield_farm(ALICE, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, new_multiplier),
-            Error::<Test, Instance1>::LiquidityMiningIsNotCanceled
+            Error::<Test, Instance1>::LiquidityMiningIsActive
         );
     });
 }

@@ -189,7 +189,7 @@ fn can_buy_weight() {
     {
         let mut trader = Trader::new();
 
-        let core_payment: MultiAsset = (Concrete(core_id.clone()), 1_000_000).into();
+        let core_payment: MultiAsset = (Concrete(core_id), 1_000_000).into();
         let res = dbg!(trader.buy_weight(1_000_000, core_payment.clone().into()));
         assert!(res
             .expect("buy_weight should succeed because payment == weight")
@@ -287,7 +287,7 @@ fn refunds_first_asset_completely() {
         assert!(res
             .expect("buy_weight should succeed because payment == weight")
             .is_empty());
-        assert_eq!(trader.refund_weight(weight), Some(core_payment.into()));
+        assert_eq!(trader.refund_weight(weight), Some(core_payment));
     }
     ExpectRevenue::expect_no_revenue();
 }
@@ -318,8 +318,8 @@ fn needs_multiple_refunds_for_multiple_currencies() {
             .expect("buy_weight should succeed because payment == 0.5 * weight")
             .is_empty());
 
-        assert_eq!(trader.refund_weight(weight), Some(core_payment.into()));
-        assert_eq!(trader.refund_weight(weight), Some(test_payment.into()));
+        assert_eq!(trader.refund_weight(weight), Some(core_payment));
+        assert_eq!(trader.refund_weight(weight), Some(test_payment));
     }
     ExpectRevenue::expect_no_revenue();
 }

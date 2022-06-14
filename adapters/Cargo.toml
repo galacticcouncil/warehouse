@@ -33,6 +33,7 @@ smallvec = "1.6.1"
 default = ["std"]
 runtime-benchmarks = [
     "xcm-builder/runtime-benchmarks",
+    "xcm-executor/runtime-benchmarks",
 ]
 std = [
     "codec/std",

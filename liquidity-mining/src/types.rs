@@ -281,7 +281,7 @@ impl<T: Config<I>, I: 'static> DepositData<T, I> {
 
         self.yield_farm_entries
             .try_push(entry)
-            .map_err(|_e| Error::<T, I>::MaxEntriesPerDeposit)?;
+            .map_err(|_| Error::<T, I>::MaxEntriesPerDeposit)?;
 
         Ok(())
     }

@@ -440,6 +440,8 @@ impl orml_tokens::Config for Test {
     type OnDust = ();
     type MaxLocks = MaxLocks;
     type DustRemovalWhitelist = Nothing;
+    type OnKilledTokenAccount = ();
+    type OnNewTokenAccount = ();
 }
 
 pub struct ExtBuilder {

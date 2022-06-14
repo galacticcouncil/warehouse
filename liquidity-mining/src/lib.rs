@@ -224,9 +224,6 @@ pub mod pallet {
         /// Farm's `incentivized_asset` is missing in provided asset pair.
         MissingIncentivizedAsset,
 
-        /// Global's farm rewards balance is not 0.
-        RewardBalanceIsNotZero,
-
         /// Reward currency balance is not sufficient.
         InsufficientRewardCurrencyBalance,
 

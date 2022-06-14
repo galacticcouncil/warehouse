@@ -173,3 +173,12 @@ pub trait CanCreatePool<AssetId> {
 pub trait LockedBalance<AssetId, AccountId, Balance> {
     fn get_by_lock(lock_id: LockIdentifier, currency_id: AssetId, who: AccountId) -> Balance;
 }
+
+/// Implementers of this trait provide the price of a given asset compared to the native currency.
+///
+/// So if `100` native tokens correspond to `200` ABC tokens, the price returned would be `2.0`.
+///
+/// Should return `None` if no price is available.
+pub trait NativePriceOracle<AssetId, Price> {
+    fn price(currency: AssetId) -> Option<Price>;
+}

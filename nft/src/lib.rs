@@ -33,6 +33,7 @@ use sp_runtime::{
     traits::{AtLeast32BitUnsigned, StaticLookup, Zero},
     DispatchError,
 };
+use sp_std::boxed::Box;
 pub use types::*;
 use weights::WeightInfo;
 

@@ -57,6 +57,7 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
+        price_adjustment: 1,
     },
     GlobalFarmData {
         id: BOB_FARM,
@@ -75,6 +76,7 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
+        price_adjustment: 1,
     },
     GlobalFarmData {
         id: GC_FARM,
@@ -93,6 +95,7 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
+        price_adjustment: 1,
     },
     GlobalFarmData {
         id: CHARLIE_FARM,
@@ -111,6 +114,7 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
+        price_adjustment: 1,
     },
     GlobalFarmData {
         id: DAVE_FARM,
@@ -129,6 +133,7 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
+        price_adjustment: 1,
     },
     GlobalFarmData {
         id: EVE_FARM,
@@ -147,6 +152,7 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
+        price_adjustment: 1,
     },
 ];
 

@@ -26,6 +26,7 @@ fn validate_create_farm_data_should_work() {
         1,
         Permill::from_percent(50),
         5,
+        1,
     ));
 
     assert_ok!(LiquidityMining::validate_create_global_farm_data(
@@ -33,6 +34,7 @@ fn validate_create_farm_data_should_work() {
         2_000_000,
         500,
         Permill::from_percent(100),
+        1,
         1,
     ));
 
@@ -42,54 +44,74 @@ fn validate_create_farm_data_should_work() {
         16_986_741,
         Permill::from_perthousand(1),
         1_000_000_000_000_000,
+        1,
     ));
 }
 
 #[test]
 fn validate_create_farm_data_should_not_work() {
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(999_999, 100, 1, Permill::from_percent(50), 10),
+        LiquidityMining::validate_create_global_farm_data(999_999, 100, 1, Permill::from_percent(50), 10, 1),
         Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(9, 100, 1, Permill::from_percent(50), 15),
+        LiquidityMining::validate_create_global_farm_data(9, 100, 1, Permill::from_percent(50), 15, 1),
         Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(0, 100, 1, Permill::from_percent(50), 1),
+        LiquidityMining::validate_create_global_farm_data(0, 100, 1, Permill::from_percent(50), 1, 1),
         Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 99, 1, Permill::from_percent(50), 2),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 99, 1, Permill::from_percent(50), 2, 1),
         Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 0, 1, Permill::from_percent(50), 3),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 0, 1, Permill::from_percent(50), 3, 1),
         Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 87, 1, Permill::from_percent(50), 4),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 87, 1, Permill::from_percent(50), 4, 1),
         Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 0, Permill::from_percent(50), 4),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 0, Permill::from_percent(50), 4, 1),
         Error::<Test, Instance1>::InvalidBlocksPerPeriod
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 10, Permill::from_percent(0), 10),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 10, Permill::from_percent(0), 10, 1),
         Error::<Test, Instance1>::InvalidYieldPerPeriod
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(10_000_000, 101, 16_986_741, Permill::from_perthousand(1), 0,),
+        LiquidityMining::validate_create_global_farm_data(
+            10_000_000,
+            101,
+            16_986_741,
+            Permill::from_perthousand(1),
+            0,
+            1
+        ),
         Error::<Test, Instance1>::InvalidMinDeposit
+    );
+
+    assert_err!(
+        LiquidityMining::validate_create_global_farm_data(
+            10_000_000,
+            101,
+            16_986_741,
+            Permill::from_perthousand(1),
+            10,
+            0
+        ),
+        Error::<Test, Instance1>::InvalidPriceAdjustment
     );
 }
 #[test]
@@ -620,6 +642,7 @@ fn update_global_farm_should_work() {
             incentivized_token,
             max_reward_per_period,
             10,
+            1,
         );
 
         global_farm.total_shares_z = *total_shares_z;
@@ -657,6 +680,7 @@ fn update_global_farm_should_work() {
                 incentivized_token,
                 max_reward_per_period,
                 10,
+                1,
             );
 
             expected_global_farm.total_shares_z = *total_shares_z;
@@ -1007,6 +1031,7 @@ fn claim_from_global_farm_should_work() {
             incentivized_token,
             max_reward_per_period,
             10,
+            1,
         );
 
         global_farm.total_shares_z = *total_shares_z;
@@ -1038,6 +1063,7 @@ fn claim_from_global_farm_should_work() {
             incentivized_token,
             max_reward_per_period,
             10,
+            1,
         );
 
         expected_global_farm.total_shares_z = *total_shares_z;
@@ -1387,6 +1413,7 @@ fn update_yield_farm_should_work() {
             incentivized_token,
             max_reward_per_period,
             10,
+            1,
         );
 
         global_farm.total_shares_z = 1_000_000_u128;
@@ -1447,6 +1474,7 @@ fn update_yield_farm_should_work() {
                 incentivized_token,
                 max_reward_per_period,
                 10,
+                1,
             );
 
             rhs_global_farm.updated_at = 200_u64;
@@ -1937,6 +1965,7 @@ fn global_farm_should_work() {
         BSX,
         1_000_000,
         1_000,
+        1,
     );
 
     //new farm should be created active

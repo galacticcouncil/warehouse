@@ -256,6 +256,9 @@ pub mod pallet {
 
         /// Invalid min. deposit was set for global farm.
         InvalidMinDeposit,
+
+        /// Price adjustment multiplier can't be 0.
+        InvalidPriceAdjustment,
     }
 
     /// Id sequencer for `GlobalFarm` and `YieldFarm`.
@@ -334,6 +337,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         owner: AccountIdOf<T>,
         yield_per_period: Permill,
         min_deposit: Balance,
+        price_adjustment: Balance,
     ) -> Result<(GlobalFarmId, Balance), DispatchError> {
         Self::validate_create_global_farm_data(
             total_rewards,
@@ -341,6 +345,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             blocks_per_period,
             yield_per_period,
             min_deposit,
+            price_adjustment,
         )?;
 
         ensure!(
@@ -367,6 +372,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             incentivized_asset,
             max_reward_per_period,
             min_deposit,
+            price_adjustment,
         );
 
         <GlobalFarm<T, I>>::insert(&global_farm.id, &global_farm);
@@ -1325,8 +1331,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         blocks_per_period: BlockNumberFor<T>,
         yield_per_period: Permill,
         min_deposit: Balance,
+        price_adjustment: Balance,
     ) -> DispatchResult {
         ensure!(min_deposit.ge(&1), Error::<T, I>::InvalidMinDeposit);
+
+        ensure!(price_adjustment.ge(&1), Error::<T, I>::InvalidPriceAdjustment);
 
         ensure!(
             total_rewards >= T::MinTotalFarmRewards::get(),

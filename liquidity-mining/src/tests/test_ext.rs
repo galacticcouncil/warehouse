@@ -35,6 +35,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
             ALICE,
             PREDEFINED_GLOBAL_FARMS_INS1[0].yield_per_period,
             PREDEFINED_GLOBAL_FARMS_INS1[0].min_deposit,
+            PREDEFINED_GLOBAL_FARMS_INS1[0].price_adjustment,
         ));
 
         assert_ok!(LiquidityMining::create_global_farm(
@@ -46,6 +47,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
             BOB,
             PREDEFINED_GLOBAL_FARMS_INS1[1].yield_per_period,
             PREDEFINED_GLOBAL_FARMS_INS1[1].min_deposit,
+            PREDEFINED_GLOBAL_FARMS_INS1[1].price_adjustment,
         ));
 
         assert_ok!(LiquidityMining::create_global_farm(
@@ -57,6 +59,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
             GC,
             PREDEFINED_GLOBAL_FARMS_INS1[2].yield_per_period,
             PREDEFINED_GLOBAL_FARMS_INS1[2].min_deposit,
+            PREDEFINED_GLOBAL_FARMS_INS1[2].price_adjustment,
         ));
 
         assert_ok!(LiquidityMining::create_global_farm(
@@ -68,6 +71,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
             CHARLIE,
             PREDEFINED_GLOBAL_FARMS_INS1[3].yield_per_period,
             PREDEFINED_GLOBAL_FARMS_INS1[3].min_deposit,
+            PREDEFINED_GLOBAL_FARMS_INS1[3].price_adjustment,
         ));
 
         assert_ok!(LiquidityMining::create_global_farm(
@@ -79,6 +83,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
             DAVE,
             PREDEFINED_GLOBAL_FARMS_INS1[4].yield_per_period,
             PREDEFINED_GLOBAL_FARMS_INS1[4].min_deposit,
+            PREDEFINED_GLOBAL_FARMS_INS1[4].price_adjustment,
         ));
 
         assert_ok!(LiquidityMining::create_global_farm(
@@ -90,6 +95,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
             EVE,
             PREDEFINED_GLOBAL_FARMS_INS1[5].yield_per_period,
             PREDEFINED_GLOBAL_FARMS_INS1[5].min_deposit,
+            PREDEFINED_GLOBAL_FARMS_INS1[5].price_adjustment,
         ));
 
         let amm_mock_data = vec![
@@ -372,6 +378,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 paid_accumulated_rewards: 1_164_400,
                 state: FarmState::Active,
                 min_deposit: 10,
+                price_adjustment: 1,
             }
         );
 

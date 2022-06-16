@@ -50,7 +50,7 @@ pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
     //total count includes `active`, `stopped`, `deleted` - this count is decreased only if yield
     //farm is flushed from storage.
     pub yield_farms_count: (u32, u32), //`(live farms count, total farms count)`
-
+    pub price_adjustment: Balance,
     pub state: FarmState,
 }
 
@@ -67,6 +67,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         incentivized_asset: T::CurrencyId,
         max_reward_per_period: Balance,
         min_deposit: Balance,
+        price_adjustment: Balance,
     ) -> Self {
         Self {
             accumulated_rewards: Zero::zero(),
@@ -84,6 +85,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
             incentivized_asset,
             max_reward_per_period,
             min_deposit,
+            price_adjustment,
             state: FarmState::Active,
         }
     }

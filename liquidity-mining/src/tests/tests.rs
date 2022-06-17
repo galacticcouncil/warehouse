@@ -26,7 +26,7 @@ fn validate_create_farm_data_should_work() {
         1,
         Permill::from_percent(50),
         5,
-        1,
+        One::one(),
     ));
 
     assert_ok!(LiquidityMining::validate_create_global_farm_data(
@@ -35,7 +35,7 @@ fn validate_create_farm_data_should_work() {
         500,
         Permill::from_percent(100),
         1,
-        1,
+        One::one(),
     ));
 
     assert_ok!(LiquidityMining::validate_create_global_farm_data(
@@ -44,49 +44,49 @@ fn validate_create_farm_data_should_work() {
         16_986_741,
         Permill::from_perthousand(1),
         1_000_000_000_000_000,
-        1,
+        One::one(),
     ));
 }
 
 #[test]
 fn validate_create_farm_data_should_not_work() {
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(999_999, 100, 1, Permill::from_percent(50), 10, 1),
+        LiquidityMining::validate_create_global_farm_data(999_999, 100, 1, Permill::from_percent(50), 10, One::one()),
         Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(9, 100, 1, Permill::from_percent(50), 15, 1),
+        LiquidityMining::validate_create_global_farm_data(9, 100, 1, Permill::from_percent(50), 15, One::one()),
         Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(0, 100, 1, Permill::from_percent(50), 1, 1),
+        LiquidityMining::validate_create_global_farm_data(0, 100, 1, Permill::from_percent(50), 1, One::one()),
         Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 99, 1, Permill::from_percent(50), 2, 1),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 99, 1, Permill::from_percent(50), 2, One::one()),
         Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 0, 1, Permill::from_percent(50), 3, 1),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 0, 1, Permill::from_percent(50), 3, One::one()),
         Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 87, 1, Permill::from_percent(50), 4, 1),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 87, 1, Permill::from_percent(50), 4, One::one()),
         Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 0, Permill::from_percent(50), 4, 1),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 0, Permill::from_percent(50), 4, One::one()),
         Error::<Test, Instance1>::InvalidBlocksPerPeriod
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 10, Permill::from_percent(0), 10, 1),
+        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 10, Permill::from_percent(0), 10, One::one()),
         Error::<Test, Instance1>::InvalidYieldPerPeriod
     );
 
@@ -97,7 +97,7 @@ fn validate_create_farm_data_should_not_work() {
             16_986_741,
             Permill::from_perthousand(1),
             0,
-            1
+            One::one()
         ),
         Error::<Test, Instance1>::InvalidMinDeposit
     );
@@ -109,7 +109,7 @@ fn validate_create_farm_data_should_not_work() {
             16_986_741,
             Permill::from_perthousand(1),
             10,
-            0
+            Zero::zero()
         ),
         Error::<Test, Instance1>::InvalidPriceAdjustment
     );
@@ -642,7 +642,7 @@ fn update_global_farm_should_work() {
             incentivized_token,
             max_reward_per_period,
             10,
-            1,
+            One::one(),
         );
 
         global_farm.total_shares_z = *total_shares_z;
@@ -680,7 +680,7 @@ fn update_global_farm_should_work() {
                 incentivized_token,
                 max_reward_per_period,
                 10,
-                1,
+                One::one(),
             );
 
             expected_global_farm.total_shares_z = *total_shares_z;
@@ -1031,7 +1031,7 @@ fn claim_from_global_farm_should_work() {
             incentivized_token,
             max_reward_per_period,
             10,
-            1,
+            One::one(),
         );
 
         global_farm.total_shares_z = *total_shares_z;
@@ -1063,7 +1063,7 @@ fn claim_from_global_farm_should_work() {
             incentivized_token,
             max_reward_per_period,
             10,
-            1,
+            One::one(),
         );
 
         expected_global_farm.total_shares_z = *total_shares_z;
@@ -1413,7 +1413,7 @@ fn update_yield_farm_should_work() {
             incentivized_token,
             max_reward_per_period,
             10,
-            1,
+            One::one(),
         );
 
         global_farm.total_shares_z = 1_000_000_u128;
@@ -1474,7 +1474,7 @@ fn update_yield_farm_should_work() {
                 incentivized_token,
                 max_reward_per_period,
                 10,
-                1,
+                One::one(),
             );
 
             rhs_global_farm.updated_at = 200_u64;
@@ -1580,7 +1580,7 @@ fn maybe_update_farms_should_work() {
     //conditions are met.
 
     const LEFT_TO_DISTRIBUTE: Balance = 1_000_000_000;
-    const REWARD_CURRENCY: AssetId = PREDEFINED_GLOBAL_FARMS_INS1[0].reward_currency;
+    let reward_currency: AssetId = get_predefined_global_farm_ins1(0).reward_currency;
     let mut ext = new_test_ext();
 
     let expected_global_farm = GlobalFarmData {
@@ -1590,7 +1590,7 @@ fn maybe_update_farms_should_work() {
         paid_accumulated_rewards: 1_000_000,
         total_shares_z: 1_000_000,
         accumulated_rewards: 20_000,
-        ..PREDEFINED_GLOBAL_FARMS_INS1[0].clone()
+        ..get_predefined_global_farm_ins1(0)
     };
 
     let expected_yield_farm = YieldFarmData {
@@ -1599,21 +1599,21 @@ fn maybe_update_farms_should_work() {
         total_valued_shares: 400_000,
         accumulated_rpvs: 15,
         accumulated_rpz: 20,
-        ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
+        ..get_predefined_yield_farm_ins1(1)
     };
 
     ext.execute_with(|| {
-        let farm_account_id = LiquidityMining::farm_account_id(PREDEFINED_GLOBAL_FARMS_INS1[0].id).unwrap();
+        let farm_account_id = LiquidityMining::farm_account_id(get_predefined_global_farm_ins1(0).id).unwrap();
         let _ = Tokens::transfer(
             Origin::signed(TREASURY),
             farm_account_id,
-            REWARD_CURRENCY,
+            reward_currency,
             LEFT_TO_DISTRIBUTE,
         )
         .unwrap();
 
         assert_eq!(
-            Tokens::free_balance(REWARD_CURRENCY, &farm_account_id),
+            Tokens::free_balance(reward_currency, &farm_account_id),
             LEFT_TO_DISTRIBUTE
         );
 
@@ -1965,7 +1965,7 @@ fn global_farm_should_work() {
         BSX,
         1_000_000,
         1_000,
-        1,
+        One::one(),
     );
 
     //new farm should be created active

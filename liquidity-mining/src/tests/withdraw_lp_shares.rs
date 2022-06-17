@@ -62,7 +62,7 @@ fn withdraw_shares_should_work() {
                 total_shares_z: 691_490,
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -75,7 +75,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 566,
                 total_valued_shares: 43_040,
                 entries_count: 2,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
+                ..get_predefined_yield_farm_ins1(0)
             },
         );
 
@@ -143,7 +143,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 688_880,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -157,7 +157,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 566,
                 total_valued_shares: 43_040,
                 entries_count: 2,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
+                ..get_predefined_yield_farm_ins1(0)
             },
         );
 
@@ -170,7 +170,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 873,
                 total_valued_shares: 47_368,
                 entries_count: 3,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
+                ..get_predefined_yield_farm_ins1(1)
             },
         );
 
@@ -237,7 +237,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 494480,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -250,7 +250,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 80,
                 total_valued_shares: 4_160,
                 entries_count: 1,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
+                ..get_predefined_yield_farm_ins1(0)
             },
         );
 
@@ -316,7 +316,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 473_680,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -329,7 +329,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 0,
                 total_valued_shares: 0,
                 entries_count: 0,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
+                ..get_predefined_yield_farm_ins1(0)
             },
         );
 
@@ -387,7 +387,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 471_680,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -412,7 +412,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 848,
                 total_valued_shares: 47_168,
                 entries_count: 2,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
+                ..get_predefined_yield_farm_ins1(1)
             },
         );
 
@@ -475,7 +475,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 464_000,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -488,7 +488,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 800,
                 total_valued_shares: 46_400,
                 entries_count: 1,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
+                ..get_predefined_yield_farm_ins1(1)
             },
         );
 
@@ -548,7 +548,7 @@ fn withdraw_shares_should_work() {
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
                 total_shares_z: 0,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -561,7 +561,7 @@ fn withdraw_shares_should_work() {
                 total_shares: 0,
                 total_valued_shares: 0,
                 entries_count: 0,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
+                ..get_predefined_yield_farm_ins1(1)
             },
         );
 

@@ -133,7 +133,7 @@ fn claim_rewards_should_work() {
                 total_shares_z: 703_990,
                 accumulated_rewards: 1_039_045,
                 paid_accumulated_rewards: 2_116_980,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -217,7 +217,7 @@ fn claim_rewards_should_work() {
                 total_shares_z: 703_990,
                 accumulated_rewards: 293_025_705,
                 paid_accumulated_rewards: 142_380_180,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 

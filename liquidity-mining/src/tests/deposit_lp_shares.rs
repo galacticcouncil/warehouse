@@ -60,7 +60,7 @@ fn deposit_lp_shares_should_work() {
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 total_shares_z: 12_500,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -70,7 +70,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: deposited_amount,
                 total_valued_shares: 2_500,
                 entries_count: 1,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
+                ..get_predefined_yield_farm_ins1(0)
             },
         );
 
@@ -122,7 +122,7 @@ fn deposit_lp_shares_should_work() {
                 updated_at: 18,
                 paid_accumulated_rewards: 112_500,
                 total_shares_z: 33_300,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -135,7 +135,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 130,
                 total_valued_shares: 6_660,
                 entries_count: 2,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
+                ..get_predefined_yield_farm_ins1(0)
             },
         );
 
@@ -194,7 +194,7 @@ fn deposit_lp_shares_should_work() {
                 accumulated_rpz: 9,
                 paid_accumulated_rewards: 112_500,
                 total_shares_z: 35_300,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -205,7 +205,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 25,
                 total_valued_shares: 200,
                 entries_count: 1,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
+                ..get_predefined_yield_farm_ins1(1)
             },
         );
 
@@ -268,7 +268,7 @@ fn deposit_lp_shares_should_work() {
                 paid_accumulated_rewards: 132_500,
                 total_shares_z: 499_300,
                 accumulated_rewards: 15_300,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -281,7 +281,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 825,
                 total_valued_shares: 46_600,
                 entries_count: 2,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
+                ..get_predefined_yield_farm_ins1(1)
             },
         );
 
@@ -343,7 +343,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares_z: 501_910,
                 accumulated_rewards: 331_550,
                 paid_accumulated_rewards: 1_064_500,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -356,7 +356,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 912,
                 total_valued_shares: 46_861,
                 entries_count: 3,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
+                ..get_predefined_yield_farm_ins1(1)
             },
         );
 
@@ -417,7 +417,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares_z: 509_590,
                 accumulated_rewards: 331_550,
                 paid_accumulated_rewards: 1_064_500,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -430,7 +430,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 960,
                 total_valued_shares: 47_629,
                 entries_count: 4,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
+                ..get_predefined_yield_farm_ins1(1)
             },
         );
 
@@ -490,7 +490,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares_z: 703_990,
                 accumulated_rewards: 231_650,
                 paid_accumulated_rewards: 1_164_400,
-                ..PREDEFINED_GLOBAL_FARMS_INS1[2].clone()
+                ..get_predefined_global_farm_ins1(2)
             }
         );
 
@@ -503,7 +503,7 @@ fn deposit_lp_shares_should_work() {
                 total_shares: 616,
                 total_valued_shares: 45_540,
                 entries_count: 3,
-                ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
+                ..get_predefined_yield_farm_ins1(0)
             },
         );
 

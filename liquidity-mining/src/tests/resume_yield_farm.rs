@@ -35,11 +35,13 @@ fn resume_yield_farm_should_work() {
 
         set_block_number(13_420_000);
 
-        assert_eq!(
-            LiquidityMining::resume_yield_farm(GC, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, new_multiplier)
-                .unwrap(),
-            GC_BSX_TKN1_YIELD_FARM_ID
-        );
+        assert_ok!(LiquidityMining::resume_yield_farm(
+            GC,
+            GC_FARM,
+            GC_BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM,
+            new_multiplier
+        ));
 
         let yield_farm_stake_in_global_farm = new_multiplier.checked_mul_int(45_540).unwrap();
 

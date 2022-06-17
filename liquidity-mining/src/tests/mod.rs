@@ -39,7 +39,8 @@ const CHARLIE_FARM: u32 = ACA_FARM;
 const DAVE_FARM: u32 = 5;
 const EVE_FARM: u32 = 6;
 
-const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
+thread_local! {
+static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
     GlobalFarmData {
         id: ALICE_FARM,
         updated_at: 0,
@@ -57,7 +58,7 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
-        price_adjustment: 1,
+        price_adjustment: One::one(),
     },
     GlobalFarmData {
         id: BOB_FARM,
@@ -76,7 +77,7 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
-        price_adjustment: 1,
+        price_adjustment: One::one(),
     },
     GlobalFarmData {
         id: GC_FARM,
@@ -95,7 +96,7 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
-        price_adjustment: 1,
+        price_adjustment: One::one(),
     },
     GlobalFarmData {
         id: CHARLIE_FARM,
@@ -114,7 +115,7 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
-        price_adjustment: 1,
+        price_adjustment: One::one(),
     },
     GlobalFarmData {
         id: DAVE_FARM,
@@ -133,7 +134,7 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
-        price_adjustment: 1,
+        price_adjustment: One::one(),
     },
     GlobalFarmData {
         id: EVE_FARM,
@@ -152,9 +153,10 @@ const PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         accumulated_rewards: 0,
         state: FarmState::Active,
         min_deposit: 10,
-        price_adjustment: 1,
+        price_adjustment: One::one(),
     },
-];
+]
+}
 
 const GC_BSX_TKN1_YIELD_FARM_ID: u32 = 7;
 const GC_BSX_TKN2_YIELD_FARM_ID: u32 = 8;
@@ -229,6 +231,14 @@ fn expect_on_accumulated_rzp_update(expected: (GlobalFarmId, Balance, Balance)) 
 
 fn expect_on_accumulated_rpvs_update(expected: (GlobalFarmId, FarmId, Balance, Balance)) {
     assert_eq!(expected, RPVS_UPDATED.with(|v| *v.borrow()));
+}
+
+fn get_predefined_global_farm_ins1(idx: usize) -> GlobalFarmData<Test, Instance1> {
+    PREDEFINED_GLOBAL_FARMS_INS1.with(|v| v[idx].clone())
+}
+
+fn get_predefined_yield_farm_ins1(idx: usize) -> YieldFarmData<Test, Instance1> {
+    PREDEFINED_YIELD_FARMS_INS1.with(|v| v[idx].clone())
 }
 
 pub mod claim_rewards;

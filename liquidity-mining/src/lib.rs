@@ -337,7 +337,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         owner: AccountIdOf<T>,
         yield_per_period: Permill,
         min_deposit: Balance,
-        price_adjustment: Balance,
+        price_adjustment: FixedU128,
     ) -> Result<(GlobalFarmId, Balance), DispatchError> {
         Self::validate_create_global_farm_data(
             total_rewards,
@@ -486,10 +486,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                     // update global farm accumulated RPZ
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
+                    let total_shares_z_adjusted = global_farm
+                        .price_adjustment
+                        .checked_mul_int(global_farm.total_shares_z)
+                        .ok_or(ArithmeticError::Overflow)?;
+
                     if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
                         let reward_per_period = math::calculate_global_pool_reward_per_period(
                             global_farm.yield_per_period.into(),
-                            global_farm.total_shares_z,
+                            total_shares_z_adjusted,
                             global_farm.max_reward_per_period,
                         )
                         .map_err(|_| ArithmeticError::Overflow)?;
@@ -657,7 +662,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         yield_farm_id: YieldFarmId,
         amm_pool_id: T::AmmPoolId,
         multiplier: FarmMultiplier,
-    ) -> Result<YieldFarmId, DispatchError> {
+    ) -> Result<(), DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
 
         <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id.clone(), global_farm_id, |maybe_active_yield_farm_id| {
@@ -680,9 +685,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     //update `GlobalFarm` accumulated_rpz
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
                     if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
+                        let total_shares_z_adjusted = global_farm
+                            .price_adjustment
+                            .checked_mul_int(global_farm.total_shares_z)
+                            .ok_or(ArithmeticError::Overflow)?;
                         let reward_per_period = math::calculate_global_pool_reward_per_period(
                             global_farm.yield_per_period.into(),
-                            global_farm.total_shares_z,
+                            total_shares_z_adjusted,
                             global_farm.max_reward_per_period,
                         )
                         .map_err(|_| ArithmeticError::Overflow)?;
@@ -706,7 +715,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     //add yield farm to active farms.
                     *maybe_active_yield_farm_id = Some(yield_farm.id);
 
-                    Ok(yield_farm.id)
+                    Ok(())
                 })
             })
         })
@@ -1331,11 +1340,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         blocks_per_period: BlockNumberFor<T>,
         yield_per_period: Permill,
         min_deposit: Balance,
-        price_adjustment: Balance,
+        price_adjustment: FixedU128,
     ) -> DispatchResult {
         ensure!(min_deposit.ge(&1), Error::<T, I>::InvalidMinDeposit);
 
-        ensure!(price_adjustment.ge(&1), Error::<T, I>::InvalidPriceAdjustment);
+        ensure!(!price_adjustment.is_zero(), Error::<T, I>::InvalidPriceAdjustment);
 
         ensure!(
             total_rewards >= T::MinTotalFarmRewards::get(),
@@ -1379,9 +1388,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         if !yield_farm.total_shares.is_zero() && yield_farm.updated_at != current_period {
             if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
+                let total_shares_z_adjusted = global_farm
+                    .price_adjustment
+                    .checked_mul_int(global_farm.total_shares_z)
+                    .ok_or(ArithmeticError::Overflow)?;
                 let rewards = math::calculate_global_pool_reward_per_period(
                     global_farm.yield_per_period.into(),
-                    global_farm.total_shares_z,
+                    total_shares_z_adjusted,
                     global_farm.max_reward_per_period,
                 )
                 .map_err(|_| ArithmeticError::Overflow)?;

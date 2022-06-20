@@ -67,3 +67,60 @@ fn reward_collator_on_new_session_should_work() {
         }));
     });
 }
+
+#[test]
+fn reward_collator_on_end_session_should_work() {
+    new_test_ext().execute_with(|| {
+        //collators which should be rewarded
+        assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &ALICE), 0);
+        assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &CHARLIE), 0);
+        assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &BOB), 0);
+        assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &DAVE), 0);
+
+        // We run a stripped down version of `fn rotate_session`
+        // https://github.com/paritytech/substrate/blob/6001b59f9f64a133d55fc13a495acc76eb4b532f/frame/session/src/lib.rs#L636-L715
+        let trigger_next_session = |index| {
+            assert!(index > 0);
+            CollatorRewards::end_session(index - 1);
+            CollatorRewards::start_session(index);
+            CollatorRewards::new_session(index + 1);
+        };
+        // We run it three times in order for the collators returned in `new_session(2)` to be rewarded
+        // in `end_session(2)`.
+        trigger_next_session(1);
+        trigger_next_session(2);
+        trigger_next_session(3);
+
+        //excluded collators and should not be rewarded
+        assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &GC_COLL_1), 0);
+        assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &GC_COLL_2), 0);
+        assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &GC_COLL_3), 0);
+
+        //this collators should be rewarded
+        assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &ALICE), COLLATOR_REWARD);
+        assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &CHARLIE), COLLATOR_REWARD);
+        assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &BOB), COLLATOR_REWARD);
+        assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &DAVE), COLLATOR_REWARD);
+
+        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
+            who: ALICE,
+            amount: COLLATOR_REWARD,
+            currency: NATIVE_TOKEN,
+        }));
+        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
+            who: BOB,
+            amount: COLLATOR_REWARD,
+            currency: NATIVE_TOKEN,
+        }));
+        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
+            who: CHARLIE,
+            amount: COLLATOR_REWARD,
+            currency: NATIVE_TOKEN,
+        }));
+        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
+            who: DAVE,
+            amount: COLLATOR_REWARD,
+            currency: NATIVE_TOKEN,
+        }));
+    });
+}

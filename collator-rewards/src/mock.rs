@@ -8,13 +8,14 @@ use frame_support::{
 
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
+use pallet_session::SessionManager;
 
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-
+use sp_staking::SessionIndex;
 use sp_std::vec::Vec;
 
 pub type AccountId = u64;
@@ -129,6 +130,15 @@ parameter_types! {
     pub GcCollators: Vec<AccountId> = vec![GC_COLL_1, GC_COLL_2, GC_COLL_3];
 }
 
+pub struct MockSessionManager;
+impl SessionManager<AccountId> for MockSessionManager {
+    fn new_session(_: SessionIndex) -> Option<Vec<AccountId>> {
+        Some(vec![ALICE, BOB, GC_COLL_1, CHARLIE, GC_COLL_2, DAVE, GC_COLL_3])
+    }
+    fn start_session(_: SessionIndex) {}
+    fn end_session(_: SessionIndex) {}
+}
+
 impl Config for Test {
     type Event = Event;
     type Balance = Balance;
@@ -138,6 +148,7 @@ impl Config for Test {
     type RewardCurrencyId = RewardCurrencyId;
     type ExcludedCollators = GcCollators;
     type AuthorityId = AuraId;
+    type SessionManager = MockSessionManager;
 }
 
 #[derive(Default)]

@@ -27,7 +27,9 @@ mod tests;
 use frame_support::traits::{Get, OneSessionHandler};
 
 use orml_traits::MultiCurrency;
+use pallet_session::SessionManager;
 use sp_runtime::RuntimeAppPublic;
+use sp_staking::SessionIndex;
 use sp_std::vec::Vec;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -78,6 +80,8 @@ pub mod pallet {
 
         /// The identifier type for an authority.
         type AuthorityId: Member + Parameter + RuntimeAppPublic + MaybeSerializeDeserialize + MaxEncodedLen;
+
+        type SessionManager: SessionManager<Self::AccountId>;
     }
 
     #[pallet::error]
@@ -93,6 +97,10 @@ pub mod pallet {
             currency: T::CurrencyId,
         },
     }
+
+    #[pallet::storage]
+    #[pallet::getter(fn collators)]
+    pub type Collators<T: Config> = StorageMap<_, Twox64Concat, SessionIndex, Vec<T::AccountId>, ValueQuery>;
 }
 
 impl<T: Config> sp_runtime::BoundToRuntimeAppPublic for Pallet<T> {
@@ -125,4 +133,36 @@ impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
     }
 
     fn on_disabled(_i: u32) {}
+}
+
+impl<T: Config> SessionManager<T::AccountId> for Pallet<T> {
+    fn new_session(index: SessionIndex) -> Option<Vec<T::AccountId>> {
+        let maybe_collators = T::SessionManager::new_session(index);
+        if let Some(ref collators) = maybe_collators {
+            Collators::<T>::insert(index, collators)
+        }
+        maybe_collators
+    }
+
+    fn start_session(index: SessionIndex) {
+        T::SessionManager::start_session(index)
+    }
+
+    fn end_session(index: SessionIndex) {
+        T::SessionManager::end_session(index);
+        let excluded = T::ExcludedCollators::get();
+        for collator in Collators::<T>::take(index) {
+            if !excluded.contains(&collator) {
+                let (currency, amount) = (T::RewardCurrencyId::get(), T::RewardPerCollator::get());
+                match T::Currency::deposit(currency, &collator, amount) {
+                    Ok(_) => Self::deposit_event(Event::CollatorRewarded {
+                        who: collator,
+                        amount,
+                        currency,
+                    }),
+                    Err(err) => log::warn!(target: "runtime::collator-rewards", "Error reward collators: {:?}", err),
+                }
+            }
+        }
+    }
 }

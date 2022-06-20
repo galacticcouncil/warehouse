@@ -8,6 +8,7 @@ members = [
 	"price-oracle",
 	"transaction-multi-payment",
 	"asset-registry",
+	"collator-rewards",
 ]
 
 resolver = "2"

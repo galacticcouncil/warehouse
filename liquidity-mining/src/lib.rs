@@ -1431,3 +1431,152 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         false
     }
 }
+
+impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>> for Pallet<T> {
+    type Error = DispatchError;
+
+    type AmmPoolId = T::AmmPoolId;
+    type Balance = Balance;
+    type Period = PeriodOf<T>;
+
+    fn create_global_farm(
+        total_rewards: Self::Balance,
+        planned_yielding_periods: Self::Period,
+        blocks_per_period: Self::BlockNumber,
+        incentivized_asset: Self::AssetId,
+        reward_currency: Self::AssetId,
+        owner: AccountIdOf<T>,
+        yield_per_period: Permill,
+        min_deposit: Self::Balance,
+        price_adjustment: FixedU128,
+    ) -> Result<(Self::GlobalFarmId, Self::Balance), Self::Error> {
+        Self::create_global_farm(
+            total_rewards,
+            planned_yielding_periods,
+            blocks_per_period,
+            incentivized_asset,
+            reward_currency,
+            owner,
+            yield_per_period,
+            min_deposit,
+            price_adjustment,
+        )
+    }
+
+    fn destroy_global_farm(
+        who: AccountIdOf<T>,
+        farm_id: Self::GlobalFarmId,
+    ) -> Result<(Self::AssetId, Self::Balance, AccountIdOf<T>), Self::Error> {
+        Self::destroy_global_farm(who, farm_id)
+    }
+
+    fn create_yield_farm(
+        who: AccountIdOf<T>,
+        global_farm_id: Self::GlobalFarmId,
+        multiplier: Self::FarmMultiplier,
+        loyalty_curve: Option<Self::LoyaltyCurve>,
+        amm_pool_id: Self::AmmPoolId,
+        asset_a: Self::AssetId,
+        asset_b: Self::AssetId,
+    ) -> Result<Self::YieldFarmId, Self::Error> {
+        Self::create_yield_farm(
+            who,
+            global_farm_id,
+            multiplier,
+            loyalty_curve,
+            amm_pool_id,
+            asset_a,
+            asset_b,
+        )
+    }
+
+    fn update_yield_farm_multiplier(
+        who: AccountIdOf<T>,
+        global_farm_id: Self::GlobalFarmId,
+        amm_pool_id: Self::AmmPoolId,
+        multiplier: Self::FarmMultiplier,
+    ) -> Result<Self::YieldFarmId, Self::Error> {
+        Self::update_yield_farm_multiplier(who, global_farm_id, amm_pool_id, multiplier)
+    }
+
+    fn stop_yield_farm(
+        who: AccountIdOf<T>,
+        global_farm_id: Self::GlobalFarmId,
+        amm_pool_id: Self::AmmPoolId,
+    ) -> Result<Self::YieldFarmId, Self::Error> {
+        Self::stop_yield_farm(who, global_farm_id, amm_pool_id)
+    }
+
+    fn resume_yield_farm(
+        who: AccountIdOf<T>,
+        global_farm_id: Self::GlobalFarmId,
+        yield_farm_id: Self::YieldFarmId,
+        amm_pool_id: Self::AmmPoolId,
+        multiplier: Self::FarmMultiplier,
+    ) -> Result<(), Self::Error> {
+        Self::resume_yield_farm(who, global_farm_id, yield_farm_id, amm_pool_id, multiplier)
+    }
+
+    fn destroy_yield_farm(
+        who: AccountIdOf<T>,
+        global_farm_id: Self::GlobalFarmId,
+        yield_farm_id: Self::YieldFarmId,
+        amm_pool_id: Self::AmmPoolId,
+    ) -> Result<(), Self::Error> {
+        Self::destroy_yield_farm(who, global_farm_id, yield_farm_id, amm_pool_id)
+    }
+
+    fn deposit_lp_shares(
+        who: AccountIdOf<T>,
+        global_farm_id: Self::GlobalFarmId,
+        yield_farm_id: Self::YieldFarmId,
+        amm_pool_id: Self::AmmPoolId,
+        shares_amount: Self::Balance,
+    ) -> Result<Self::DepositId, Self::Error> {
+        Self::deposit_lp_shares(who, global_farm_id, yield_farm_id, amm_pool_id, shares_amount)
+    }
+
+    fn redeposit_lp_shares(
+        global_farm_id: Self::GlobalFarmId,
+        yield_farm_id: Self::YieldFarmId,
+        deposit_id: Self::DepositId,
+    ) -> Result<Self::Balance, Self::Error> {
+        Self::redeposit_lp_shares(global_farm_id, yield_farm_id, deposit_id)
+    }
+
+    fn claim_rewards(
+        who: AccountIdOf<T>,
+        deposit_id: Self::DepositId,
+        yield_farm_id: Self::YieldFarmId,
+        check_double_claim: bool,
+    ) -> Result<(Self::GlobalFarmId, Self::AssetId, Self::Balance, Self::Balance), Self::Error> {
+        Self::claim_rewards(who, deposit_id, yield_farm_id, check_double_claim)
+    }
+
+    fn withdraw_lp_shares(
+        who: AccountIdOf<T>,
+        deposit_id: Self::DepositId,
+        yield_farm_id: Self::YieldFarmId,
+        unclaimable_rewards: Self::Balance,
+    ) -> Result<(Self::GlobalFarmId, Self::Balance), Self::Error> {
+        Self::withdraw_lp_shares(who, deposit_id, yield_farm_id, unclaimable_rewards)
+    }
+
+    fn is_yield_farm_claimable(
+        global_farm_id: Self::GlobalFarmId,
+        yield_farm_id: Self::YieldFarmId,
+        amm_pool_id: Self::AmmPoolId,
+    ) -> bool {
+        Self::is_yield_farm_claimable(global_farm_id, yield_farm_id, amm_pool_id)
+    }
+
+    fn get_global_farm_id(deposit_id: Self::DepositId, yield_farm_id: Self::YieldFarmId) -> Option<Self::GlobalFarmId> {
+        if let Some(mut deposit) = Self::deposit(deposit_id) {
+            if let Some(farm_entry) = deposit.get_yield_farm_entry(yield_farm_id) {
+                return Some(farm_entry.global_farm_id)     
+            }
+        }
+
+        None 
+    }
+}

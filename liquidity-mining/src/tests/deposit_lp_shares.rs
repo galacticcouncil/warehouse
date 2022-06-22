@@ -38,7 +38,7 @@ fn deposit_lp_shares_should_work() {
                 yield_farm_id,
                 BSX_TKN1_AMM,
                 deposited_amount,
-                |_, _| { 50_u128 }
+                |_, _| { Ok(50_u128) }
             )
             .unwrap(),
             PREDEFINED_DEPOSIT_IDS[0]
@@ -88,7 +88,7 @@ fn deposit_lp_shares_should_work() {
                 yield_farm_id,
                 BSX_TKN1_AMM,
                 deposited_amount,
-                |_, _| { 52_u128 }
+                |_, _| { Ok(52_u128) }
             )
             .unwrap(),
             PREDEFINED_DEPOSIT_IDS[1]
@@ -154,7 +154,7 @@ fn deposit_lp_shares_should_work() {
                 yield_farm_id,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _| { 8_u128 }
+                |_, _| { Ok(8_u128) }
             )
             .unwrap(),
             PREDEFINED_DEPOSIT_IDS[2]
@@ -223,7 +223,7 @@ fn deposit_lp_shares_should_work() {
                 yield_farm_id,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _| { 58_u128 }
+                |_, _| { Ok(58_u128) }
             )
             .unwrap(),
             PREDEFINED_DEPOSIT_IDS[3]
@@ -293,7 +293,7 @@ fn deposit_lp_shares_should_work() {
                 yield_farm_id,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _| { 3_u128 }
+                |_, _| { Ok(3_u128) }
             )
             .unwrap(),
             PREDEFINED_DEPOSIT_IDS[4]
@@ -362,7 +362,7 @@ fn deposit_lp_shares_should_work() {
                 yield_farm_id,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _| { 16_u128 }
+                |_, _| { Ok(16_u128) }
             )
             .unwrap(),
             PREDEFINED_DEPOSIT_IDS[5]
@@ -430,7 +430,7 @@ fn deposit_lp_shares_should_work() {
                 yield_farm_id,
                 BSX_TKN1_AMM,
                 deposited_amount,
-                |_, _| { 80_u128 }
+                |_, _| { Ok(80_u128) }
             )
             .unwrap(),
             PREDEFINED_DEPOSIT_IDS[6]
@@ -502,7 +502,7 @@ fn deposit_lp_shares_should_work() {
         let yield_farm_id = CHARLIE_ACA_KSM_YIELD_FARM_ID;
         assert_eq!(
             LiquidityMining::deposit_lp_shares(CHARLIE_FARM, yield_farm_id, ACA_KSM_AMM, deposited_amount, |_, _| {
-                16_u128
+                Ok(16_u128)
             })
             .unwrap(),
             deposit_id
@@ -534,17 +534,17 @@ fn deposit_lp_shares_bellow_min_deposit_should_not_work() {
         let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
 
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(GC_FARM, yield_farm_id, BSX_TKN1_AMM, 0, |_, _| { 10_u128 }),
+            LiquidityMining::deposit_lp_shares(GC_FARM, yield_farm_id, BSX_TKN1_AMM, 0, |_, _| { Ok(10_u128) }),
             Error::<Test, Instance1>::InvalidDepositAmount
         );
 
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(GC_FARM, yield_farm_id, BSX_TKN1_AMM, 1, |_, _| { 10_u128 }),
+            LiquidityMining::deposit_lp_shares(GC_FARM, yield_farm_id, BSX_TKN1_AMM, 1, |_, _| { Ok(10_u128) }),
             Error::<Test, Instance1>::InvalidDepositAmount
         );
 
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(GC_FARM, yield_farm_id, BSX_TKN1_AMM, 8, |_, _| { 10_u128 }),
+            LiquidityMining::deposit_lp_shares(GC_FARM, yield_farm_id, BSX_TKN1_AMM, 8, |_, _| { Ok(10_u128) }),
             Error::<Test, Instance1>::InvalidDepositAmount
         );
 
@@ -554,7 +554,7 @@ fn deposit_lp_shares_bellow_min_deposit_should_not_work() {
             yield_farm_id,
             BSX_TKN1_AMM,
             10,
-            |_, _| { 10_u128 }
+            |_, _| { Ok(10_u128) }
         ));
     });
 }
@@ -563,7 +563,9 @@ fn deposit_lp_shares_bellow_min_deposit_should_not_work() {
 fn deposit_lp_shares_non_existing_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(GC_FARM, BSX_DOT_YIELD_FARM_ID, BSX_DOT_AMM, 10_000, |_, _| { 10_u128 }),
+            LiquidityMining::deposit_lp_shares(GC_FARM, BSX_DOT_YIELD_FARM_ID, BSX_DOT_AMM, 10_000, |_, _| {
+                Ok(10_u128)
+            }),
             Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
@@ -576,7 +578,7 @@ fn deposit_lp_shares_stop_yield_farm_should_not_work() {
 
         assert_noop!(
             LiquidityMining::deposit_lp_shares(GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, 10_000, |_, _| {
-                10_u128
+                Ok(10_u128)
             }),
             Error::<Test, Instance1>::LiquidityMiningCanceled
         );

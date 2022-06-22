@@ -492,7 +492,7 @@ fn withdraw_shares_should_work() {
             CHARLIE_ACA_KSM_YIELD_FARM_ID,
             ACA_KSM_AMM,
             deposited_amount,
-            |_, _| { 50_u128 }
+            |_, _| { Ok(50_u128) }
         ));
 
         const DEPOSIT_ID: DepositId = 1;
@@ -537,14 +537,14 @@ fn withdraw_with_multiple_entries_and_flush_should_work() {
             DAVE_FARM,
             DAVE_BSX_TKN1_YIELD_FARM_ID,
             PREDEFINED_DEPOSIT_IDS[0],
-            |_, _| { 10_u128 },
+            |_, _| { Ok(10_u128) },
         ));
 
         assert_ok!(LiquidityMining::redeposit_lp_shares(
             EVE_FARM,
             EVE_BSX_TKN1_YIELD_FARM_ID,
             PREDEFINED_DEPOSIT_IDS[0],
-            |_, _| { 10_u128 },
+            |_, _| { Ok(10_u128) },
         ));
         //NOTE: predefined_deposit_ids[0] is deposited in 3 yield farms now.
 

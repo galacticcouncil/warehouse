@@ -277,7 +277,7 @@ fn claim_rewards_should_work() {
             CHARLIE_ACA_KSM_YIELD_FARM_ID,
             ACA_KSM_AMM,
             deposited_amount,
-            |_, _| { 50_u128 }
+            |_, _| { Ok(50_u128) }
         ));
 
         assert_eq!(
@@ -323,7 +323,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
             EVE_FARM,
             EVE_BSX_TKN1_YIELD_FARM_ID,
             PREDEFINED_DEPOSIT_IDS[0],
-            |_, _| { 80_u128 }
+            |_, _| { Ok(80_u128) }
         ));
 
         set_block_number(800_000);
@@ -331,7 +331,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
             DAVE_FARM,
             DAVE_BSX_TKN1_YIELD_FARM_ID,
             PREDEFINED_DEPOSIT_IDS[0],
-            |_, _| { 100_u128 }
+            |_, _| { Ok(100_u128) }
         ));
 
         let deposit = LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap();

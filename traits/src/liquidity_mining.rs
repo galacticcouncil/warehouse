@@ -60,19 +60,21 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         amm_pool_id: Self::AmmPoolId,
     ) -> Result<(), Self::Error>;
 
+    #[allow(clippy::type_complexity)]
     fn deposit_lp_shares(
         global_farm_id: u32,
         yield_farm_id: u32,
         amm_pool_id: Self::AmmPoolId,
         shares_amount: Self::Balance,
-        get_balance_in_amm: fn(AssetId, Self::AmmPoolId) -> Self::Balance,
+        get_balance_in_amm: fn(AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
     ) -> Result<u128, Self::Error>;
 
+    #[allow(clippy::type_complexity)]
     fn redeposit_lp_shares(
         global_farm_id: u32,
         yield_farm_id: u32,
         deposit_id: u128,
-        get_balance_in_amm: fn(AssetId, Self::AmmPoolId) -> Self::Balance,
+        get_balance_in_amm: fn(AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
     ) -> Result<Self::Balance, Self::Error>;
 
     #[allow(clippy::type_complexity)]

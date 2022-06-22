@@ -823,7 +823,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         yield_farm_id: YieldFarmId,
         amm_pool_id: T::AmmPoolId,
         shares_amount: Balance,
-        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Balance,
+        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Result<Balance, DispatchError>,
     ) -> Result<DepositId, DispatchError> {
         let mut deposit = DepositData::new(shares_amount, amm_pool_id);
 
@@ -853,7 +853,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
-        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Balance,
+        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Result<Balance, DispatchError>,
     ) -> Result<Balance, DispatchError> {
         <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T, I>::DepositNotFound)?;
@@ -1070,7 +1070,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         deposit: &mut DepositData<T, I>,
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
-        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Balance,
+        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Result<Balance, DispatchError>,
     ) -> Result<(), DispatchError> {
         //LP shares can be locked only once in the same yield farm.
         ensure!(
@@ -1385,13 +1385,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         shares: Balance,
         amm: T::AmmPoolId,
         incentivized_asset: T::CurrencyId,
-        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Balance,
-    ) -> Result<Balance, ArithmeticError> {
-        let incentivized_asset_balance = get_balance_in_amm(incentivized_asset, amm);
+        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Result<Balance, DispatchError>,
+    ) -> Result<Balance, DispatchError> {
+        let incentivized_asset_balance = get_balance_in_amm(incentivized_asset, amm)?;
 
         shares
             .checked_mul(incentivized_asset_balance)
-            .ok_or(ArithmeticError::Overflow)
+            .ok_or_else(|| ArithmeticError::Overflow.into())
     }
 
     /// This function update both (global and yield) farms if conditions are met.
@@ -1564,7 +1564,7 @@ impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::Curr
         yield_farm_id: u32,
         amm_pool_id: Self::AmmPoolId,
         shares_amount: Self::Balance,
-        get_balance_in_amm: fn(T::CurrencyId, Self::AmmPoolId) -> Self::Balance,
+        get_balance_in_amm: fn(T::CurrencyId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
     ) -> Result<u128, Self::Error> {
         Self::deposit_lp_shares(
             global_farm_id,
@@ -1579,7 +1579,7 @@ impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::Curr
         global_farm_id: u32,
         yield_farm_id: u32,
         deposit_id: u128,
-        get_balance_in_amm: fn(T::CurrencyId, Self::AmmPoolId) -> Self::Balance,
+        get_balance_in_amm: fn(T::CurrencyId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
     ) -> Result<Self::Balance, Self::Error> {
         Self::redeposit_lp_shares(global_farm_id, yield_farm_id, deposit_id, get_balance_in_amm)
     }

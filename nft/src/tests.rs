@@ -491,7 +491,7 @@ fn nonfungible_traits_work() {
                 &INSTANCE_ID_1,
                 &BOB
             ),
-            Error::<Test>::ClassUnknown
+            pallet_uniques::Error::<Test>::Unknown
         );
         assert_ok!(
             <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(

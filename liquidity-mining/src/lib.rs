@@ -1448,6 +1448,18 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         false
     }
+
+    // This function resturs `GlobalFarmId` from deposit's farm entry or `None` if deposit or farm
+    // entry doesn't exists.
+    fn get_global_farm_id(id: DepositId, yield_farm_id: YieldFarmId) -> Option<GlobalFarmId> {
+        if let Some(mut deposit) = Self::deposit(id) {
+            if let Some(farm_entry) = deposit.get_yield_farm_entry(yield_farm_id) {
+                return Some(farm_entry.global_farm_id);
+            }
+        }
+
+        None
+    }
 }
 
 impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::CurrencyId, BlockNumberFor<T>>
@@ -1593,7 +1605,7 @@ impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::Curr
         Self::is_yield_farm_claimable(global_farm_id, yield_farm_id, amm_pool_id)
     }
 
-    fn get_global_farm_id(_deposit_id: u128, _yield_farm_id: u32) -> Option<u32> {
-        todo!()
+    fn get_global_farm_id(deposit_id: u128, yield_farm_id: u32) -> Option<u32> {
+        Self::get_global_farm_id(deposit_id, yield_farm_id)
     }
 }

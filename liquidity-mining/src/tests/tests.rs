@@ -2011,3 +2011,75 @@ fn global_farm_should_work() {
     global_farm.yield_farms_count = (0, 0);
     assert!(global_farm.can_be_flushed());
 }
+
+#[test]
+fn is_yield_farm_clamable_should_work() {
+    predefined_test_ext_with_deposits().execute_with(|| {
+        //active farm
+        assert!(LiquidityMining::is_yield_farm_claimable(
+            GC_FARM,
+            GC_BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM
+        ));
+
+        //invalid amm_pool_id
+        assert!(!LiquidityMining::is_yield_farm_claimable(
+            GC_FARM,
+            GC_BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN2_AMM
+        ));
+
+        //farm withouth deposits
+        assert!(!LiquidityMining::is_yield_farm_claimable(
+            EVE_FARM,
+            EVE_BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM
+        ));
+
+        //deleted yield farm
+        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+        assert_ok!(LiquidityMining::destroy_yield_farm(
+            GC,
+            GC_FARM,
+            GC_BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM
+        ));
+
+        assert!(!LiquidityMining::is_yield_farm_claimable(
+            GC_FARM,
+            GC_BSX_TKN1_YIELD_FARM_ID,
+            BSX_TKN1_AMM
+        ));
+    });
+}
+
+#[test]
+fn get_global_farm_id_should_work() {
+    predefined_test_ext_with_deposits().execute_with(|| {
+        //happy path
+        assert_eq!(
+            LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], GC_BSX_TKN1_YIELD_FARM_ID),
+            Some(GC_FARM)
+        );
+
+        //happy path deposit with multiple farm entries
+        //create second farm entry
+        assert_ok!(LiquidityMining::redeposit_lp_shares(
+            EVE_FARM,
+            EVE_BSX_TKN1_YIELD_FARM_ID,
+            PREDEFINED_DEPOSIT_IDS[0],
+            |_, _| { 10_u128 }
+        ));
+
+        assert_eq!(
+            LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], EVE_BSX_TKN1_YIELD_FARM_ID),
+            Some(EVE_FARM)
+        );
+
+        //deposit doesn't exists
+        assert!(LiquidityMining::get_global_farm_id(999_9999, GC_BSX_TKN1_YIELD_FARM_ID).is_none());
+
+        //farm's entry doesn't exists in the deposit
+        assert!(LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], DAVE_BSX_TKN1_YIELD_FARM_ID).is_none());
+    });
+}

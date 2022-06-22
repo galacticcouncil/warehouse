@@ -23,36 +23,24 @@ fn deposit_lp_shares_should_work() {
     //NOTE: farm incentivize BSX token.
     predefined_test_ext().execute_with(|| {
         let global_farm_id = GC_FARM;
-        let bsx_tkn1_assets = AssetPair {
-            asset_in: BSX,
-            asset_out: TKN1,
-        };
-
-        let bsx_tkn2_assets = AssetPair {
-            asset_in: BSX,
-            asset_out: TKN2,
-        };
-
         let global_farm_account = LiquidityMining::farm_account_id(global_farm_id).unwrap();
         let bsx_tnk1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
         let bsx_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
-        let bsx_tkn1_amm_account =
-            AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(bsx_tkn1_assets)).unwrap().0);
-        let bsx_tkn2_amm_account =
-            AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(bsx_tkn2_assets)).unwrap().0);
+
         //DEPOSIT 1:
         set_block_number(1_800); //18-th period
-
-        let bsx_tkn1_alice_shares = Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE);
-
-        //This is necessary because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 50, 0).unwrap();
 
         let deposited_amount = 50;
         let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
         assert_eq!(
-            LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN1_AMM, deposited_amount)
-                .unwrap(),
+            LiquidityMining::deposit_lp_shares(
+                global_farm_id,
+                yield_farm_id,
+                BSX_TKN1_AMM,
+                deposited_amount,
+                |_, _| { 50_u128 }
+            )
+            .unwrap(),
             PREDEFINED_DEPOSIT_IDS[0]
         );
 
@@ -91,27 +79,18 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        assert_eq!(
-            Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE),
-            bsx_tkn1_alice_shares - deposited_amount
-        );
-
-        assert_eq!(
-            Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH),
-            deposited_amount
-        );
-
         // DEPOSIT 2 (deposit in the same period):
-        let bsx_tkn1_bob_shares = Tokens::free_balance(BSX_TKN1_SHARE_ID, &BOB);
-
-        //This is necessary because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 52, 0).unwrap();
-
         let deposited_amount = 80;
         let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
         assert_eq!(
-            LiquidityMining::deposit_lp_shares(BOB, global_farm_id, yield_farm_id, BSX_TKN1_AMM, deposited_amount)
-                .unwrap(),
+            LiquidityMining::deposit_lp_shares(
+                global_farm_id,
+                yield_farm_id,
+                BSX_TKN1_AMM,
+                deposited_amount,
+                |_, _| { 52_u128 }
+            )
+            .unwrap(),
             PREDEFINED_DEPOSIT_IDS[1]
         );
 
@@ -156,13 +135,6 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //Check if LP shares are transferred from owner.
-        assert_eq!(
-            Tokens::free_balance(BSX_TKN1_SHARE_ID, &BOB),
-            bsx_tkn1_bob_shares - deposited_amount
-        );
-        assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH), 130); //130 - sum of all deposited shares until now
-
         let yield_farm_claims_from_global_farm = 112_500;
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
@@ -173,16 +145,18 @@ fn deposit_lp_shares_should_work() {
         assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 112_500);
 
         // DEPOSIT 3 (same period, second yield farm):
-        let bsx_tkn2_bob_shares = Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB);
-
-        //this is necessary because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 8, 0).unwrap();
 
         let deposited_amount = 25;
         let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
         assert_eq!(
-            LiquidityMining::deposit_lp_shares(BOB, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
-                .unwrap(),
+            LiquidityMining::deposit_lp_shares(
+                global_farm_id,
+                yield_farm_id,
+                BSX_TKN2_AMM,
+                deposited_amount,
+                |_, _| { 8_u128 }
+            )
+            .unwrap(),
             PREDEFINED_DEPOSIT_IDS[2]
         );
 
@@ -226,13 +200,6 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //Check if LP shares are transferred from owner.
-        assert_eq!(
-            Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB),
-            bsx_tkn2_bob_shares - deposited_amount
-        );
-        assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH), 25); //25 - sum of all deposited shares until now
-
         //farm wasn't updated in this period so no claim from global farm happened.
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
@@ -247,16 +214,18 @@ fn deposit_lp_shares_should_work() {
 
         // DEPOSIT 4 (new period):
         set_block_number(2051); //period 20
-        let bsx_tkn2_bob_shares = Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB);
-
-        //This is necessary because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 58, 0).unwrap();
 
         let deposited_amount = 800;
         let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
         assert_eq!(
-            LiquidityMining::deposit_lp_shares(BOB, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
-                .unwrap(),
+            LiquidityMining::deposit_lp_shares(
+                global_farm_id,
+                yield_farm_id,
+                BSX_TKN2_AMM,
+                deposited_amount,
+                |_, _| { 58_u128 }
+            )
+            .unwrap(),
             PREDEFINED_DEPOSIT_IDS[3]
         );
 
@@ -302,13 +271,6 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //Check if LP shares are transferred from owner.
-        assert_eq!(
-            Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB),
-            bsx_tkn2_bob_shares - deposited_amount
-        );
-        assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH), 825); //825 - sum of all deposited shares until now
-
         let sum_yield_farm_claims_from_global_farm = 132_500;
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
@@ -322,16 +284,18 @@ fn deposit_lp_shares_should_work() {
 
         // DEPOSIT 5 (same period, second liq pool yield farm):
         set_block_number(2_586); //period 20
-        let bsx_tkn2_alice_shares = Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE);
-
-        //This is necessary because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 3, 0).unwrap();
 
         let deposited_amount = 87;
         let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
         assert_eq!(
-            LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
-                .unwrap(),
+            LiquidityMining::deposit_lp_shares(
+                global_farm_id,
+                yield_farm_id,
+                BSX_TKN2_AMM,
+                deposited_amount,
+                |_, _| { 3_u128 }
+            )
+            .unwrap(),
             PREDEFINED_DEPOSIT_IDS[4]
         );
 
@@ -377,13 +341,6 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //Check if LP shares are transferred from owner.
-        assert_eq!(
-            Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE),
-            bsx_tkn2_alice_shares - 87
-        );
-        assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH), 912); //912 - sum of all deposited shares until now
-
         let sum_yield_farm_claims_from_global_farm = 1_064_500;
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
@@ -396,16 +353,18 @@ fn deposit_lp_shares_should_work() {
 
         // DEPOSIT 6 (same period):
         set_block_number(2_596); //period 20
-        let bsx_tkn2_alice_shares = Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE);
-
-        //This is necessary because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 16, 0).unwrap();
 
         let deposited_amount = 48;
         let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
         assert_eq!(
-            LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN2_AMM, deposited_amount)
-                .unwrap(),
+            LiquidityMining::deposit_lp_shares(
+                global_farm_id,
+                yield_farm_id,
+                BSX_TKN2_AMM,
+                deposited_amount,
+                |_, _| { 16_u128 }
+            )
+            .unwrap(),
             PREDEFINED_DEPOSIT_IDS[5]
         );
 
@@ -451,13 +410,6 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //Check if LP shares are transferred from owner.
-        assert_eq!(
-            Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE),
-            bsx_tkn2_alice_shares - deposited_amount
-        );
-        assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &LP_SHARES_STASH), 960); //960 - sum of all deposited shares until now
-
         let sum_yield_farm_claims_from_global_farm = 1_064_500;
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
@@ -469,16 +421,18 @@ fn deposit_lp_shares_should_work() {
 
         // DEPOSIT 7 : (same period different yield farm)
         set_block_number(2_596); //period 20
-        let bsx_tkn1_alice_shares = Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE);
-
-        //This is necessary because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 80, 0).unwrap();
 
         let deposited_amount = 486;
         let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
         assert_eq!(
-            LiquidityMining::deposit_lp_shares(ALICE, global_farm_id, yield_farm_id, BSX_TKN1_AMM, deposited_amount)
-                .unwrap(),
+            LiquidityMining::deposit_lp_shares(
+                global_farm_id,
+                yield_farm_id,
+                BSX_TKN1_AMM,
+                deposited_amount,
+                |_, _| { 80_u128 }
+            )
+            .unwrap(),
             PREDEFINED_DEPOSIT_IDS[6]
         );
 
@@ -524,13 +478,6 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        //Check if LP shares are transferred from owner.
-        assert_eq!(
-            Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE),
-            bsx_tkn1_alice_shares - deposited_amount
-        );
-        assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &LP_SHARES_STASH), 616); //616 - sum of all deposited shares until now
-
         let sum_yield_farm_claims_from_global_farm = 1_164_400;
         assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
@@ -547,26 +494,17 @@ fn deposit_lp_shares_should_work() {
     //This test only check if valued shares are correctly calculated if reward and incentivized
     //assets are different, otherwise farm behavior is same as in test above.
     predefined_test_ext().execute_with(|| {
-        let aca_ksm_assets = AssetPair {
-            asset_in: ACA,
-            asset_out: KSM,
-        };
-
-        let aca_ksm_amm_account = AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(aca_ksm_assets)).unwrap().0);
-        let ksm_balance_in_amm = 16;
-
-        //This is necessary because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), aca_ksm_amm_account, KSM, ksm_balance_in_amm, 0).unwrap();
-        Tokens::set_balance(Origin::root(), aca_ksm_amm_account, ACA, 20, 0).unwrap();
-
         set_block_number(2_596); //period 25
 
+        let ksm_balance_in_amm = 16_u128;
         let deposited_amount = 1_000_000;
         let deposit_id = 1; //1 - because new test ext
         let yield_farm_id = CHARLIE_ACA_KSM_YIELD_FARM_ID;
         assert_eq!(
-            LiquidityMining::deposit_lp_shares(ALICE, CHARLIE_FARM, yield_farm_id, ACA_KSM_AMM, deposited_amount)
-                .unwrap(),
+            LiquidityMining::deposit_lp_shares(CHARLIE_FARM, yield_farm_id, ACA_KSM_AMM, deposited_amount, |_, _| {
+                16_u128
+            })
+            .unwrap(),
             deposit_id
         );
 
@@ -596,27 +534,27 @@ fn deposit_lp_shares_bellow_min_deposit_should_not_work() {
         let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
 
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, yield_farm_id, BSX_TKN1_AMM, 0),
+            LiquidityMining::deposit_lp_shares(GC_FARM, yield_farm_id, BSX_TKN1_AMM, 0, |_, _| { 10_u128 }),
             Error::<Test, Instance1>::InvalidDepositAmount
         );
 
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, yield_farm_id, BSX_TKN1_AMM, 1),
+            LiquidityMining::deposit_lp_shares(GC_FARM, yield_farm_id, BSX_TKN1_AMM, 1, |_, _| { 10_u128 }),
             Error::<Test, Instance1>::InvalidDepositAmount
         );
 
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, yield_farm_id, BSX_TKN1_AMM, 8),
+            LiquidityMining::deposit_lp_shares(GC_FARM, yield_farm_id, BSX_TKN1_AMM, 8, |_, _| { 10_u128 }),
             Error::<Test, Instance1>::InvalidDepositAmount
         );
 
         //margin value should works
         assert_ok!(LiquidityMining::deposit_lp_shares(
-            ALICE,
             GC_FARM,
             yield_farm_id,
             BSX_TKN1_AMM,
-            10
+            10,
+            |_, _| { 10_u128 }
         ));
     });
 }
@@ -625,7 +563,7 @@ fn deposit_lp_shares_bellow_min_deposit_should_not_work() {
 fn deposit_lp_shares_non_existing_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, BSX_DOT_YIELD_FARM_ID, BSX_DOT_AMM, 10_000),
+            LiquidityMining::deposit_lp_shares(GC_FARM, BSX_DOT_YIELD_FARM_ID, BSX_DOT_AMM, 10_000, |_, _| { 10_u128 }),
             Error::<Test, Instance1>::YieldFarmNotFound
         );
     });
@@ -637,7 +575,9 @@ fn deposit_lp_shares_stop_yield_farm_should_not_work() {
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
         assert_noop!(
-            LiquidityMining::deposit_lp_shares(ALICE, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, 10_000),
+            LiquidityMining::deposit_lp_shares(GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, 10_000, |_, _| {
+                10_u128
+            }),
             Error::<Test, Instance1>::LiquidityMiningCanceled
         );
     });

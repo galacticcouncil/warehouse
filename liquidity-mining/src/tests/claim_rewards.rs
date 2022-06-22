@@ -21,7 +21,7 @@ use test_ext::*;
 #[test]
 fn claim_rewards_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        const FAIL_ON_DOUBLE_CLAIM: bool = true;
+        const FAIL_ON_DOUBLECLAIM: bool = true;
         const REWARD_CURRENCY: AssetId = BSX;
         let global_farm_id = GC_FARM;
         let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
@@ -38,7 +38,7 @@ fn claim_rewards_should_work() {
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 GC_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             )
             .unwrap(),
             (
@@ -94,7 +94,7 @@ fn claim_rewards_should_work() {
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[4],
                 GC_BSX_TKN2_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             )
             .unwrap(),
             (
@@ -177,7 +177,7 @@ fn claim_rewards_should_work() {
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 GC_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             )
             .unwrap(),
             (
@@ -264,19 +264,7 @@ fn claim_rewards_should_work() {
     //This test check if correct currency is transferred if rewards and incentivized
     //assets are different, otherwise farm behavior is the same as in tests above.
     predefined_test_ext().execute_with(|| {
-        const FAIL_ON_DOUBLE_CLAIM: bool = true;
-        let aca_ksm_assets = AssetPair {
-            asset_in: ACA,
-            asset_out: KSM,
-        };
-
-        let aca_ksm_amm_account = AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(aca_ksm_assets)).unwrap().0);
-
-        let ksm_balance_in_amm = 50;
-        //This is done because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), aca_ksm_amm_account, KSM, ksm_balance_in_amm, 0).unwrap();
-        Tokens::set_balance(Origin::root(), aca_ksm_amm_account, ACA, 20, 0).unwrap();
-
+        const FAIL_ON_DOUBLECLAIM: bool = true;
         set_block_number(1_800); //period 18
 
         let global_farm_id = CHARLIE_FARM;
@@ -285,11 +273,11 @@ fn claim_rewards_should_work() {
         let deposited_amount = 50;
         let deposit_id = 1;
         assert_ok!(LiquidityMining::deposit_lp_shares(
-            ALICE,
             CHARLIE_FARM,
             CHARLIE_ACA_KSM_YIELD_FARM_ID,
             ACA_KSM_AMM,
             deposited_amount,
+            |_, _| { 50_u128 }
         ));
 
         assert_eq!(
@@ -315,7 +303,7 @@ fn claim_rewards_should_work() {
         set_block_number(2_596); //period 25
 
         assert_eq!(
-            LiquidityMining::claim_rewards(ALICE, deposit_id, CHARLIE_ACA_KSM_YIELD_FARM_ID, FAIL_ON_DOUBLE_CLAIM)
+            LiquidityMining::claim_rewards(ALICE, deposit_id, CHARLIE_ACA_KSM_YIELD_FARM_ID, FAIL_ON_DOUBLECLAIM)
                 .unwrap(),
             (CHARLIE_FARM, ACA, expected_claimed_rewards, unclaimable_rewards)
         );
@@ -328,31 +316,22 @@ fn claim_rewards_should_work() {
 #[test]
 fn claim_rewards_deposit_with_multiple_entries_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        const FAIL_ON_DOUBLE_CLAIM: bool = true;
+        const FAIL_ON_DOUBLECLAIM: bool = true;
         //predefined_deposit[0] - GC_FARM, BSX_TKN1_AMM
         set_block_number(50_000);
         assert_ok!(LiquidityMining::redeposit_lp_shares(
             EVE_FARM,
             EVE_BSX_TKN1_YIELD_FARM_ID,
-            PREDEFINED_DEPOSIT_IDS[0]
+            PREDEFINED_DEPOSIT_IDS[0],
+            |_, _| { 80_u128 }
         ));
 
         set_block_number(800_000);
-        //Dave's farm incentivize TKN1 - some balance must be set so `valued_shares` will not be `0`.
-        let bsx_tkn1_amm_account = AMM_POOLS.with(|v| {
-            v.borrow()
-                .get(&asset_pair_to_map_key(AssetPair {
-                    asset_in: BSX,
-                    asset_out: TKN1,
-                }))
-                .unwrap()
-                .0
-        });
-        Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, TKN1, 100, 0).unwrap();
         assert_ok!(LiquidityMining::redeposit_lp_shares(
             DAVE_FARM,
             DAVE_BSX_TKN1_YIELD_FARM_ID,
-            PREDEFINED_DEPOSIT_IDS[0]
+            PREDEFINED_DEPOSIT_IDS[0],
+            |_, _| { 100_u128 }
         ));
 
         let deposit = LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap();
@@ -394,13 +373,12 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
         );
 
         set_block_number(1_000_000);
-
         assert_eq!(
             LiquidityMining::claim_rewards(
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 EVE_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             )
             .unwrap(),
             (EVE_FARM, KSM, 7_619_047, 380_953)
@@ -411,7 +389,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 EVE_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             ),
             Error::<Test, Instance1>::DoubleClaimInPeriod
         );
@@ -421,7 +399,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 GC_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             )
             .unwrap(),
             (GC_FARM, BSX, 62_177_603, 309_897)
@@ -471,7 +449,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 EVE_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             ),
             Error::<Test, Instance1>::DoubleClaimInPeriod
         );
@@ -481,7 +459,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 GC_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             ),
             Error::<Test, Instance1>::DoubleClaimInPeriod
         );
@@ -491,7 +469,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 DAVE_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             )
             .unwrap(),
             (DAVE_FARM, ACA, 8_333_333, 1_666_667)
@@ -537,9 +515,9 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
 }
 
 #[test]
-fn claim_rewards_double_claim_in_the_same_period_should_not_work() {
+fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        const FAIL_ON_DOUBLE_CLAIM: bool = true;
+        const FAIL_ON_DOUBLECLAIM: bool = true;
         let global_farm_id = GC_FARM;
         let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
         let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
@@ -550,7 +528,7 @@ fn claim_rewards_double_claim_in_the_same_period_should_not_work() {
             ALICE,
             PREDEFINED_DEPOSIT_IDS[0],
             GC_BSX_TKN1_YIELD_FARM_ID,
-            FAIL_ON_DOUBLE_CLAIM
+            FAIL_ON_DOUBLECLAIM
         ));
 
         assert_eq!(
@@ -585,7 +563,7 @@ fn claim_rewards_double_claim_in_the_same_period_should_not_work() {
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 GC_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             ),
             Error::<Test, Instance1>::DoubleClaimInPeriod
         );
@@ -595,7 +573,7 @@ fn claim_rewards_double_claim_in_the_same_period_should_not_work() {
 #[test]
 fn claim_rewards_from_canceled_yield_farm_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        const FAIL_ON_DOUBLE_CLAIM: bool = true;
+        const FAIL_ON_DOUBLECLAIM: bool = true;
         let global_farm_id = GC_FARM;
         let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
         let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
@@ -613,7 +591,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 GC_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             )
             .unwrap(),
             (global_farm_id, BSX, expected_claimed_rewards, unclaimable_rewards)
@@ -655,7 +633,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
 
 #[test]
 fn claim_rewards_from_removed_yield_farm_should_not_work() {
-    const FAIL_ON_DOUBLE_CLAIM: bool = true;
+    const FAIL_ON_DOUBLECLAIM: bool = true;
     predefined_test_ext_with_deposits().execute_with(|| {
         //Stop yield farming before removing.
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM,));
@@ -673,7 +651,7 @@ fn claim_rewards_from_removed_yield_farm_should_not_work() {
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 GC_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM
+                FAIL_ON_DOUBLECLAIM
             ),
             Error::<Test, Instance1>::YieldFarmNotFound
         );
@@ -681,15 +659,15 @@ fn claim_rewards_from_removed_yield_farm_should_not_work() {
 }
 
 #[test]
-fn claim_rewards_double_claim_should_work() {
-    const DONT_FAIL_ON_DOUBLE_CLAIM: bool = false;
+fn claim_rewards_doubleclaim_should_work() {
+    const FAIL_ON_DOUBLECLAIM: bool = true;
 
     predefined_test_ext_with_deposits().execute_with(|| {
         let (_, _, claimable_rewards, unclaimable_rewards) = LiquidityMining::claim_rewards(
             ALICE,
             PREDEFINED_DEPOSIT_IDS[0],
             GC_BSX_TKN1_YIELD_FARM_ID,
-            DONT_FAIL_ON_DOUBLE_CLAIM,
+            !FAIL_ON_DOUBLECLAIM,
         )
         .unwrap();
 
@@ -702,7 +680,7 @@ fn claim_rewards_double_claim_should_work() {
             ALICE,
             PREDEFINED_DEPOSIT_IDS[0],
             GC_BSX_TKN1_YIELD_FARM_ID,
-            DONT_FAIL_ON_DOUBLE_CLAIM,
+            !FAIL_ON_DOUBLECLAIM,
         )
         .unwrap();
 
@@ -710,13 +688,12 @@ fn claim_rewards_double_claim_should_work() {
         assert_eq!(unclaimable_rewards, 70_094);
 
         //check if double claim fails
-        const FAIL_ON_DOUBLE_CLAIM: bool = true;
         assert_noop!(
             LiquidityMining::claim_rewards(
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
                 GC_BSX_TKN1_YIELD_FARM_ID,
-                FAIL_ON_DOUBLE_CLAIM,
+                FAIL_ON_DOUBLECLAIM,
             ),
             Error::<Test, Instance1>::DoubleClaimInPeriod
         );

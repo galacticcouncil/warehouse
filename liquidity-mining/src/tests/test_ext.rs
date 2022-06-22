@@ -6,9 +6,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-//
 // http://www.apache.org/licenses/LICENSE-2.0
-//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -194,9 +192,6 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
 
         let yield_farm = get_predefined_yield_farm_ins1(5);
         init_yield_farm_ins1(EVE, EVE_FARM, BSX_TKN2_AMM, BSX, TKN2, yield_farm);
-
-        reset_on_rpvs_update();
-        reset_on_rpz_update();
     });
 
     ext
@@ -232,67 +227,48 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
     ext.execute_with(|| {
         let farm_id = GC_FARM;
 
-        let bsx_tkn1_assets = AssetPair {
-            asset_in: BSX,
-            asset_out: TKN1,
-        };
-
-        let bsx_tkn2_assets = AssetPair {
-            asset_in: BSX,
-            asset_out: TKN2,
-        };
-
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
         let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
         let bsx_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
-        let bsx_tkn1_amm_account =
-            AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(bsx_tkn1_assets)).unwrap().0);
-        let bsx_tkn2_amm_account =
-            AMM_POOLS.with(|v| v.borrow().get(&asset_pair_to_map_key(bsx_tkn2_assets)).unwrap().0);
 
         //DEPOSIT 1:
         set_block_number(1_800); //18-th period
 
-        //This is done because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 50, 0).unwrap();
-
         let deposited_amount = 50;
         assert_ok!(LiquidityMining::deposit_lp_shares(
-            ALICE,
             farm_id,
             GC_BSX_TKN1_YIELD_FARM_ID,
             BSX_TKN1_AMM,
             deposited_amount,
+            |_, _| { 50_u128 },
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).is_some());
 
         // DEPOSIT 2 (deposit in same period):
-
-        //This is done because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 52, 0).unwrap();
-
         let deposited_amount = 80;
         assert_eq!(
-            LiquidityMining::deposit_lp_shares(BOB, farm_id, GC_BSX_TKN1_YIELD_FARM_ID, BSX_TKN1_AMM, deposited_amount,)
-                .unwrap(),
+            LiquidityMining::deposit_lp_shares(
+                farm_id,
+                GC_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                deposited_amount,
+                |_, _| { 52_u128 },
+            )
+            .unwrap(),
             PREDEFINED_DEPOSIT_IDS[1]
         );
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[1]).is_some());
 
         // DEPOSIT 3 (same period, second yield farm):
-
-        //This is done because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 8, 0).unwrap();
-
         let deposited_amount = 25;
         assert_ok!(LiquidityMining::deposit_lp_shares(
-            BOB,
             farm_id,
             GC_BSX_TKN2_YIELD_FARM_ID,
             BSX_TKN2_AMM,
             deposited_amount,
+            |_, _| { 8_u128 },
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]).is_some());
@@ -300,16 +276,13 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         // DEPOSIT 4 (new period):
         set_block_number(2051); //period 20
 
-        //This is done because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 58, 0).unwrap();
-
         let deposited_amount = 800;
         assert_ok!(LiquidityMining::deposit_lp_shares(
-            BOB,
             farm_id,
             GC_BSX_TKN2_YIELD_FARM_ID,
             BSX_TKN2_AMM,
             deposited_amount,
+            |_, _| { 58_u128 },
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[3]).is_some());
@@ -317,16 +290,13 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         // DEPOSIT 5 (same period, second yield farm):
         set_block_number(2_586); //period 25
 
-        //This is done because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 3, 0).unwrap();
-
         let deposited_amount = 87;
         assert_ok!(LiquidityMining::deposit_lp_shares(
-            ALICE,
             farm_id,
             GC_BSX_TKN2_YIELD_FARM_ID,
             BSX_TKN2_AMM,
             deposited_amount,
+            |_, _| { 3_u128 },
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[4]).is_some());
@@ -334,16 +304,13 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         // DEPOSIT 6 (same period):
         set_block_number(2_596); //period 25
 
-        //This is done because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn2_amm_account, BSX, 16, 0).unwrap();
-
         let deposited_amount = 48;
         assert_ok!(LiquidityMining::deposit_lp_shares(
-            ALICE,
             farm_id,
             GC_BSX_TKN2_YIELD_FARM_ID,
             BSX_TKN2_AMM,
             deposited_amount,
+            |_, _| { 16_u128 },
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[5]).is_some());
@@ -351,16 +318,13 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         // DEPOSIT 7 : (same period different liq poll farm)
         set_block_number(2_596); //period 25
 
-        //This is done because amount of incentivized token in AMM is used in calculations.
-        Tokens::set_balance(Origin::root(), bsx_tkn1_amm_account, BSX, 80, 0).unwrap();
-
         let deposited_amount = 486;
         assert_ok!(LiquidityMining::deposit_lp_shares(
-            ALICE,
             farm_id,
             GC_BSX_TKN1_YIELD_FARM_ID,
             BSX_TKN1_AMM,
             deposited_amount,
+            |_, _| { 80_u128 },
         ));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[6]).is_some());
@@ -425,17 +389,6 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         //Check of claimed amount from global farm (sum of all claims).
         assert_eq!(Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account), 212_400);
         assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 952_000);
-
-        //Balance check after transfer amm shares.
-        assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE), 3_000_000 - 536);
-        assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &ALICE), 3_000_000 - 135);
-
-        //Balance check after transfer amm shares
-        assert_eq!(Tokens::free_balance(BSX_TKN1_SHARE_ID, &BOB), 2_000_000 - 80);
-        assert_eq!(Tokens::free_balance(BSX_TKN2_SHARE_ID, &BOB), 2_000_000 - 825);
-
-        reset_on_rpvs_update();
-        reset_on_rpz_update();
     });
 
     ext

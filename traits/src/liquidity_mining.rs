@@ -1,5 +1,4 @@
 use sp_arithmetic::{FixedU128, Permill};
-use liquidity_mining::{GlobalFarmId, YieldFarmId, DepositId, FarmMultiplier};
 
 pub trait AmmProvider<AssetId, AmmPoolId, Balance> {
     /// Returns balance of asset in amm pool
@@ -45,7 +44,9 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     type AmmPoolId;
     type Balance;
     type Period;
+    type LoyaltyCurve;
 
+    #[allow(clippy::too_many_arguments)]
     fn create_global_farm(
         total_rewards: Self::Balance,
         planned_yielding_periods: Self::Period,
@@ -56,84 +57,77 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         yield_per_period: Permill,
         min_deposit: Self::Balance,
         price_adjustment: FixedU128,
-    ) -> Result<(GlobalFarmId, Self::Balance), Self::Error>;
+    ) -> Result<(u32, Self::Balance), Self::Error>;
 
     fn destroy_global_farm(
         who: AccountId,
-        farm_id: GlobalFarmId,
+        global_farm_id: u32,
     ) -> Result<(AssetId, Self::Balance, AccountId), Self::Error>;
 
     fn create_yield_farm(
         who: AccountId,
-        global_farm_id: GlobalFarmId,
-        multiplier: FarmMultiplier,
-        loyalty_curve: Option<LoyaltyCurve>,
+        global_farm_id: u32,
+        multiplier: FixedU128,
+        loyalty_curve: Option<Self::LoyaltyCurve>,
         amm_pool_id: Self::AmmPoolId,
         asset_a: AssetId,
         asset_b: AssetId,
-    ) -> Result<YieldFarmId, Self::Error>;
+    ) -> Result<u32, Self::Error>;
 
     fn update_yield_farm_multiplier(
         who: AccountId,
-        global_farm_id: GlobalFarmId,
+        global_farm_id: u32,
         amm_pool_id: Self::AmmPoolId,
-        multiplier: FarmMultiplier,
-    ) -> Result<YieldFarmId, Self::Error>;
+        multiplier: FixedU128,
+    ) -> Result<u32, Self::Error>;
 
-    fn stop_yield_farm(
-        who: AccountId,
-        global_farm_id: GlobalFarmId,
-        amm_pool_id: Self::AmmPoolId,
-    ) -> Result<Self::YieldFarmId, Self::Error>;
+    fn stop_yield_farm(who: AccountId, global_farm_id: u32, amm_pool_id: Self::AmmPoolId) -> Result<u32, Self::Error>;
 
     fn resume_yield_farm(
         who: AccountId,
-        global_farm_id: GlobalFarmId,
-        yield_farm_id: YieldFarmId,
+        global_farm_id: u32,
+        yield_farm_id: u32,
         amm_pool_id: Self::AmmPoolId,
-        multiplier: FarmMultiplier,
+        multiplier: FixedU128,
     ) -> Result<(), Self::Error>;
 
     fn destroy_yield_farm(
         who: AccountId,
-        global_farm_id: GlobalFarmId,
-        yield_farm_id: YieldFarmId,
+        global_farm_id: u32,
+        yield_farm_id: u32,
         amm_pool_id: Self::AmmPoolId,
     ) -> Result<(), Self::Error>;
 
     fn deposit_lp_shares(
-        who: AccountId,
-        global_farm_id: GlobalFarmId,
-        yield_farm_id: YieldFarmId,
-        amm_pool_id: AmmPoolId,
-        shares_amount: Balance,
-    ) -> Result<DepositId, Self::Error>;
+        global_farm_id: u32,
+        yield_farm_id: u32,
+        amm_pool_id: Self::AmmPoolId,
+        shares_amount: Self::Balance,
+        get_balance_in_amm: fn(AssetId, Self::AmmPoolId) -> Self::Balance,
+    ) -> Result<u128, Self::Error>;
 
     fn redeposit_lp_shares(
-        global_farm_id: GlobalFarmId,
-        yield_farm_id: YieldFarmId,
-        deposit_id: DepositId,
+        global_farm_id: u32,
+        yield_farm_id: u32,
+        deposit_id: u128,
+        get_balance_in_amm: fn(AssetId, Self::AmmPoolId) -> Self::Balance,
     ) -> Result<Self::Balance, Self::Error>;
 
+    #[allow(clippy::type_complexity)]
     fn claim_rewards(
         who: AccountId,
-        deposit_id: Self::DepositId,
-        yield_farm_id: Self::YieldFarmId,
-        check_double_claim: bool,
-    ) -> Result<(GlobalFarmId, AssetId, Self::Balance, Self::Balance), Self::Error>;
+        deposit_id: u128,
+        yield_farm_id: u32,
+        fail_on_doubleclaim: bool,
+    ) -> Result<(u32, AssetId, Self::Balance, Self::Balance), Self::Error>;
 
     fn withdraw_lp_shares(
-        who: AccountId,
-        deposit_id: DepositId,
-        yield_farm_id: YieldFarmId,
+        deposit_id: u128,
+        yield_farm_id: u32,
         unclaimable_rewards: Self::Balance,
-    ) -> Result<(GlobalFarmId, Self::Balance), Self::Error>;
+    ) -> Result<(u32, Self::Balance, bool), Self::Error>;
 
-    fn is_yield_farm_claimable(
-        global_farm_id: GlobalFarmId,
-        yield_farm_id: YieldFarmId,
-        amm_pool_id: Self::AmmPoolId,
-    ) -> bool;
+    fn is_yield_farm_claimable(global_farm_id: u32, yield_farm_id: u32, amm_pool_id: Self::AmmPoolId) -> bool;
 
-    fn get_global_farm_id(deposit_id: DepositId, yield_farm_id: YieldFarmId) -> Option<GlobalFarmId>;
+    fn get_global_farm_id(deposit_id: u128, yield_farm_id: u32) -> Option<u32>;
 }

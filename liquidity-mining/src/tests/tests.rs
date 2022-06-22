@@ -653,8 +653,6 @@ fn update_global_farm_should_work() {
         let mut ext = new_test_ext();
 
         ext.execute_with(|| {
-            reset_on_rpz_update();
-
             let farm_account_id = LiquidityMining::farm_account_id(*id).unwrap();
             let _ = Tokens::transfer(
                 Origin::signed(TREASURY),
@@ -691,7 +689,13 @@ fn update_global_farm_should_work() {
             assert_eq!(global_farm, expected_global_farm);
 
             if updated_at != current_period {
-                expect_on_accumulated_rzp_update((*id, *expected_accumulated_rpz, *total_shares_z));
+                frame_system::Pallet::<Test>::assert_has_event(mock::Event::LiquidityMining(
+                    Event::GlobalFarmAccRPZUpdated {
+                        global_farm_id: *id,
+                        accumulated_rpz: *expected_accumulated_rpz,
+                        total_shares_z: *total_shares_z,
+                    },
+                ));
             }
         });
     }
@@ -1441,7 +1445,6 @@ fn update_yield_farm_should_work() {
         let yield_farm_account_id = LiquidityMining::farm_account_id(*yield_farm_id).unwrap();
 
         ext.execute_with(|| {
-            reset_on_rpvs_update();
             let _ = Tokens::transfer(
                 Origin::signed(TREASURY),
                 global_farm_account_id,
@@ -1512,11 +1515,13 @@ fn update_yield_farm_should_work() {
             );
 
             if current_period != yield_farm_updated_at && !yield_farm_total_valued_shares.is_zero() {
-                expect_on_accumulated_rpvs_update((
-                    global_farm.id,
-                    *yield_farm_id,
-                    *expected_yield_farm_accumulated_rpvs,
-                    yield_farm.total_valued_shares,
+                frame_system::Pallet::<Test>::assert_has_event(mock::Event::LiquidityMining(
+                    Event::YieldFarmAccRPVSUpdated {
+                        global_farm_id: global_farm.id,
+                        yield_farm_id: *yield_farm_id,
+                        accumulated_rpvs: *expected_yield_farm_accumulated_rpvs,
+                        total_valued_shares: yield_farm.total_valued_shares,
+                    },
                 ));
             }
         });

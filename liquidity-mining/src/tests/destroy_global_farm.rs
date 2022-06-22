@@ -58,11 +58,11 @@ fn destroy_global_farm_should_work() {
 
         //Add deposit to yield farm so it will not be flushed on destroy.
         assert_ok!(LiquidityMining::deposit_lp_shares(
-            BOB,
             CHARLIE_FARM,
             yield_farm_id,
             ACA_KSM_AMM,
-            1_000
+            1_000,
+            |_, _| { 10_u128 },
         ));
 
         //Stop farming.

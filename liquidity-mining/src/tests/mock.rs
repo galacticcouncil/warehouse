@@ -60,7 +60,6 @@ pub const EVE: AccountId = 5;
 pub const TREASURY: AccountId = 6;
 pub const ACCOUNT_WITH_1M: AccountId = 7;
 pub const GC: AccountId = 8;
-pub const LP_SHARES_STASH: AccountId = 9;
 
 pub const INITIAL_BALANCE: u128 = 1_000_000_000_000;
 
@@ -119,8 +118,8 @@ frame_support::construct_runtime!(
     UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        LiquidityMining: liq_mining::<Instance1>::{Pallet, Storage},
-        LiquidityMining2: liq_mining::<Instance2>::{Pallet, Storage},
+        LiquidityMining: liq_mining::<Instance1>::{Pallet, Storage, Event<T>},
+        LiquidityMining2: liq_mining::<Instance2>::{Pallet, Storage, Event<T>},
         Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
     }
@@ -281,6 +280,7 @@ parameter_types! {
 }
 
 impl Config<Instance1> for Test {
+    type Event = Event;
     type CurrencyId = AssetId;
     type MultiCurrency = Tokens;
     type PalletId = LMPalletId;
@@ -288,7 +288,6 @@ impl Config<Instance1> for Test {
     type MinTotalFarmRewards = MinTotalFarmRewards;
     type BlockNumberProvider = MockBlockNumberProvider;
     type AmmPoolId = AccountId;
-    type LiquidityMiningHandler = TestLiquidityMiningHandler;
     type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit;
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
 }
@@ -302,6 +301,7 @@ parameter_types! {
 }
 
 impl Config<Instance2> for Test {
+    type Event = Event;
     type CurrencyId = AssetId;
     type MultiCurrency = Tokens;
     type PalletId = LMPalletId2;
@@ -309,101 +309,8 @@ impl Config<Instance2> for Test {
     type MinTotalFarmRewards = MinTotalFarmRewards2;
     type BlockNumberProvider = MockBlockNumberProvider;
     type AmmPoolId = AccountId;
-    type LiquidityMiningHandler = TestLiquidityMiningHandler;
     type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit2;
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
-}
-
-pub struct TestLiquidityMiningHandler {}
-
-impl hydradx_traits::liquidity_mining::AmmProvider<AssetId, AccountId, Balance> for TestLiquidityMiningHandler {
-    fn get_balance_in_amm(asset: AssetId, amm_pool: AccountId) -> Balance {
-        Tokens::free_balance(asset, &amm_pool)
-    }
-}
-
-impl hydradx_traits::liquidity_mining::OnUpdateHandler<GlobalFarmId, YieldFarmId, Balance>
-    for TestLiquidityMiningHandler
-{
-    fn on_accumulated_rpvs_update(
-        farm_id: GlobalFarmId,
-        liq_pool_farm_id: FarmId,
-        accumulated_rpvs: Balance,
-        total_valued_shares: Balance,
-    ) {
-        RPVS_UPDATED.with(|v| {
-            let mut p = v.borrow_mut();
-            p.0 = farm_id;
-            p.1 = liq_pool_farm_id;
-            p.2 = accumulated_rpvs;
-            p.3 = total_valued_shares;
-        });
-    }
-
-    fn on_accumulated_rpz_update(farm_id: GlobalFarmId, accumulated_rpz: Balance, total_shares_z: Balance) {
-        RPZ_UPDATED.with(|v| {
-            let mut p = v.borrow_mut();
-            p.0 = farm_id;
-            p.1 = accumulated_rpz;
-            p.2 = total_shares_z;
-        });
-    }
-}
-
-impl hydradx_traits::liquidity_mining::LockableLpShares<AccountId, AccountId, Balance, DepositId>
-    for TestLiquidityMiningHandler
-{
-    type Error = frame_support::dispatch::DispatchError;
-
-    fn lock_lp_shares(
-        amm_pool_id: AccountId,
-        who: AccountId,
-        amount: Balance,
-        _deposit_id: AccountId,
-    ) -> Result<(), DispatchError> {
-        let map = HashMap::from([
-            (BSX_ACA_AMM, BSX_ACA_SHARE_ID),
-            (BSX_KSM_AMM, BSX_KSM_SHARE_ID),
-            (BSX_DOT_AMM, BSX_DOT_SHARE_ID),
-            (BSX_ETH_AMM, BSX_ETH_SHARE_ID),
-            (BSX_HDX_AMM, BSX_HDX_SHARE_ID),
-            (BSX_TKN1_AMM, BSX_TKN1_SHARE_ID),
-            (BSX_TKN2_AMM, BSX_TKN2_SHARE_ID),
-            (KSM_DOT_AMM, KSM_DOT_SHARE_ID),
-            (ACA_KSM_AMM, ACA_KSM_SHARE_ID),
-        ]);
-
-        let lp_token = map.get(&amm_pool_id).unwrap();
-
-        Tokens::transfer(Origin::signed(who), LP_SHARES_STASH, *lp_token, amount)?;
-
-        Ok(())
-    }
-
-    fn unlock_lp_shares(
-        amm_pool_id: AccountId,
-        who: AccountId,
-        amount: Balance,
-        _deposit_id: AccountId,
-    ) -> Result<(), DispatchError> {
-        let map = HashMap::from([
-            (BSX_ACA_AMM, BSX_ACA_SHARE_ID),
-            (BSX_KSM_AMM, BSX_KSM_SHARE_ID),
-            (BSX_DOT_AMM, BSX_DOT_SHARE_ID),
-            (BSX_ETH_AMM, BSX_ETH_SHARE_ID),
-            (BSX_HDX_AMM, BSX_HDX_SHARE_ID),
-            (BSX_TKN1_AMM, BSX_TKN1_SHARE_ID),
-            (BSX_TKN2_AMM, BSX_TKN2_SHARE_ID),
-            (KSM_DOT_AMM, KSM_DOT_SHARE_ID),
-            (ACA_KSM_AMM, ACA_KSM_SHARE_ID),
-        ]);
-
-        let lp_token = map.get(&amm_pool_id).unwrap();
-
-        Tokens::transfer(Origin::signed(LP_SHARES_STASH), who, *lp_token, amount)?;
-
-        Ok(())
-    }
 }
 
 parameter_types! {
@@ -519,23 +426,4 @@ impl ExtBuilder {
 pub fn set_block_number(n: u64) {
     MockBlockNumberProvider::set(n);
     System::set_block_number(n);
-}
-
-pub fn reset_on_rpvs_update() {
-    RPVS_UPDATED.with(|v| {
-        let mut p = v.borrow_mut();
-        p.0 = 0;
-        p.1 = 0;
-        p.2 = 0;
-        p.3 = 0;
-    });
-}
-
-pub fn reset_on_rpz_update() {
-    RPZ_UPDATED.with(|v| {
-        let mut p = v.borrow_mut();
-        p.0 = 0;
-        p.1 = 0;
-        p.2 = 0;
-    });
 }

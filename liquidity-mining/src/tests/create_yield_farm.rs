@@ -394,11 +394,11 @@ fn add_yield_farm_global_farm_full_should_not_work() {
         //Stop and destroy yield farm (destroyed farm stays in the storage because of deposit)
         //deposit to yield so it's not flushed on destroy
         assert_ok!(LiquidityMining::deposit_lp_shares(
-            ALICE,
             GC_FARM,
             GC_BSX_TKN1_YIELD_FARM_ID,
             BSX_TKN1_AMM,
-            1_000
+            1_000,
+            |_, _| { 10_u128 }
         ));
 
         //stop and destroy

@@ -108,6 +108,7 @@ use frame_support::{
     PalletId,
 };
 
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::ArithmeticError;
 
 use hydra_dx_math::liquidity_mining as math;
@@ -119,9 +120,7 @@ use sp_arithmetic::{
 };
 use sp_std::convert::{From, Into, TryInto};
 
-type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type AssetIdOf<T, I = ()> = <T as pallet::Config<I>>::CurrencyId;
-type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 type PeriodOf<T> = <T as frame_system::Config>::BlockNumber;
 
 #[frame_support::pallet]
@@ -349,7 +348,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         blocks_per_period: BlockNumberFor<T>,
         incentivized_asset: AssetIdOf<T, I>,
         reward_currency: AssetIdOf<T, I>,
-        owner: AccountIdOf<T>,
+        owner: T::AccountId,
         yield_per_period: Permill,
         min_deposit: Balance,
         price_adjustment: FixedU128,
@@ -412,9 +411,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `who`: farm's owner.
     /// - `farm_id`: id of farm to be destroyed.
     fn destroy_global_farm(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         farm_id: GlobalFarmId,
-    ) -> Result<(T::CurrencyId, Balance, AccountIdOf<T>), DispatchError> {
+    ) -> Result<(T::CurrencyId, Balance, T::AccountId), DispatchError> {
         <GlobalFarm<T, I>>::try_mutate_exists(farm_id, |maybe_global_farm| {
             let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
 
@@ -462,7 +461,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `asset_a`: one of the assets in the AMM.
     /// - `asset_b`: second asset in the AMM.
     fn create_yield_farm(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         global_farm_id: GlobalFarmId,
         multiplier: FarmMultiplier,
         loyalty_curve: Option<LoyaltyCurve>,
@@ -542,7 +541,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `multiplier`: new yield farm multiplier.
     /// - `amm_pool_id`: identifier of the AMM pool.
     fn update_yield_farm_multiplier(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         global_farm_id: GlobalFarmId,
         amm_pool_id: T::AmmPoolId,
         multiplier: FarmMultiplier,
@@ -601,7 +600,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `global_farm_id`: farm id in which yield farm will be stopped.
     /// - `amm_pool_id`: identifier of the AMM pool.
     fn stop_yield_farm(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         global_farm_id: GlobalFarmId,
         amm_pool_id: T::AmmPoolId,
     ) -> Result<YieldFarmId, DispatchError> {
@@ -672,7 +671,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `amm_pool_id`: identifier of the AMM pool.
     /// - `multiplier`: yield farm's multiplier.
     fn resume_yield_farm(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         amm_pool_id: T::AmmPoolId,
@@ -752,7 +751,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `yield_farm_id`: yield farm id of farm to destroy.
     /// - `amm_pool_id`: identifier of the AMM pool.
     fn destroy_yield_farm(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         amm_pool_id: T::AmmPoolId,
@@ -881,7 +880,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `yield_farm_id`: identifier of yield farm to withdrawn from.
     /// - `check_double_claim`: fn failed on second claim in the same period if set to `true`.
     fn claim_rewards(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         deposit_id: DepositId,
         yield_farm_id: YieldFarmId,
         fail_on_doubleclaim: bool,
@@ -1167,7 +1166,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// This function returns account from `FarmId` or error.
     ///
     /// WARN: farm_id = 0 is same as `T::PalletId::get().into_account()`. 0 is not valid value.
-    pub fn farm_account_id(farm_id: FarmId) -> Result<AccountIdOf<T>, Error<T, I>> {
+    pub fn farm_account_id(farm_id: FarmId) -> Result<T::AccountId, Error<T, I>> {
         Self::validate_farm_id(farm_id)?;
 
         Ok(T::PalletId::get().into_sub_account(farm_id))
@@ -1462,8 +1461,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     }
 }
 
-impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::CurrencyId, BlockNumberFor<T>>
-    for Pallet<T>
+impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::AccountId, T::CurrencyId, BlockNumberFor<T>>
+    for Pallet<T, I>
 {
     type Error = DispatchError;
 
@@ -1478,7 +1477,7 @@ impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::Curr
         blocks_per_period: BlockNumberFor<T>,
         incentivized_asset: T::CurrencyId,
         reward_currency: T::CurrencyId,
-        owner: AccountIdOf<T>,
+        owner: T::AccountId,
         yield_per_period: Permill,
         min_deposit: Self::Balance,
         price_adjustment: FixedU128,
@@ -1497,14 +1496,14 @@ impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::Curr
     }
 
     fn destroy_global_farm(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         global_farm_id: u32,
-    ) -> Result<(T::CurrencyId, Self::Balance, AccountIdOf<T>), Self::Error> {
+    ) -> Result<(T::CurrencyId, Self::Balance, T::AccountId), Self::Error> {
         Self::destroy_global_farm(who, global_farm_id)
     }
 
     fn create_yield_farm(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         global_farm_id: u32,
         multiplier: FixedU128,
         loyalty_curve: Option<Self::LoyaltyCurve>,
@@ -1524,7 +1523,7 @@ impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::Curr
     }
 
     fn update_yield_farm_multiplier(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         global_farm_id: u32,
         amm_pool_id: Self::AmmPoolId,
         multiplier: FixedU128,
@@ -1533,7 +1532,7 @@ impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::Curr
     }
 
     fn stop_yield_farm(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         global_farm_id: u32,
         amm_pool_id: Self::AmmPoolId,
     ) -> Result<u32, Self::Error> {
@@ -1541,7 +1540,7 @@ impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::Curr
     }
 
     fn resume_yield_farm(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         global_farm_id: u32,
         yield_farm_id: u32,
         amm_pool_id: Self::AmmPoolId,
@@ -1551,7 +1550,7 @@ impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::Curr
     }
 
     fn destroy_yield_farm(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         global_farm_id: u32,
         yield_farm_id: u32,
         amm_pool_id: Self::AmmPoolId,
@@ -1585,7 +1584,7 @@ impl<T: Config> hydradx_traits::liquidity_mining::Mutate<AccountIdOf<T>, T::Curr
     }
 
     fn claim_rewards(
-        who: AccountIdOf<T>,
+        who: T::AccountId,
         deposit_id: u128,
         yield_farm_id: u32,
         fail_on_doubleclaim: bool,

@@ -32,7 +32,7 @@ pub type DepositId = u128;
 #[scale_info(skip_type_params(I))]
 pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
     pub id: GlobalFarmId,
-    pub owner: AccountIdOf<T>,
+    pub owner: T::AccountId,
     pub updated_at: PeriodOf<T>,
     pub total_shares_z: Balance,
     pub accumulated_rpz: Balance,
@@ -63,7 +63,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         yield_per_period: Permill,
         planned_yielding_periods: PeriodOf<T>,
         blocks_per_period: T::BlockNumber,
-        owner: AccountIdOf<T>,
+        owner: T::AccountId,
         incentivized_asset: T::CurrencyId,
         max_reward_per_period: Balance,
         min_deposit: Balance,

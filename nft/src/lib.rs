@@ -127,7 +127,7 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
 
             ensure!(T::ReserveClassIdUpTo::get() < class_id, Error::<T>::IdReserved);
-            
+
             Self::do_create_class(sender, class_id, class_type, metadata)?;
 
             Ok(())

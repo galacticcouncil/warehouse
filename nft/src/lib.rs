@@ -126,6 +126,8 @@ pub mod pallet {
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
+            ensure!(T::ReserveClassIdUpTo::get() < class_id, Error::<T>::IdReserved);
+
             Self::do_create_class(sender, class_id, class_type, metadata)?;
 
             Ok(())
@@ -280,7 +282,6 @@ impl<T: Config> Pallet<T> {
         class_type: T::ClassType,
         metadata: BoundedVecOfUnq<T>,
     ) -> Result<(T::NftClassId, T::ClassType), DispatchError> {
-        ensure!(T::ReserveClassIdUpTo::get() < class_id, Error::<T>::IdReserved);
         ensure!(T::Permissions::can_create(&class_type), Error::<T>::NotPermitted);
 
         let deposit_info = match T::Permissions::has_deposit(&class_type) {

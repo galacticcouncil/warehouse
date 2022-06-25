@@ -203,7 +203,6 @@ impl SpotPriceProvider<AssetId> for SpotPrice {
     fn spot_price(asset_a: AssetId, asset_b: AssetId) -> Option<Self::Price> {
         match (asset_a, asset_b) {
             (HDX, SUPPORTED_CURRENCY_WITH_PRICE) => Some(FixedU128::from_float(0.1)),
-            (SUPPORTED_CURRENCY_WITH_PRICE, HDX) => Some(FixedU128::from_float(0.1)),
             _ => None,
         }
     }

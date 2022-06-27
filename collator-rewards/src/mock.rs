@@ -26,8 +26,6 @@ type AssetId = u32;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-
 pub const GC_COLL_1: AccountId = 1;
 pub const GC_COLL_2: AccountId = 2;
 pub const GC_COLL_3: AccountId = 3;
@@ -147,7 +145,6 @@ impl Config for Test {
     type RewardPerCollator = RewardPerCollator;
     type RewardCurrencyId = RewardCurrencyId;
     type ExcludedCollators = GcCollators;
-    type AuthorityId = AuraId;
     type SessionManager = MockSessionManager;
 }
 

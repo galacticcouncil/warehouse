@@ -51,8 +51,8 @@ use sp_std::marker::PhantomData;
 use frame_support::sp_runtime::FixedPointNumber;
 use frame_support::sp_runtime::FixedPointOperand;
 use frame_support::weights::{Pays, Weight};
-use hydradx_traits::pools::SpotPriceProvider;
-use orml_traits::{MultiCurrency, MultiCurrencyExtended};
+use hydradx_traits::{pools::SpotPriceProvider, NativePriceOracle};
+use orml_traits::{Happened, MultiCurrency, MultiCurrencyExtended};
 
 use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::SignedExtension;
@@ -61,16 +61,15 @@ use frame_support::traits::IsSubType;
 
 use scale_info::TypeInfo;
 
-use crate::traits::{CurrencyWithdraw, PaymentWithdrawResult};
+pub use crate::traits::*;
 use frame_support::dispatch::DispatchError;
 
 type AssetIdOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 type BalanceOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+type NegativeImbalanceOf<C, T> = <C as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
 /// Spot price type
 pub type Price = FixedU128;
-
-type NegativeImbalanceOf<C, T> = <C as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -137,6 +136,10 @@ pub mod pallet {
         /// Native Asset
         #[pallet::constant]
         type NativeAssetId: Get<AssetIdOf<Self>>;
+
+        /// Account where fees are deposited
+        #[pallet::constant]
+        type FeeReceiver: Get<Self::AccountId>;
     }
 
     #[pallet::event]
@@ -144,19 +147,28 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// CurrencySet
         /// [who, currency]
-        CurrencySet(T::AccountId, AssetIdOf<T>),
+        CurrencySet {
+            account_id: T::AccountId,
+            asset_id: AssetIdOf<T>,
+        },
 
         /// New accepted currency added
         /// [currency]
-        CurrencyAdded(AssetIdOf<T>),
+        CurrencyAdded { asset_id: AssetIdOf<T> },
 
         /// Accepted currency removed
         /// [currency]
-        CurrencyRemoved(AssetIdOf<T>),
+        CurrencyRemoved { asset_id: AssetIdOf<T> },
 
         /// Transaction fee paid in non-native currency
         /// [Account, Currency, Native fee amount, Non-native fee amount, Destination account]
-        FeeWithdrawn(T::AccountId, AssetIdOf<T>, BalanceOf<T>, BalanceOf<T>, T::AccountId),
+        FeeWithdrawn {
+            account_id: T::AccountId,
+            asset_id: AssetIdOf<T>,
+            native_fee_amount: BalanceOf<T>,
+            non_native_fee_amount: BalanceOf<T>,
+            destination_account_id: T::AccountId,
+        },
     }
 
     #[pallet::error]
@@ -181,9 +193,6 @@ pub mod pallet {
 
         /// Math overflow
         Overflow,
-
-        /// Fallback account is not set.
-        FallbackAccountNotSet,
     }
 
     /// Account currency map
@@ -191,25 +200,19 @@ pub mod pallet {
     #[pallet::getter(fn get_currency)]
     pub type AccountCurrencyMap<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, AssetIdOf<T>, OptionQuery>;
 
-    /// Curated list of currencies which fees can be paid with
+    /// Curated list of currencies which fees can be paid mapped to corresponding fallback price
     #[pallet::storage]
     #[pallet::getter(fn currencies)]
     pub type AcceptedCurrencies<T: Config> = StorageMap<_, Twox64Concat, AssetIdOf<T>, Price, OptionQuery>;
 
-    /// Block storage for accepted currency price
+    /// Asset prices from the spot price provider or the fallback price if the price is not available. Updated at the beginning of every block.
     #[pallet::storage]
     #[pallet::getter(fn currency_price)]
     pub type AcceptedCurrencyPrice<T: Config> = StorageMap<_, Twox64Concat, AssetIdOf<T>, Price, OptionQuery>;
 
-    /// Account to use when pool does not exist.
-    #[pallet::storage]
-    #[pallet::getter(fn fallback_account)]
-    pub type FallbackAccount<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
-
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub currencies: Vec<(AssetIdOf<T>, Price)>,
-        pub fallback_account: Option<T::AccountId>,
         pub account_currencies: Vec<(T::AccountId, AssetIdOf<T>)>,
     }
 
@@ -218,7 +221,6 @@ pub mod pallet {
         fn default() -> Self {
             GenesisConfig {
                 currencies: vec![],
-                fallback_account: None,
                 account_currencies: vec![],
             }
         }
@@ -227,12 +229,6 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            if self.fallback_account == None {
-                panic!("Fallback account is not set");
-            }
-
-            FallbackAccount::<T>::put(self.fallback_account.clone().expect("Fallback account is not set"));
-
             for (asset, price) in &self.currencies {
                 AcceptedCurrencies::<T>::insert(asset, price);
             }
@@ -270,10 +266,13 @@ pub mod pallet {
                 <AccountCurrencyMap<T>>::insert(who.clone(), currency);
 
                 if T::WithdrawFeeForSetCurrency::get() == Pays::Yes {
-                    Self::withdraw_set_fee(&who)?;
+                    Self::transfer_set_fee(&who)?;
                 }
 
-                Self::deposit_event(Event::CurrencySet(who, currency));
+                Self::deposit_event(Event::CurrencySet {
+                    account_id: who,
+                    asset_id: currency,
+                });
 
                 return Ok(());
             }
@@ -300,7 +299,7 @@ pub mod pallet {
                 }
 
                 *maybe_price = Some(price);
-                Self::deposit_event(Event::CurrencyAdded(currency));
+                Self::deposit_event(Event::CurrencyAdded { asset_id: currency });
                 Ok(())
             })
         }
@@ -324,7 +323,7 @@ pub mod pallet {
 
                 *x = None;
 
-                Self::deposit_event(Event::CurrencyRemoved(currency));
+                Self::deposit_event(Event::CurrencyRemoved { asset_id: currency });
 
                 Ok(())
             })
@@ -340,59 +339,29 @@ where
         Pallet::<T>::get_currency(who).unwrap_or_else(T::NativeAssetId::get)
     }
 
-    /// Execute a trade to buy HDX and sell selected currency.
-    pub fn withdraw_fee_non_native(
-        who: &T::AccountId,
-        fee: BalanceOf<T>,
-    ) -> Result<PaymentWithdrawResult, DispatchError> {
-        let currency = Self::account_currency(who);
-
-        if currency == T::NativeAssetId::get() {
-            Ok(PaymentWithdrawResult::Native)
-        } else {
-            let price = if let Some(spot_price) = Self::currency_price(currency) {
-                spot_price
-            } else {
-                // If not loaded in on_init, let's try first the spot price provider again
-                // This is unlikely scenario as the price would be retrieved in on_init for each block
-                if let Some(spot_price) = T::SpotPriceProvider::spot_price(T::NativeAssetId::get(), currency) {
-                    spot_price
-                } else {
-                    Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?
-                }
-            };
-
-            let amount = price.checked_mul_int(fee).ok_or(Error::<T>::Overflow)?;
-
-            T::Currencies::transfer(
-                currency,
-                who,
-                &Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
-                amount,
-            )?;
-
-            Self::deposit_event(Event::FeeWithdrawn(
-                who.clone(),
-                currency,
-                fee,
-                amount,
-                Self::fallback_account().ok_or(Error::<T>::FallbackAccountNotSet)?,
-            ));
-
-            Ok(PaymentWithdrawResult::Transferred)
-        }
-    }
-
-    pub fn withdraw_set_fee(who: &T::AccountId) -> DispatchResult {
+    /// Transfer fee without executing an AMM trade
+    pub fn transfer_set_fee(who: &T::AccountId) -> DispatchResult {
         let base_fee = Self::weight_to_fee(T::BlockWeights::get().get(DispatchClass::Normal).base_extrinsic);
         let adjusted_weight_fee = Self::weight_to_fee(T::WeightInfo::set_currency());
         let fee = base_fee.saturating_add(adjusted_weight_fee);
+        let (currency, maybe_price) = Self::get_currency_and_price(who)?;
 
-        let result = Self::withdraw(who, fee)?;
-        match result {
-            PaymentWithdrawResult::Transferred => Ok(()),
-            PaymentWithdrawResult::Native => T::Currencies::withdraw(T::NativeAssetId::get(), who, fee),
-        }
+        let amount = match maybe_price {
+            None => fee,
+            Some(price) => price.checked_mul_int(fee).ok_or(Error::<T>::Overflow)?,
+        };
+
+        T::Currencies::transfer(currency, who, &T::FeeReceiver::get(), amount)?;
+
+        Self::deposit_event(Event::FeeWithdrawn {
+            account_id: who.clone(),
+            asset_id: currency,
+            native_fee_amount: fee,
+            non_native_fee_amount: amount,
+            destination_account_id: T::FeeReceiver::get(),
+        });
+
+        Ok(())
     }
 
     fn weight_to_fee(weight: Weight) -> BalanceOf<T> {
@@ -408,21 +377,165 @@ where
         };
         Ok(())
     }
+
+    fn get_currency_and_price(
+        who: &<T as frame_system::Config>::AccountId,
+    ) -> Result<(AssetIdOf<T>, Option<Price>), DispatchError> {
+        let native_currency = T::NativeAssetId::get();
+        let currency = Self::account_currency(who);
+        if currency == T::NativeAssetId::get() {
+            Ok((native_currency, None))
+        } else {
+            let price = if let Some(spot_price) = Self::currency_price(currency) {
+                spot_price
+            } else {
+                // If not loaded in on_init, let's try first the spot price provider again
+                // This is unlikely scenario as the price would be retrieved in on_init for each block
+                if let Some(spot_price) = T::SpotPriceProvider::spot_price(T::NativeAssetId::get(), currency) {
+                    spot_price
+                } else {
+                    Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?
+                }
+            };
+
+            Ok((currency, Some(price)))
+        }
+    }
 }
 
-impl<T: Config> CurrencyWithdraw<<T as frame_system::Config>::AccountId, BalanceOf<T>> for Pallet<T>
+impl<T: Config> TransactionMultiPaymentDataProvider<<T as frame_system::Config>::AccountId, AssetIdOf<T>, Price>
+    for Pallet<T>
 where
     BalanceOf<T>: FixedPointOperand,
 {
-    fn withdraw(who: &T::AccountId, fee: BalanceOf<T>) -> Result<PaymentWithdrawResult, DispatchError> {
-        Self::withdraw_fee_non_native(who, fee)
+    fn get_currency_and_price(
+        who: &<T as frame_system::Config>::AccountId,
+    ) -> Result<(AssetIdOf<T>, Option<Price>), DispatchError> {
+        Self::get_currency_and_price(who)
+    }
+
+    fn get_fee_receiver() -> <T as frame_system::Config>::AccountId {
+        T::FeeReceiver::get()
+    }
+}
+
+/// Deposits all fees to some account
+pub struct DepositAll<T>(PhantomData<T>);
+
+impl<T: Config> DepositFee<T::AccountId, AssetIdOf<T>, BalanceOf<T>> for DepositAll<T> {
+    fn deposit_fee(who: &T::AccountId, currency: AssetIdOf<T>, amount: BalanceOf<T>) -> DispatchResult {
+        <T as Config>::Currencies::deposit(currency, who, amount)?;
+        Ok(())
     }
 }
 
 /// Implements the transaction payment for native as well as non-native currencies
-pub struct MultiCurrencyAdapter<C, OU, SW>(PhantomData<(C, OU, SW)>);
+pub struct TransferFees<MC, DP, DF>(PhantomData<(MC, DP, DF)>);
 
-impl<T, C, OU, SW> OnChargeTransaction<T> for MultiCurrencyAdapter<C, OU, SW>
+impl<T, MC, DP, DF> OnChargeTransaction<T> for TransferFees<MC, DP, DF>
+where
+    T: Config,
+    MC: MultiCurrency<<T as frame_system::Config>::AccountId>,
+    AssetIdOf<T>: Into<MC::CurrencyId>,
+    MC::Balance: FixedPointOperand,
+    DP: TransactionMultiPaymentDataProvider<T::AccountId, AssetIdOf<T>, Price>,
+    DF: DepositFee<T::AccountId, MC::CurrencyId, MC::Balance>,
+{
+    type LiquidityInfo = Option<PaymentInfo<Self::Balance, AssetIdOf<T>, Price>>;
+    type Balance = <MC as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+
+    /// Withdraw the predicted fee from the transaction origin.
+    ///
+    /// Note: The `fee` already includes the `tip`.
+    fn withdraw_fee(
+        who: &T::AccountId,
+        _call: &T::Call,
+        _info: &DispatchInfoOf<T::Call>,
+        fee: Self::Balance,
+        _tip: Self::Balance,
+    ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
+        if fee.is_zero() {
+            return Ok(None);
+        }
+        // get the currency in which fees are paid. In case of non-native currency, the price is required to calculate final fee.
+        let currency_data = DP::get_currency_and_price(who)
+            .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+
+        match currency_data {
+            (_, None) => match MC::withdraw(T::NativeAssetId::get().into(), who, fee) {
+                Ok(()) => Ok(Some(PaymentInfo::Native(fee))),
+                Err(_) => Err(InvalidTransaction::Payment.into()),
+            },
+            (currency, Some(price)) => {
+                let converted_fee = price
+                    .checked_mul_int(fee)
+                    .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+                match MC::withdraw(currency.into(), who, converted_fee) {
+                    Ok(()) => Ok(Some(PaymentInfo::NonNative(converted_fee, currency, price))),
+                    Err(_) => Err(InvalidTransaction::Payment.into()),
+                }
+            }
+        }
+    }
+
+    /// Since the predicted fee might have been too high, parts of the fee may
+    /// be refunded.
+    ///
+    /// Note: The `fee` already includes the `tip`.
+    fn correct_and_deposit_fee(
+        who: &T::AccountId,
+        _dispatch_info: &DispatchInfoOf<T::Call>,
+        _post_info: &PostDispatchInfoOf<T::Call>,
+        corrected_fee: Self::Balance,
+        tip: Self::Balance,
+        already_withdrawn: Self::LiquidityInfo,
+    ) -> Result<(), TransactionValidityError> {
+        let fee_receiver = DP::get_fee_receiver();
+
+        if let Some(paid) = already_withdrawn {
+            // Calculate how much refund we should return
+            let (currency, refund, fee, tip) = match paid {
+                PaymentInfo::Native(paid_fee) => (
+                    T::NativeAssetId::get().into(),
+                    paid_fee.saturating_sub(corrected_fee),
+                    corrected_fee.saturating_sub(tip),
+                    tip,
+                ),
+                PaymentInfo::NonNative(paid_fee, currency, price) => {
+                    // calculate corrected_fee in the non-native currency
+                    let converted_corrected_fee = price
+                        .checked_mul_int(corrected_fee)
+                        .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+                    let refund = paid_fee.saturating_sub(converted_corrected_fee);
+                    let converted_tip = price
+                        .checked_mul_int(tip)
+                        .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+                    (
+                        currency.into(),
+                        refund,
+                        converted_corrected_fee.saturating_sub(converted_tip),
+                        converted_tip,
+                    )
+                }
+            };
+
+            // refund to the account that paid the fees
+            MC::deposit(currency, who, refund)
+                .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+
+            // deposit the fee
+            DF::deposit_fee(&fee_receiver, currency, fee + tip)
+                .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+        }
+
+        Ok(())
+    }
+}
+
+/// Implements the transaction payment for native as well as non-native currencies
+pub struct WithdrawFees<C, OU, SW>(PhantomData<(C, OU, SW)>);
+
+impl<T, C, OU, SW> OnChargeTransaction<T> for WithdrawFees<C, OU, SW>
 where
     T: Config,
     T::TransactionByteFee: Get<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance>,
@@ -574,5 +687,41 @@ impl<T: Config + Send + Sync> CurrencyBalanceCheck<T> {
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::new_without_default))]
     pub fn new() -> Self {
         Self(sp_std::marker::PhantomData)
+    }
+}
+
+/// We provide an oracle for the price of all currencies accepted as fee payment.
+impl<T: Config> NativePriceOracle<AssetIdOf<T>, Price> for Pallet<T> {
+    fn price(currency: AssetIdOf<T>) -> Option<Price> {
+        Pallet::<T>::currency_price(currency)
+    }
+}
+
+/// Type to automatically add a fee currency for an account on account creation.
+pub struct AddTxAssetOnAccount<T>(PhantomData<T>);
+impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for AddTxAssetOnAccount<T> {
+    fn happened((who, currency): &(T::AccountId, AssetIdOf<T>)) {
+        if !AccountCurrencyMap::<T>::contains_key(who)
+            && (*currency == T::NativeAssetId::get() || AcceptedCurrencies::<T>::contains_key(&currency))
+        {
+            AccountCurrencyMap::<T>::insert(who, currency);
+        }
+    }
+}
+
+/// Type to automatically remove the fee currency for an account on account deletion.
+///
+/// Note: The fee currency is only removed if the system account is gone or the account
+/// corresponding to the fee currency is empty.
+pub struct RemoveTxAssetOnKilled<T>(PhantomData<T>);
+impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for RemoveTxAssetOnKilled<T> {
+    fn happened((who, _currency): &(T::AccountId, AssetIdOf<T>)) {
+        if !frame_system::Pallet::<T>::account_exists(who) {
+            AccountCurrencyMap::<T>::remove(who);
+        } else if let Some(currency) = AccountCurrencyMap::<T>::get(who) {
+            if T::Currencies::total_balance(currency, who).is_zero() {
+                AccountCurrencyMap::<T>::remove(who);
+            }
+        }
     }
 }

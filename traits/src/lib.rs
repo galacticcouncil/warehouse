@@ -19,6 +19,8 @@
 #![allow(clippy::upper_case_acronyms)]
 
 pub mod pools;
+pub mod registry;
+pub use registry::*;
 
 use codec::{Decode, Encode};
 use frame_support::dispatch;
@@ -132,48 +134,6 @@ pub trait Resolver<AccountId, Intention, E> {
     fn resolve_matched_intentions(pair_account: &AccountId, intention: &Intention, matched: &[&Intention]);
 }
 
-pub trait Registry<AssetId, AssetName, Balance, Error> {
-    fn exists(name: AssetId) -> bool;
-
-    fn retrieve_asset(name: &AssetName) -> Result<AssetId, Error>;
-
-    fn create_asset(name: &AssetName, existential_deposit: Balance) -> Result<AssetId, Error>;
-
-    fn get_or_create_asset(name: AssetName, existential_deposit: Balance) -> Result<AssetId, Error> {
-        if let Ok(asset_id) = Self::retrieve_asset(&name) {
-            Ok(asset_id)
-        } else {
-            Self::create_asset(&name, existential_deposit)
-        }
-    }
-}
-
-pub trait ShareTokenRegistry<AssetId, AssetName, Balance, Error>: Registry<AssetId, AssetName, Balance, Error> {
-    fn retrieve_shared_asset(name: &AssetName, assets: &[AssetId]) -> Result<AssetId, Error>;
-
-    fn create_shared_asset(
-        name: &AssetName,
-        assets: &[AssetId],
-        existential_deposit: Balance,
-    ) -> Result<AssetId, Error>;
-
-    fn get_or_create_shared_asset(
-        name: AssetName,
-        assets: Vec<AssetId>,
-        existential_deposit: Balance,
-    ) -> Result<AssetId, Error> {
-        if let Ok(asset_id) = Self::retrieve_shared_asset(&name, &assets) {
-            Ok(asset_id)
-        } else {
-            Self::create_shared_asset(&name, &assets, existential_deposit)
-        }
-    }
-}
-
-pub trait AssetPairAccountIdFor<AssetId, AccountId> {
-    fn from_assets(asset_a: AssetId, asset_b: AssetId, identifier: &str) -> AccountId;
-}
-
 /// Handler used by AMM pools to perform some tasks when a new pool is created.
 pub trait OnCreatePoolHandler<AssetId> {
     /// Register an asset to be handled by price-oracle pallet.
@@ -212,4 +172,13 @@ pub trait CanCreatePool<AssetId> {
 
 pub trait LockedBalance<AssetId, AccountId, Balance> {
     fn get_by_lock(lock_id: LockIdentifier, currency_id: AssetId, who: AccountId) -> Balance;
+}
+
+/// Implementers of this trait provide the price of a given asset compared to the native currency.
+///
+/// So if `100` native tokens correspond to `200` ABC tokens, the price returned would be `2.0`.
+///
+/// Should return `None` if no price is available.
+pub trait NativePriceOracle<AssetId, Price> {
+    fn price(currency: AssetId) -> Option<Price>;
 }

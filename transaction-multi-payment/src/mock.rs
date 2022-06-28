@@ -17,14 +17,14 @@
 
 use super::*;
 pub use crate as multi_payment;
-use crate::{Config, MultiCurrencyAdapter};
+use crate::{Config, TransferFees};
 use frame_support::{parameter_types, weights::DispatchClass};
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup, Zero},
+    traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
 
@@ -34,7 +34,7 @@ use hydradx_traits::AssetPairAccountIdFor;
 use orml_currencies::BasicCurrencyAdapter;
 use std::cell::RefCell;
 
-use frame_support::traits::{Everything, GenesisBuild, Get};
+use frame_support::traits::{Everything, GenesisBuild, Get, Nothing};
 use hydradx_traits::pools::SpotPriceProvider;
 
 pub type AccountId = u64;
@@ -46,14 +46,16 @@ pub const INITIAL_BALANCE: Balance = 1_000_000_000_000_000u128;
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub const FALLBACK_ACCOUNT: AccountId = 300;
+pub const FEE_RECEIVER: AccountId = 300;
 
 pub const HDX: AssetId = 0;
 pub const SUPPORTED_CURRENCY: AssetId = 2000;
 pub const SUPPORTED_CURRENCY_WITH_PRICE: AssetId = 3000;
 pub const UNSUPPORTED_CURRENCY: AssetId = 4000;
+pub const SUPPORTED_CURRENCY_NO_BALANCE: AssetId = 5000; // Used for insufficient balance testing
+pub const HIGH_ED_CURRENCY: AssetId = 6000;
 
-pub const SUPPORTED_CURRENCY_NO_BALANCE: AssetId = 5000;
+pub const HIGH_ED: Balance = 5;
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 const MAX_BLOCK_WEIGHT: Weight = 1024;
@@ -93,10 +95,11 @@ parameter_types! {
     pub const SS58Prefix: u8 = 63;
 
     pub const HdxAssetId: u32 = 0;
-    pub const ExistentialDeposit: u128 = 0;
+    pub const ExistentialDeposit: u128 = 2;
     pub const MaxLocks: u32 = 50;
     pub const TransactionByteFee: Balance = 1;
     pub const RegistryStringLimit: u32 = 100;
+    pub const FeeReceiver: AccountId = FEE_RECEIVER;
 
     pub RuntimeBlockWeights: system::limits::BlockWeights = system::limits::BlockWeights::builder()
         .base_block(10)
@@ -155,6 +158,7 @@ impl Config for Test {
     type WithdrawFeeForSetCurrency = PayForSetCurrency;
     type WeightToFee = IdentityFee<Balance>;
     type NativeAssetId = HdxAssetId;
+    type FeeReceiver = FeeReceiver;
 }
 
 impl pallet_balances::Config for Test {
@@ -172,7 +176,7 @@ impl pallet_balances::Config for Test {
 }
 
 impl pallet_transaction_payment::Config for Test {
-    type OnChargeTransaction = MultiCurrencyAdapter<Balances, (), PaymentPallet>;
+    type OnChargeTransaction = TransferFees<Currencies, PaymentPallet, DepositAll<Test>>;
     type TransactionByteFee = TransactionByteFee;
     type OperationalFeeMultiplier = ();
     type WeightToFee = IdentityFee<Balance>;
@@ -209,8 +213,11 @@ impl SpotPriceProvider<AssetId> for SpotPrice {
 }
 
 parameter_type_with_key! {
-    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-        Zero::zero()
+    pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
+        match currency_id {
+            &HIGH_ED_CURRENCY => HIGH_ED,
+            _ => 2u128
+        }
     };
 }
 
@@ -223,7 +230,9 @@ impl orml_tokens::Config for Test {
     type ExistentialDeposits = ExistentialDeposits;
     type OnDust = ();
     type MaxLocks = ();
-    type DustRemovalWhitelist = Everything;
+    type DustRemovalWhitelist = Nothing;
+    type OnNewTokenAccount = AddTxAssetOnAccount<Test>;
+    type OnKilledTokenAccount = RemoveTxAssetOnKilled<Test>;
 }
 
 impl orml_currencies::Config for Test {
@@ -245,11 +254,10 @@ impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
             base_weight: 0,
-            native_balances: vec![(ALICE, INITIAL_BALANCE), (BOB, 0)],
+            native_balances: vec![(ALICE, INITIAL_BALANCE)],
             endowed_accounts: vec![
                 (ALICE, HDX, INITIAL_BALANCE),
-                (ALICE, SUPPORTED_CURRENCY_NO_BALANCE, 0u128), // Used for insufficient balance testing
-                (ALICE, SUPPORTED_CURRENCY, INITIAL_BALANCE),  // used for fallback price test
+                (ALICE, SUPPORTED_CURRENCY, INITIAL_BALANCE), // used for fallback price test
                 (ALICE, SUPPORTED_CURRENCY_WITH_PRICE, INITIAL_BALANCE),
             ],
 
@@ -306,8 +314,8 @@ impl ExtBuilder {
                 (SUPPORTED_CURRENCY_NO_BALANCE, Price::from(1)),
                 (SUPPORTED_CURRENCY, Price::from_float(1.5)),
                 (SUPPORTED_CURRENCY_WITH_PRICE, Price::from_float(0.5)),
+                (HIGH_ED_CURRENCY, Price::from(3)),
             ],
-            fallback_account: Some(FALLBACK_ACCOUNT),
             account_currencies: self.account_currencies,
         }
         .assimilate_storage(&mut t)

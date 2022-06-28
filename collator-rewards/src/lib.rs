@@ -106,7 +106,6 @@ impl<T: Config> SessionManager<T::AccountId> for Pallet<T> {
     fn new_session(index: SessionIndex) -> Option<Vec<T::AccountId>> {
         let maybe_collators = T::SessionManager::new_session(index);
         if let Some(ref collators) = maybe_collators {
-            // stores the collators; will be removed in `end_session` to avoid storage piling up
             Collators::<T>::insert(index, collators)
         }
         maybe_collators
@@ -119,6 +118,7 @@ impl<T: Config> SessionManager<T::AccountId> for Pallet<T> {
     fn end_session(index: SessionIndex) {
         T::SessionManager::end_session(index);
         let excluded = T::ExcludedCollators::get();
+        // remove the collators so we don't pile up storage
         for collator in Collators::<T>::take(index) {
             if !excluded.contains(&collator) {
                 let (currency, amount) = (T::RewardCurrencyId::get(), T::RewardPerCollator::get());

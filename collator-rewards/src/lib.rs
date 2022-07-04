@@ -24,10 +24,11 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use frame_support::traits::{Get, OneSessionHandler};
+use frame_support::traits::Get;
 
 use orml_traits::MultiCurrency;
-use sp_runtime::RuntimeAppPublic;
+use pallet_session::SessionManager;
+use sp_staking::SessionIndex;
 use sp_std::vec::Vec;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -76,8 +77,9 @@ pub mod pallet {
         /// List of collator which will not be rewarded.
         type ExcludedCollators: Get<Vec<Self::AccountId>>;
 
-        /// The identifier type for an authority.
-        type AuthorityId: Member + Parameter + RuntimeAppPublic + MaybeSerializeDeserialize + MaxEncodedLen;
+        /// The session manager this pallet will wrap that provides the collator account list on
+        /// `new_session`.
+        type SessionManager: SessionManager<Self::AccountId>;
     }
 
     #[pallet::error]
@@ -93,36 +95,42 @@ pub mod pallet {
             currency: T::CurrencyId,
         },
     }
+
+    #[pallet::storage]
+    #[pallet::getter(fn collators)]
+    /// Stores the collators per session (index).
+    pub type Collators<T: Config> = StorageMap<_, Twox64Concat, SessionIndex, Vec<T::AccountId>, ValueQuery>;
 }
 
-impl<T: Config> sp_runtime::BoundToRuntimeAppPublic for Pallet<T> {
-    type Public = T::AuthorityId;
-}
+impl<T: Config> SessionManager<T::AccountId> for Pallet<T> {
+    fn new_session(index: SessionIndex) -> Option<Vec<T::AccountId>> {
+        let maybe_collators = T::SessionManager::new_session(index);
+        if let Some(ref collators) = maybe_collators {
+            Collators::<T>::insert(index, collators)
+        }
+        maybe_collators
+    }
 
-impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
-    type Key = T::AuthorityId;
+    fn start_session(index: SessionIndex) {
+        T::SessionManager::start_session(index)
+    }
 
-    fn on_genesis_session<'a, I: 'a>(_collators: I) {}
-
-    fn on_new_session<'a, I: 'a>(_changed: bool, collators: I, _queued_validators: I)
-    where
-        I: Iterator<Item = (&'a T::AccountId, T::AuthorityId)>,
-    {
-        for (collator, _) in collators {
-            if !T::ExcludedCollators::get().contains(collator) {
-                let result = T::Currency::deposit(T::RewardCurrencyId::get(), collator, T::RewardPerCollator::get());
-                if result.is_ok() {
-                    Self::deposit_event(Event::CollatorRewarded {
-                        who: collator.clone(),
-                        amount: T::RewardPerCollator::get(),
-                        currency: T::RewardCurrencyId::get(),
-                    });
-                } else {
-                    log::warn!("Error reward collators: {:?}", result);
+    fn end_session(index: SessionIndex) {
+        T::SessionManager::end_session(index);
+        let excluded = T::ExcludedCollators::get();
+        // remove the collators so we don't pile up storage
+        for collator in Collators::<T>::take(index) {
+            if !excluded.contains(&collator) {
+                let (currency, amount) = (T::RewardCurrencyId::get(), T::RewardPerCollator::get());
+                match T::Currency::deposit(currency, &collator, amount) {
+                    Ok(_) => Self::deposit_event(Event::CollatorRewarded {
+                        who: collator,
+                        amount,
+                        currency,
+                    }),
+                    Err(err) => log::warn!(target: "runtime::collator-rewards", "Error reward collators: {:?}", err),
                 }
             }
         }
     }
-
-    fn on_disabled(_i: u32) {}
 }

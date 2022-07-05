@@ -61,7 +61,7 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 const MAX_BLOCK_WEIGHT: Weight = 1024;
 
 thread_local! {
-        static EXTRINSIC_BASE_WEIGHT: RefCell<u64> = RefCell::new(0);
+    static EXTRINSIC_BASE_WEIGHT: RefCell<u64> = RefCell::new(0);
 }
 
 pub struct ExtrinsicBaseWeight;

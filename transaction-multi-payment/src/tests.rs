@@ -304,6 +304,18 @@ fn account_currency_works() {
 
 #[test]
 fn data_provider_works() {
+    let go_to_next_block = || {
+        use frame_support::traits::Hooks;
+
+        let current = System::block_number();
+        PaymentPallet::on_finalize(current);
+
+        let next = current + 1;
+        System::set_block_number(next);
+        // Make sure the prices are up-to-date.
+        PaymentPallet::on_initialize(next);
+    };
+
     ExtBuilder::default().build().execute_with(|| {
         assert_eq!(PaymentPallet::get_fee_receiver(), FEE_RECEIVER);
         assert_eq!(
@@ -318,6 +330,8 @@ fn data_provider_works() {
         );
 
         assert_ok!(PaymentPallet::remove_currency(Origin::root(), SUPPORTED_CURRENCY));
+        // price is removed at the end of the block
+        go_to_next_block();
         assert_err!(
             PaymentPallet::get_currency_and_price(&ALICE),
             Error::<Test>::FallbackPriceNotFound

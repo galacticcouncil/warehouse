@@ -934,3 +934,20 @@ fn only_set_fee_currency_for_supported_currency() {
             assert_eq!(PaymentPallet::get_currency(BOB), None);
         });
 }
+
+#[test]
+fn returns_prices_for_supported_currencies() {
+    use hydradx_traits::NativePriceOracle;
+
+    ExtBuilder::default().build()
+        .execute_with(|| {
+            // returns constant price of 1 for native asset
+            assert_eq!(PaymentPallet::price(HdxAssetId::get()), Some(1.into()));
+            // returns default price configured at genesis
+            assert_eq!(PaymentPallet::price(SUPPORTED_CURRENCY_NO_BALANCE), Some(1.into()));
+            assert_eq!(PaymentPallet::price(SUPPORTED_CURRENCY), Some(Price::from_float(1.5)));
+            assert_eq!(PaymentPallet::price(HIGH_ED_CURRENCY), Some(3.into()));
+            // returns spot price
+            assert_eq!(PaymentPallet::price(SUPPORTED_CURRENCY_WITH_PRICE), Some(Price::from_float(0.1)));
+        });
+}

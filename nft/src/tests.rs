@@ -43,6 +43,14 @@ fn create_class_works() {
             }
         );
 
+        expect_events(vec![
+           crate::Event::ClassCreated {
+                owner: ALICE,
+                class_id: CLASS_ID_0,
+                class_type: ClassType::Marketplace,
+            }.into()
+        ]);
+
         // not allowed in Permissions
         assert_noop!(
             NFTPallet::create_class(Origin::signed(ALICE), CLASS_ID_2, ClassType::Auction, metadata.clone()),
@@ -104,6 +112,14 @@ fn mint_works() {
                 metadata: metadata.clone()
             }
         );
+
+        expect_events(vec![
+           crate::Event::InstanceMinted {
+                owner: ALICE,
+                class_id: CLASS_ID_0,
+                instance_id: INSTANCE_ID_0,
+            }.into()
+        ]);
 
         // duplicate instance
         assert_noop!(
@@ -195,6 +211,15 @@ fn transfer_works() {
             BOB
         ));
         assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0).unwrap(), BOB);
+
+        expect_events(vec![
+           crate::Event::InstanceTransferred {
+                from: ALICE,
+                to: BOB,
+                class_id: CLASS_ID_0,
+                instance_id: INSTANCE_ID_0,
+            }.into()
+        ]);
     });
 }
 
@@ -250,6 +275,14 @@ fn burn_works() {
         assert_ok!(NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0));
         assert!(!<Instances<Test>>::contains_key(CLASS_ID_0, INSTANCE_ID_0));
 
+        expect_events(vec![
+           crate::Event::InstanceBurned {
+                owner: ALICE,
+                class_id: CLASS_ID_0,
+                instance_id: INSTANCE_ID_0,
+            }.into()
+        ]);
+
         // not existing
         assert_noop!(
             NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0),
@@ -298,6 +331,13 @@ fn destroy_class_works() {
 
         assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
         assert_eq!(NFTPallet::classes(CLASS_ID_0), None);
+
+        expect_events(vec![
+           crate::Event::ClassDestroyed {
+                owner: ALICE,
+                class_id: CLASS_ID_0,
+            }.into()
+        ]);
 
         // not existing
         assert_noop!(

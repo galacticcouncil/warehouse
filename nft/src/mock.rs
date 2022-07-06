@@ -215,5 +215,5 @@ impl ExtBuilder {
 }
 
 pub fn expect_events(e: Vec<Event>) {
-	e.into_iter().for_each(frame_system::Pallet::<Test>::assert_has_event);
+    e.into_iter().for_each(frame_system::Pallet::<Test>::assert_has_event);
 }

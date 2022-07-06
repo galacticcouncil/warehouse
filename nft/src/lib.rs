@@ -216,32 +216,32 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// A class was created \[owner, class_id, class_type\]
+        /// A class was created
         ClassCreated {
             owner: T::AccountId,
             class_id: T::NftClassId,
             class_type: T::ClassType,
         },
-        /// An instance was minted \[owner, class_id, instance_id\]
+        /// An instance was minted
         InstanceMinted {
             owner: T::AccountId,
             class_id: T::NftClassId,
             instance_id: T::NftInstanceId,
         },
-        /// An instance was transferred \[from, to, class_id, instance_id\]
+        /// An instance was transferred
         InstanceTransferred {
             from: T::AccountId,
             to: T::AccountId,
             class_id: T::NftClassId,
             instance_id: T::NftInstanceId,
         },
-        /// An instance was burned \[sender, class_id, instance_id\]
+        /// An instance was burned
         InstanceBurned {
             owner: T::AccountId,
             class_id: T::NftClassId,
             instance_id: T::NftInstanceId,
         },
-        /// A class was destroyed \[class_id\]
+        /// A class was destroyed
         ClassDestroyed {
             owner: T::AccountId,
             class_id: T::NftClassId,

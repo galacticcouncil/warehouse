@@ -44,10 +44,10 @@ fn do_create_class<T: Config>(caller: T::AccountId, class_id: T::NftClassId) {
         .try_into()
         .unwrap();
     assert!(NFT::Pallet::<T>::create_class(
-        RawOrigin::Signed(caller.clone()).into(),
+        RawOrigin::Signed(caller).into(),
         class_id,
         Default::default(),
-        metadata.clone()
+        metadata
     )
     .is_ok());
 }

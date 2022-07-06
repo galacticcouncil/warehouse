@@ -29,6 +29,7 @@ use frame_system::pallet_prelude::*;
 use sp_runtime::DispatchResult;
 use sp_std::{prelude::*, vec::Vec};
 
+mod benchmarking;
 mod mock;
 mod tests;
 pub mod weights;

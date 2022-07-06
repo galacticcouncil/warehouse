@@ -11,6 +11,7 @@ members = [
 	"asset-registry",
 	"adapters",
 	"collator-rewards",
+  "liquidity-mining",
 ]
 
 resolver = "2"

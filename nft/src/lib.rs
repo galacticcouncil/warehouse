@@ -281,7 +281,7 @@ impl<T: Config> Pallet<T> {
         class_id: T::NftClassId,
         class_type: T::ClassType,
         metadata: BoundedVecOfUnq<T>,
-    ) -> Result<(T::NftClassId, T::ClassType), DispatchError> {
+    ) -> DispatchResult {
         ensure!(T::Permissions::can_create(&class_type), Error::<T>::NotPermitted);
 
         let deposit_info = match T::Permissions::has_deposit(&class_type) {
@@ -310,7 +310,7 @@ impl<T: Config> Pallet<T> {
             class_type,
         });
 
-        Ok((class_id, class_type))
+        Ok(())
     }
 
     fn do_mint(
@@ -318,7 +318,7 @@ impl<T: Config> Pallet<T> {
         class_id: T::NftClassId,
         instance_id: T::NftInstanceId,
         metadata: BoundedVecOfUnq<T>,
-    ) -> Result<T::NftInstanceId, DispatchError> {
+    ) -> DispatchResult {
         let class_type = Self::classes(class_id)
             .map(|c| c.class_type)
             .ok_or(Error::<T>::ClassUnknown)?;
@@ -335,7 +335,7 @@ impl<T: Config> Pallet<T> {
             instance_id,
         });
 
-        Ok(instance_id)
+        Ok(())
     }
 
     fn do_transfer(

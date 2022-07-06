@@ -11,6 +11,7 @@ members = [
 	"asset-registry",
 	"adapters",
 	"collator-rewards",
+	"transaction-pause",
 ]
 
 resolver = "2"

@@ -43,13 +43,10 @@ fn do_create_class<T: Config>(caller: T::AccountId, class_id: T::NftClassId) {
     let metadata: BoundedVec<_, _> = vec![0; <T as UNQ::Config>::StringLimit::get() as usize]
         .try_into()
         .unwrap();
-    assert!(NFT::Pallet::<T>::create_class(
-        RawOrigin::Signed(caller).into(),
-        class_id,
-        Default::default(),
-        metadata
-    )
-    .is_ok());
+    assert!(
+        NFT::Pallet::<T>::create_class(RawOrigin::Signed(caller).into(), class_id, Default::default(), metadata)
+            .is_ok()
+    );
 }
 
 fn do_mint<T: Config>(caller: T::AccountId, class_id: T::NftClassId, instance_id: T::NftInstanceId) {

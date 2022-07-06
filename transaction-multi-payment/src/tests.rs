@@ -304,6 +304,18 @@ fn account_currency_works() {
 
 #[test]
 fn data_provider_works() {
+    let go_to_next_block = || {
+        use frame_support::traits::Hooks;
+
+        let current = System::block_number();
+        PaymentPallet::on_finalize(current);
+
+        let next = current + 1;
+        System::set_block_number(next);
+        // Make sure the prices are up-to-date.
+        PaymentPallet::on_initialize(next);
+    };
+
     ExtBuilder::default().build().execute_with(|| {
         assert_eq!(PaymentPallet::get_fee_receiver(), FEE_RECEIVER);
         assert_eq!(
@@ -318,6 +330,8 @@ fn data_provider_works() {
         );
 
         assert_ok!(PaymentPallet::remove_currency(Origin::root(), SUPPORTED_CURRENCY));
+        // price is removed at the end of the block
+        go_to_next_block();
         assert_err!(
             PaymentPallet::get_currency_and_price(&ALICE),
             Error::<Test>::FallbackPriceNotFound
@@ -919,4 +933,23 @@ fn only_set_fee_currency_for_supported_currency() {
             // Bob's fee currency was not set on transfer (due to the currency being unsupported)
             assert_eq!(PaymentPallet::get_currency(BOB), None);
         });
+}
+
+#[test]
+fn returns_prices_for_supported_currencies() {
+    use hydradx_traits::NativePriceOracle;
+
+    ExtBuilder::default().build().execute_with(|| {
+        // returns constant price of 1 for native asset
+        assert_eq!(PaymentPallet::price(HdxAssetId::get()), Some(1.into()));
+        // returns default price configured at genesis
+        assert_eq!(PaymentPallet::price(SUPPORTED_CURRENCY_NO_BALANCE), Some(1.into()));
+        assert_eq!(PaymentPallet::price(SUPPORTED_CURRENCY), Some(Price::from_float(1.5)));
+        assert_eq!(PaymentPallet::price(HIGH_ED_CURRENCY), Some(3.into()));
+        // returns spot price
+        assert_eq!(
+            PaymentPallet::price(SUPPORTED_CURRENCY_WITH_PRICE),
+            Some(Price::from_float(0.1))
+        );
+    });
 }

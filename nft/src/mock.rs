@@ -88,8 +88,7 @@ impl NftPermission<ClassType> for NftTestPermissions {
     }
 }
 
-impl pallet_nft::Config for Test {
-    type Currency = Balances;
+impl Config for Test {
     type Event = Event;
     type WeightInfo = pallet_nft::weights::BasiliskWeight<Test>;
     type NftClassId = ClassId;

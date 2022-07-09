@@ -23,7 +23,7 @@ use codec::HasCompact;
 use frame_support::{
     dispatch::DispatchResult,
     ensure,
-    traits::{tokens::nonfungibles::*, Get, NamedReservableCurrency},
+    traits::{tokens::nonfungibles::*, Get},
     transactional, BoundedVec,
 };
 use frame_system::ensure_signed;
@@ -67,7 +67,6 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_uniques::Config {
-        type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = ReserveIdentifier>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type WeightInfo: WeightInfo;
         type ProtocolOrigin: EnsureOrigin<Self::Origin>;

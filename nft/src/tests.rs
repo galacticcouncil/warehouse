@@ -349,10 +349,10 @@ fn deposit_works() {
             b"metadata".to_vec().try_into().unwrap();
 
         let class_deposit = <Test as pallet_uniques::Config>::ClassDeposit::get();
-        let initial_balance = <Test as Config>::Currency::free_balance(&ALICE);
+        let initial_balance = <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE);
 
         // has deposit
-        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+        assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
         assert_ok!(NFTPallet::create_class(
             Origin::signed(ALICE),
             CLASS_ID_0,
@@ -360,14 +360,20 @@ fn deposit_works() {
             metadata.clone()
         ));
         assert_eq!(
-            <Test as Config>::Currency::free_balance(&ALICE),
+            <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
             initial_balance - class_deposit
         );
-        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), class_deposit);
+        assert_eq!(
+            <Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE),
+            class_deposit
+        );
 
         assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
-        assert_eq!(<Test as Config>::Currency::free_balance(&ALICE), initial_balance);
-        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+        assert_eq!(
+            <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
+            initial_balance
+        );
+        assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
 
         // no deposit
         assert_ok!(NFTPallet::create_class(
@@ -376,12 +382,18 @@ fn deposit_works() {
             ClassType::LiquidityMining,
             metadata
         ));
-        assert_eq!(<Test as Config>::Currency::free_balance(&ALICE), initial_balance);
-        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+        assert_eq!(
+            <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
+            initial_balance
+        );
+        assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
 
         assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
-        assert_eq!(<Test as Config>::Currency::free_balance(&ALICE), initial_balance);
-        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+        assert_eq!(
+            <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
+            initial_balance
+        );
+        assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
     })
 }
 

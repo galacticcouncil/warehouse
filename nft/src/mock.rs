@@ -174,7 +174,7 @@ impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type WeightInfo = ();
     type MaxReserves = MaxReserves;
-    type ReserveIdentifier = ReserveIdentifier;
+    type ReserveIdentifier = ();
 }
 
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);

@@ -88,8 +88,7 @@ impl NftPermission<ClassType> for NftTestPermissions {
     }
 }
 
-impl pallet_nft::Config for Test {
-    type Currency = Balances;
+impl Config for Test {
     type Event = Event;
     type WeightInfo = pallet_nft::weights::BasiliskWeight<Test>;
     type NftClassId = ClassId;
@@ -175,7 +174,7 @@ impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type WeightInfo = ();
     type MaxReserves = MaxReserves;
-    type ReserveIdentifier = ReserveIdentifier;
+    type ReserveIdentifier = ();
 }
 
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);

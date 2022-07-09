@@ -43,16 +43,6 @@ pub struct InstanceInfo<BoundedVec> {
     pub metadata: BoundedVec,
 }
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord, MaxEncodedLen, RuntimeDebug, TypeInfo)]
-#[repr(u8)]
-pub enum ReserveIdentifier {
-    Nft,
-    Marketplace,
-
-    // always the last, indicate number of variants
-    Count,
-}
-
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum ClassType {

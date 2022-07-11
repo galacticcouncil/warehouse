@@ -967,12 +967,7 @@ fn do_not_set_fee_currency_for_new_native_account() {
         .execute_with(|| {
             assert_eq!(PaymentPallet::get_currency(DAVE), None);
 
-            assert_ok!(Currencies::transfer(
-                Some(CHARLIE).into(),
-                DAVE,
-                0,
-                10,
-            ));
+            assert_ok!(Currencies::transfer(Some(CHARLIE).into(), DAVE, 0, 10,));
 
             assert_eq!(PaymentPallet::get_currency(DAVE), None);
         });

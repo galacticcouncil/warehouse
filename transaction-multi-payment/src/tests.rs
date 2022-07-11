@@ -936,6 +936,44 @@ fn only_set_fee_currency_for_supported_currency() {
 }
 
 #[test]
+fn only_set_fee_currency_when_without_native_currency() {
+    const CHARLIE: AccountId = 5;
+
+    ExtBuilder::default()
+        .account_native_balance(CHARLIE, 10)
+        .build()
+        .execute_with(|| {
+            assert_eq!(PaymentPallet::get_currency(CHARLIE), None);
+
+            assert_ok!(Currencies::transfer(
+                Some(ALICE).into(),
+                CHARLIE,
+                SUPPORTED_CURRENCY,
+                10,
+            ));
+
+            assert_eq!(PaymentPallet::get_currency(CHARLIE), None);
+        });
+}
+
+#[test]
+fn do_not_set_fee_currency_for_new_native_account() {
+    const CHARLIE: AccountId = 5;
+    const DAVE: AccountId = 6;
+
+    ExtBuilder::default()
+        .account_native_balance(CHARLIE, 10)
+        .build()
+        .execute_with(|| {
+            assert_eq!(PaymentPallet::get_currency(DAVE), None);
+
+            assert_ok!(Currencies::transfer(Some(CHARLIE).into(), DAVE, 0, 10,));
+
+            assert_eq!(PaymentPallet::get_currency(DAVE), None);
+        });
+}
+
+#[test]
 fn returns_prices_for_supported_currencies() {
     use hydradx_traits::NativePriceOracle;
 

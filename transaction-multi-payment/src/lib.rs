@@ -706,7 +706,8 @@ pub struct AddTxAssetOnAccount<T>(PhantomData<T>);
 impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for AddTxAssetOnAccount<T> {
     fn happened((who, currency): &(T::AccountId, AssetIdOf<T>)) {
         if !AccountCurrencyMap::<T>::contains_key(who)
-            && (*currency == T::NativeAssetId::get() || AcceptedCurrencies::<T>::contains_key(&currency))
+            && AcceptedCurrencies::<T>::contains_key(&currency)
+            && T::Currencies::total_balance(T::NativeAssetId::get(), who).is_zero()
         {
             AccountCurrencyMap::<T>::insert(who, currency);
         }

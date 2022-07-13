@@ -18,8 +18,7 @@
 use super::*;
 use codec::{Decode, Encode};
 use frame_support::weights::IdentityFee;
-use smallvec::smallvec;
-use sp_runtime::{traits::One, DispatchError, DispatchResult, FixedU128, Perbill};
+use sp_runtime::{traits::One, DispatchError, DispatchResult, FixedU128};
 use sp_std::cell::RefCell;
 use sp_std::collections::btree_set::BTreeSet;
 
@@ -279,22 +278,18 @@ fn cannot_buy_with_non_fungible() {
 
 #[test]
 fn overflow_errors() {
-    use frame_support::weights::{WeightToFeeCoefficient, WeightToFeeCoefficients};
-    // Create a mock fee calculator that always returns `max_value`.
-    pub struct MaxFee;
-    impl WeightToFeePolynomial for MaxFee {
-        type Balance = Balance;
+    use frame_support::traits::ConstU128;
+    use frame_support::weights::ConstantMultiplier;
 
-        fn polynomial() -> WeightToFeeCoefficients<Balance> {
-            smallvec!(WeightToFeeCoefficient {
-                coeff_integer: Balance::max_value(),
-                coeff_frac: Perbill::zero(),
-                negative: false,
-                degree: 1,
-            })
-        }
-    }
-    type Trader = MultiCurrencyTrader<AssetId, Balance, Price, MaxFee, MockOracle, MockConvert, ()>;
+    type Trader = MultiCurrencyTrader<
+        AssetId,
+        Balance,
+        Price,
+        ConstantMultiplier<u128, ConstU128<{ Balance::MAX }>>,
+        MockOracle,
+        MockConvert,
+        (),
+    >;
 
     let overflow_id = MockConvert::convert(OVERFLOW_ASSET_ID).unwrap();
 

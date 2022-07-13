@@ -17,7 +17,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::weights::{Weight, WeightToFeePolynomial};
+use frame_support::weights::{Weight, WeightToFee};
 use hydradx_traits::NativePriceOracle;
 use pallet_transaction_multi_payment::{DepositFee, TransactionMultiPaymentDataProvider};
 use polkadot_xcm::latest::prelude::*;
@@ -34,7 +34,7 @@ mod tests;
 
 /// Weight trader that accepts multiple assets as weight fee payment.
 ///
-/// It uses `WeightToFee` in combination with a `NativePriceOracle` to set the right price for weight.
+/// It uses `ConvertWeightToFee` in combination with a `NativePriceOracle` to set the right price for weight.
 /// Keeps track of the assets used to pay for weight and can refund them one by one (interface only
 /// allows returning one asset per refund). Will pass any remaining assets on `Drop` to
 /// `TakeRevenue`.
@@ -42,7 +42,7 @@ pub struct MultiCurrencyTrader<
     AssetId,
     Balance: FixedPointOperand + TryInto<u128>,
     Price: FixedPointNumber,
-    WeightToFee: WeightToFeePolynomial<Balance = Balance>,
+    ConvertWeightToFee: WeightToFee<Balance = Balance>,
     AcceptedCurrencyPrices: NativePriceOracle<AssetId, Price>,
     ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
     Revenue: TakeRevenue,
@@ -53,7 +53,7 @@ pub struct MultiCurrencyTrader<
         AssetId,
         Balance,
         Price,
-        WeightToFee,
+        ConvertWeightToFee,
         AcceptedCurrencyPrices,
         ConvertCurrency,
         Revenue,
@@ -64,11 +64,12 @@ impl<
         AssetId,
         Balance: FixedPointOperand + TryInto<u128>,
         Price: FixedPointNumber,
-        WeightToFee: WeightToFeePolynomial<Balance = Balance>,
+        ConvertWeightToFee: WeightToFee<Balance = Balance>,
         AcceptedCurrencyPrices: NativePriceOracle<AssetId, Price>,
         ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
         Revenue: TakeRevenue,
-    > MultiCurrencyTrader<AssetId, Balance, Price, WeightToFee, AcceptedCurrencyPrices, ConvertCurrency, Revenue>
+    >
+    MultiCurrencyTrader<AssetId, Balance, Price, ConvertWeightToFee, AcceptedCurrencyPrices, ConvertCurrency, Revenue>
 {
     /// Get the asset id of the first asset in `payment` and try to determine its price via the
     /// price oracle.
@@ -90,12 +91,20 @@ impl<
         AssetId,
         Balance: FixedPointOperand + TryInto<u128>,
         Price: FixedPointNumber,
-        WeightToFee: WeightToFeePolynomial<Balance = Balance>,
+        ConvertWeightToFee: WeightToFee<Balance = Balance>,
         AcceptedCurrencyPrices: NativePriceOracle<AssetId, Price>,
         ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
         Revenue: TakeRevenue,
     > WeightTrader
-    for MultiCurrencyTrader<AssetId, Balance, Price, WeightToFee, AcceptedCurrencyPrices, ConvertCurrency, Revenue>
+    for MultiCurrencyTrader<
+        AssetId,
+        Balance,
+        Price,
+        ConvertWeightToFee,
+        AcceptedCurrencyPrices,
+        ConvertCurrency,
+        Revenue,
+    >
 {
     fn new() -> Self {
         Self {
@@ -109,7 +118,7 @@ impl<
     ///
     /// This is a reasonable strategy as the `BuyExecution` XCM instruction only passes one asset
     /// per buy.
-    /// The fee is determined by `WeightToFee` in combination with the price determined by
+    /// The fee is determined by `ConvertWeightToFee` in combination with the price determined by
     /// `AcceptedCurrencyPrices`.
     fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
         log::trace!(
@@ -117,7 +126,7 @@ impl<
             weight, payment
         );
         let (asset_loc, price) = self.get_asset_and_price(&payment).ok_or(XcmError::AssetNotFound)?;
-        let fee = WeightToFee::calc(&weight);
+        let fee = ConvertWeightToFee::weight_to_fee(&weight);
         let converted_fee = price.checked_mul_int(fee).ok_or(XcmError::Overflow)?;
         let amount: u128 = converted_fee.try_into().map_err(|_| XcmError::Overflow)?;
         let required = (Concrete(asset_loc.clone()), amount).into();
@@ -141,7 +150,7 @@ impl<
         );
         let weight = weight.min(self.weight);
         self.weight -= weight; // Will not underflow because of `min()` above.
-        let fee = WeightToFee::calc(&weight);
+        let fee = ConvertWeightToFee::weight_to_fee(&weight);
         if let Some(((asset_loc, price), amount)) = self.paid_assets.iter_mut().next() {
             let converted_fee: u128 = price.saturating_mul_int(fee).saturated_into();
             let refund = converted_fee.min(*amount);
@@ -165,12 +174,20 @@ impl<
         AssetId,
         Balance: FixedPointOperand + TryInto<u128>,
         Price: FixedPointNumber,
-        WeightToFee: WeightToFeePolynomial<Balance = Balance>,
+        ConvertWeightToFee: WeightToFee<Balance = Balance>,
         AcceptedCurrencyPrices: NativePriceOracle<AssetId, Price>,
         ConvertCurrency: Convert<MultiAsset, Option<AssetId>>,
         Revenue: TakeRevenue,
     > Drop
-    for MultiCurrencyTrader<AssetId, Balance, Price, WeightToFee, AcceptedCurrencyPrices, ConvertCurrency, Revenue>
+    for MultiCurrencyTrader<
+        AssetId,
+        Balance,
+        Price,
+        ConvertWeightToFee,
+        AcceptedCurrencyPrices,
+        ConvertCurrency,
+        Revenue,
+    >
 {
     fn drop(&mut self) {
         for ((asset_loc, _), amount) in self.paid_assets.iter() {

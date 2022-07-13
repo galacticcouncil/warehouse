@@ -23,7 +23,6 @@ use frame_support::{
     dispatch::{CallMetadata, GetCallMetadata},
     pallet_prelude::*,
     traits::{Contains, PalletInfoAccess},
-    transactional,
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::DispatchResult;
@@ -92,7 +91,6 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(T::WeightInfo::pause_transaction())]
-        #[transactional]
         pub fn pause_transaction(origin: OriginFor<T>, pallet_name: Vec<u8>, function_name: Vec<u8>) -> DispatchResult {
             T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -116,7 +114,6 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::unpause_transaction())]
-        #[transactional]
         pub fn unpause_transaction(
             origin: OriginFor<T>,
             pallet_name: Vec<u8>,

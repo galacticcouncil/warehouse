@@ -18,7 +18,7 @@
 use super::*;
 use crate as pallet_nft;
 
-use frame_support::traits::Everything;
+use frame_support::traits::{AsEnsureOriginWithArg, Everything};
 use frame_support::{parameter_types, weights::Weight};
 use frame_system::EnsureRoot;
 use sp_core::{crypto::AccountId32, H256};
@@ -112,12 +112,14 @@ parameter_types! {
 
 impl pallet_uniques::Config for Test {
     type Event = Event;
-    type ClassId = ClassId;
-    type InstanceId = InstanceId;
+    type CollectionId = ClassId;
+    type ItemId = InstanceId;
     type Currency = Balances;
     type ForceOrigin = EnsureRoot<AccountId>;
-    type ClassDeposit = ClassDeposit;
-    type InstanceDeposit = InstanceDeposit;
+    type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
+    type Locker = ();
+    type CollectionDeposit = ClassDeposit;
+    type ItemDeposit = InstanceDeposit;
     type MetadataDepositBase = UniquesMetadataDepositBase;
     type AttributeDepositBase = AttributeDepositBase;
     type DepositPerByte = DepositPerByte;
@@ -181,14 +183,14 @@ pub const ALICE: AccountId = AccountId::new([1u8; 32]);
 pub const BOB: AccountId = AccountId::new([2u8; 32]);
 pub const BSX: Balance = 100_000_000_000;
 pub const CHARLIE: AccountId = AccountId::new([3u8; 32]);
-pub const CLASS_ID_0: <Test as pallet_uniques::Config>::ClassId = 1000;
-pub const CLASS_ID_1: <Test as pallet_uniques::Config>::ClassId = 1001;
-pub const CLASS_ID_2: <Test as pallet_uniques::Config>::ClassId = 1002;
-pub const CLASS_ID_RESERVED: <Test as pallet_uniques::Config>::ClassId = 42;
-pub const INSTANCE_ID_0: <Test as pallet_uniques::Config>::InstanceId = 0;
-pub const INSTANCE_ID_1: <Test as pallet_uniques::Config>::InstanceId = 1;
-pub const INSTANCE_ID_2: <Test as pallet_uniques::Config>::InstanceId = 2;
-pub const NON_EXISTING_CLASS_ID: <Test as pallet_uniques::Config>::ClassId = 999;
+pub const CLASS_ID_0: <Test as pallet_uniques::Config>::CollectionId = 1000;
+pub const CLASS_ID_1: <Test as pallet_uniques::Config>::CollectionId = 1001;
+pub const CLASS_ID_2: <Test as pallet_uniques::Config>::CollectionId = 1002;
+pub const CLASS_ID_RESERVED: <Test as pallet_uniques::Config>::CollectionId = 42;
+pub const INSTANCE_ID_0: <Test as pallet_uniques::Config>::ItemId = 0;
+pub const INSTANCE_ID_1: <Test as pallet_uniques::Config>::ItemId = 1;
+pub const INSTANCE_ID_2: <Test as pallet_uniques::Config>::ItemId = 2;
+pub const NON_EXISTING_CLASS_ID: <Test as pallet_uniques::Config>::CollectionId = 999;
 
 pub struct ExtBuilder;
 impl Default for ExtBuilder {

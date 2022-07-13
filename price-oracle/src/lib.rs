@@ -164,7 +164,7 @@ pub mod pallet {
             Self::update_data();
 
             // clear the price buffer
-            PriceDataAccumulator::<T>::remove_all(None);
+            let _ = <PriceDataAccumulator<T>>::clear(u32::MAX, None);
 
             // add newly registered assets
             let _ =

@@ -282,7 +282,7 @@ fn burn_works() {
         // not existing
         assert_noop!(
             NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0),
-            pallet_uniques::Error::<Test>::Unknown
+            pallet_uniques::Error::<Test>::UnknownCollection
         );
     });
 }
@@ -348,7 +348,7 @@ fn deposit_works() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        let class_deposit = <Test as pallet_uniques::Config>::ClassDeposit::get();
+        let class_deposit = <Test as pallet_uniques::Config>::CollectionDeposit::get();
         let initial_balance = <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE);
 
         // has deposit
@@ -432,11 +432,11 @@ fn nonfungible_traits_work() {
         );
 
         assert_eq!(
-            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::class_owner(&CLASS_ID_0),
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::collection_owner(&CLASS_ID_0),
             Some(ALICE)
         );
         assert_eq!(
-            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::class_owner(&CLASS_ID_1),
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::collection_owner(&CLASS_ID_1),
             None
         );
 
@@ -455,12 +455,12 @@ fn nonfungible_traits_work() {
 
         // `InspectEnumerable` trait
         assert_eq!(
-            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::classes()
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::collections()
                 .collect::<Vec<ClassId>>(),
             vec![CLASS_ID_0]
         );
         assert_eq!(
-            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::instances(&CLASS_ID_0)
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::items(&CLASS_ID_0)
                 .collect::<Vec<InstanceId>>(),
             vec![INSTANCE_ID_0]
         );
@@ -470,7 +470,7 @@ fn nonfungible_traits_work() {
             vec![(CLASS_ID_0, INSTANCE_ID_0)]
         );
         assert_eq!(
-            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned_in_class(
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned_in_collection(
                 &CLASS_ID_0,
                 &BOB
             )
@@ -480,11 +480,19 @@ fn nonfungible_traits_work() {
 
         // `Create` trait
         assert_noop!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_class(&CLASS_ID_0, &BOB, &ALICE),
+            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
+                &CLASS_ID_0,
+                &BOB,
+                &ALICE
+            ),
             pallet_uniques::Error::<Test>::InUse
         );
         assert_ok!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_class(&CLASS_ID_1, &BOB, &ALICE)
+            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
+                &CLASS_ID_1,
+                &BOB,
+                &ALICE
+            )
         );
 
         // `Destroy` trait
@@ -495,8 +503,8 @@ fn nonfungible_traits_work() {
         assert_eq!(
             witness,
             pallet_uniques::DestroyWitness {
-                instances: 1,
-                instance_metadatas: 0,
+                items: 1,
+                item_metadatas: 0,
                 attributes: 0
             }
         );
@@ -510,8 +518,8 @@ fn nonfungible_traits_work() {
         );
 
         let empty_witness = pallet_uniques::DestroyWitness {
-            instances: 0,
-            instance_metadatas: 0,
+            items: 0,
+            item_metadatas: 0,
             attributes: 0,
         };
 
@@ -548,9 +556,11 @@ fn nonfungible_traits_work() {
             )
         );
 
-        assert_ok!(
-            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn_from(&CLASS_ID_0, &INSTANCE_ID_1)
-        );
+        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+            &CLASS_ID_0,
+            &INSTANCE_ID_1,
+            None
+        ));
         assert!(!<Instances<Test>>::contains_key(CLASS_ID_0, INSTANCE_ID_1));
 
         // `Transfer` trait

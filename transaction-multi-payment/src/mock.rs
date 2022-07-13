@@ -28,8 +28,7 @@ use sp_runtime::{
     Perbill,
 };
 
-use frame_support::weights::IdentityFee;
-use frame_support::weights::Weight;
+use frame_support::weights::{IdentityFee, Weight};
 use hydradx_traits::AssetPairAccountIdFor;
 use orml_currencies::BasicCurrencyAdapter;
 use std::cell::RefCell;
@@ -84,7 +83,7 @@ frame_support::construct_runtime!(
          PaymentPallet: multi_payment::{Pallet, Call, Storage, Event<T>},
          TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
          Balances: pallet_balances::{Pallet,Call, Storage,Config<T>, Event<T>},
-         Currencies: orml_currencies::{Pallet, Event<T>},
+         Currencies: orml_currencies::{Pallet},
          Tokens: orml_tokens::{Pallet, Event<T>},
      }
 
@@ -97,7 +96,6 @@ parameter_types! {
     pub const HdxAssetId: u32 = 0;
     pub const ExistentialDeposit: u128 = 2;
     pub const MaxLocks: u32 = 50;
-    pub const TransactionByteFee: Balance = 1;
     pub const RegistryStringLimit: u32 = 100;
     pub const FeeReceiver: AccountId = FEE_RECEIVER;
 
@@ -177,7 +175,7 @@ impl pallet_balances::Config for Test {
 
 impl pallet_transaction_payment::Config for Test {
     type OnChargeTransaction = TransferFees<Currencies, PaymentPallet, DepositAll<Test>>;
-    type TransactionByteFee = TransactionByteFee;
+    type LengthToFee = IdentityFee<Balance>;
     type OperationalFeeMultiplier = ();
     type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate = ();
@@ -221,6 +219,10 @@ parameter_type_with_key! {
     };
 }
 
+parameter_types! {
+    pub const MaxReserves: u32 = 50;
+}
+
 impl orml_tokens::Config for Test {
     type Event = Event;
     type Balance = Balance;
@@ -233,10 +235,11 @@ impl orml_tokens::Config for Test {
     type DustRemovalWhitelist = Nothing;
     type OnNewTokenAccount = AddTxAssetOnAccount<Test>;
     type OnKilledTokenAccount = RemoveTxAssetOnKilled<Test>;
+    type ReserveIdentifier = ();
+    type MaxReserves = MaxReserves;
 }
 
 impl orml_currencies::Config for Test {
-    type Event = Event;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, u32>;
     type GetNativeCurrencyId = HdxAssetId;

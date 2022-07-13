@@ -24,7 +24,7 @@ use frame_support::{
     dispatch::DispatchResult,
     ensure,
     traits::{tokens::nonfungibles::*, Get},
-    transactional, BoundedVec,
+    BoundedVec,
 };
 use frame_system::ensure_signed;
 use pallet_uniques::DestroyWitness;
@@ -76,16 +76,16 @@ pub mod pallet {
             + Copy
             + HasCompact
             + AtLeast32BitUnsigned
-            + Into<Self::ClassId>
-            + From<Self::ClassId>;
+            + Into<Self::CollectionId>
+            + From<Self::CollectionId>;
         type NftInstanceId: Member
             + Parameter
             + Default
             + Copy
             + HasCompact
             + AtLeast32BitUnsigned
-            + Into<Self::InstanceId>
-            + From<Self::InstanceId>;
+            + Into<Self::ItemId>
+            + From<Self::ItemId>;
         type ClassType: Member + Parameter + Default + Copy;
         type Permissions: NftPermission<Self::ClassType>;
         /// Class IDs reserved for runtime up to the following constant
@@ -116,7 +116,6 @@ pub mod pallet {
         ///
         /// Emits ClassCreated event
         #[pallet::weight(<T as Config>::WeightInfo::create_class())]
-        #[transactional]
         pub fn create_class(
             origin: OriginFor<T>,
             class_id: T::NftClassId,
@@ -140,7 +139,6 @@ pub mod pallet {
         /// - `instance_id`: The class of the asset to be minted.
         /// - `metadata`: Arbitrary data about an instance, e.g. IPFS hash or symbol
         #[pallet::weight(<T as Config>::WeightInfo::mint())]
-        #[transactional]
         pub fn mint(
             origin: OriginFor<T>,
             class_id: T::NftClassId,
@@ -163,7 +161,6 @@ pub mod pallet {
         /// - `instance_id`: The instance of the asset to be transferred.
         /// - `dest`: The account to receive ownership of the asset.
         #[pallet::weight(<T as Config>::WeightInfo::transfer())]
-        #[transactional]
         pub fn transfer(
             origin: OriginFor<T>,
             class_id: T::NftClassId,
@@ -185,7 +182,6 @@ pub mod pallet {
         /// - `class_id`: The class of the asset to be burned.
         /// - `instance_id`: The instance of the asset to be burned.
         #[pallet::weight(<T as Config>::WeightInfo::burn())]
-        #[transactional]
         pub fn burn(origin: OriginFor<T>, class_id: T::NftClassId, instance_id: T::NftInstanceId) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
@@ -199,7 +195,6 @@ pub mod pallet {
         /// Parameters:
         /// - `class_id`: The identifier of the asset class to be destroyed.
         #[pallet::weight(<T as Config>::WeightInfo::destroy_class())]
-        #[transactional]
         pub fn destroy_class(origin: OriginFor<T>, class_id: T::NftClassId) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
@@ -268,7 +263,7 @@ pub mod pallet {
 
 impl<T: Config> Pallet<T> {
     pub fn class_owner(class_id: T::NftClassId) -> Option<T::AccountId> {
-        pallet_uniques::Pallet::<T>::class_owner(&class_id.into())
+        pallet_uniques::Pallet::<T>::collection_owner(class_id.into())
     }
 
     pub fn owner(class_id: T::NftClassId, instance_id: T::NftInstanceId) -> Option<T::AccountId> {
@@ -285,17 +280,17 @@ impl<T: Config> Pallet<T> {
 
         let deposit_info = match T::Permissions::has_deposit(&class_type) {
             false => (Zero::zero(), true),
-            true => (T::ClassDeposit::get(), false),
+            true => (T::CollectionDeposit::get(), false),
         };
 
-        pallet_uniques::Pallet::<T>::do_create_class(
+        pallet_uniques::Pallet::<T>::do_create_collection(
             class_id.into(),
             owner.clone(),
             owner.clone(),
             deposit_info.0,
             deposit_info.1,
             pallet_uniques::Event::Created {
-                class: class_id.into(),
+                collection: class_id.into(),
                 creator: owner.clone(),
                 owner: owner.clone(),
             },
@@ -410,9 +405,9 @@ impl<T: Config> Pallet<T> {
             pallet_uniques::Pallet::<T>::get_destroy_witness(&class_id.into()).ok_or(Error::<T>::ClassUnknown)?;
 
         // witness struct is empty because we don't allow destroying a class with existing instances
-        ensure!(witness.instances == 0u32, Error::<T>::TokenClassNotEmpty);
+        ensure!(witness.items == 0u32, Error::<T>::TokenClassNotEmpty);
 
-        pallet_uniques::Pallet::<T>::do_destroy_class(class_id.into(), witness, Some(owner.clone()))?;
+        pallet_uniques::Pallet::<T>::do_destroy_collection(class_id.into(), witness, Some(owner.clone()))?;
         Classes::<T>::remove(class_id);
 
         Self::deposit_event(Event::ClassDestroyed { owner, class_id });
@@ -421,18 +416,18 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
-    type InstanceId = T::NftInstanceId;
-    type ClassId = T::NftClassId;
+    type ItemId = T::NftInstanceId;
+    type CollectionId = T::NftClassId;
 
-    fn owner(class: &Self::ClassId, instance: &Self::InstanceId) -> Option<T::AccountId> {
+    fn owner(class: &Self::CollectionId, instance: &Self::ItemId) -> Option<T::AccountId> {
         Self::owner(*class, *instance)
     }
 
-    fn class_owner(class: &Self::ClassId) -> Option<T::AccountId> {
+    fn collection_owner(class: &Self::CollectionId) -> Option<T::AccountId> {
         Self::class_owner(*class)
     }
 
-    fn can_transfer(class: &Self::ClassId, _instance: &Self::InstanceId) -> bool {
+    fn can_transfer(class: &Self::CollectionId, _instance: &Self::ItemId) -> bool {
         let maybe_class_type = Self::classes(class).map(|c| c.class_type);
 
         match maybe_class_type {
@@ -443,25 +438,25 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
-    fn classes() -> Box<dyn Iterator<Item = Self::ClassId>> {
+    fn collections() -> Box<dyn Iterator<Item = Self::CollectionId>> {
         Box::new(Classes::<T>::iter_keys())
     }
 
-    fn instances(class: &Self::ClassId) -> Box<dyn Iterator<Item = Self::InstanceId>> {
+    fn items(class: &Self::CollectionId) -> Box<dyn Iterator<Item = Self::ItemId>> {
         Box::new(Instances::<T>::iter_key_prefix(class))
     }
 
-    fn owned(who: &T::AccountId) -> Box<dyn Iterator<Item = (Self::ClassId, Self::InstanceId)>> {
+    fn owned(who: &T::AccountId) -> Box<dyn Iterator<Item = (Self::CollectionId, Self::ItemId)>> {
         Box::new(
             pallet_uniques::Pallet::<T>::owned(who)
                 .map(|(class_id, instance_id)| (class_id.into(), instance_id.into())),
         )
     }
 
-    fn owned_in_class(class: &Self::ClassId, who: &T::AccountId) -> Box<dyn Iterator<Item = Self::InstanceId>> {
+    fn owned_in_collection(class: &Self::CollectionId, who: &T::AccountId) -> Box<dyn Iterator<Item = Self::ItemId>> {
         Box::new(
-            pallet_uniques::Pallet::<T>::owned_in_class(
-                &(Into::<<T as pallet_uniques::Config>::ClassId>::into(*class)),
+            pallet_uniques::Pallet::<T>::owned_in_collection(
+                &(Into::<<T as pallet_uniques::Config>::CollectionId>::into(*class)),
                 who,
             )
             .map(|i| i.into()),
@@ -470,7 +465,7 @@ impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> Create<T::AccountId> for Pallet<T> {
-    fn create_class(class: &Self::ClassId, who: &T::AccountId, _admin: &T::AccountId) -> DispatchResult {
+    fn create_collection(class: &Self::CollectionId, who: &T::AccountId, _admin: &T::AccountId) -> DispatchResult {
         Self::do_create_class(who.clone(), *class, Default::default(), BoundedVec::default())?;
 
         Ok(())
@@ -480,14 +475,14 @@ impl<T: Config> Create<T::AccountId> for Pallet<T> {
 impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
     type DestroyWitness = pallet_uniques::DestroyWitness;
 
-    fn get_destroy_witness(class: &Self::ClassId) -> Option<Self::DestroyWitness> {
+    fn get_destroy_witness(class: &Self::CollectionId) -> Option<Self::DestroyWitness> {
         pallet_uniques::Pallet::<T>::get_destroy_witness(
-            &(Into::<<T as pallet_uniques::Config>::ClassId>::into(*class)),
+            &(Into::<<T as pallet_uniques::Config>::CollectionId>::into(*class)),
         )
     }
 
     fn destroy(
-        class: Self::ClassId,
+        class: Self::CollectionId,
         _witness: Self::DestroyWitness,
         _maybe_check_owner: Option<T::AccountId>,
     ) -> Result<Self::DestroyWitness, DispatchError> {
@@ -497,21 +492,25 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
 
         // We can return empty struct here because we don't allow destroying a class with existing instances
         Ok(DestroyWitness {
-            instances: 0,
-            instance_metadatas: 0,
+            items: 0,
+            item_metadatas: 0,
             attributes: 0,
         })
     }
 }
 
 impl<T: Config> Mutate<T::AccountId> for Pallet<T> {
-    fn mint_into(class: &Self::ClassId, instance: &Self::InstanceId, who: &T::AccountId) -> DispatchResult {
+    fn mint_into(class: &Self::CollectionId, instance: &Self::ItemId, who: &T::AccountId) -> DispatchResult {
         Self::do_mint(who.clone(), *class, *instance, BoundedVec::default())?;
 
         Ok(())
     }
 
-    fn burn_from(class: &Self::ClassId, instance: &Self::InstanceId) -> DispatchResult {
+    fn burn(
+        class: &Self::CollectionId,
+        instance: &Self::ItemId,
+        _maybe_check_owner: Option<&T::AccountId>,
+    ) -> DispatchResult {
         let owner = Self::owner(*class, *instance).ok_or(Error::<T>::InstanceUnknown)?;
 
         Self::do_burn(owner, *class, *instance)?;
@@ -521,7 +520,7 @@ impl<T: Config> Mutate<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
-    fn transfer(class: &Self::ClassId, instance: &Self::InstanceId, destination: &T::AccountId) -> DispatchResult {
+    fn transfer(class: &Self::CollectionId, instance: &Self::ItemId, destination: &T::AccountId) -> DispatchResult {
         let owner = Self::owner(*class, *instance).ok_or(Error::<T>::InstanceUnknown)?;
 
         Self::do_transfer(*class, *instance, owner, destination.clone())

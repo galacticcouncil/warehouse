@@ -16,14 +16,15 @@
 // limitations under the License.
 
 pub use crate::{mock::*, Config, Error};
+use frame_support::dispatch::Dispatchable;
+use frame_support::sp_runtime::transaction_validity::ValidTransaction;
+use frame_support::weights::{DispatchInfo, PostDispatchInfo, Weight};
 use frame_support::{assert_err, assert_noop, assert_ok};
 use pallet_transaction_payment::ChargeTransactionPayment;
 use sp_runtime::traits::SignedExtension;
 
 use crate::traits::TransactionMultiPaymentDataProvider;
-use crate::{CurrencyBalanceCheck, PaymentInfo, Price};
-use frame_support::sp_runtime::transaction_validity::{InvalidTransaction, ValidTransaction};
-use frame_support::weights::{DispatchInfo, PostDispatchInfo, Weight};
+use crate::{error_to_invalid, CurrencyBalanceCheck, PaymentInfo, Price};
 use orml_traits::MultiCurrency;
 use pallet_balances::Call as BalancesCall;
 use sp_runtime::traits::BadOrigin;
@@ -116,13 +117,17 @@ fn set_currency_with_insufficient_balance() {
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10)
         .build()
         .execute_with(|| {
+            let call = Call::PaymentPallet(crate::Call::<Test>::set_currency {
+                currency: SUPPORTED_CURRENCY,
+            });
             assert_noop!(
-                PaymentPallet::set_currency(Origin::signed(CHARLIE), SUPPORTED_CURRENCY),
+                call.dispatch(Origin::signed(CHARLIE)),
                 orml_tokens::Error::<Test>::BalanceTooLow
             );
 
+            let call = Call::PaymentPallet(crate::Call::<Test>::set_currency { currency: HDX });
             assert_noop!(
-                PaymentPallet::set_currency(Origin::signed(CHARLIE), HDX),
+                call.dispatch(Origin::signed(CHARLIE)),
                 pallet_balances::Error::<Test>::InsufficientBalance
             );
 
@@ -284,7 +289,7 @@ fn check_balance_extension_fails() {
 
         assert_eq!(
             CurrencyBalanceCheck::<Test>(PhantomData).validate(&NOT_CHARLIE, &call, &info, 150),
-            InvalidTransaction::Custom(Error::<Test>::ZeroBalance.as_u8()).into()
+            error_to_invalid(Error::<Test>::ZeroBalance).into()
         );
     });
 }
@@ -393,10 +398,9 @@ fn check_balance_should_work() {
         assert_ok!(PaymentPallet::check_balance(&ALICE, SUPPORTED_CURRENCY));
         assert_eq!(
             PaymentPallet::check_balance(&ALICE, SUPPORTED_CURRENCY_NO_BALANCE)
-                .err()
-                .unwrap()
-                .as_u8(),
-            1_u8
+                .unwrap_err()
+                .as_str(),
+            Error::<Test>::ZeroBalance.as_str()
         );
     });
 }

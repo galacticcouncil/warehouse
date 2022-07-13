@@ -60,7 +60,7 @@ benchmarks! {
         let metadata: BoundedVec<_, _> = vec![0; <T as UNQ::Config>::StringLimit::get() as usize].try_into().unwrap();
     }: _(RawOrigin::Signed(caller.clone()), CLASS_ID_0.into(), Default::default(), metadata)
     verify {
-        assert_eq!(UNQ::Pallet::<T>::class_owner(&T::NftClassId::from(CLASS_ID_0).into()), Some(caller));
+        assert_eq!(UNQ::Pallet::<T>::collection_owner(T::NftClassId::from(CLASS_ID_0).into()), Some(caller));
     }
 
     mint {
@@ -89,7 +89,7 @@ benchmarks! {
         do_create_class::<T>(caller.clone(), CLASS_ID_0.into());
     }: _(RawOrigin::Signed(caller), CLASS_ID_0.into())
     verify {
-        assert_eq!(UNQ::Pallet::<T>::classes().count(), 0);
+        assert_eq!(UNQ::Pallet::<T>::collections().count(), 0);
     }
 
     burn {

@@ -14,8 +14,8 @@ pub trait DustRemovalAccountWhitelist<AccountId> {
     type Error;
 
     /// Add account to the list.
-    fn add_account(account: &AccountId) -> Self::Error;
+    fn add_account(account: &AccountId) -> Result<(), Self::Error>;
 
     /// Remove an account from the list.
-    fn remove_account(account: &AccountId) -> Self::Error;
+    fn remove_account(account: &AccountId) -> Result<(), Self::Error>;
 }

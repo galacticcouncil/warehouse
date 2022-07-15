@@ -8,3 +8,14 @@ pub trait SpotPriceProvider<AssetId> {
     /// Returns None if such pair does not exist
     fn spot_price(asset_a: AssetId, asset_b: AssetId) -> Option<Self::Price>;
 }
+
+/// Manage list of non-dustable accounts
+pub trait DustRemovalAccountWhitelist<AccountId> {
+    type Error;
+
+    /// Add account to the list.
+    fn add_account(account: &AccountId) -> Self::Error;
+
+    /// Remove an account from the list.
+    fn remove_account(account: &AccountId) -> Self::Error;
+}

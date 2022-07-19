@@ -29,6 +29,7 @@ use frame_support::{
 use frame_system::ensure_signed;
 use pallet_uniques::DestroyWitness;
 
+use hydradx_traits::nft::{CreateTypedClass, ReserveClassIdUpTo};
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, StaticLookup, Zero},
     DispatchError,
@@ -125,7 +126,7 @@ pub mod pallet {
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
-            ensure!(T::ReserveClassIdUpTo::get() < class_id, Error::<T>::IdReserved);
+            ensure!(!Self::is_id_reserved(class_id), Error::<T>::IdReserved);
 
             Self::do_create_class(sender, class_id, class_type, metadata)?;
 
@@ -525,5 +526,17 @@ impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
         let owner = Self::owner(*class, *instance).ok_or(Error::<T>::InstanceUnknown)?;
 
         Self::do_transfer(*class, *instance, owner, destination.clone())
+    }
+}
+
+impl<T: Config> CreateTypedClass<T::AccountId, T::NftClassId, T::ClassType> for Pallet<T> {
+    fn create_typed_class(owner: T::AccountId, class_id: T::NftClassId, class_type: T::ClassType) -> DispatchResult {
+        Self::do_create_class(owner, class_id, class_type, Default::default())
+    }
+}
+
+impl<T: Config> ReserveClassIdUpTo<T::NftClassId> for Pallet<T> {
+    fn is_id_reserved(id: T::NftClassId) -> bool {
+        id <= T::ReserveClassIdUpTo::get()
     }
 }

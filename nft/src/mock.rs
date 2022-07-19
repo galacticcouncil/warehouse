@@ -179,8 +179,9 @@ impl pallet_balances::Config for Test {
 
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);
 pub const BOB: AccountId = AccountId::new([2u8; 32]);
-pub const BSX: Balance = 100_000_000_000;
 pub const CHARLIE: AccountId = AccountId::new([3u8; 32]);
+pub const ACCOUNT_WITH_NO_BALANCE: AccountId = AccountId::new([4u8; 32]);
+pub const BSX: Balance = 100_000_000_000;
 pub const CLASS_ID_0: <Test as pallet_uniques::Config>::ClassId = 1000;
 pub const CLASS_ID_1: <Test as pallet_uniques::Config>::ClassId = 1001;
 pub const CLASS_ID_2: <Test as pallet_uniques::Config>::ClassId = 1002;

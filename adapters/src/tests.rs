@@ -51,7 +51,7 @@ impl Convert<AssetId, Option<MultiLocation>> for MockConvert {
     fn convert(id: AssetId) -> Option<MultiLocation> {
         match id {
             CORE_ASSET_ID | TEST_ASSET_ID | CHEAP_ASSET_ID | OVERFLOW_ASSET_ID => {
-                Some(MultiLocation::new(0, X1(GeneralKey(id.encode()))))
+                Some(MultiLocation::new(0, X1(GeneralKey(id.encode().try_into().unwrap()))))
             }
             _ => None,
         }
@@ -256,7 +256,7 @@ fn cannot_buy_with_too_few_tokens() {
 fn cannot_buy_with_unknown_token() {
     type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
 
-    let unknown_token = GeneralKey(9876u32.encode());
+    let unknown_token = GeneralKey(9876u32.encode().try_into().unwrap());
 
     let mut trader = Trader::new();
     let payment: MultiAsset = (Concrete(unknown_token.into()), 1_000_000).into();
@@ -268,7 +268,7 @@ fn cannot_buy_with_unknown_token() {
 fn cannot_buy_with_non_fungible() {
     type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
 
-    let unknown_token = GeneralKey(9876u32.encode());
+    let unknown_token = GeneralKey(9876u32.encode().try_into().unwrap());
 
     let mut trader = Trader::new();
     let payment: MultiAsset = (Concrete(unknown_token.into()), NonFungible(AssetInstance::Undefined)).into();

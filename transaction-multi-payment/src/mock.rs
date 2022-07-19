@@ -81,7 +81,7 @@ frame_support::construct_runtime!(
      {
          System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
          PaymentPallet: multi_payment::{Pallet, Call, Storage, Event<T>},
-         TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
          Balances: pallet_balances::{Pallet,Call, Storage,Config<T>, Event<T>},
          Currencies: orml_currencies::{Pallet},
          Tokens: orml_tokens::{Pallet, Event<T>},
@@ -174,6 +174,7 @@ impl pallet_balances::Config for Test {
 }
 
 impl pallet_transaction_payment::Config for Test {
+    type Event = Event;
     type OnChargeTransaction = TransferFees<Currencies, PaymentPallet, DepositAll<Test>>;
     type LengthToFee = IdentityFee<Balance>;
     type OperationalFeeMultiplier = ();

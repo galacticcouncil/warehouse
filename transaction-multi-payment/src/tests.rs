@@ -16,7 +16,7 @@
 // limitations under the License.
 
 pub use crate::{mock::*, Config, Error};
-use frame_support::dispatch::{Dispatchable, DispatchError};
+use frame_support::dispatch::{DispatchError, Dispatchable};
 use frame_support::sp_runtime::transaction_validity::ValidTransaction;
 use frame_support::weights::{DispatchInfo, PostDispatchInfo, Weight};
 use frame_support::{assert_err, assert_noop, assert_ok};

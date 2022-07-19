@@ -16,7 +16,7 @@
 // limitations under the License.
 
 pub use crate::{mock::*, Config, Error};
-use frame_support::dispatch::Dispatchable;
+use frame_support::dispatch::{Dispatchable, DispatchError};
 use frame_support::sp_runtime::transaction_validity::ValidTransaction;
 use frame_support::weights::{DispatchInfo, PostDispatchInfo, Weight};
 use frame_support::{assert_err, assert_noop, assert_ok};
@@ -396,11 +396,9 @@ fn weight_to_fee_should_work() {
 fn check_balance_should_work() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
         assert_ok!(PaymentPallet::check_balance(&ALICE, SUPPORTED_CURRENCY));
-        assert_eq!(
-            PaymentPallet::check_balance(&ALICE, SUPPORTED_CURRENCY_NO_BALANCE)
-                .unwrap_err()
-                .as_str(),
-            Error::<Test>::ZeroBalance.as_str()
+        assert_err!(
+            PaymentPallet::check_balance(&ALICE, SUPPORTED_CURRENCY_NO_BALANCE).map_err(Into::<DispatchError>::into),
+            Error::<Test>::ZeroBalance
         );
     });
 }

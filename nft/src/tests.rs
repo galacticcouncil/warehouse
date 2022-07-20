@@ -625,7 +625,7 @@ fn create_typed_class_should_not_work_without_deposit_when_deposit_is_required()
 }
 
 #[test]
-fn create_typed_class_should_not_create_class_when_class_is_not_permitted() {
+fn create_typed_class_should_not_work_when_not_permitted() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
             NFTPallet::create_typed_class(ALICE, CLASS_ID_0, ClassType::Auction),

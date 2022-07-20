@@ -29,7 +29,7 @@ use frame_support::{
 use frame_system::ensure_signed;
 use pallet_uniques::DestroyWitness;
 
-use hydradx_traits::nft::{CreateTypedClass, ReserveClassIdUpTo};
+use hydradx_traits::nft::{CreateTypedClass, ReserveClassId};
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, StaticLookup, Zero},
     DispatchError,
@@ -535,7 +535,7 @@ impl<T: Config> CreateTypedClass<T::AccountId, T::NftClassId, T::ClassType> for 
     }
 }
 
-impl<T: Config> ReserveClassIdUpTo<T::NftClassId> for Pallet<T> {
+impl<T: Config> ReserveClassId<T::NftClassId> for Pallet<T> {
     fn is_id_reserved(id: T::NftClassId) -> bool {
         id <= T::ReserveClassIdUpTo::get()
     }

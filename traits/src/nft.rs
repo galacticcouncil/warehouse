@@ -22,7 +22,7 @@ pub trait CreateTypedClass<AccountId, ClassId, ClassType>: Create<AccountId> {
     fn create_typed_class(owner: AccountId, class_id: ClassId, class_type: ClassType) -> DispatchResult;
 }
 
-pub trait ReserveClassIdUpTo<ClassId> {
+pub trait ReserveClassId<ClassId> {
     /// This function return `true` if class id is from reserved range, `false` otherwise.
     fn is_id_reserved(id: ClassId) -> bool;
 }

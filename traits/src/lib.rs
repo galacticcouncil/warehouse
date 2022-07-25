@@ -18,6 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::upper_case_acronyms)]
 
+pub mod nft;
 pub mod pools;
 pub mod registry;
 pub use registry::*;

@@ -20,7 +20,6 @@ use frame_support::{assert_noop, assert_ok, traits::tokens::nonfungibles::*};
 use super::*;
 use mock::*;
 use std::convert::TryInto;
-
 type NFTPallet = Pallet<Test>;
 
 #[test]
@@ -572,5 +571,75 @@ fn nonfungible_traits_work() {
             )
         );
         assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0), Some(ALICE));
+    });
+}
+
+#[test]
+fn is_id_reserved_should_return_true_when_id_is_from_reserved_range() {
+    assert!(
+        NFTPallet::is_id_reserved(0),
+        "0 should be part of reserved classId range"
+    );
+
+    assert!(
+        NFTPallet::is_id_reserved(13),
+        "num <= ReserveClassIdUpTo should be part of reserved classId range"
+    );
+
+    assert!(
+        NFTPallet::is_id_reserved(mock::ReserveClassIdUpTo::get()),
+        "num == ReserveClassIdUpTo should be part of reserved classId range"
+    );
+}
+
+#[test]
+fn is_id_reserved_should_return_false_when_id_is_not_from_reserved_range() {
+    assert!(
+        !NFTPallet::is_id_reserved(mock::ReserveClassIdUpTo::get() + 1),
+        "(ReserveClassIdUpTo + 1) should not be part of reserved classId range"
+    );
+
+    assert!(
+        !NFTPallet::is_id_reserved(mock::ReserveClassIdUpTo::get() + 500_000_000_000),
+        "num > ReserveClassIdUpTo should not be part of reserved classId range"
+    );
+}
+
+#[test]
+fn create_typed_class_should_work_without_deposit_when_deposit_is_not_required() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(NFTPallet::create_typed_class(
+            ACCOUNT_WITH_NO_BALANCE,
+            CLASS_ID_0,
+            ClassType::LiquidityMining
+        ));
+
+        assert_eq!(
+            NFTPallet::classes(CLASS_ID_0).unwrap(),
+            ClassInfoOf::<Test> {
+                class_type: ClassType::LiquidityMining,
+                metadata: Default::default()
+            }
+        )
+    });
+}
+
+#[test]
+fn create_typed_class_should_not_work_without_deposit_when_deposit_is_required() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            NFTPallet::create_typed_class(ACCOUNT_WITH_NO_BALANCE, CLASS_ID_0, ClassType::Marketplace),
+            pallet_balances::Error::<Test>::InsufficientBalance
+        );
+    });
+}
+
+#[test]
+fn create_typed_class_should_not_work_when_not_permitted() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            NFTPallet::create_typed_class(ALICE, CLASS_ID_0, ClassType::Auction),
+            Error::<Test>::NotPermitted
+        );
     });
 }

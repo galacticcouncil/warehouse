@@ -22,7 +22,7 @@
 
 use super::*;
 use frame_support::{
-    construct_runtime, ord_parameter_types,
+    construct_runtime, ord_parameter_types, parameter_types,
     traits::{ConstU128, ConstU32, ConstU64, Everything, Nothing},
 };
 use frame_system::EnsureSignedBy;
@@ -87,6 +87,10 @@ parameter_type_with_key! {
     };
 }
 
+parameter_types! {
+    pub const MaxReserves: u32 = 50;
+}
+
 impl orml_tokens::Config for Runtime {
     type Event = Event;
     type Balance = Balance;
@@ -99,6 +103,8 @@ impl orml_tokens::Config for Runtime {
     type DustRemovalWhitelist = Nothing;
     type OnNewTokenAccount = ();
     type OnKilledTokenAccount = ();
+    type ReserveIdentifier = ();
+    type MaxReserves = MaxReserves;
 }
 
 ord_parameter_types! {

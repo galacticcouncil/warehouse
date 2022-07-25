@@ -18,8 +18,7 @@
 use super::*;
 use codec::{Decode, Encode};
 use frame_support::weights::IdentityFee;
-use smallvec::smallvec;
-use sp_runtime::{traits::One, DispatchError, DispatchResult, FixedU128, Perbill};
+use sp_runtime::{traits::One, DispatchError, DispatchResult, FixedU128};
 use sp_std::cell::RefCell;
 use sp_std::collections::btree_set::BTreeSet;
 
@@ -52,7 +51,7 @@ impl Convert<AssetId, Option<MultiLocation>> for MockConvert {
     fn convert(id: AssetId) -> Option<MultiLocation> {
         match id {
             CORE_ASSET_ID | TEST_ASSET_ID | CHEAP_ASSET_ID | OVERFLOW_ASSET_ID => {
-                Some(MultiLocation::new(0, X1(GeneralKey(id.encode()))))
+                Some(MultiLocation::new(0, X1(GeneralKey(id.encode().try_into().unwrap()))))
             }
             _ => None,
         }
@@ -257,7 +256,7 @@ fn cannot_buy_with_too_few_tokens() {
 fn cannot_buy_with_unknown_token() {
     type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
 
-    let unknown_token = GeneralKey(9876u32.encode());
+    let unknown_token = GeneralKey(9876u32.encode().try_into().unwrap());
 
     let mut trader = Trader::new();
     let payment: MultiAsset = (Concrete(unknown_token.into()), 1_000_000).into();
@@ -269,7 +268,7 @@ fn cannot_buy_with_unknown_token() {
 fn cannot_buy_with_non_fungible() {
     type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
 
-    let unknown_token = GeneralKey(9876u32.encode());
+    let unknown_token = GeneralKey(9876u32.encode().try_into().unwrap());
 
     let mut trader = Trader::new();
     let payment: MultiAsset = (Concrete(unknown_token.into()), NonFungible(AssetInstance::Undefined)).into();
@@ -279,22 +278,18 @@ fn cannot_buy_with_non_fungible() {
 
 #[test]
 fn overflow_errors() {
-    use frame_support::weights::{WeightToFeeCoefficient, WeightToFeeCoefficients};
-    // Create a mock fee calculator that always returns `max_value`.
-    pub struct MaxFee;
-    impl WeightToFeePolynomial for MaxFee {
-        type Balance = Balance;
+    use frame_support::traits::ConstU128;
+    use frame_support::weights::ConstantMultiplier;
 
-        fn polynomial() -> WeightToFeeCoefficients<Balance> {
-            smallvec!(WeightToFeeCoefficient {
-                coeff_integer: Balance::max_value(),
-                coeff_frac: Perbill::zero(),
-                negative: false,
-                degree: 1,
-            })
-        }
-    }
-    type Trader = MultiCurrencyTrader<AssetId, Balance, Price, MaxFee, MockOracle, MockConvert, ()>;
+    type Trader = MultiCurrencyTrader<
+        AssetId,
+        Balance,
+        Price,
+        ConstantMultiplier<u128, ConstU128<{ Balance::MAX }>>,
+        MockOracle,
+        MockConvert,
+        (),
+    >;
 
     let overflow_id = MockConvert::convert(OVERFLOW_ASSET_ID).unwrap();
 

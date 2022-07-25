@@ -85,6 +85,10 @@ parameter_type_with_key! {
     };
 }
 
+parameter_types! {
+    pub const MaxReserves: u32 = 50;
+}
+
 impl orml_tokens::Config for Test {
     type Event = ();
     type Balance = Balance;
@@ -97,6 +101,8 @@ impl orml_tokens::Config for Test {
     type DustRemovalWhitelist = Nothing;
     type OnNewTokenAccount = ();
     type OnKilledTokenAccount = ();
+    type ReserveIdentifier = ();
+    type MaxReserves = MaxReserves;
 }
 
 impl Config for Test {

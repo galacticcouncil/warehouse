@@ -398,6 +398,45 @@ where
             Ok((currency, Some(price)))
         }
     }
+
+    // This method is required by WithdrawFee
+    /// Execute a trade to buy HDX and sell selected currency.
+    pub fn withdraw_fee_non_native(
+        who: &T::AccountId,
+        fee: BalanceOf<T>,
+    ) -> Result<PaymentWithdrawResult, DispatchError> {
+        let currency = Self::account_currency(who);
+
+        if currency == T::NativeAssetId::get() {
+            Ok(PaymentWithdrawResult::Native)
+        } else {
+            let price = if let Some(spot_price) = Self::currency_price(currency) {
+                spot_price
+            } else {
+                // If not loaded in on_init, let's try first the spot price provider again
+                // This is unlikely scenario as the price would be retrieved in on_init for each block
+                if let Some(spot_price) = T::SpotPriceProvider::spot_price(T::NativeAssetId::get(), currency) {
+                    spot_price
+                } else {
+                    Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?
+                }
+            };
+
+            let amount = price.checked_mul_int(fee).ok_or(Error::<T>::Overflow)?;
+
+            T::Currencies::transfer(currency, who, &T::FeeReceiver::get(), amount)?;
+
+            Self::deposit_event(Event::FeeWithdrawn {
+                account_id: who.clone(),
+                asset_id: currency,
+                native_fee_amount: fee,
+                non_native_fee_amount: amount,
+                destination_account_id: T::FeeReceiver::get(),
+            });
+
+            Ok(PaymentWithdrawResult::Transferred)
+        }
+    }
 }
 
 impl<T: Config> TransactionMultiPaymentDataProvider<<T as frame_system::Config>::AccountId, AssetIdOf<T>, Price>
@@ -526,6 +565,15 @@ where
         }
 
         Ok(())
+    }
+}
+
+impl<T: Config> CurrencyWithdraw<<T as frame_system::Config>::AccountId, BalanceOf<T>> for Pallet<T>
+where
+    BalanceOf<T>: FixedPointOperand,
+{
+    fn withdraw(who: &T::AccountId, fee: BalanceOf<T>) -> Result<PaymentWithdrawResult, DispatchError> {
+        Self::withdraw_fee_non_native(who, fee)
     }
 }
 

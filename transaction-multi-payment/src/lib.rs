@@ -424,7 +424,7 @@ where
 
             let amount = price.checked_mul_int(fee).ok_or(Error::<T>::Overflow)?;
 
-            T::Currencies::transfer(currency, who, &T::FeeReceiver::get(), amount)?;
+            T::Currencies::withdraw(currency, who, amount)?;
 
             Self::deposit_event(Event::FeeWithdrawn {
                 account_id: who.clone(),

@@ -88,8 +88,7 @@ impl NftPermission<ClassType> for NftTestPermissions {
     }
 }
 
-impl pallet_nft::Config for Test {
-    type Currency = Balances;
+impl Config for Test {
     type Event = Event;
     type WeightInfo = pallet_nft::weights::BasiliskWeight<Test>;
     type NftClassId = ClassId;
@@ -175,13 +174,14 @@ impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type WeightInfo = ();
     type MaxReserves = MaxReserves;
-    type ReserveIdentifier = ReserveIdentifier;
+    type ReserveIdentifier = ();
 }
 
 pub const ALICE: AccountId = AccountId::new([1u8; 32]);
 pub const BOB: AccountId = AccountId::new([2u8; 32]);
-pub const BSX: Balance = 100_000_000_000;
 pub const CHARLIE: AccountId = AccountId::new([3u8; 32]);
+pub const ACCOUNT_WITH_NO_BALANCE: AccountId = AccountId::new([4u8; 32]);
+pub const BSX: Balance = 100_000_000_000;
 pub const CLASS_ID_0: <Test as pallet_uniques::Config>::ClassId = 1000;
 pub const CLASS_ID_1: <Test as pallet_uniques::Config>::ClassId = 1001;
 pub const CLASS_ID_2: <Test as pallet_uniques::Config>::ClassId = 1002;
@@ -212,4 +212,8 @@ impl ExtBuilder {
         ext.execute_with(|| System::set_block_number(1));
         ext
     }
+}
+
+pub fn expect_events(e: Vec<Event>) {
+    e.into_iter().for_each(frame_system::Pallet::<Test>::assert_has_event);
 }

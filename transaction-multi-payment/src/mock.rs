@@ -61,7 +61,7 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 const MAX_BLOCK_WEIGHT: Weight = 1024;
 
 thread_local! {
-        static EXTRINSIC_BASE_WEIGHT: RefCell<u64> = RefCell::new(0);
+    static EXTRINSIC_BASE_WEIGHT: RefCell<u64> = RefCell::new(0);
 }
 
 pub struct ExtrinsicBaseWeight;
@@ -287,6 +287,8 @@ impl ExtBuilder {
         EXTRINSIC_BASE_WEIGHT.with(|v| *v.borrow_mut() = self.base_weight);
     }
     pub fn build(self) -> sp_io::TestExternalities {
+        use frame_support::traits::OnInitialize;
+
         self.set_constants();
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
@@ -321,6 +323,12 @@ impl ExtBuilder {
         .assimilate_storage(&mut t)
         .unwrap();
 
-        t.into()
+        let mut ext: sp_io::TestExternalities = t.into();
+        ext.execute_with(|| {
+            System::set_block_number(1);
+            // Make sure the prices are up-to-date.
+            PaymentPallet::on_initialize(1);
+        });
+        ext
     }
 }

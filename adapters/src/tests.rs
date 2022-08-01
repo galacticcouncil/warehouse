@@ -214,6 +214,33 @@ fn can_buy_weight() {
 }
 
 #[test]
+fn can_buy_twice() {
+    ExpectRevenue::reset();
+    type Trader =
+        MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ExpectRevenue>;
+
+    let core_id = MockConvert::convert(CORE_ASSET_ID).unwrap();
+
+    {
+        let mut trader = Trader::new();
+
+        let payment1: MultiAsset = (Concrete(core_id.clone()), 1_000_000).into();
+        let res = dbg!(trader.buy_weight(1_000_000, payment1.into()));
+        assert!(res
+            .expect("buy_weight should succeed because payment == weight")
+            .is_empty());
+        let payment2: MultiAsset = (Concrete(core_id.clone()), 1_000_000).into();
+        let res = dbg!(trader.buy_weight(1_000_000, payment2.into()));
+        assert!(res
+            .expect("buy_weight should succeed because payment == weight")
+            .is_empty());
+        let total_payment: MultiAsset = (Concrete(core_id), 2_000_000).into();
+        ExpectRevenue::register_expected_asset(total_payment);
+    }
+    ExpectRevenue::expect_revenue();
+}
+
+#[test]
 fn cannot_buy_with_too_few_tokens() {
     type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
 
@@ -234,6 +261,18 @@ fn cannot_buy_with_unknown_token() {
 
     let mut trader = Trader::new();
     let payment: MultiAsset = (Concrete(unknown_token.into()), 1_000_000).into();
+    let res = dbg!(trader.buy_weight(1_000_000, payment.into()));
+    assert_eq!(res, Err(XcmError::AssetNotFound));
+}
+
+#[test]
+fn cannot_buy_with_non_fungible() {
+    type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
+
+    let unknown_token = GeneralKey(9876u32.encode());
+
+    let mut trader = Trader::new();
+    let payment: MultiAsset = (Concrete(unknown_token.into()), NonFungible(AssetInstance::Undefined)).into();
     let res = dbg!(trader.buy_weight(1_000_000, payment.into()));
     assert_eq!(res, Err(XcmError::AssetNotFound));
 }
@@ -290,6 +329,14 @@ fn refunds_first_asset_completely() {
         assert_eq!(trader.refund_weight(weight), Some(core_payment));
     }
     ExpectRevenue::expect_no_revenue();
+}
+
+#[test]
+fn does_not_refund_if_empty() {
+    type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
+
+    let mut trader = Trader::new();
+    assert_eq!(trader.refund_weight(100), None);
 }
 
 #[test]

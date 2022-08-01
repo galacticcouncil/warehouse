@@ -20,7 +20,6 @@ use frame_support::{assert_noop, assert_ok, traits::tokens::nonfungibles::*};
 use super::*;
 use mock::*;
 use std::convert::TryInto;
-
 type NFTPallet = Pallet<Test>;
 
 #[test]
@@ -42,6 +41,13 @@ fn create_class_works() {
                 metadata: metadata.clone()
             }
         );
+
+        expect_events(vec![crate::Event::ClassCreated {
+            owner: ALICE,
+            class_id: CLASS_ID_0,
+            class_type: ClassType::Marketplace,
+        }
+        .into()]);
 
         // not allowed in Permissions
         assert_noop!(
@@ -104,6 +110,13 @@ fn mint_works() {
                 metadata: metadata.clone()
             }
         );
+
+        expect_events(vec![crate::Event::InstanceMinted {
+            owner: ALICE,
+            class_id: CLASS_ID_0,
+            instance_id: INSTANCE_ID_0,
+        }
+        .into()]);
 
         // duplicate instance
         assert_noop!(
@@ -195,6 +208,14 @@ fn transfer_works() {
             BOB
         ));
         assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0).unwrap(), BOB);
+
+        expect_events(vec![crate::Event::InstanceTransferred {
+            from: ALICE,
+            to: BOB,
+            class_id: CLASS_ID_0,
+            instance_id: INSTANCE_ID_0,
+        }
+        .into()]);
     });
 }
 
@@ -250,6 +271,13 @@ fn burn_works() {
         assert_ok!(NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0));
         assert!(!<Instances<Test>>::contains_key(CLASS_ID_0, INSTANCE_ID_0));
 
+        expect_events(vec![crate::Event::InstanceBurned {
+            owner: ALICE,
+            class_id: CLASS_ID_0,
+            instance_id: INSTANCE_ID_0,
+        }
+        .into()]);
+
         // not existing
         assert_noop!(
             NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0),
@@ -299,6 +327,12 @@ fn destroy_class_works() {
         assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
         assert_eq!(NFTPallet::classes(CLASS_ID_0), None);
 
+        expect_events(vec![crate::Event::ClassDestroyed {
+            owner: ALICE,
+            class_id: CLASS_ID_0,
+        }
+        .into()]);
+
         // not existing
         assert_noop!(
             NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0),
@@ -314,10 +348,10 @@ fn deposit_works() {
             b"metadata".to_vec().try_into().unwrap();
 
         let class_deposit = <Test as pallet_uniques::Config>::ClassDeposit::get();
-        let initial_balance = <Test as Config>::Currency::free_balance(&ALICE);
+        let initial_balance = <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE);
 
         // has deposit
-        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+        assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
         assert_ok!(NFTPallet::create_class(
             Origin::signed(ALICE),
             CLASS_ID_0,
@@ -325,14 +359,20 @@ fn deposit_works() {
             metadata.clone()
         ));
         assert_eq!(
-            <Test as Config>::Currency::free_balance(&ALICE),
+            <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
             initial_balance - class_deposit
         );
-        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), class_deposit);
+        assert_eq!(
+            <Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE),
+            class_deposit
+        );
 
         assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
-        assert_eq!(<Test as Config>::Currency::free_balance(&ALICE), initial_balance);
-        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+        assert_eq!(
+            <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
+            initial_balance
+        );
+        assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
 
         // no deposit
         assert_ok!(NFTPallet::create_class(
@@ -341,12 +381,18 @@ fn deposit_works() {
             ClassType::LiquidityMining,
             metadata
         ));
-        assert_eq!(<Test as Config>::Currency::free_balance(&ALICE), initial_balance);
-        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+        assert_eq!(
+            <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
+            initial_balance
+        );
+        assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
 
         assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
-        assert_eq!(<Test as Config>::Currency::free_balance(&ALICE), initial_balance);
-        assert_eq!(<Test as Config>::Currency::reserved_balance(&ALICE), 0);
+        assert_eq!(
+            <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
+            initial_balance
+        );
+        assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
     })
 }
 
@@ -515,5 +561,75 @@ fn nonfungible_traits_work() {
             )
         );
         assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0), Some(ALICE));
+    });
+}
+
+#[test]
+fn is_id_reserved_should_return_true_when_id_is_from_reserved_range() {
+    assert!(
+        NFTPallet::is_id_reserved(0),
+        "0 should be part of reserved classId range"
+    );
+
+    assert!(
+        NFTPallet::is_id_reserved(13),
+        "num <= ReserveClassIdUpTo should be part of reserved classId range"
+    );
+
+    assert!(
+        NFTPallet::is_id_reserved(mock::ReserveClassIdUpTo::get()),
+        "num == ReserveClassIdUpTo should be part of reserved classId range"
+    );
+}
+
+#[test]
+fn is_id_reserved_should_return_false_when_id_is_not_from_reserved_range() {
+    assert!(
+        !NFTPallet::is_id_reserved(mock::ReserveClassIdUpTo::get() + 1),
+        "(ReserveClassIdUpTo + 1) should not be part of reserved classId range"
+    );
+
+    assert!(
+        !NFTPallet::is_id_reserved(mock::ReserveClassIdUpTo::get() + 500_000_000_000),
+        "num > ReserveClassIdUpTo should not be part of reserved classId range"
+    );
+}
+
+#[test]
+fn create_typed_class_should_work_without_deposit_when_deposit_is_not_required() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(NFTPallet::create_typed_class(
+            ACCOUNT_WITH_NO_BALANCE,
+            CLASS_ID_0,
+            ClassType::LiquidityMining
+        ));
+
+        assert_eq!(
+            NFTPallet::classes(CLASS_ID_0).unwrap(),
+            ClassInfoOf::<Test> {
+                class_type: ClassType::LiquidityMining,
+                metadata: Default::default()
+            }
+        )
+    });
+}
+
+#[test]
+fn create_typed_class_should_not_work_without_deposit_when_deposit_is_required() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            NFTPallet::create_typed_class(ACCOUNT_WITH_NO_BALANCE, CLASS_ID_0, ClassType::Marketplace),
+            pallet_balances::Error::<Test>::InsufficientBalance
+        );
+    });
+}
+
+#[test]
+fn create_typed_class_should_not_work_when_not_permitted() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            NFTPallet::create_typed_class(ALICE, CLASS_ID_0, ClassType::Auction),
+            Error::<Test>::NotPermitted
+        );
     });
 }

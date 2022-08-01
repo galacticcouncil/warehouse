@@ -14,12 +14,18 @@ targets = ["x86_64-unknown-linux-gnu"]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 
 [dependencies]
+# NOTE: Remove once we've upgraded to polkadot-v0.9.24
+# https://github.com/paritytech/substrate/pull/11707
+syn = "=1.0.97"
 log = { default-features = false, version = "0.4.16" }
 codec = { default-features = false, features = ["derive"], package = "parity-scale-codec", version = "2.3.1" }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 serde = { features = ["derive"], optional = true, version = "1.0.136" }
+
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+sp-staking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 
 # ORML dependencies
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "63b32194e7b9aff6a6350d2d4434525de4eec7c1", default-features = false }
@@ -60,4 +66,5 @@ std = [
     "sp-runtime/std",
     "pallet-balances/std",
     "pallet-aura/std",
+    "pallet-session/std",
 ]

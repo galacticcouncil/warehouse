@@ -23,12 +23,13 @@ use codec::HasCompact;
 use frame_support::{
     dispatch::DispatchResult,
     ensure,
-    traits::{tokens::nonfungibles::*, Get, NamedReservableCurrency},
+    traits::{tokens::nonfungibles::*, Get},
     transactional, BoundedVec,
 };
 use frame_system::ensure_signed;
 use pallet_uniques::DestroyWitness;
 
+use hydradx_traits::nft::{CreateTypedClass, ReserveClassId};
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, StaticLookup, Zero},
     DispatchError,
@@ -67,7 +68,6 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_uniques::Config {
-        type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = ReserveIdentifier>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type WeightInfo: WeightInfo;
         type ProtocolOrigin: EnsureOrigin<Self::Origin>;
@@ -125,6 +125,8 @@ pub mod pallet {
             metadata: BoundedVecOfUnq<T>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
+
+            ensure!(!Self::is_id_reserved(class_id), Error::<T>::IdReserved);
 
             Self::do_create_class(sender, class_id, class_type, metadata)?;
 
@@ -214,32 +216,32 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// A class was created \[owner, class_id, class_type\]
+        /// A class was created
         ClassCreated {
             owner: T::AccountId,
             class_id: T::NftClassId,
             class_type: T::ClassType,
         },
-        /// An instance was minted \[owner, class_id, instance_id\]
+        /// An instance was minted
         InstanceMinted {
             owner: T::AccountId,
             class_id: T::NftClassId,
             instance_id: T::NftInstanceId,
         },
-        /// An instance was transferred \[from, to, class_id, instance_id\]
+        /// An instance was transferred
         InstanceTransferred {
             from: T::AccountId,
             to: T::AccountId,
             class_id: T::NftClassId,
             instance_id: T::NftInstanceId,
         },
-        /// An instance was burned \[sender, class_id, instance_id\]
+        /// An instance was burned
         InstanceBurned {
             owner: T::AccountId,
             class_id: T::NftClassId,
             instance_id: T::NftInstanceId,
         },
-        /// A class was destroyed \[class_id\]
+        /// A class was destroyed
         ClassDestroyed {
             owner: T::AccountId,
             class_id: T::NftClassId,
@@ -279,8 +281,7 @@ impl<T: Config> Pallet<T> {
         class_id: T::NftClassId,
         class_type: T::ClassType,
         metadata: BoundedVecOfUnq<T>,
-    ) -> Result<(T::NftClassId, T::ClassType), DispatchError> {
-        ensure!(T::ReserveClassIdUpTo::get() < class_id, Error::<T>::IdReserved);
+    ) -> DispatchResult {
         ensure!(T::Permissions::can_create(&class_type), Error::<T>::NotPermitted);
 
         let deposit_info = match T::Permissions::has_deposit(&class_type) {
@@ -309,7 +310,7 @@ impl<T: Config> Pallet<T> {
             class_type,
         });
 
-        Ok((class_id, class_type))
+        Ok(())
     }
 
     fn do_mint(
@@ -317,7 +318,7 @@ impl<T: Config> Pallet<T> {
         class_id: T::NftClassId,
         instance_id: T::NftInstanceId,
         metadata: BoundedVecOfUnq<T>,
-    ) -> Result<T::NftInstanceId, DispatchError> {
+    ) -> DispatchResult {
         let class_type = Self::classes(class_id)
             .map(|c| c.class_type)
             .ok_or(Error::<T>::ClassUnknown)?;
@@ -334,7 +335,7 @@ impl<T: Config> Pallet<T> {
             instance_id,
         });
 
-        Ok(instance_id)
+        Ok(())
     }
 
     fn do_transfer(
@@ -525,5 +526,17 @@ impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
         let owner = Self::owner(*class, *instance).ok_or(Error::<T>::InstanceUnknown)?;
 
         Self::do_transfer(*class, *instance, owner, destination.clone())
+    }
+}
+
+impl<T: Config> CreateTypedClass<T::AccountId, T::NftClassId, T::ClassType> for Pallet<T> {
+    fn create_typed_class(owner: T::AccountId, class_id: T::NftClassId, class_type: T::ClassType) -> DispatchResult {
+        Self::do_create_class(owner, class_id, class_type, Default::default())
+    }
+}
+
+impl<T: Config> ReserveClassId<T::NftClassId> for Pallet<T> {
+    fn is_id_reserved(id: T::NftClassId) -> bool {
+        id <= T::ReserveClassIdUpTo::get()
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "pallet-nft"
-version = "2.5.0"
+version = "3.2.0"
 description = "A generic NFT pallet for managing non-fungible tokens"
 authors = ["GalacticCoucil"]
 edition = "2021"
@@ -22,6 +22,7 @@ serde = { version = "1.0.136", optional = true, features = ["derive"] }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+hydradx-traits = { path = "../traits", version="0.7.0", default-features = false }
 
 [dev-dependencies]
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
@@ -40,7 +41,6 @@ std = [
     "sp-runtime/std",
     "pallet-uniques/std",
     "scale-info/std",
-
 ]
 runtime-benchmarks = [
     "frame-benchmarking",

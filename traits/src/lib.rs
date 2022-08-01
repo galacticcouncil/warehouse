@@ -19,6 +19,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 pub mod liquidity_mining;
+pub mod nft;
 pub mod pools;
 pub mod registry;
 pub use registry::*;

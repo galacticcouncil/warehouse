@@ -39,7 +39,7 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use sp_runtime::{
-    traits::{DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
+    traits::{DispatchInfoOf, One, PostDispatchInfoOf, Saturating, Zero},
     transaction_validity::{InvalidTransaction, TransactionValidityError},
     FixedU128,
 };
@@ -693,7 +693,11 @@ impl<T: Config + Send + Sync> CurrencyBalanceCheck<T> {
 /// We provide an oracle for the price of all currencies accepted as fee payment.
 impl<T: Config> NativePriceOracle<AssetIdOf<T>, Price> for Pallet<T> {
     fn price(currency: AssetIdOf<T>) -> Option<Price> {
-        Pallet::<T>::currency_price(currency)
+        if currency == T::NativeAssetId::get() {
+            Some(Price::one())
+        } else {
+            Pallet::<T>::currency_price(currency)
+        }
     }
 }
 
@@ -702,7 +706,8 @@ pub struct AddTxAssetOnAccount<T>(PhantomData<T>);
 impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for AddTxAssetOnAccount<T> {
     fn happened((who, currency): &(T::AccountId, AssetIdOf<T>)) {
         if !AccountCurrencyMap::<T>::contains_key(who)
-            && (*currency == T::NativeAssetId::get() || AcceptedCurrencies::<T>::contains_key(&currency))
+            && AcceptedCurrencies::<T>::contains_key(&currency)
+            && T::Currencies::total_balance(T::NativeAssetId::get(), who).is_zero()
         {
             AccountCurrencyMap::<T>::insert(who, currency);
         }

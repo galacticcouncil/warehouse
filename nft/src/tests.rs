@@ -627,11 +627,41 @@ fn create_typed_class_should_not_work_without_deposit_when_deposit_is_required()
 }
 
 #[test]
-fn create_typed_class_should_not_work_when_not_permitted() {
+fn do_mint_should_work_when_account_has_no_balance() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(
-            NFTPallet::create_typed_class(ALICE, CLASS_ID_0, ClassType::Auction),
-            Error::<Test>::NotPermitted
-        );
+        //arrange
+        assert_ok!(NFTPallet::create_typed_class(
+            ACCOUNT_WITH_NO_BALANCE,
+            CLASS_ID_0,
+            ClassType::LiquidityMining
+        ));
+
+        //act & assert
+        assert_ok!(NFTPallet::mint_into(
+            &CLASS_ID_0,
+            &INSTANCE_ID_0,
+            &ACCOUNT_WITH_NO_BALANCE,
+        ));
+    });
+}
+
+#[test]
+fn burn_from_should_work_when_account_has_no_balance() {
+    ExtBuilder::default().build().execute_with(|| {
+        //arrange
+        assert_ok!(NFTPallet::create_typed_class(
+            ACCOUNT_WITH_NO_BALANCE,
+            CLASS_ID_0,
+            ClassType::LiquidityMining
+        ));
+
+        assert_ok!(NFTPallet::mint_into(
+            &CLASS_ID_0,
+            &INSTANCE_ID_0,
+            &ACCOUNT_WITH_NO_BALANCE,
+        ));
+
+        //act & assert
+        assert_ok!(NFTPallet::burn_from(&CLASS_ID_0, &INSTANCE_ID_0,));
     });
 }

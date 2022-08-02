@@ -46,6 +46,7 @@ fn create_class_works() {
             owner: ALICE,
             class_id: CLASS_ID_0,
             class_type: ClassType::Marketplace,
+            metadata: metadata.clone(),
         }
         .into()]);
 
@@ -115,6 +116,7 @@ fn mint_works() {
             owner: ALICE,
             class_id: CLASS_ID_0,
             instance_id: INSTANCE_ID_0,
+            metadata: metadata.clone(),
         }
         .into()]);
 

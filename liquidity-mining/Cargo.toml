@@ -14,14 +14,14 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 codec = { default-features = false, features = ["derive"], package = "parity-scale-codec", version = "2.3.1" }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
-sp-arithmetic = { git = "https://github.com/paritytech//substrate", rev = "22d40c761a985482f93bbbea5ba4199bdba74f8e", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 
 # ORML dependencies
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "aac79b3b31953381669a2ffa9b3e9bfe48e87f38", default-features = false }
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", version="0.7.0", default-features = false }
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev="3e0e6774d52184b00e758dc822564e5a893773f5", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev="1485464db9bc1650fac3fb744f0d3fd725e20e9e", default-features = false }
 
 # Substrate dependencies
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }

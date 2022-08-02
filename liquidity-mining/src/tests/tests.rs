@@ -24,7 +24,7 @@ fn validate_create_farm_data_should_work() {
         1_000_000,
         100,
         1,
-        Permill::from_percent(50),
+        Perquintill::from_percent(50),
         5,
         One::one(),
     ));
@@ -33,7 +33,7 @@ fn validate_create_farm_data_should_work() {
         9_999_000_000_000,
         2_000_000,
         500,
-        Permill::from_percent(100),
+        Perquintill::from_percent(100),
         1,
         One::one(),
     ));
@@ -42,7 +42,7 @@ fn validate_create_farm_data_should_work() {
         10_000_000,
         101,
         16_986_741,
-        Permill::from_perthousand(1),
+        Perquintill::from_perthousand(1),
         1_000_000_000_000_000,
         One::one(),
     ));
@@ -51,42 +51,84 @@ fn validate_create_farm_data_should_work() {
 #[test]
 fn validate_create_farm_data_should_not_work() {
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(999_999, 100, 1, Permill::from_percent(50), 10, One::one()),
+        LiquidityMining::validate_create_global_farm_data(
+            999_999,
+            100,
+            1,
+            Perquintill::from_percent(50),
+            10,
+            One::one()
+        ),
         Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(9, 100, 1, Permill::from_percent(50), 15, One::one()),
+        LiquidityMining::validate_create_global_farm_data(9, 100, 1, Perquintill::from_percent(50), 15, One::one()),
         Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(0, 100, 1, Permill::from_percent(50), 1, One::one()),
+        LiquidityMining::validate_create_global_farm_data(0, 100, 1, Perquintill::from_percent(50), 1, One::one()),
         Error::<Test, Instance1>::InvalidTotalRewards
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 99, 1, Permill::from_percent(50), 2, One::one()),
+        LiquidityMining::validate_create_global_farm_data(
+            1_000_000,
+            99,
+            1,
+            Perquintill::from_percent(50),
+            2,
+            One::one()
+        ),
         Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 0, 1, Permill::from_percent(50), 3, One::one()),
+        LiquidityMining::validate_create_global_farm_data(
+            1_000_000,
+            0,
+            1,
+            Perquintill::from_percent(50),
+            3,
+            One::one()
+        ),
         Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 87, 1, Permill::from_percent(50), 4, One::one()),
+        LiquidityMining::validate_create_global_farm_data(
+            1_000_000,
+            87,
+            1,
+            Perquintill::from_percent(50),
+            4,
+            One::one()
+        ),
         Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 0, Permill::from_percent(50), 4, One::one()),
+        LiquidityMining::validate_create_global_farm_data(
+            1_000_000,
+            100,
+            0,
+            Perquintill::from_percent(50),
+            4,
+            One::one()
+        ),
         Error::<Test, Instance1>::InvalidBlocksPerPeriod
     );
 
     assert_err!(
-        LiquidityMining::validate_create_global_farm_data(1_000_000, 100, 10, Permill::from_percent(0), 10, One::one()),
+        LiquidityMining::validate_create_global_farm_data(
+            1_000_000,
+            100,
+            10,
+            Perquintill::from_percent(0),
+            10,
+            One::one()
+        ),
         Error::<Test, Instance1>::InvalidYieldPerPeriod
     );
 
@@ -95,7 +137,7 @@ fn validate_create_farm_data_should_not_work() {
             10_000_000,
             101,
             16_986_741,
-            Permill::from_perthousand(1),
+            Perquintill::from_perthousand(1),
             0,
             One::one()
         ),
@@ -107,7 +149,7 @@ fn validate_create_farm_data_should_not_work() {
             10_000_000,
             101,
             16_986_741,
-            Permill::from_perthousand(1),
+            Perquintill::from_perthousand(1),
             10,
             Zero::zero()
         ),
@@ -624,7 +666,7 @@ fn update_global_farm_should_work() {
         expected_accumulated_rewards,
     ) in testing_values.iter()
     {
-        let yield_per_period = Permill::from_percent(50);
+        let yield_per_period = Perquintill::from_percent(50);
         let planned_yielding_periods = 100;
         let blocks_per_period = 0;
         let owner = ALICE;
@@ -1017,7 +1059,7 @@ fn claim_from_global_farm_should_work() {
     {
         let global_farm_id = 1;
         let yield_farm_id = 2;
-        let yield_per_period = Permill::from_percent(50);
+        let yield_per_period = Perquintill::from_percent(50);
         let planned_yielding_periods = 100;
         let blocks_per_period = 1;
         let owner = ALICE;
@@ -1399,7 +1441,7 @@ fn update_yield_farm_should_work() {
     ) in testing_values.iter()
     {
         let owner = ALICE;
-        let yield_per_period = Permill::from_percent(50);
+        let yield_per_period = Perquintill::from_percent(50);
         let blocks_per_period = BlockNumber::from(1_u32);
         let planned_yielding_periods = 100;
         let incentivized_token = BSX;
@@ -1963,7 +2005,7 @@ fn global_farm_should_work() {
         1,
         10,
         BSX,
-        Permill::from_float(0.2),
+        Perquintill::from_float(0.2),
         1_000,
         100,
         GC,

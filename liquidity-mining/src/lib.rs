@@ -116,7 +116,7 @@ use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
 use sp_arithmetic::{
     traits::{CheckedDiv, CheckedSub},
-    FixedPointNumber, FixedU128, Permill,
+    FixedPointNumber, FixedU128, Perquintill,
 };
 use sp_std::convert::{From, Into, TryInto};
 
@@ -349,7 +349,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         incentivized_asset: AssetIdOf<T, I>,
         reward_currency: AssetIdOf<T, I>,
         owner: T::AccountId,
-        yield_per_period: Permill,
+        yield_per_period: Perquintill,
         min_deposit: Balance,
         price_adjustment: FixedU128,
     ) -> Result<(GlobalFarmId, Balance), DispatchError> {
@@ -1354,7 +1354,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         total_rewards: Balance,
         planned_yielding_periods: PeriodOf<T>,
         blocks_per_period: BlockNumberFor<T>,
-        yield_per_period: Permill,
+        yield_per_period: Perquintill,
         min_deposit: Balance,
         price_adjustment: FixedU128,
     ) -> DispatchResult {
@@ -1478,7 +1478,7 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         incentivized_asset: T::CurrencyId,
         reward_currency: T::CurrencyId,
         owner: T::AccountId,
-        yield_per_period: Permill,
+        yield_per_period: Perquintill,
         min_deposit: Self::Balance,
         price_adjustment: FixedU128,
     ) -> Result<(u32, Self::Balance), Self::Error> {

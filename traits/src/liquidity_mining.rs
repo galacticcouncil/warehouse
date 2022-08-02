@@ -1,4 +1,4 @@
-use sp_arithmetic::{FixedU128, Permill};
+use sp_arithmetic::{FixedU128, Perquintill};
 
 pub trait Mutate<AccountId, AssetId, BlockNumber> {
     type Error;
@@ -16,7 +16,7 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         incentivized_asset: AssetId,
         reward_currency: AssetId,
         owner: AccountId,
-        yield_per_period: Permill,
+        yield_per_period: Perquintill,
         min_deposit: Self::Balance,
         price_adjustment: FixedU128,
     ) -> Result<(u32, Self::Balance), Self::Error>;

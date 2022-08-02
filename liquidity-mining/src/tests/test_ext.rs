@@ -335,7 +335,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 id: GC_FARM,
                 updated_at: 25,
                 reward_currency: BSX,
-                yield_per_period: Permill::from_percent(50),
+                yield_per_period: Perquintill::from_percent(50),
                 planned_yielding_periods: 500_u64,
                 blocks_per_period: 100_u64,
                 owner: GC,

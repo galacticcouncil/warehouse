@@ -28,7 +28,7 @@ fn create_global_farm_should_work() {
         let blocks_per_period = 20_000;
         let incentivized_token = BSX;
         let owner = ALICE;
-        let yield_per_period = Permill::from_percent(20);
+        let yield_per_period = Perquintill::from_percent(20);
         let max_reward_per_period: Balance = total_rewards.checked_div(planned_yielding_periods.into()).unwrap();
 
         let created_at_block = 15_896;
@@ -101,7 +101,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                 BSX,
                 BSX,
                 ALICE,
-                Permill::from_percent(20),
+                Perquintill::from_percent(20),
                 10,
                 One::one()
             ),
@@ -117,7 +117,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                 BSX,
                 BSX,
                 ALICE,
-                Permill::from_percent(20),
+                Perquintill::from_percent(20),
                 10,
                 One::one()
             ),
@@ -133,7 +133,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                 BSX,
                 BSX,
                 ALICE,
-                Permill::from_percent(20),
+                Perquintill::from_percent(20),
                 10,
                 One::one()
             ),
@@ -149,7 +149,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                 BSX,
                 BSX,
                 ALICE,
-                Permill::from_percent(0),
+                Perquintill::from_percent(0),
                 10,
                 One::one()
             ),
@@ -165,7 +165,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                 BSX,
                 BSX,
                 ALICE,
-                Permill::from_percent(10),
+                Perquintill::from_percent(10),
                 0,
                 One::one()
             ),
@@ -181,7 +181,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                 BSX,
                 BSX,
                 ALICE,
-                Permill::from_percent(10),
+                Perquintill::from_percent(10),
                 10,
                 FixedU128::from(0_u128)
             ),
@@ -202,7 +202,7 @@ fn create_global_farm_with_inssufficient_balance_should_not_work() {
                 BSX,
                 BSX,
                 ACCOUNT_WITH_1M,
-                Permill::from_percent(20),
+                Perquintill::from_percent(20),
                 10,
                 One::one(),
             ),

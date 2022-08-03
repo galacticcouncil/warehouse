@@ -656,7 +656,7 @@ fn do_mint_should_work_when_account_has_no_balance() {
 }
 
 #[test]
-fn burn_from_should_work_when_account_has_no_balance() {
+fn burn_should_work_when_account_has_no_balance() {
     ExtBuilder::default().build().execute_with(|| {
         //arrange
         assert_ok!(NFTPallet::create_typed_class(
@@ -670,8 +670,22 @@ fn burn_from_should_work_when_account_has_no_balance() {
             &INSTANCE_ID_0,
             &ACCOUNT_WITH_NO_BALANCE,
         ));
+        assert_ok!(NFTPallet::mint_into(
+            &CLASS_ID_0,
+            &INSTANCE_ID_1,
+            &ACCOUNT_WITH_NO_BALANCE,
+        ));
 
         //act & assert
-        assert_ok!(NFTPallet::burn_from(&CLASS_ID_0, &INSTANCE_ID_0,));
+        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+            &CLASS_ID_0,
+            &INSTANCE_ID_0,
+            None
+        ));
+        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+            &CLASS_ID_0,
+            &INSTANCE_ID_1,
+            Some(&ACCOUNT_WITH_NO_BALANCE)
+        ));
     });
 }

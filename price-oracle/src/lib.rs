@@ -26,6 +26,8 @@ use sp_std::convert::TryInto;
 use sp_std::marker::PhantomData;
 use sp_std::prelude::*;
 
+use sp_std::collections::btree_map::BTreeMap;
+
 #[cfg(test)]
 mod mock;
 
@@ -126,6 +128,15 @@ pub mod pallet {
     #[pallet::getter(fn price_data_thousand)]
     pub type PriceDataThousand<T: Config> = StorageMap<_, Twox64Concat, AssetPairId, BucketQueue, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn accumulator)]
+    pub type Accumulator<T: Config> = StorageValue<_, BTreeMap<AssetPairId, PriceEntry>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn oracle)]
+    pub type Oracles<T: Config> =
+        StorageDoubleMap<_, Twox64Concat, AssetPairId, Twox64Concat, u32, PriceEntry, OptionQuery>;
+
     #[pallet::genesis_config]
     #[derive(Default)]
     pub struct GenesisConfig {
@@ -225,6 +236,17 @@ impl<T: Config> Pallet<T> {
                 *previous_price_entry = new_price_entry;
             }
         });
+
+        let _ = Accumulator::<T>::mutate(|accumulator| {
+            let pair_id = Self::get_name(asset_a, asset_b);
+
+            accumulator
+                .entry(pair_id)
+                .and_modify(|entry| {
+                    *entry = entry.accumulate_trade_amount(&price_entry);
+                })
+                .or_insert(price_entry);
+        });
     }
 
     fn update_data() {
@@ -262,6 +284,28 @@ impl<T: Config> Pallet<T> {
                     data.update_last(element_from_hundred.1.calculate_average());
                 });
             }
+        }
+
+        // EMA oracles
+        for (pair_id, price_entry) in Accumulator::<T>::take().into_iter() {
+            Oracles::<T>::mutate(pair_id.clone(), 1, |oracle| {
+                let new_entry = oracle
+                    .map(|entry| entry.calculate_new_ema_entry::<1>(&price_entry).unwrap_or(entry))
+                    .unwrap_or(price_entry);
+                *oracle = Some(new_entry);
+            });
+            Oracles::<T>::mutate(pair_id.clone(), 10, |oracle| {
+                let new_entry = oracle
+                    .map(|entry| entry.calculate_new_ema_entry::<10>(&price_entry).unwrap_or(entry))
+                    .unwrap_or(price_entry);
+                *oracle = Some(new_entry);
+            });
+            Oracles::<T>::mutate(pair_id.clone(), 50, |oracle| {
+                let new_entry = oracle
+                    .map(|entry| entry.calculate_new_ema_entry::<50>(&price_entry).unwrap_or(entry))
+                    .unwrap_or(price_entry);
+                *oracle = Some(new_entry);
+            });
         }
     }
 

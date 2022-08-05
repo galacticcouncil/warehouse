@@ -563,6 +563,8 @@ fn stable_price_should_work() {
         let num_of_iters = BucketQueue::BUCKET_SIZE.pow(3);
         assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
 
+        env_logger::init();
+
         for i in num_of_iters - 2..2 * num_of_iters + 2 {
             PriceOracle::on_initialize(i.into());
             System::set_block_number(i.into());
@@ -599,6 +601,10 @@ fn stable_price_should_work() {
                 volume: 1_000
             }
         );
+        assert_eq!(PriceOracle::oracle(hdx_dot_pair_name.clone(), 1), Some(PRICE_ENTRY_1));
+        assert_eq!(PriceOracle::oracle(hdx_dot_pair_name.clone(), 10), Some(PRICE_ENTRY_1));
+        assert_eq!(PriceOracle::oracle(hdx_dot_pair_name.clone(), 50), Some(PRICE_ENTRY_1));
+        assert_eq!(PriceOracle::oracle(hdx_dot_pair_name.clone(), 5), None);
 
         for i in num_of_iters..2 * num_of_iters {
             PriceOracle::on_initialize(i.into());

@@ -102,6 +102,37 @@ impl PriceEntry {
             liquidity_amount: total_liquidity,
         })
     }
+
+    pub fn accumulate_trade_amount(&self, previous_entry: &Self) -> Self {
+        let trade_amount = previous_entry.trade_amount.saturating_add(self.trade_amount);
+        Self {
+            price: self.price,
+            trade_amount,
+            liquidity_amount: self.liquidity_amount,
+        }
+    }
+
+    pub fn calculate_new_ema_entry<const N: u32>(&self, previous_entry: &Self) -> Option<Self> {
+        use sp_arithmetic::{traits::One, FixedPointNumber};
+
+        let alpha = Price::saturating_from_rational(2u32, N.max(1) + 1);
+        debug_assert!(alpha <= Price::one());
+        let inv_alpha = Price::one() - alpha;
+
+        // TODO: include time
+        let price = previous_entry.price.checked_mul(&inv_alpha)? + self.price.checked_mul(&alpha)?;
+        let trade_amount = (inv_alpha.checked_mul(&Price::from(previous_entry.trade_amount))?
+            + alpha.checked_mul(&Price::from(self.trade_amount))?)
+        .saturating_mul_int(1u32.into());
+        let liquidity_amount = (inv_alpha.checked_mul(&Price::from(previous_entry.liquidity_amount))?
+            + alpha.checked_mul(&Price::from(self.liquidity_amount))?)
+        .saturating_mul_int(1u32.into());
+        Some(Self {
+            price,
+            trade_amount,
+            liquidity_amount,
+        })
+    }
 }
 
 pub const BUCKET_SIZE: u32 = 10;

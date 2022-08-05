@@ -62,6 +62,7 @@ const MAX_BLOCK_WEIGHT: Weight = 1024;
 
 thread_local! {
     static EXTRINSIC_BASE_WEIGHT: RefCell<u64> = RefCell::new(0);
+    static CHARGE_FEE: RefCell<bool> = RefCell::new(true);
 }
 
 pub struct ExtrinsicBaseWeight;
@@ -120,6 +121,7 @@ parameter_types! {
 
     pub ExchangeFeeRate: (u32, u32) = (2, 1_000);
     pub PayForSetCurrency : Pays = Pays::Yes;
+
 }
 
 impl system::Config for Test {
@@ -176,12 +178,80 @@ impl pallet_balances::Config for Test {
 }
 
 impl pallet_transaction_payment::Config for Test {
-    type OnChargeTransaction = TransferFees<Currencies, PaymentPallet, DepositAll<Test>>;
+    type OnChargeTransaction = ChargeAdapter<
+        TransferFees<Currencies, PaymentPallet, DepositAll<Test>>,
+        TransferFees<Currencies, PaymentPallet, DepositAll<Test>>,
+    >;
     type TransactionByteFee = TransactionByteFee;
     type OperationalFeeMultiplier = ();
     type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate = ();
 }
+
+pub struct ChargeAdapter<L, R>(sp_std::marker::PhantomData<L>, sp_std::marker::PhantomData<R>);
+
+#[derive(Default)]
+pub struct Info<L, R>(Option<L>, Option<R>);
+
+impl<T, L, R> OnChargeTransaction<T> for ChargeAdapter<L, R>
+where
+    L: OnChargeTransaction<T>,
+    R: OnChargeTransaction<T>,
+    T: pallet::Config,
+    L::Balance: From<u128>,
+    R::Balance: From<u128>,
+{
+    type Balance = u128;
+    type LiquidityInfo = Info<L::LiquidityInfo, R::LiquidityInfo>;
+
+    fn withdraw_fee(
+        who: &T::AccountId,
+        call: &T::Call,
+        dispatch_info: &DispatchInfoOf<T::Call>,
+        fee: Self::Balance,
+        tip: Self::Balance,
+    ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
+        let f = CHARGE_FEE.with(|v| v.borrow().clone());
+        if f {
+            let r = L::withdraw_fee(who, call, dispatch_info, fee.into(), tip.into())?;
+            Ok(Info(Some(r), None))
+        } else {
+            let r = R::withdraw_fee(who, call, dispatch_info, fee.into(), tip.into())?;
+            Ok(Info(None, Some(r)))
+        }
+    }
+
+    fn correct_and_deposit_fee(
+        who: &T::AccountId,
+        dispatch_info: &DispatchInfoOf<T::Call>,
+        post_info: &PostDispatchInfoOf<T::Call>,
+        corrected_fee: Self::Balance,
+        tip: Self::Balance,
+        already_withdrawn: Self::LiquidityInfo,
+    ) -> Result<(), TransactionValidityError> {
+        let f = CHARGE_FEE.with(|v| v.borrow().clone());
+        if f {
+            L::correct_and_deposit_fee(
+                who,
+                dispatch_info,
+                post_info,
+                corrected_fee.into(),
+                tip.into(),
+                already_withdrawn.0.unwrap(),
+            )
+        } else {
+            R::correct_and_deposit_fee(
+                who,
+                dispatch_info,
+                post_info,
+                corrected_fee.into(),
+                tip.into(),
+                already_withdrawn.1.unwrap(),
+            )
+        }
+    }
+}
+
 pub struct AssetPairAccountIdTest();
 
 impl AssetPairAccountIdFor<AssetId, u64> for AssetPairAccountIdTest {

@@ -135,7 +135,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn oracle)]
     pub type Oracles<T: Config> =
-        StorageDoubleMap<_, Twox64Concat, AssetPairId, Twox64Concat, u32, PriceEntry, OptionQuery>;
+        StorageDoubleMap<_, Twox64Concat, AssetPairId, Twox64Concat, Period, PriceEntry, OptionQuery>;
 
     #[pallet::genesis_config]
     #[derive(Default)]
@@ -294,7 +294,7 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    fn update_oracle<const N: u32>(pair_id: &AssetPairId, price_entry: &PriceEntry) {
+    fn update_oracle<const N: Period>(pair_id: &AssetPairId, price_entry: &PriceEntry) {
         Oracles::<T>::mutate(pair_id, N, |oracle| {
             let new_entry = oracle
                 .map(|entry| entry.calculate_new_ema_entry::<N>(&price_entry).unwrap_or(entry))

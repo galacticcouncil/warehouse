@@ -29,6 +29,7 @@ use serde::{Deserialize, Serialize};
 pub type AssetId = u32;
 pub type Balance = u128;
 pub type Price = FixedU128;
+pub type Period = u32;
 
 /// A type representing data produced by a trade.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -112,7 +113,14 @@ impl PriceEntry {
         }
     }
 
-    pub fn calculate_new_ema_entry<const N: u32>(&self, previous_entry: &Self) -> Option<Self> {
+    /// Determine a new price entry based on self and a previous entry.
+    /// Uses an exponential moving average with a smoothing factor of `alpha = 2 / (N + 1)`.
+    /// `alpha = 2 / (N + 1)` leads to the center of mass of the EMA corresponding to an N-length SMA.
+    ///
+    /// Possible alternatives: `alpha = 1 - 0.5^(1 / N)` for a half-life of N periods or
+    /// `alpha = 1 - 0.5^(1 / (0.5N))` to have the same median as an N-length SMA.
+    /// See https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA
+    pub fn calculate_new_ema_entry<const N: Period>(&self, previous_entry: &Self) -> Option<Self> {
         use sp_arithmetic::{traits::One, FixedPointNumber};
 
         let alpha = Price::saturating_from_rational(2u32, N.max(1) + 1);
@@ -120,7 +128,11 @@ impl PriceEntry {
         let inv_alpha = Price::one() - alpha;
 
         // TODO: include time
+        // All three should follow `old_value * inv_alpha + incoming_value * alpha`.
+        // Safe to use bare `+` because `inv_alpha + apha == 1`.
         let price = previous_entry.price.checked_mul(&inv_alpha)? + self.price.checked_mul(&alpha)?;
+        // `Price::from` necessary to avoid rounding errors induced by using `checked_mul_int` with
+        // small values.
         let trade_amount = (inv_alpha.checked_mul(&Price::from(previous_entry.trade_amount))?
             + alpha.checked_mul(&Price::from(self.trade_amount))?)
         .saturating_mul_int(1u32.into());

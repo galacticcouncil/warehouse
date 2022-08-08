@@ -288,25 +288,19 @@ impl<T: Config> Pallet<T> {
 
         // EMA oracles
         for (pair_id, price_entry) in Accumulator::<T>::take().into_iter() {
-            Oracles::<T>::mutate(pair_id.clone(), 1, |oracle| {
-                let new_entry = oracle
-                    .map(|entry| entry.calculate_new_ema_entry::<1>(&price_entry).unwrap_or(entry))
-                    .unwrap_or(price_entry);
-                *oracle = Some(new_entry);
-            });
-            Oracles::<T>::mutate(pair_id.clone(), 10, |oracle| {
-                let new_entry = oracle
-                    .map(|entry| entry.calculate_new_ema_entry::<10>(&price_entry).unwrap_or(entry))
-                    .unwrap_or(price_entry);
-                *oracle = Some(new_entry);
-            });
-            Oracles::<T>::mutate(pair_id.clone(), 50, |oracle| {
-                let new_entry = oracle
-                    .map(|entry| entry.calculate_new_ema_entry::<50>(&price_entry).unwrap_or(entry))
-                    .unwrap_or(price_entry);
-                *oracle = Some(new_entry);
-            });
+            Self::update_oracle::<1>(&pair_id, &price_entry);
+            Self::update_oracle::<10>(&pair_id, &price_entry);
+            Self::update_oracle::<50>(&pair_id, &price_entry);
         }
+    }
+
+    fn update_oracle<const N: u32>(pair_id: &AssetPairId, price_entry: &PriceEntry) {
+        Oracles::<T>::mutate(pair_id, N, |oracle| {
+            let new_entry = oracle
+                .map(|entry| entry.calculate_new_ema_entry::<N>(&price_entry).unwrap_or(entry))
+                .unwrap_or(price_entry.clone());
+            *oracle = Some(new_entry);
+        });
     }
 
     /// Calculate price from ordered assets

@@ -25,6 +25,16 @@ use frame_support::{
 };
 use sp_arithmetic::traits::One;
 
+#[macro_export]
+macro_rules! assert_eq_approx {
+    ( $x:expr, $y:expr, $z:expr, $r:expr) => {{
+        let diff = if $x >= $y { $x - $y } else { $y - $x };
+        if diff > $z {
+            panic!("\n{} not equal\n left: {:?}\nright: {:?}\n", $r, $x, $y);
+        }
+    }};
+}
+
 pub fn new_test_ext() -> sp_io::TestExternalities {
     ExtBuilder::default().build()
 }
@@ -718,8 +728,13 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
         liquidity: next_liquidity,
         timestamp: 100,
     };
-    let next_oracle = next_value.calculate_new_ema_entry::<PERIOD>(&start_oracle);
-    // assert_eq!(next_oracle, Some(next_value));
+    let next_oracle = next_value.calculate_new_ema_entry::<PERIOD>(&start_oracle).unwrap();
+    assert_eq_approx!(
+        next_oracle.price,
+        next_value.price,
+        Price::from_float(0.0001),
+        "Oracle price deviates too much."
+    );
 
     let (next_price, next_volume, next_liquidity) =
         (Price::saturating_from_integer(8000u32), 8000u32.into(), 8000u32.into());
@@ -731,9 +746,9 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
     };
     let next_oracle = next_value.calculate_new_ema_entry::<PERIOD>(&start_oracle);
     let expected_oracle = PriceEntry {
-        price: Price::saturating_from_integer(6000u32),
-        volume: 6000u32.into(),
-        liquidity: 6000u32.into(),
+        price: Price::saturating_from_rational(63125, 10),
+        volume: 6312u32.into(),
+        liquidity: 6312u32.into(),
         timestamp: 8,
     };
     assert_eq!(next_oracle, Some(expected_oracle));

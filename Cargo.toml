@@ -12,6 +12,7 @@ members = [
 	"adapters",
 	"collator-rewards",
 	"transaction-pause",
+	"currencies",
 ]
 
 resolver = "2"

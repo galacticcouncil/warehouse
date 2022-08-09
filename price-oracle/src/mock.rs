@@ -31,6 +31,7 @@ use sp_core::H256;
 pub type AssetId = u32;
 pub type Balance = u128;
 pub type Price = FixedU128;
+pub type BlockNumber = u64;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -40,15 +41,17 @@ pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
 pub const ETH: AssetId = 4_000;
 
-pub const PRICE_ENTRY_1: PriceEntry = PriceEntry {
+pub const PRICE_ENTRY_1: PriceEntry<BlockNumber> = PriceEntry {
     price: Price::from_inner(2000000000000000000),
-    trade_amount: 1_000,
-    liquidity_amount: 2_000,
+    volume: 1_000,
+    liquidity: 2_000,
+    timestamp: 5,
 };
-pub const PRICE_ENTRY_2: PriceEntry = PriceEntry {
+pub const PRICE_ENTRY_2: PriceEntry<BlockNumber> = PriceEntry {
     price: Price::from_inner(5000000000000000000),
-    trade_amount: 3_000,
-    liquidity_amount: 4_000,
+    volume: 3_000,
+    liquidity: 4_000,
+    timestamp: 10,
 };
 
 frame_support::construct_runtime!(
@@ -64,7 +67,7 @@ frame_support::construct_runtime!(
 );
 
 parameter_types! {
-    pub const BlockHashCount: u64 = 250;
+    pub const BlockHashCount: BlockNumber = 250;
 }
 
 impl frame_system::Config for Test {
@@ -74,7 +77,7 @@ impl frame_system::Config for Test {
     type Origin = Origin;
     type Call = Call;
     type Index = u64;
-    type BlockNumber = u64;
+    type BlockNumber = BlockNumber;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u64;
@@ -123,11 +126,11 @@ impl Config for Test {
 
 #[derive(Default)]
 pub struct ExtBuilder {
-    pub price_data: Vec<((AssetId, AssetId), Price, Balance)>,
+    pub price_data: Vec<((AssetId, AssetId), Price, Balance, Balance)>,
 }
 
 impl ExtBuilder {
-    pub fn with_price_data(mut self, data: Vec<((AssetId, AssetId), Price, Balance)>) -> Self {
+    pub fn with_price_data(mut self, data: Vec<((AssetId, AssetId), Price, Balance, Balance)>) -> Self {
         self.price_data = data;
         self
     }

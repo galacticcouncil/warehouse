@@ -19,6 +19,10 @@ use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero};
 use frame_support::sp_runtime::{FixedU128, RuntimeDebug};
 use scale_info::TypeInfo;
+use sp_arithmetic::{
+    traits::{One, SaturatedConversion, UniqueSaturatedInto},
+    FixedPointNumber,
+};
 use sp_std::iter::Sum;
 use sp_std::ops::{Add, Index, IndexMut};
 use sp_std::prelude::*;
@@ -34,82 +38,41 @@ pub type Period = u32;
 /// A type representing data produced by a trade.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(RuntimeDebug, Encode, Decode, Copy, Clone, PartialEq, Eq, Default, TypeInfo)]
-pub struct PriceEntry {
+pub struct PriceEntry<BlockNumber> {
     pub price: Price,
-    pub trade_amount: Balance,
-    pub liquidity_amount: Balance,
+    pub volume: Balance,
+    pub liquidity: Balance,
+    pub timestamp: BlockNumber,
 }
 
-impl Add for PriceEntry {
-    type Output = Self;
-    fn add(self, other: Self) -> Self {
-        Self {
-            price: self.price.add(other.price),
-            trade_amount: self.trade_amount.add(other.trade_amount),
-            liquidity_amount: self.liquidity_amount.add(other.liquidity_amount),
-        }
-    }
-}
-
-impl Zero for PriceEntry {
-    fn zero() -> Self {
-        Self {
-            price: Price::zero(),
-            trade_amount: Balance::zero(),
-            liquidity_amount: Balance::zero(),
-        }
-    }
-
-    fn is_zero(&self) -> bool {
-        self == &PriceEntry::zero()
-    }
-}
-
-impl Add for &PriceEntry {
-    type Output = PriceEntry;
-    fn add(self, other: Self) -> Self::Output {
-        PriceEntry {
-            price: self.price.add(other.price),
-            trade_amount: self.trade_amount.add(other.trade_amount),
-            liquidity_amount: self.liquidity_amount.add(other.liquidity_amount),
-        }
-    }
-}
-
-impl<'a> Sum<&'a Self> for PriceEntry {
-    fn sum<I>(iter: I) -> Self
-    where
-        I: Iterator<Item = &'a Self>,
-    {
-        iter.fold(PriceEntry::default(), |a, b| &a + b)
-    }
-}
-
-impl PriceEntry {
+impl<BlockNumber> PriceEntry<BlockNumber>
+where
+    BlockNumber: UniqueSaturatedInto<u64> + Copy,
+{
     /// Updates the previous average value with a new entry.
     pub fn calculate_new_price_entry(&self, previous_price_entry: &Self) -> Option<Self> {
-        let total_liquidity = previous_price_entry
-            .liquidity_amount
-            .checked_add(self.liquidity_amount)?;
+        let total_liquidity = previous_price_entry.liquidity.checked_add(self.liquidity)?;
         let product_of_old_values = previous_price_entry
             .price
-            .checked_mul(&Price::from_inner(previous_price_entry.liquidity_amount))?;
-        let product_of_new_values = self.price.checked_mul(&Price::from_inner(self.liquidity_amount))?;
+            .checked_mul(&Price::from_inner(previous_price_entry.liquidity))?;
+        let product_of_new_values = self.price.checked_mul(&Price::from_inner(self.liquidity))?;
         Some(Self {
             price: product_of_old_values
                 .checked_add(&product_of_new_values)?
                 .checked_div(&Price::from_inner(total_liquidity))?,
-            trade_amount: previous_price_entry.trade_amount.checked_add(self.trade_amount)?,
-            liquidity_amount: total_liquidity,
+            volume: previous_price_entry.volume.checked_add(self.volume)?,
+            liquidity: total_liquidity,
+            timestamp: self.timestamp,
         })
     }
 
-    pub fn accumulate_trade_amount(&self, previous_entry: &Self) -> Self {
-        let trade_amount = previous_entry.trade_amount.saturating_add(self.trade_amount);
+    pub fn accumulate_volume(&self, previous_entry: &Self) -> Self {
+        let volume = previous_entry.volume.saturating_add(self.volume);
         Self {
             price: self.price,
-            trade_amount,
-            liquidity_amount: self.liquidity_amount,
+            volume,
+            liquidity: self.liquidity,
+            timestamp: self.timestamp,
         }
     }
 
@@ -121,127 +84,45 @@ impl PriceEntry {
     /// `alpha = 1 - 0.5^(1 / (0.5N))` to have the same median as an N-length SMA.
     /// See https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA
     pub fn calculate_new_ema_entry<const N: Period>(&self, previous_entry: &Self) -> Option<Self> {
-        use sp_arithmetic::{traits::One, FixedPointNumber};
-
         let alpha = Price::saturating_from_rational(2u32, N.max(1) + 1);
         debug_assert!(alpha <= Price::one());
         let inv_alpha = Price::one() - alpha;
 
-        // TODO: include time
-        // All three should follow `old_value * inv_alpha + incoming_value * alpha`.
-        // Safe to use bare `+` because `inv_alpha + apha == 1`.
-        let price = previous_entry.price.checked_mul(&inv_alpha)? + self.price.checked_mul(&alpha)?;
-        // `Price::from` necessary to avoid rounding errors induced by using `checked_mul_int` with
-        // small values.
-        let trade_amount = (inv_alpha.checked_mul(&Price::from(previous_entry.trade_amount))?
-            + alpha.checked_mul(&Price::from(self.trade_amount))?)
-        .saturating_mul_int(1u32.into());
-        let liquidity_amount = (inv_alpha.checked_mul(&Price::from(previous_entry.liquidity_amount))?
-            + alpha.checked_mul(&Price::from(self.liquidity_amount))?)
-        .saturating_mul_int(1u32.into());
+        let mut price = previous_entry.price;
+        let mut volume = previous_entry.volume;
+        let mut liquidity = previous_entry.liquidity;
+        for _ in previous_entry.timestamp.saturated_into::<u64>()..self.timestamp.saturated_into::<u64>() {
+            (price, volume, liquidity) = ema(
+                (price, volume, liquidity),
+                (self.price, self.volume, self.liquidity),
+                alpha,
+                inv_alpha,
+            )?;
+        }
         Some(Self {
             price,
-            trade_amount,
-            liquidity_amount,
+            volume,
+            liquidity,
+            timestamp: self.timestamp,
         })
     }
 }
 
-pub const BUCKET_SIZE: u32 = 10;
-
-pub type Bucket = [PriceInfo; BUCKET_SIZE as usize];
-
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(RuntimeDebug, Encode, Decode, Copy, Clone, PartialEq, Eq, Default, TypeInfo)]
-pub struct PriceInfo {
-    pub avg_price: Price,
-    pub volume: Balance,
-}
-
-impl Add for &PriceInfo {
-    type Output = PriceInfo;
-    fn add(self, other: Self) -> Self::Output {
-        PriceInfo {
-            avg_price: self.avg_price.add(other.avg_price),
-            volume: self.volume.add(other.volume),
-        }
-    }
-}
-
-impl<'a> Sum<&'a Self> for PriceInfo {
-    fn sum<I>(iter: I) -> Self
-    where
-        I: Iterator<Item = &'a Self>,
-    {
-        iter.fold(PriceInfo::default(), |a, b| &a + b)
-    }
-}
-
-/// A circular buffer storing average prices and volumes
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(RuntimeDebug, Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo)]
-pub struct BucketQueue {
-    bucket: Bucket,
-    last: u32,
-}
-
-impl BucketQueue {
-    // make sure that BUCKET_SIZE != 0
-    pub const BUCKET_SIZE: u32 = BUCKET_SIZE;
-}
-
-impl Default for BucketQueue {
-    fn default() -> Self {
-        Self {
-            bucket: Bucket::default(),
-            last: Self::BUCKET_SIZE - 1,
-        }
-    }
-}
-
-pub trait BucketQueueT {
-    fn update_last(&mut self, price_info: PriceInfo);
-    fn get_last(&self) -> PriceInfo;
-    fn calculate_average(&self) -> PriceInfo;
-}
-
-impl BucketQueueT for BucketQueue {
-    /// Add new entry to the front and remove the oldest entry.
-    fn update_last(&mut self, price_info: PriceInfo) {
-        self.last = (self.last + 1) % Self::BUCKET_SIZE;
-        self.bucket[self.last as usize] = price_info;
-    }
-
-    /// Get the last entry added
-    fn get_last(&self) -> PriceInfo {
-        self.bucket[self.last as usize]
-    }
-
-    /// Calculate average price and volume from all the entries.
-    fn calculate_average(&self) -> PriceInfo {
-        let sum = self.bucket.iter().sum::<PriceInfo>();
-        PriceInfo {
-            avg_price: sum
-                .avg_price
-                .checked_div(&Price::from(Self::BUCKET_SIZE as u128))
-                .expect("avg_price is valid value; BUCKET_SIZE is non-zero integer; qed"),
-            volume: sum
-                .volume
-                .checked_div(Self::BUCKET_SIZE as u128)
-                .expect("avg_price is valid value; BUCKET_SIZE is non-zero integer; qed"),
-        }
-    }
-}
-
-impl Index<usize> for BucketQueue {
-    type Output = PriceInfo;
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.bucket[index]
-    }
-}
-
-impl IndexMut<usize> for BucketQueue {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.bucket[index]
-    }
+pub(crate) fn ema(
+    (prev_price, prev_volume, prev_liquidity): (Price, Balance, Balance),
+    (new_price, new_volume, new_liquidity): (Price, Balance, Balance),
+    alpha: Price,
+    inv_alpha: Price,
+) -> Option<(Price, Balance, Balance)> {
+    // All three should follow `old_value * inv_alpha + incoming_value * alpha`.
+    // Safe to use bare `+` because `inv_alpha + apha == 1`.
+    let price = prev_price.checked_mul(&inv_alpha)? + new_price.checked_mul(&alpha)?;
+    let volume = (inv_alpha.checked_mul(&Price::from(prev_volume))? + alpha.checked_mul(&Price::from(new_volume))?)
+        .saturating_mul_int(1u32.into());
+    // `checked_mul` in combination with `Price::from` necessary to avoid rounding errors
+    // induced by using `checked_mul_int` with small values.
+    let liquidity = (inv_alpha.checked_mul(&Price::from(prev_liquidity))?
+        + alpha.checked_mul(&Price::from(new_liquidity))?)
+    .saturating_mul_int(1u32.into());
+    Some((price, volume, liquidity))
 }

@@ -19,9 +19,14 @@ use super::*;
 pub use crate::mock::{
     Event as TestEvent, ExtBuilder, Origin, PriceOracle, System, Test, ACA, DOT, ETH, HDX, PRICE_ENTRY_1, PRICE_ENTRY_2,
 };
+use OraclePeriod::*;
+
+use assert_matches::assert_matches;
 use frame_support::{
-    assert_noop, assert_ok, assert_storage_noop,
-    traits::{OnFinalize, OnInitialize},
+    assert_noop,
+    assert_ok,
+    assert_storage_noop,
+    // traits::{OnFinalize, OnInitialize},
 };
 use sp_arithmetic::traits::One;
 
@@ -53,37 +58,38 @@ fn expect_events(e: Vec<TestEvent>) {
     assert_eq!(last_events(e.len()), e);
 }
 
-// #[test]
-// fn genesis_config_works() {
-//     ExtBuilder::default()
-//         .with_price_data(vec![
-//             ((HDX, DOT), Price::from(1_000_000), 2_000_000, 2_000_000),
-//             ((HDX, ACA), Price::from(3_000_000), 4_000_000, 4_000_000),
-//         ])
-//         .build()
-//         .execute_with(|| {
-//             assert_eq!(PriceOracle::num_of_assets(), 2);
-//             assert_eq!(PriceOracle::price_data_ten().len(), 2);
+#[test]
+fn genesis_config_works() {
+    ExtBuilder::default()
+        .with_price_data(vec![
+            ((HDX, DOT), Price::from(1_000_000), 2_000_000, 2_000_000),
+            ((HDX, ACA), Price::from(3_000_000), 4_000_000, 4_000_000),
+        ])
+        .build()
+        .execute_with(|| {
+            for period in OraclePeriod::all_periods() {
+                assert_eq!(
+                    PriceOracle::oracle(determine_name(HDX, DOT), period.into_num()),
+                    Some(PriceEntry {
+                        price: Price::from(1_000_000),
+                        volume: 2_000_000,
+                        liquidity: 2_000_000,
+                        timestamp: 0,
+                    })
+                );
 
-//             assert_eq!(PriceOracle::price_data_ten()[0].0, PriceOracle::get_name(HDX, DOT));
-//             assert_eq!(
-//                 PriceOracle::price_data_ten()[0].1.get_last(),
-//                 PriceInfo {
-//                     avg_price: Price::from(1_000_000),
-//                     volume: 2_000_000
-//                 }
-//             );
-
-//             assert_eq!(PriceOracle::price_data_ten()[1].0, PriceOracle::get_name(HDX, ACA));
-//             assert_eq!(
-//                 PriceOracle::price_data_ten()[1].1.get_last(),
-//                 PriceInfo {
-//                     avg_price: Price::from(3_000_000),
-//                     volume: 4_000_000
-//                 }
-//             );
-//         });
-// }
+                assert_eq!(
+                    PriceOracle::oracle(determine_name(HDX, ACA), period.into_num()),
+                    Some(PriceEntry {
+                        price: Price::from(3_000_000),
+                        volume: 4_000_000,
+                        liquidity: 4_000_000,
+                        timestamp: 0,
+                    })
+                );
+            }
+        });
+}
 
 // #[test]
 // fn add_new_asset_pair_should_work() {
@@ -91,9 +97,9 @@ fn expect_events(e: Vec<TestEvent>) {
 //         System::set_block_number(3);
 //         PriceOracle::on_initialize(3);
 
-//         let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
-//         let hdx_aca_pair_name = PriceOracle::get_name(HDX, ACA);
-//         let hdx_eth_pair_name = PriceOracle::get_name(HDX, ETH);
+//         let hdx_dot_pair_name = PriceOracle::determine_name(HDX, DOT);
+//         let hdx_aca_pair_name = PriceOracle::determine_name(HDX, ACA);
+//         let hdx_eth_pair_name = PriceOracle::determine_name(HDX, ETH);
 
 //         assert_eq!(PriceOracle::num_of_assets(), 0);
 //         assert_eq!(PriceOracle::new_assets(), vec![AssetPairId::new(); 0]);
@@ -163,7 +169,7 @@ fn expect_events(e: Vec<TestEvent>) {
 //         PriceOracle::on_initialize(3);
 
 //         // duplicity in the asset queue
-//         assert!(!<PriceDataTen<Test>>::get().contains(&(PriceOracle::get_name(HDX, DOT), BucketQueue::default())));
+//         assert!(!<PriceDataTen<Test>>::get().contains(&(PriceOracle::determine_name(HDX, DOT), BucketQueue::default())));
 //         assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
 //         assert_noop!(PriceOracle::on_create_pool(HDX, DOT), Error::<Test>::AssetAlreadyAdded);
 
@@ -207,7 +213,7 @@ fn expect_events(e: Vec<TestEvent>) {
 // #[test]
 // fn on_trade_should_work() {
 //     new_test_ext().execute_with(|| {
-//         let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
+//         let hdx_dot_pair_name = PriceOracle::determine_name(HDX, DOT);
 
 //         assert_eq!(
 //             <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()),
@@ -226,7 +232,7 @@ fn expect_events(e: Vec<TestEvent>) {
 // #[test]
 // fn on_trade_handler_should_work() {
 //     new_test_ext().execute_with(|| {
-//         let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
+//         let hdx_dot_pair_name = PriceOracle::determine_name(HDX, DOT);
 
 //         assert_eq!(
 //             <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()),
@@ -244,7 +250,7 @@ fn expect_events(e: Vec<TestEvent>) {
 // #[test]
 // fn price_normalization_should_work() {
 //     new_test_ext().execute_with(|| {
-//         let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
+//         let hdx_dot_pair_name = PriceOracle::determine_name(HDX, DOT);
 
 //         assert_eq!(
 //             <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()),
@@ -338,12 +344,12 @@ fn expect_events(e: Vec<TestEvent>) {
 
 //         let data_ten_a = PriceOracle::price_data_ten()
 //             .iter()
-//             .find(|&x| x.0 == PriceOracle::get_name(HDX, DOT))
+//             .find(|&x| x.0 == PriceOracle::determine_name(HDX, DOT))
 //             .unwrap()
 //             .1;
 //         let data_ten_b = PriceOracle::price_data_ten()
 //             .iter()
-//             .find(|&x| x.0 == PriceOracle::get_name(HDX, ACA))
+//             .find(|&x| x.0 == PriceOracle::determine_name(HDX, ACA))
 //             .unwrap()
 //             .1;
 
@@ -392,7 +398,7 @@ fn expect_events(e: Vec<TestEvent>) {
 
 //         let data_ten = PriceOracle::price_data_ten()
 //             .iter()
-//             .find(|&x| x.0 == PriceOracle::get_name(HDX, DOT))
+//             .find(|&x| x.0 == PriceOracle::determine_name(HDX, DOT))
 //             .unwrap()
 //             .1;
 //         assert_eq!(
@@ -408,7 +414,7 @@ fn expect_events(e: Vec<TestEvent>) {
 // #[test]
 // fn update_empty_data_should_work() {
 //     new_test_ext().execute_with(|| {
-//         let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
+//         let hdx_dot_pair_name = PriceOracle::determine_name(HDX, DOT);
 
 //         assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
 
@@ -569,7 +575,7 @@ fn expect_events(e: Vec<TestEvent>) {
 // #[test]
 // fn stable_price_should_work() {
 //     new_test_ext().execute_with(|| {
-//         let hdx_dot_pair_name = PriceOracle::get_name(HDX, DOT);
+//         let hdx_dot_pair_name = PriceOracle::determine_name(HDX, DOT);
 
 //         let num_of_iters = BucketQueue::BUCKET_SIZE.pow(3);
 //         assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
@@ -689,7 +695,7 @@ fn calculate_new_ema_entry_works() {
         timestamp: 6,
         ..start_oracle
     };
-    let next_oracle = next_value.calculate_new_ema_entry::<PERIOD>(&start_oracle);
+    let next_oracle = next_value.calculate_new_ema_entry(PERIOD, &start_oracle);
     assert_eq!(next_oracle, Some(next_value));
 
     let (next_price, next_volume, next_liquidity) = (Price::saturating_from_integer(8u32), 8u32.into(), 8u32.into());
@@ -699,7 +705,7 @@ fn calculate_new_ema_entry_works() {
         liquidity: next_liquidity,
         timestamp: 6,
     };
-    let next_oracle = next_value.calculate_new_ema_entry::<PERIOD>(&start_oracle);
+    let next_oracle = next_value.calculate_new_ema_entry(PERIOD, &start_oracle);
     let expected_oracle = PriceEntry {
         price: Price::saturating_from_integer(5u32),
         volume: 5u32.into(),
@@ -728,7 +734,7 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
         liquidity: next_liquidity,
         timestamp: 100,
     };
-    let next_oracle = next_value.calculate_new_ema_entry::<PERIOD>(&start_oracle).unwrap();
+    let next_oracle = next_value.calculate_new_ema_entry(PERIOD, &start_oracle).unwrap();
     assert_eq_approx!(
         next_oracle.price,
         next_value.price,
@@ -744,7 +750,7 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
         liquidity: next_liquidity,
         timestamp: 8,
     };
-    let next_oracle = next_value.calculate_new_ema_entry::<PERIOD>(&start_oracle);
+    let next_oracle = next_value.calculate_new_ema_entry(PERIOD, &start_oracle);
     let expected_oracle = PriceEntry {
         price: Price::saturating_from_rational(63125, 10),
         volume: 6312u32.into(),
@@ -752,4 +758,65 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
         timestamp: 8,
     };
     assert_eq!(next_oracle, Some(expected_oracle));
+}
+
+use EmaOracle;
+
+#[test]
+fn get_price_works() {
+    ExtBuilder::default()
+        .with_price_data(vec![((HDX, DOT), Price::from(1_000_000), 2_000_000, 2_000_000)])
+        .build()
+        .execute_with(|| {
+            let price = Price::from(1_000_000);
+            assert_matches!(PriceOracle::get_price(HDX, DOT, Immediate), (Some(p), _) if p == Price::from(1_000_000));
+            assert_matches!(PriceOracle::get_price(HDX, DOT, TenMinutes), (Some(p), _) if p == Price::from(1_000_000));
+            assert_matches!(PriceOracle::get_price(HDX, DOT, Day), (Some(p), _) if p == Price::from(1_000_000));
+            assert_matches!(PriceOracle::get_price(HDX, DOT, Week), (Some(p), _) if p == Price::from(1_000_000));
+        });
+}
+
+#[test]
+fn get_price_returns_updated_price() {
+    ExtBuilder::default()
+        .with_price_data(vec![((HDX, DOT), Price::from(1_000_000), 2_000_000, 2_000_000)])
+        .build()
+        .execute_with(|| {
+            let on_trade_entry = PriceEntry {
+                price: Price::from(500_000),
+                volume: 2_000_000,
+                liquidity: 2_000_000,
+                timestamp: 1_000,
+            };
+            System::set_block_number(1_000);
+            PriceOracle::on_trade(determine_name(HDX, DOT), on_trade_entry);
+            env_logger::init();
+            PriceOracle::on_finalize(1_000);
+
+            let e = Price::from_float(0.01);
+            assert_eq_approx!(
+                PriceOracle::get_price(HDX, DOT, Immediate).0.unwrap(),
+                Price::from(500_000),
+                e,
+                "Immediate Oracle should have most recent value."
+            );
+            assert_eq_approx!(
+                PriceOracle::get_price(HDX, DOT, TenMinutes).0.unwrap(),
+                Price::from(500_000),
+                e,
+                "TenMinutes Oracle should converge within 1000 blocks."
+            );
+            assert_eq_approx!(
+                PriceOracle::get_price(HDX, DOT, Day).0.unwrap(),
+                Price::from_float(878732.5635),
+                e,
+                "Day Oracle should converge somewhat."
+            );
+            assert_eq_approx!(
+                PriceOracle::get_price(HDX, DOT, Week).0.unwrap(),
+                Price::from_float(980547.25),
+                e,
+                "Week Oracle should converge a little."
+            );
+        });
 }

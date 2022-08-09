@@ -36,6 +36,7 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 log = { version = "0.4.14", default-features = false }
 
 [dev-dependencies]
+assert_matches = "1.5"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 env_logger = "*"
 

@@ -83,15 +83,26 @@ where
     /// Possible alternatives: `alpha = 1 - 0.5^(1 / N)` for a half-life of N periods or
     /// `alpha = 1 - 0.5^(1 / (0.5N))` to have the same median as an N-length SMA.
     /// See https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA
-    pub fn calculate_new_ema_entry<const N: Period>(&self, previous_entry: &Self) -> Option<Self> {
-        let alpha = Price::saturating_from_rational(2u32, N.max(1) + 1);
+    pub fn calculate_new_ema_entry(&self, period: Period, previous_entry: &Self) -> Option<Self> {
+        if period <= 1 {
+            return Some(self.clone());
+        }
+        let alpha = Price::saturating_from_rational(2u32, period.saturating_add(1));
         debug_assert!(alpha <= Price::one());
         let inv_alpha = Price::one() - alpha;
 
         let mut price = previous_entry.price;
         let mut volume = previous_entry.volume;
         let mut liquidity = previous_entry.liquidity;
-        for _ in previous_entry.timestamp.saturated_into::<u64>()..self.timestamp.saturated_into::<u64>() {
+        log::debug!("before ema: {:?}", (price, volume, liquidity));
+        log::debug!("self before ema: {:?}", (self.price, self.volume, self.liquidity));
+        let range = previous_entry.timestamp.saturated_into::<u64>()..self.timestamp.saturated_into::<u64>();
+        log::debug!("range: {:?}", range);
+        let rounds = range.clone().count() as u64;
+        for round in range {
+            if round % (rounds / 20) == 0 || round == rounds - 1 {
+                log::debug!("round {}: {:?}", round, (price, volume, liquidity));
+            }
             (price, volume, liquidity) = ema(
                 (price, volume, liquidity),
                 (self.price, self.volume, self.liquidity),
@@ -99,6 +110,7 @@ where
                 inv_alpha,
             )?;
         }
+        log::debug!("after ema: {:?}", (price, volume, liquidity));
         Some(Self {
             price,
             volume,

@@ -21,7 +21,7 @@ use frame_support::ensure;
 use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::{CheckedDiv, One, Zero};
 use frame_support::sp_runtime::{DispatchResult, FixedPointNumber};
-use hydradx_traits::{OnCreatePoolHandler, OnTradeHandler};
+use hydradx_traits::{OnCreatePoolHandler, OnLiquidityChangedHandler, OnTradeHandler};
 use sp_std::convert::TryInto;
 use sp_std::marker::PhantomData;
 use sp_std::prelude::*;
@@ -141,12 +141,23 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    pub fn on_trade(pair_id: AssetPairId, price_entry: PriceEntry<T::BlockNumber>) {
+    pub(crate) fn on_trade(pair_id: AssetPairId, price_entry: PriceEntry<T::BlockNumber>) {
         Accumulator::<T>::mutate(|accumulator| {
             accumulator
                 .entry(pair_id)
                 .and_modify(|entry| {
-                    *entry = entry.accumulate_volume(&price_entry);
+                    *entry = price_entry.accumulate_volume(&entry);
+                })
+                .or_insert(price_entry);
+        });
+    }
+
+    pub(crate) fn on_liquidity_changed(pair_id: AssetPairId, price_entry: PriceEntry<T::BlockNumber>) {
+        Accumulator::<T>::mutate(|accumulator| {
+            accumulator
+                .entry(pair_id)
+                .and_modify(|entry| {
+                    *entry = price_entry.accumulate_volume(&entry);
                 })
                 .or_insert(price_entry);
         });
@@ -244,12 +255,52 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
             liquidity,
             timestamp,
         };
-
         Pallet::<T>::on_trade(determine_name(asset_a, asset_b), price_entry);
     }
 
     fn on_trade_weight() -> Weight {
         T::WeightInfo::on_finalize_one_token() - T::WeightInfo::on_finalize_no_entry()
+        // TODO: update weights
+    }
+}
+
+impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for PriceOracleHandler<T> {
+    fn on_liquidity_changed(
+        asset_a: AssetId,
+        asset_b: AssetId,
+        amount_a: Balance,
+        amount_b: Balance,
+        liquidity: Balance,
+    ) {
+        // We ignore the amount as liquidity changes don't affect trade volume.
+        let (price, _amount) =
+            if let Some(price_tuple) = determine_normalized_price(asset_a, asset_b, amount_a, amount_b) {
+                price_tuple
+            } else {
+                // We don't want to throw an error here because this method is used in different extrinsics.
+                // Invalid prices are ignored and not added to the queue.
+                return;
+            };
+
+        // We assume that zero values are not valid.
+        // Zero values are ignored and not added to the queue.
+        if price.is_zero() || liquidity.is_zero() {
+            return;
+        }
+
+        let timestamp = <frame_system::Pallet<T>>::block_number();
+        let price_entry = PriceEntry {
+            price,
+            volume: 0,
+            liquidity,
+            timestamp,
+        };
+        Pallet::<T>::on_liquidity_changed(determine_name(asset_a, asset_b), price_entry);
+    }
+
+    fn on_liquidity_changed_weight() -> Weight {
+        T::WeightInfo::on_finalize_one_token() - T::WeightInfo::on_finalize_no_entry()
+        // TODO: update weights
     }
 }
 

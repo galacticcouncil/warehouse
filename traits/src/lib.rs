@@ -183,3 +183,27 @@ pub trait LockedBalance<AssetId, AccountId, Balance> {
 pub trait NativePriceOracle<AssetId, Price> {
     fn price(currency: AssetId) -> Option<Price>;
 }
+
+/// Handler used by AMM pools to perform some tasks when liquidity changes outside of trades.
+pub trait OnLiquidityChangedHandler<AssetId, Balance> {
+    /// Notify that the liquidity for a pair of assets has changed.
+    fn on_liquidity_changed(
+        asset_a: AssetId,
+        asset_b: AssetId,
+        amount_in: Balance,
+        amount_out: Balance,
+        liquidity: Balance,
+    );
+    /// Known overhead for a liquidity change in `on_initialize/on_finalize`.
+    /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
+    /// Add this weight to an extrinsic from which you call `on_liquidity_changed`.
+    fn on_liquidity_changed_weight() -> Weight;
+}
+
+impl<AssetId, Balance> OnLiquidityChangedHandler<AssetId, Balance> for () {
+    fn on_liquidity_changed(_a: AssetId, _b: AssetId, _amount_a: Balance, _amount_b: Balance, _liq: Balance) {}
+
+    fn on_liquidity_changed_weight() -> Weight {
+        Weight::zero()
+    }
+}

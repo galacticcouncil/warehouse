@@ -66,6 +66,9 @@ pub mod pallet {
 
         /// Weight information for the extrinsics.
         type WeightInfo: WeightInfo;
+
+        /// Number of seconds between blocks, used to convert periods.
+        type SecsPerBlock: Get<Period>;
     }
 
     #[pallet::error]
@@ -115,7 +118,7 @@ pub mod pallet {
                     timestamp: T::BlockNumber::zero(),
                 };
                 for period in OraclePeriod::all_periods() {
-                    Pallet::<T>::update_oracle(&pair_id, period.into_num(), &price_entry);
+                    Pallet::<T>::update_oracle(&pair_id, period.into_num::<T>(), &price_entry);
                 }
             }
         }
@@ -153,7 +156,7 @@ impl<T: Config> Pallet<T> {
         // EMA oracles
         for (pair_id, price_entry) in Accumulator::<T>::take().into_iter() {
             for period in OraclePeriod::all_periods() {
-                Self::update_oracle(&pair_id, period.into_num(), &price_entry);
+                Self::update_oracle(&pair_id, period.into_num::<T>(), &price_entry);
             }
         }
     }
@@ -177,10 +180,10 @@ impl<T: Config> Pallet<T> {
         let current_block = <frame_system::Pallet<T>>::block_number();
         let parent = current_block.saturating_sub(One::one());
 
-        let mut immediate = Oracles::<T>::get(pair_id, Immediate.into_num())?;
+        let mut immediate = Oracles::<T>::get(pair_id, Immediate.into_num::<T>())?;
         if immediate.timestamp < parent {
             immediate.timestamp = parent;
-            Oracles::<T>::insert(pair_id, Immediate.into_num(), &immediate);
+            Oracles::<T>::insert(pair_id, Immediate.into_num::<T>(), &immediate);
         }
 
         log::debug!("immediate: {immediate:?}");
@@ -188,12 +191,12 @@ impl<T: Config> Pallet<T> {
         OraclePeriod::non_immediate_periods()
             .iter()
             .map(|p| {
-                let entry = Self::oracle(pair_id, p.into_num())?;
+                let entry = Self::oracle(pair_id, p.into_num::<T>())?;
                 let return_entry = if entry.timestamp < parent {
                     immediate
-                        .calculate_new_ema_entry(p.into_num(), &entry)
+                        .calculate_new_ema_entry(p.into_num::<T>(), &entry)
                         .map(|new_entry| {
-                            Oracles::<T>::insert(pair_id, period.into_num(), &new_entry);
+                            Oracles::<T>::insert(pair_id, period.into_num::<T>(), &new_entry);
                             new_entry
                         })
                         .unwrap_or(entry)
@@ -316,19 +319,16 @@ impl OraclePeriod {
         &[TenMinutes, Day, Week]
     }
 
-    pub fn into_num(&self) -> Period {
-        Period::from(*self)
-    }
-}
-
-impl From<OraclePeriod> for Period {
-    fn from(period: OraclePeriod) -> Period {
-        match period {
+    pub fn into_num<T: Config>(self) -> Period {
+        let secs_per_block = T::SecsPerBlock::get();
+        let minutes = 60 / secs_per_block;
+        let hours = 60 * minutes;
+        let days = 24 * hours;
+        match self {
             OraclePeriod::Immediate => 1,
-            // TODO: make configurable (based on block times, this assumes 12s per block)
-            OraclePeriod::TenMinutes => 50,
-            OraclePeriod::Day => 7200,
-            OraclePeriod::Week => 50400,
+            OraclePeriod::TenMinutes => 10 * minutes,
+            OraclePeriod::Day => 1 * days,
+            OraclePeriod::Week => 7 * days,
         }
     }
 }

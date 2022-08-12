@@ -112,16 +112,15 @@ impl AssetPairAccountIdFor<AssetId, u64> for AssetPairAccountIdTest {
 
 pub const EXCHANGE_FEE: (u32, u32) = (2, 1_000);
 
-struct ExchangeFee;
-impl Get<(u32, u32)> for ExchangeFee {
-    fn get() -> (u32, u32) {
-        EXCHANGE_FEE
-    }
+parameter_types! {
+    pub const ExchangeFee: (u32, u32) = EXCHANGE_FEE;
+    pub const SecsPerBlock: u32 = 12;
 }
 
 impl Config for Test {
     type Event = Event;
     type WeightInfo = ();
+    type SecsPerBlock = SecsPerBlock;
 }
 
 #[derive(Default)]

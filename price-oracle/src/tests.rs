@@ -69,7 +69,7 @@ fn genesis_config_works() {
         .execute_with(|| {
             for period in OraclePeriod::all_periods() {
                 assert_eq!(
-                    PriceOracle::oracle(determine_name(HDX, DOT), period.into_num()),
+                    PriceOracle::oracle(determine_name(HDX, DOT), period.into_num::<Test>()),
                     Some(PriceEntry {
                         price: Price::from(1_000_000),
                         volume: 2_000_000,
@@ -79,7 +79,7 @@ fn genesis_config_works() {
                 );
 
                 assert_eq!(
-                    PriceOracle::oracle(determine_name(HDX, ACA), period.into_num()),
+                    PriceOracle::oracle(determine_name(HDX, ACA), period.into_num::<Test>()),
                     Some(PriceEntry {
                         price: Price::from(3_000_000),
                         volume: 4_000_000,

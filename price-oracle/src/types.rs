@@ -100,7 +100,7 @@ where
         log::debug!("range: {:?}", range);
         let rounds = range.clone().count() as u64;
         for round in range {
-            if round % (rounds / 20) == 0 || round == rounds - 1 {
+            if round % (rounds / 20).max(1) == 0 || round == rounds - 1 {
                 log::debug!("round {}: {:?}", round, (price, volume, liquidity));
             }
             (price, volume, liquidity) = ema(

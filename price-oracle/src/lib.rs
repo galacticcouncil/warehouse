@@ -72,22 +72,9 @@ pub mod pallet {
     }
 
     #[pallet::error]
-    pub enum Error<T> {
-        /// Calculation error occurred while calculating average price
-        PriceComputationError,
-
-        /// An unexpected overflow occurred
-        UpdateDataOverflow,
-
-        /// Asset has been already added
-        AssetAlreadyAdded,
-
-        /// Overflow
-        TrackedAssetsOverflow,
-    }
+    pub enum Error<T> {}
 
     #[pallet::event]
-    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {}
 
     #[pallet::storage]
@@ -109,7 +96,7 @@ pub mod pallet {
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
             for &(asset_pair, price, volume, liquidity) in self.price_data.iter() {
-                let pair_id = determine_name(asset_pair.0, asset_pair.1);
+                let pair_id = derive_name(asset_pair.0, asset_pair.1);
 
                 let price_entry: PriceEntry<T::BlockNumber> = PriceEntry {
                     price,
@@ -255,7 +242,7 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
             liquidity,
             timestamp,
         };
-        Pallet::<T>::on_trade(determine_name(asset_a, asset_b), price_entry);
+        Pallet::<T>::on_trade(derive_name(asset_a, asset_b), price_entry);
     }
 
     fn on_trade_weight() -> Weight {
@@ -295,7 +282,7 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for PriceOracleHandl
             liquidity,
             timestamp,
         };
-        Pallet::<T>::on_liquidity_changed(determine_name(asset_a, asset_b), price_entry);
+        Pallet::<T>::on_liquidity_changed(derive_name(asset_a, asset_b), price_entry);
     }
 
     fn on_liquidity_changed_weight() -> Weight {
@@ -337,7 +324,7 @@ pub fn ordered_pair(asset_a: AssetId, asset_b: AssetId) -> (AssetId, AssetId) {
 
 /// Return share token name
 /// The implementation is the same as for AssetPair
-pub fn determine_name(asset_a: AssetId, asset_b: AssetId) -> Vec<u8> {
+pub fn derive_name(asset_a: AssetId, asset_b: AssetId) -> Vec<u8> {
     let mut buf: Vec<u8> = Vec::new();
 
     let (asset_left, asset_right) = ordered_pair(asset_a, asset_b);
@@ -390,7 +377,7 @@ pub trait EmaOracle {
 
 impl<T: Config> EmaOracle for Pallet<T> {
     fn get_price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod) -> (Option<Price>, Weight) {
-        let pair_id = determine_name(asset_a, asset_b);
+        let pair_id = derive_name(asset_a, asset_b);
         let entry = Self::get_updated_entry(&pair_id, period);
         (entry.map(|entry| entry.price), 100) // TODO: weight
     }

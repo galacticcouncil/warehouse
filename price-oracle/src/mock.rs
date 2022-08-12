@@ -143,6 +143,10 @@ impl ExtBuilder {
             &mut t,
         )
         .unwrap();
-        t.into()
+        let mut ext: sp_io::TestExternalities = t.into();
+        ext.execute_with(|| {
+            System::set_block_number(0);
+        });
+        ext
     }
 }

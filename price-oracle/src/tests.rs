@@ -219,17 +219,22 @@ fn ema_works() {
     debug_assert!(alpha <= Price::one());
     let inv_alpha = Price::one() - alpha;
 
-    let start_oracle = (Price::saturating_from_integer(4u32), 4u32.into(), 4u32.into());
-    let next_value = start_oracle;
-    let next_oracle = ema(start_oracle, next_value, alpha, inv_alpha);
-    assert_eq!(next_oracle, Some(start_oracle));
+    // stays stable if the value doesn't change
+    let start_price = Price::saturating_from_integer(4u32);
+    let incoming_price = start_price;
+    let next_price = price_ema(start_price, incoming_price, alpha, inv_alpha);
+    assert_eq!(next_price, Some(start_price));
+    let start_balance = 4u32.into();
+    let incoming_balance = start_balance;
+    let next_balance = balance_ema(start_balance, incoming_balance, alpha, inv_alpha);
+    assert_eq!(next_balance, Some(start_balance));
 
-    let next_value = (Price::saturating_from_integer(8u32), 8u32.into(), 8u32.into());
-    let next_oracle = ema(start_oracle, next_value, alpha, inv_alpha);
-    assert_eq!(
-        next_oracle,
-        Some((Price::saturating_from_integer(5u32), 5u32.into(), 5u32.into()))
-    );
+    // updates by the correct amount if the value changes
+    let (incoming_price, incoming_balance) = (Price::saturating_from_integer(8u32), 8u32.into());
+    let next_price = price_ema(start_price, incoming_price, alpha, inv_alpha);
+    assert_eq!(next_price, Some(Price::saturating_from_integer(5u32)));
+    let next_balance = balance_ema(start_balance, incoming_balance, alpha, inv_alpha);
+    assert_eq!(next_balance, Some(5u32.into()));
 }
 
 #[test]

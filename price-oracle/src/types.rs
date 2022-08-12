@@ -16,7 +16,7 @@
 // limitations under the License.
 
 use codec::{Decode, Encode};
-use frame_support::sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul};
+use frame_support::sp_runtime::traits::CheckedMul;
 use frame_support::sp_runtime::{FixedU128, RuntimeDebug};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
@@ -87,12 +87,9 @@ where
             if round % (rounds / 20).max(1) == 0 || round == rounds - 1 {
                 log::debug!("round {}: {:?}", round, (price, volume, liquidity));
             }
-            (price, volume, liquidity) = ema(
-                (price, volume, liquidity),
-                (self.price, self.volume, self.liquidity),
-                alpha,
-                inv_alpha,
-            )?;
+            price = price_ema(price, self.price, alpha, inv_alpha)?;
+            volume = balance_ema(volume, self.volume, alpha, inv_alpha)?;
+            liquidity = balance_ema(liquidity, self.liquidity, alpha, inv_alpha)?;
         }
         log::debug!("after ema: {:?}", (price, volume, liquidity));
         Some(Self {
@@ -104,22 +101,23 @@ where
     }
 }
 
-pub(crate) fn ema(
-    (prev_price, prev_volume, prev_liquidity): (Price, Balance, Balance),
-    (new_price, new_volume, new_liquidity): (Price, Balance, Balance),
-    alpha: Price,
-    inv_alpha: Price,
-) -> Option<(Price, Balance, Balance)> {
+/// Calculate the next exponential moving average for the given price.
+pub(crate) fn price_ema(prev: Price, incoming: Price, alpha: Price, inv_alpha: Price) -> Option<Price> {
     debug_assert!(inv_alpha + alpha == Price::one());
-    // All three should follow `old_value * inv_alpha + incoming_value * alpha`.
     // Safe to use bare `+` because `inv_alpha + apha == 1`.
-    let price = prev_price.checked_mul(&inv_alpha)? + new_price.checked_mul(&alpha)?;
-    let volume = (inv_alpha.checked_mul(&Price::from(prev_volume))? + alpha.checked_mul(&Price::from(new_volume))?)
+    // `prev_value * inv_alpha + incoming_value * alpha`
+    let price = prev.checked_mul(&inv_alpha)? + incoming.checked_mul(&alpha)?;
+    Some(price)
+}
+
+/// Calculate the next exponential moving average for the given values.
+pub(crate) fn balance_ema(prev: Balance, incoming: Balance, alpha: Price, inv_alpha: Price) -> Option<Balance> {
+    debug_assert!(inv_alpha + alpha == Price::one());
+    // Safe to use bare `+` because `inv_alpha + apha == 1`.
+    // `prev_value * inv_alpha + incoming_value * alpha`
+    // `checked_mul` in combination with `Price::from` necessary to avoid rounding errors induced by
+    // using `checked_mul_int` with small values.
+    let new_value = (inv_alpha.checked_mul(&Price::from(prev))? + alpha.checked_mul(&Price::from(incoming))?)
         .saturating_mul_int(1u32.into());
-    // `checked_mul` in combination with `Price::from` necessary to avoid rounding errors
-    // induced by using `checked_mul_int` with small values.
-    let liquidity = (inv_alpha.checked_mul(&Price::from(prev_liquidity))?
-        + alpha.checked_mul(&Price::from(new_liquidity))?)
-    .saturating_mul_int(1u32.into());
-    Some((price, volume, liquidity))
+    Some(new_value)
 }

@@ -333,7 +333,7 @@ use frame_support::RuntimeDebug;
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
 pub enum OraclePeriod {
-    Immediate,
+    Immediate, // TODO: rename to LastBlock?
     TenMinutes,
     Day,
     Week,

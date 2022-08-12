@@ -21,11 +21,10 @@ use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::{CheckedDiv, One, Zero};
 use frame_support::sp_runtime::FixedPointNumber;
 use hydradx_traits::{OnLiquidityChangedHandler, OnTradeHandler};
-
+use sp_arithmetic::traits::Saturating;
+use sp_std::collections::btree_map::BTreeMap;
 use sp_std::marker::PhantomData;
 use sp_std::prelude::*;
-
-use sp_std::collections::btree_map::BTreeMap;
 
 #[cfg(test)]
 mod mock;
@@ -116,7 +115,7 @@ pub mod pallet {
         }
 
         fn on_finalize(_n: T::BlockNumber) {
-            // update average values in the storage
+            // update oracles based on data accumulated during the block
             Self::update_data();
         }
     }
@@ -149,7 +148,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn update_data() {
-        // EMA oracles
+        // update oracles based on data accumulated during the block
         for (pair_id, price_entry) in Accumulator::<T>::take().into_iter() {
             for period in OraclePeriod::all_periods() {
                 Self::update_oracle(&pair_id, period.into_num::<T>(), &price_entry);
@@ -160,10 +159,10 @@ impl<T: Config> Pallet<T> {
     fn update_oracle(pair_id: &AssetPairId, period: Period, price_entry: &PriceEntry<T::BlockNumber>) {
         Oracles::<T>::mutate(pair_id, period, |oracle| {
             let new_entry = oracle
-                .map(|entry| {
-                    let v = price_entry.calculate_new_ema_entry(period, &entry).unwrap_or(entry);
-                    log::debug!("v {v:?}");
-                    v
+                .map(|prev_entry| {
+                    price_entry
+                        .calculate_new_ema_entry(period, &prev_entry)
+                        .unwrap_or(prev_entry)
                 })
                 .unwrap_or(price_entry.clone());
             *oracle = Some(new_entry);
@@ -171,8 +170,6 @@ impl<T: Config> Pallet<T> {
     }
 
     fn get_updated_entry(pair_id: &AssetPairId, period: OraclePeriod) -> Option<PriceEntry<T::BlockNumber>> {
-        use sp_arithmetic::traits::Saturating;
-
         let current_block = <frame_system::Pallet<T>>::block_number();
         let parent = current_block.saturating_sub(One::one());
 
@@ -182,7 +179,6 @@ impl<T: Config> Pallet<T> {
             Oracles::<T>::insert(pair_id, Immediate.into_num::<T>(), &immediate);
         }
 
-        log::debug!("immediate: {immediate:?}");
         let mut r = None;
         OraclePeriod::non_immediate_periods()
             .iter()
@@ -205,7 +201,6 @@ impl<T: Config> Pallet<T> {
                 Some(())
             })
             .for_each(|_| {});
-        log::debug!("r: {r:?}");
         if period == Immediate {
             Some(immediate)
         } else {

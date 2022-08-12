@@ -1,6 +1,6 @@
 // This file is part of pallet-price-oracle.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 
 use super::*;
 pub use crate::mock::{
-    BlockNumber, Event as TestEvent, ExtBuilder, Origin, PriceOracle, System, Test, ACA, DOT, ETH, HDX, PRICE_ENTRY_1,
+    BlockNumber, Event as TestEvent, ExtBuilder, Origin, PriceOracle, System, Test, ACA, DOT, HDX, PRICE_ENTRY_1,
     PRICE_ENTRY_2,
 };
 use OraclePeriod::*;
@@ -38,20 +38,6 @@ macro_rules! assert_eq_approx {
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
     ExtBuilder::default().build()
-}
-
-fn last_events(n: usize) -> Vec<TestEvent> {
-    frame_system::Pallet::<Test>::events()
-        .into_iter()
-        .rev()
-        .take(n)
-        .rev()
-        .map(|e| e.event)
-        .collect()
-}
-
-fn expect_events(e: Vec<TestEvent>) {
-    assert_eq!(last_events(e.len()), e);
 }
 
 /// Return the entry of an asset pair in the accumulator.
@@ -182,345 +168,32 @@ fn price_normalization_should_work() {
     });
 }
 
-// #[test]
-// fn update_data_should_work() {
-//     new_test_ext().execute_with(|| {
-//         System::set_block_number(3);
-//         PriceOracle::on_initialize(3);
+#[test]
+fn update_data_should_work() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(5);
+        PriceOracle::on_initialize(5);
 
-//         assert_ok!(PriceOracle::on_create_pool(HDX, ACA));
-//         assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
+        PriceOracle::on_trade(derive_name(HDX, DOT), PRICE_ENTRY_1);
+        PriceOracle::on_trade(derive_name(HDX, DOT), PRICE_ENTRY_2);
+        PriceOracle::on_trade(derive_name(HDX, ACA), PRICE_ENTRY_1);
 
-//         PriceOracle::on_finalize(3);
-//         System::set_block_number(4);
-//         PriceOracle::on_initialize(4);
+        PriceOracle::on_finalize(5);
+        System::set_block_number(6);
+        PriceOracle::on_initialize(6);
 
-//         PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_1);
-//         PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_2);
-//         PriceOracle::on_trade(HDX, ACA, PRICE_ENTRY_1);
-
-//         PriceOracle::on_finalize(4);
-//         System::set_block_number(5);
-//         PriceOracle::on_initialize(5);
-
-//         let data_ten_a = PriceOracle::price_data_ten()
-//             .iter()
-//             .find(|&x| x.0 == PriceOracle::derive_name(HDX, DOT))
-//             .unwrap()
-//             .1;
-//         let data_ten_b = PriceOracle::price_data_ten()
-//             .iter()
-//             .find(|&x| x.0 == PriceOracle::derive_name(HDX, ACA))
-//             .unwrap()
-//             .1;
-
-//         assert_eq!(
-//             data_ten_a.get_last(),
-//             PriceInfo {
-//                 avg_price: 4.into(),
-//                 volume: 4_000
-//             }
-//         );
-//         assert_eq!(
-//             data_ten_b.get_last(),
-//             PriceInfo {
-//                 avg_price: 2.into(),
-//                 volume: 1_000
-//             }
-//         );
-//     });
-// }
-
-// #[test]
-// fn update_data_with_incorrect_input_should_not_work() {
-//     new_test_ext().execute_with(|| {
-//         System::set_block_number(3);
-//         PriceOracle::on_initialize(3);
-
-//         assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
-
-//         PriceOracle::on_finalize(3);
-//         System::set_block_number(4);
-//         PriceOracle::on_initialize(4);
-
-//         PriceOracle::on_trade(
-//             HDX,
-//             DOT,
-//             PriceEntry {
-//                 price: Price::from(1),
-//                 trade_amount: Zero::zero(),
-//                 liquidity_amount: Zero::zero(),
-//             },
-//         );
-
-//         PriceOracle::on_finalize(4);
-//         System::set_block_number(5);
-//         PriceOracle::on_initialize(5);
-
-//         let data_ten = PriceOracle::price_data_ten()
-//             .iter()
-//             .find(|&x| x.0 == PriceOracle::derive_name(HDX, DOT))
-//             .unwrap()
-//             .1;
-//         assert_eq!(
-//             data_ten.get_last(),
-//             PriceInfo {
-//                 avg_price: Zero::zero(),
-//                 volume: Zero::zero()
-//             }
-//         );
-//     });
-// }
-
-// #[test]
-// fn update_empty_data_should_work() {
-//     new_test_ext().execute_with(|| {
-//         let hdx_dot_pair_name = PriceOracle::derive_name(HDX, DOT);
-
-//         assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
-
-//         for i in 0..1002 {
-//             PriceOracle::on_initialize(i);
-//             System::set_block_number(i);
-//             PriceOracle::on_finalize(i);
-//         }
-
-//         let data_ten = PriceOracle::price_data_ten()
-//             .iter()
-//             .find(|&x| x.0 == hdx_dot_pair_name)
-//             .unwrap()
-//             .1;
-//         assert_eq!(
-//             data_ten.get_last(),
-//             PriceInfo {
-//                 avg_price: Zero::zero(),
-//                 volume: Zero::zero()
-//             }
-//         );
-
-//         let data_hundred = PriceOracle::price_data_hundred(hdx_dot_pair_name.clone());
-//         assert_eq!(
-//             data_hundred.get_last(),
-//             PriceInfo {
-//                 avg_price: Zero::zero(),
-//                 volume: Zero::zero()
-//             }
-//         );
-
-//         let data_thousand = PriceOracle::price_data_thousand(hdx_dot_pair_name);
-//         assert_eq!(
-//             data_thousand.get_last(),
-//             PriceInfo {
-//                 avg_price: Zero::zero(),
-//                 volume: Zero::zero()
-//             }
-//         );
-//     });
-// }
-
-// #[test]
-// fn bucket_queue_should_work() {
-//     let mut queue = BucketQueue::default();
-//     for i in 0..BucketQueue::BUCKET_SIZE {
-//         assert_eq!(queue[i as usize], PriceInfo::default());
-//     }
-//     assert_eq!(queue.get_last(), PriceInfo::default());
-
-//     for i in 0..BucketQueue::BUCKET_SIZE {
-//         let new_price = Price::from(i as u128);
-//         queue.update_last(PriceInfo {
-//             avg_price: new_price,
-//             volume: 0,
-//         });
-//         assert_eq!(
-//             queue.get_last(),
-//             PriceInfo {
-//                 avg_price: new_price,
-//                 volume: 0
-//             }
-//         );
-//         // for k in 0..BucketQueue::BUCKET_SIZE {
-//         //     print!(" {}", queue.bucket[k as usize].avg_price.to_float());
-//         // }
-//         // println!();
-
-//         for j in 0..BucketQueue::BUCKET_SIZE {
-//             if i < j {
-//                 assert_eq!(queue[j as usize], PriceInfo::default());
-//             } else {
-//                 assert_eq!(
-//                     queue[j as usize],
-//                     PriceInfo {
-//                         avg_price: Price::from(j as u128),
-//                         volume: 0
-//                     }
-//                 );
-//             }
-//         }
-//     }
-
-//     for i in BucketQueue::BUCKET_SIZE..BucketQueue::BUCKET_SIZE * 3 {
-//         let new_price = Price::from(i as u128);
-//         queue.update_last(PriceInfo {
-//             avg_price: new_price,
-//             volume: 0,
-//         });
-//         // for k in 0..BucketQueue::BUCKET_SIZE {
-//         // 	print!(" {}", queue.bucket[k as usize].avg_price.to_float());
-//         // }
-//         // println!();
-
-//         for j in 0..BucketQueue::BUCKET_SIZE {
-//             if (i % BucketQueue::BUCKET_SIZE) < j {
-//                 assert_eq!(
-//                     queue[j as usize],
-//                     PriceInfo {
-//                         avg_price: Price::from((10 * (i / BucketQueue::BUCKET_SIZE).saturating_sub(1) + j) as u128),
-//                         volume: 0
-//                     }
-//                 );
-//             } else {
-//                 assert_eq!(
-//                     queue[j as usize],
-//                     PriceInfo {
-//                         avg_price: Price::from((j as u128) + 10u128 * (i / BucketQueue::BUCKET_SIZE) as u128),
-//                         volume: 0
-//                     }
-//                 );
-//             }
-//         }
-//     }
-// }
-
-// #[test]
-// fn continuous_trades_should_work() {
-//     ExtBuilder::default().build().execute_with(|| {
-//         assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
-
-//         for i in 0..210 {
-//             System::set_block_number(i);
-//             PriceOracle::on_initialize(System::block_number());
-
-//             PriceOracle::on_trade(
-//                 HDX,
-//                 DOT,
-//                 PriceEntry {
-//                     price: Price::from((i + 1) as u128),
-//                     trade_amount: (i * 1_000).into(),
-//                     liquidity_amount: 1u128,
-//                 },
-//             );
-
-//             // let ten = PriceOracle::price_data_ten().iter().find(|&x| x.0 == ASSET_PAIR_A).unwrap().1;
-//             // let hundred = PriceOracle::price_data_hundred(ASSET_PAIR_A);
-//             // let thousand = PriceOracle::price_data_thousand(ASSET_PAIR_A);
-//             //
-//             // for i in 0..BUCKET_SIZE {
-//             // 	print!(" {}", ten[i as usize].avg_price.to_float());
-//             // }
-//             // println!();
-//             //
-//             // for i in 0..BUCKET_SIZE {
-//             // 	print!(" {}", hundred[i as usize].avg_price.to_float());
-//             // }
-//             // println!();
-//             //
-//             // for i in 0..BUCKET_SIZE {
-//             // 	print!(" {}", thousand[i as usize].avg_price.to_float());
-//             // }
-//             // println!("\n");
-//         }
-//     })
-// }
-
-// #[test]
-// fn stable_price_should_work() {
-//     new_test_ext().execute_with(|| {
-//         let hdx_dot_pair_name = PriceOracle::derive_name(HDX, DOT);
-
-//         let num_of_iters = BucketQueue::BUCKET_SIZE.pow(3);
-//         assert_ok!(PriceOracle::on_create_pool(HDX, DOT));
-
-//         env_logger::init();
-
-//         for i in num_of_iters - 2..2 * num_of_iters + 2 {
-//             PriceOracle::on_initialize(i.into());
-//             System::set_block_number(i.into());
-//             PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_1);
-//             PriceOracle::on_finalize(i.into());
-//         }
-
-//         let data_ten = PriceOracle::price_data_ten()
-//             .iter()
-//             .find(|&x| x.0 == hdx_dot_pair_name)
-//             .unwrap()
-//             .1;
-//         let data_hundred = PriceOracle::price_data_hundred(hdx_dot_pair_name.clone());
-//         let data_thousand = PriceOracle::price_data_thousand(hdx_dot_pair_name.clone());
-
-//         assert_eq!(
-//             data_ten.get_last(),
-//             PriceInfo {
-//                 avg_price: 2.into(),
-//                 volume: 1_000
-//             }
-//         );
-//         assert_eq!(
-//             data_hundred.get_last(),
-//             PriceInfo {
-//                 avg_price: 2.into(),
-//                 volume: 1_000
-//             }
-//         );
-//         assert_eq!(
-//             data_thousand.get_last(),
-//             PriceInfo {
-//                 avg_price: 2.into(),
-//                 volume: 1_000
-//             }
-//         );
-//         assert_eq!(PriceOracle::oracle(hdx_dot_pair_name.clone(), 1), Some(PRICE_ENTRY_1));
-//         assert_eq!(PriceOracle::oracle(hdx_dot_pair_name.clone(), 10), Some(PRICE_ENTRY_1));
-//         assert_eq!(PriceOracle::oracle(hdx_dot_pair_name.clone(), 50), Some(PRICE_ENTRY_1));
-//         assert_eq!(PriceOracle::oracle(hdx_dot_pair_name.clone(), 5), None);
-
-//         for i in num_of_iters..2 * num_of_iters {
-//             PriceOracle::on_initialize(i.into());
-//             System::set_block_number(i.into());
-//             PriceOracle::on_finalize(i.into());
-//         }
-
-//         let data_ten = PriceOracle::price_data_ten()
-//             .iter()
-//             .find(|&x| x.0 == hdx_dot_pair_name)
-//             .unwrap()
-//             .1;
-//         let data_hundred = PriceOracle::price_data_hundred(hdx_dot_pair_name.clone());
-//         let data_thousand = PriceOracle::price_data_thousand(hdx_dot_pair_name);
-
-//         assert_eq!(
-//             data_ten.get_last(),
-//             PriceInfo {
-//                 avg_price: 2.into(),
-//                 volume: 1_000
-//             }
-//         );
-//         assert_eq!(
-//             data_hundred.get_last(),
-//             PriceInfo {
-//                 avg_price: 2.into(),
-//                 volume: 1_000
-//             }
-//         );
-//         assert_eq!(
-//             data_thousand.get_last(),
-//             PriceInfo {
-//                 avg_price: 2.into(),
-//                 volume: 1_000
-//             }
-//         );
-//     });
-// }
+        for period in OraclePeriod::all_periods() {
+            assert_eq!(
+                Oracles::<Test>::get(derive_name(HDX, DOT), period.into_num::<Test>()),
+                Some(PRICE_ENTRY_2.accumulate_volume(&PRICE_ENTRY_1)),
+            );
+            assert_eq!(
+                Oracles::<Test>::get(derive_name(HDX, ACA), period.into_num::<Test>()),
+                Some(PRICE_ENTRY_1),
+            );
+        }
+    });
+}
 
 #[test]
 fn ema_works() {

@@ -39,7 +39,6 @@ type Block = frame_system::mocking::MockBlock<Test>;
 pub const HDX: AssetId = 1_000;
 pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
-pub const ETH: AssetId = 4_000;
 
 pub const PRICE_ENTRY_1: PriceEntry<BlockNumber> = PriceEntry {
     price: Price::from_inner(2000000000000000000),
@@ -51,7 +50,7 @@ pub const PRICE_ENTRY_2: PriceEntry<BlockNumber> = PriceEntry {
     price: Price::from_inner(5000000000000000000),
     volume: 3_000,
     liquidity: 4_000,
-    timestamp: 10,
+    timestamp: 5,
 };
 
 frame_support::construct_runtime!(

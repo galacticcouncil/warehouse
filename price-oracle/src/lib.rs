@@ -17,12 +17,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::ensure;
 use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::{CheckedDiv, One, Zero};
-use frame_support::sp_runtime::{DispatchResult, FixedPointNumber};
-use hydradx_traits::{OnCreatePoolHandler, OnLiquidityChangedHandler, OnTradeHandler};
-use sp_std::convert::TryInto;
+use frame_support::sp_runtime::FixedPointNumber;
+use hydradx_traits::{OnLiquidityChangedHandler, OnTradeHandler};
+
 use sp_std::marker::PhantomData;
 use sp_std::prelude::*;
 
@@ -54,7 +53,6 @@ pub type AssetPairId = Vec<u8>;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::pallet_prelude::*;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]

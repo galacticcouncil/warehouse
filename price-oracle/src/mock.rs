@@ -23,7 +23,7 @@ use frame_support::sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     FixedU128,
 };
-use frame_support::traits::{Everything, GenesisBuild, Get};
+use frame_support::traits::{Everything, GenesisBuild};
 use hydradx_traits::AssetPairAccountIdFor;
 use price_oracle::PriceEntry;
 use sp_core::H256;

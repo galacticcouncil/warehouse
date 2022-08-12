@@ -23,7 +23,7 @@ pub use crate::mock::{
 use OraclePeriod::*;
 
 use assert_matches::assert_matches;
-use frame_support::{assert_noop, assert_ok, assert_storage_noop};
+use frame_support::assert_storage_noop;
 use sp_arithmetic::traits::One;
 
 #[macro_export]
@@ -629,7 +629,6 @@ fn get_price_works() {
         .with_price_data(vec![((HDX, DOT), Price::from(1_000_000), 2_000_000, 2_000_000)])
         .build()
         .execute_with(|| {
-            let price = Price::from(1_000_000);
             assert_matches!(PriceOracle::get_price(HDX, DOT, Immediate), (Some(p), _) if p == Price::from(1_000_000));
             assert_matches!(PriceOracle::get_price(HDX, DOT, TenMinutes), (Some(p), _) if p == Price::from(1_000_000));
             assert_matches!(PriceOracle::get_price(HDX, DOT, Day), (Some(p), _) if p == Price::from(1_000_000));

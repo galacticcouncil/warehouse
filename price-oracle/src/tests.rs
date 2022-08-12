@@ -24,7 +24,7 @@ use OraclePeriod::*;
 
 use assert_matches::assert_matches;
 use frame_support::assert_storage_noop;
-use sp_arithmetic::traits::One;
+use sp_arithmetic::{traits::One, FixedPointNumber};
 
 #[macro_export]
 macro_rules! assert_eq_approx {
@@ -97,6 +97,23 @@ fn on_trade_handler_should_work() {
         assert_eq!(get_accumulator_entry(&derive_name(HDX, DOT)), None);
         PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1_000, 500, 2_000);
         assert_eq!(get_accumulator_entry(&derive_name(HDX, DOT)), Some(PRICE_ENTRY_1));
+    });
+}
+
+#[test]
+fn on_liquidity_changed_handler_should_work() {
+    new_test_ext().execute_with(|| {
+        let timestamp = 5;
+        System::set_block_number(timestamp);
+        let no_volume_entry = PriceEntry {
+            price: Price::saturating_from_integer(2),
+            volume: 0,
+            liquidity: 2_000,
+            timestamp,
+        };
+        assert_eq!(get_accumulator_entry(&derive_name(HDX, DOT)), None);
+        PriceOracleHandler::<Test>::on_liquidity_changed(HDX, DOT, 1_000, 500, 2_000);
+        assert_eq!(get_accumulator_entry(&derive_name(HDX, DOT)), Some(no_volume_entry));
     });
 }
 

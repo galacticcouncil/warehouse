@@ -125,6 +125,8 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+    /// Insert or update data in the accumulator from received price entry. Aggregates volume and
+    /// takes the most recent data for the rest.
     pub(crate) fn on_price_entry(pair_id: AssetPairId, price_entry: PriceEntry<T::BlockNumber>) {
         Accumulator::<T>::mutate(|accumulator| {
             accumulator
@@ -361,14 +363,18 @@ impl OraclePeriod {
     }
 }
 
+// TODO: better name and extract
 pub trait EmaOracle {
     fn get_price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod) -> (Option<Price>, Weight);
 }
 
 impl<T: Config> EmaOracle for Pallet<T> {
+    // TODO: return error if oracle is not initialized yet.
     fn get_price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod) -> (Option<Price>, Weight) {
         let pair_id = derive_name(asset_a, asset_b);
         let entry = Self::get_updated_entry(&pair_id, period);
         (entry.map(|entry| entry.price), 100) // TODO: weight
     }
 }
+
+// TODO: volume and liquidity oracles

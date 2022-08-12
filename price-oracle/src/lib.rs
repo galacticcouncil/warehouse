@@ -125,7 +125,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    pub(crate) fn on_trade(pair_id: AssetPairId, price_entry: PriceEntry<T::BlockNumber>) {
+    pub(crate) fn on_price_entry(pair_id: AssetPairId, price_entry: PriceEntry<T::BlockNumber>) {
         Accumulator::<T>::mutate(|accumulator| {
             accumulator
                 .entry(pair_id)
@@ -136,15 +136,12 @@ impl<T: Config> Pallet<T> {
         });
     }
 
+    pub(crate) fn on_trade(pair_id: AssetPairId, price_entry: PriceEntry<T::BlockNumber>) {
+        Self::on_price_entry(pair_id, price_entry)
+    }
+
     pub(crate) fn on_liquidity_changed(pair_id: AssetPairId, price_entry: PriceEntry<T::BlockNumber>) {
-        Accumulator::<T>::mutate(|accumulator| {
-            accumulator
-                .entry(pair_id)
-                .and_modify(|entry| {
-                    *entry = price_entry.accumulate_volume(&entry);
-                })
-                .or_insert(price_entry);
-        });
+        Self::on_price_entry(pair_id, price_entry)
     }
 
     fn update_data() {

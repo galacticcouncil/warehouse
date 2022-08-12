@@ -48,23 +48,8 @@ impl<BlockNumber> PriceEntry<BlockNumber>
 where
     BlockNumber: UniqueSaturatedInto<u64> + Copy,
 {
-    /// Updates the previous average value with a new entry.
-    pub fn calculate_new_price_entry(&self, previous_price_entry: &Self) -> Option<Self> {
-        let total_liquidity = previous_price_entry.liquidity.checked_add(self.liquidity)?;
-        let product_of_old_values = previous_price_entry
-            .price
-            .checked_mul(&Price::from_inner(previous_price_entry.liquidity))?;
-        let product_of_new_values = self.price.checked_mul(&Price::from_inner(self.liquidity))?;
-        Some(Self {
-            price: product_of_old_values
-                .checked_add(&product_of_new_values)?
-                .checked_div(&Price::from_inner(total_liquidity))?,
-            volume: previous_price_entry.volume.checked_add(self.volume)?,
-            liquidity: total_liquidity,
-            timestamp: self.timestamp,
-        })
-    }
-
+    /// Determine a new entry based on `self` and a previous entry. Adds the volumes together and
+    /// takes the values of `self` for the rest.
     pub fn accumulate_volume(&self, previous_entry: &Self) -> Self {
         let volume = previous_entry.volume.saturating_add(self.volume);
         Self {

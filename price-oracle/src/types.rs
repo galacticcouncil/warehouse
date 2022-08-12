@@ -126,6 +126,7 @@ pub(crate) fn ema(
     alpha: Price,
     inv_alpha: Price,
 ) -> Option<(Price, Balance, Balance)> {
+    debug_assert!(inv_alpha + alpha == Price::one());
     // All three should follow `old_value * inv_alpha + incoming_value * alpha`.
     // Safe to use bare `+` because `inv_alpha + apha == 1`.
     let price = prev_price.checked_mul(&inv_alpha)? + new_price.checked_mul(&alpha)?;

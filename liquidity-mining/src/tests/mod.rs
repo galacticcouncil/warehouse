@@ -29,7 +29,6 @@ use mock::{
 use frame_support::{assert_err, assert_noop, assert_ok};
 
 use sp_arithmetic::traits::CheckedSub;
-
 use std::cmp::Ordering;
 
 const ALICE_FARM: u32 = BSX_FARM;
@@ -232,12 +231,23 @@ fn get_predefined_yield_farm_ins1(idx: usize) -> YieldFarmData<Test, Instance1> 
     PREDEFINED_YIELD_FARMS_INS1.with(|v| v[idx].clone())
 }
 
+#[macro_export]
+macro_rules! assert_eq_approx {
+    ( $x:expr, $y:expr, $z:expr, $r:expr) => {{
+        let diff = if $x >= $y { $x - $y } else { $y - $x };
+        if diff > $z {
+            panic!("\n{} not equal\n left: {:?}\nright: {:?}\n", $r, $x, $y);
+        }
+    }};
+}
+
 pub mod claim_rewards;
 pub mod create_global_farm;
 pub mod create_yield_farm;
 pub mod deposit_lp_shares;
 pub mod destroy_global_farm;
 pub mod destroy_yield_farm;
+pub mod invariants;
 pub mod mock;
 pub mod redeposit_lp_shares;
 pub mod resume_yield_farm;

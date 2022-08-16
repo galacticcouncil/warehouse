@@ -1,7 +1,5 @@
 // This file is part of galacticcouncil/warehouse.
-
-// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
-// SPDX-License-Identifier: Apache-2.0
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB). SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1206,22 +1204,22 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// conditions are met.
     fn update_global_farm(
         global_farm: &mut GlobalFarmData<T, I>,
-        now_period: PeriodOf<T>,
+        current_period: PeriodOf<T>,
         reward_per_period: Balance,
-    ) -> Result<(), DispatchError> {
+    ) -> Result<Balance, DispatchError> {
         // Farm should be updated only once in the same period.
-        if global_farm.updated_at == now_period {
-            return Ok(());
+        if global_farm.updated_at == current_period {
+            return Ok(Zero::zero());
         }
 
         // Nothing to update if there is no stake in the farm.
         if global_farm.total_shares_z.is_zero() {
-            return Ok(());
+            return Ok(Zero::zero());
         }
 
         // Number of periods since last farm update.
         let periods_since_last_update: Balance = TryInto::<u128>::try_into(
-            now_period
+            current_period
                 .checked_sub(&global_farm.updated_at)
                 .ok_or(ArithmeticError::Underflow)?,
         )
@@ -1241,13 +1239,14 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             global_farm.accumulated_rpz =
                 math::calculate_accumulated_rps(global_farm.accumulated_rpz, global_farm.total_shares_z, reward)
                     .map_err(|_| ArithmeticError::Overflow)?;
+
             global_farm.accumulated_rewards = global_farm
                 .accumulated_rewards
                 .checked_add(reward)
                 .ok_or(ArithmeticError::Overflow)?;
         }
 
-        global_farm.updated_at = now_period;
+        global_farm.updated_at = current_period;
 
         Pallet::<T, I>::deposit_event(Event::GlobalFarmAccRPZUpdated {
             global_farm_id: global_farm.id,
@@ -1255,22 +1254,21 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             total_shares_z: global_farm.total_shares_z,
         });
 
-        Ok(())
+        Ok(reward)
     }
 
     /// This function calculate and returns yield farm's reward from `GlobalFarm`.
     fn claim_from_global_farm(
         global_farm: &mut GlobalFarmData<T, I>,
         yield_farm: &mut YieldFarmData<T, I>,
-        stake_in_global_pool: Balance,
+        stake_in_global_farm: Balance,
     ) -> Result<Balance, ArithmeticError> {
         let reward = math::calculate_reward(
             yield_farm.accumulated_rpz,
             global_farm.accumulated_rpz,
-            stake_in_global_pool,
+            stake_in_global_farm,
         )
         .map_err(|_| ArithmeticError::Overflow)?;
-
         yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
 
         global_farm.paid_accumulated_rewards = global_farm

@@ -155,7 +155,8 @@ impl ExtBuilder {
 }
 
 thread_local! {
-    pub static EXECUTED_TRADES: RefCell<Vec<(PoolType<AssetId>, Balance)>> = RefCell::new(Vec::default());
+    pub static EXECUTED_SELLS: RefCell<Vec<(PoolType<AssetId>, Balance)>> = RefCell::new(Vec::default());
+    pub static EXECUTED_BUYS: RefCell<Vec<(PoolType<AssetId>, Balance)>> = RefCell::new(Vec::default());
 }
 
 
@@ -188,7 +189,15 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
         asset_out: AssetId,
         amount_out: Balance,
     ) -> Result<Self::Output, ExecutorError<Self::Error>> {
-        todo!()
+        if pool_type != PoolType::XYK {
+            return Err(ExecutorError::NotSupported);
+        }
+
+        if amount_out == 200u128 {
+            return Err(ExecutorError::Error(()));
+        }
+
+        Ok(5u128)
     }
 
     fn execute_sell(
@@ -198,12 +207,12 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
         asset_out: AssetId,
         amount_in: Balance,
     ) -> Result<(), ExecutorError<Self::Error>> {
-        EXECUTED_TRADES.with(|v| {
+        EXECUTED_SELLS.with(|v| {
             let mut m = v.borrow_mut();
             m.push((pool_type, amount_in));
         });
 
-        Ok(()) //TODO: add spy for storing the sells
+        Ok(())
     }
 
     fn execute_buy(
@@ -213,6 +222,11 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
         asset_out: AssetId,
         amount_out: Balance,
     ) -> Result<(), ExecutorError<Self::Error>> {
-        todo!()
+        EXECUTED_BUYS.with(|v| {
+            let mut m = v.borrow_mut();
+            m.push((pool_type, amount_out));
+        });
+
+        Ok(())
     }
 }

@@ -27,7 +27,7 @@ use crate::types::Trade;
 use pretty_assertions::assert_eq;
 
 #[test]
-fn execute_sell_should_work_when_route_has_single_trade() {
+fn execute_buy_should_when_route_has_single_trade() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount = 10;
@@ -40,15 +40,15 @@ fn execute_sell_should_work_when_route_has_single_trade() {
         let trades = vec![trade];
 
         //Act
-        assert_ok!(Router::execute_sell(Origin::signed(ALICE), BSX, aUSD, amount, limit,trades));
+        assert_ok!(Router::execute_buy(Origin::signed(ALICE), BSX, aUSD, amount, limit,trades));
 
         //Assert
-        assert_executed_trades(vec![(PoolType::XYK, amount)]);
+        assert_executed_trades(vec![(PoolType::XYK, 5)]);
     });
 }
 
 #[test]
-fn execute_sell_should_work_when_route_has_multiple_trades() {
+fn execute_buy_should_when_route_has_multiple_trades() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount = 10;
@@ -66,10 +66,10 @@ fn execute_sell_should_work_when_route_has_multiple_trades() {
         let trades = vec![trade1, trade2];
 
         //Act
-        assert_ok!(Router::execute_sell(Origin::signed(ALICE), BSX, KSM, amount, limit,trades));
+        assert_ok!(Router::execute_buy(Origin::signed(ALICE), BSX, KSM, amount, limit,trades));
 
         //Assert
-        assert_executed_trades(vec![(PoolType::XYK, amount), (PoolType::XYK, 5)]);
+        assert_executed_trades(vec![(PoolType::XYK, 5), (PoolType::XYK, 5)]);
     });
 }
 

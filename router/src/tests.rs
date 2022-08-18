@@ -16,14 +16,14 @@
 // limitations under the License.
 
 use super::*;
-use crate::mock::{Currency, ExtBuilder, Router, Origin, Test, ALICE, HDX};
+use crate::mock::{Currency, ExtBuilder, Origin, Router, Test, ALICE, HDX};
 use frame_support::traits::OnFinalize;
 use frame_support::{assert_noop, assert_ok};
 
 #[test]
 fn rampage_mints() {
     ExtBuilder::default().build().execute_with(|| {
-        let res: Result<u32, u32>= Ok(3u32);
+        let res: Result<u32, u32> = Ok(3u32);
         assert_ok!(res);
     });
 }

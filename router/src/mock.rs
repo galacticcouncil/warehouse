@@ -99,9 +99,14 @@ impl orml_tokens::Config for Test {
     type OnKilledTokenAccount = ();
 }
 
+type Pools = (XYK, Stableswap, Omnipool);
+
 impl Config for Test {
     type Event = ();
+    type AssetId = ();
+    type Balance = ();
     type Currency = Currency;
+    type AMM = Pools;
 }
 
 pub type AccountId = u64;
@@ -124,7 +129,7 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-    pub fn with_endowed_accounts(mut self, accounts: Vec<(AccountId,AssetId, Balance)>) -> Self {
+    pub fn with_endowed_accounts(mut self, accounts: Vec<(AccountId, AssetId, Balance)>) -> Self {
         self.endowed_accounts = accounts;
         self
     }
@@ -135,12 +140,10 @@ impl ExtBuilder {
         orml_tokens::GenesisConfig::<Test> {
             balances: self.endowed_accounts,
         }
-            .assimilate_storage(&mut t)
-            .unwrap();
+        .assimilate_storage(&mut t)
+        .unwrap();
 
-        router::GenesisConfig {}
-            .assimilate_storage::<Test>(&mut t)
-            .unwrap();
+        router::GenesisConfig {}.assimilate_storage::<Test>(&mut t).unwrap();
 
         t.into()
     }

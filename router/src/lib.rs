@@ -23,7 +23,9 @@ use frame_support::{
     weights::{DispatchClass, Pays},
 };
 use frame_system::ensure_signed;
-use orml_traits::{MultiCurrency, MultiCurrencyExtended};
+use hydradx_traits::router::Executor;
+use orml_traits::MultiCurrency;
+use sp_arithmetic::traits::BaseArithmetic;
 use sp_std::vec::Vec;
 
 #[cfg(test)]
@@ -31,9 +33,7 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
-
-type AssetId = u32;
-type Balance = u128;
+mod types;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -41,8 +41,11 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use crate::types::Trade;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
+    use hydradx_traits::router::ExecutorError;
+    use sp_runtime::traits::AtLeast32BitUnsigned;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -52,7 +55,23 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        type Currency: MultiCurrencyExtended<Self::AccountId, CurrencyId = AssetId, Balance = Balance, Amount = i128>;
+        /// Asset type
+        type AssetId: Parameter
+            + Member
+            + Default
+            + Copy
+            + BaseArithmetic
+            + MaybeSerializeDeserialize
+            + MaxEncodedLen
+            + Encode
+            + TypeInfo;
+
+        /// Balance type
+        type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize;
+
+        type Currency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Self::Balance>;
+
+        type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, Output = Self::Balance>;
     }
 
     #[pallet::event]
@@ -60,37 +79,61 @@ pub mod pallet {
     pub enum Event<T: Config> {}
 
     #[pallet::error]
-    pub enum Error<T> {}
-
-    #[pallet::genesis_config]
-    #[derive(Default)]
-    pub struct GenesisConfig {
-    }
-
-    #[cfg(feature = "std")]
-    impl GenesisConfig {
-        /// Direct implementation to not break dependency
-        pub fn build_storage<T: Config>(&self) -> Result<sp_runtime::Storage, String> {
-            <Self as frame_support::traits::GenesisBuild<T>>::build_storage(self)
-        }
-
-        /// Direct implementation to not break dependency
-        pub fn assimilate_storage<T: Config>(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
-            <Self as frame_support::traits::GenesisBuild<T>>::assimilate_storage(self, storage)
-        }
-    }
-
-    #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig {
-        fn build(&self) {
-        }
+    pub enum Error<T> {
+        Limit,
+        PoolNotSupported,
+        Math,
+        Execution,
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-        pub fn logic(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            Ok(().into())
+        pub fn execute_sell(
+            origin: OriginFor<T>,
+            asset_in: T::AssetId,
+            asset_out: T::AssetId,
+            amount: T::Balance,
+            limit: T::Balance,
+            route: Vec<Trade<T::AssetId>>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            // TODO:
+            // ensure route has at least 1 entry
+            // ensure that who has enough balance
+
+            //let mut amounts = SmallVec::<T::Balance>::with_capacity(route.len() + 1);
+            let mut amounts = Vec::<T::Balance>::with_capacity(route.len() + 1);
+
+            let mut amount = amount;
+
+            amounts.push(amount);
+
+            for trade in route.iter() {
+                let result = T::AMM::calculate_sell(trade.pool, trade.asset_in, trade.asset_out, amount);
+
+                match result {
+                    Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
+                    Err(ExecutorError::Error(_)) => return Err(Error::<T>::Math.into()),
+                    Ok(r) => {
+                        amount = r;
+                        amounts.push(r);
+                    }
+                }
+            }
+
+            let last_amount = amounts.pop().ok_or(Error::<T>::Limit)?;
+            ensure!(last_amount >= limit, Error::<T>::Limit);
+
+            for (amount, trade) in amounts.iter().zip(route) {
+                T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
+                    .map_err(|_| Error::<T>::Execution)?;
+            }
+
+            // Emit event?
+            // check asset out balance to verify that who receives at least last_amount
+
+            Ok(())
         }
     }
 }

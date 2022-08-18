@@ -43,7 +43,7 @@ fn execute_buy_should_when_route_has_single_trade() {
         assert_ok!(Router::execute_buy(Origin::signed(ALICE), BSX, aUSD, amount, limit,trades));
 
         //Assert
-        assert_executed_trades(vec![(PoolType::XYK, 5)]);
+        assert_executed_sell_trades(vec![(PoolType::XYK, 5)]);
         assert_that_there_is_no_any_executed_buys();
     });
 }
@@ -70,14 +70,7 @@ fn execute_buy_should_when_route_has_multiple_trades() {
         assert_ok!(Router::execute_buy(Origin::signed(ALICE), BSX, KSM, amount, limit,trades));
 
         //Assert
-        assert_executed_trades(vec![(PoolType::XYK, 5), (PoolType::XYK, 5)]);
+        assert_executed_sell_trades(vec![(PoolType::XYK, 5), (PoolType::XYK, 5)]);
         assert_that_there_is_no_any_executed_buys();
-    });
-}
-
-fn assert_executed_trades(expected_trades :Vec<(PoolType<AssetId>, Balance)>) {
-    EXECUTED_SELLS.borrow().with(|v| {
-        let trades = v.borrow().deref().clone();
-        assert_eq!(expected_trades,trades);
     });
 }

@@ -18,6 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
+use frame_support::traits::fungibles::Inspect;
 use frame_support::{
     ensure,
     weights::{DispatchClass, Pays},
@@ -25,7 +26,6 @@ use frame_support::{
 use frame_system::ensure_signed;
 use hydradx_traits::router::Executor;
 use orml_traits::MultiCurrency;
-use sp_arithmetic::traits::BaseArithmetic;
 use sp_std::vec::Vec;
 
 #[cfg(test)]
@@ -55,21 +55,11 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        /// Asset type
-        type AssetId: Parameter
-            + Member
-            + Default
-            + Copy
-            + BaseArithmetic
-            + MaybeSerializeDeserialize
-            + MaxEncodedLen
-            + Encode
-            + TypeInfo;
+        type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
-        /// Balance type
-        type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize;
+        type Balance: Parameter + Member + Copy + PartialOrd + MaybeSerializeDeserialize;
 
-        type Currency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Self::Balance>;
+        type Currency: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
 
         type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, Output = Self::Balance>;
     }

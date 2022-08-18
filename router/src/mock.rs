@@ -20,6 +20,7 @@ use crate::Config;
 use frame_support::parameter_types;
 use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
+use hydradx_traits::router::{Executor, ExecutorError, PoolType};
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
@@ -40,7 +41,7 @@ frame_support::construct_runtime!(
      UncheckedExtrinsic = UncheckedExtrinsic,
      {
          System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-         Router: router::{Pallet, Call,Config, Storage, Event<T>},
+         Router: router::{Pallet, Call,Event<T>},
          Currency: orml_tokens::{Pallet, Event<T>},
      }
 );
@@ -99,12 +100,12 @@ impl orml_tokens::Config for Test {
     type OnKilledTokenAccount = ();
 }
 
-type Pools = (XYK, Stableswap, Omnipool);
+type Pools = (XYK);
 
 impl Config for Test {
     type Event = ();
-    type AssetId = ();
-    type Balance = ();
+    type AssetId = AssetId;
+    type Balance = Balance;
     type Currency = Currency;
     type AMM = Pools;
 }
@@ -143,8 +144,59 @@ impl ExtBuilder {
         .assimilate_storage(&mut t)
         .unwrap();
 
-        router::GenesisConfig {}.assimilate_storage::<Test>(&mut t).unwrap();
-
         t.into()
+    }
+}
+
+pub struct XYK;
+
+impl Executor<AccountId, AssetId, Balance> for XYK {
+    type Output = Balance;
+    type Error = ();
+
+    fn calculate_sell(
+        pool_type: PoolType<AssetId>,
+        asset_in: AssetId,
+        asset_out: AssetId,
+        amount_in: Balance,
+    ) -> Result<Self::Output, ExecutorError<Self::Error>> {
+        if pool_type != PoolType::XYK {
+            return Err(ExecutorError::NotSupported);
+        }
+
+        if amount_in != 100u128 {
+            return Err(ExecutorError::Error(()));
+        }
+
+        Ok(5u128)
+    }
+
+    fn calculate_buy(
+        pool_type: PoolType<AssetId>,
+        asset_in: AssetId,
+        asset_out: AssetId,
+        amount_out: Balance,
+    ) -> Result<Self::Output, ExecutorError<Self::Error>> {
+        todo!()
+    }
+
+    fn execute_sell(
+        pool_type: PoolType<AssetId>,
+        who: &AccountId,
+        asset_in: AssetId,
+        asset_out: AssetId,
+        amount_in: Balance,
+    ) -> Result<(), ExecutorError<Self::Error>> {
+        todo!()
+    }
+
+    fn execute_buy(
+        pool_type: PoolType<AssetId>,
+        who: &AccountId,
+        asset_in: AssetId,
+        asset_out: AssetId,
+        amount_out: Balance,
+    ) -> Result<(), ExecutorError<Self::Error>> {
+        todo!()
     }
 }

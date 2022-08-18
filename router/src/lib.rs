@@ -125,5 +125,52 @@ pub mod pallet {
 
             Ok(())
         }
+        #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+        pub fn execute_buy(
+            origin: OriginFor<T>,
+            asset_in: T::AssetId,
+            asset_out: T::AssetId,
+            amount: T::Balance,
+            limit: T::Balance,
+            route: Vec<Trade<T::AssetId>>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            // TODO:
+            // ensure route has at least 1 entry
+            // ensure that who has enough balance
+
+            //let mut amounts = SmallVec::<T::Balance>::with_capacity(route.len() + 1);
+            let mut amounts = Vec::<T::Balance>::with_capacity(route.len() + 1);
+
+            let mut amount = amount;
+
+            amounts.push(amount);
+
+            for trade in route.iter().rev() {
+                let result = T::AMM::calculate_buy(trade.pool, trade.asset_in, trade.asset_out, amount);
+
+                match result {
+                    Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
+                    Err(ExecutorError::Error(_)) => return Err(Error::<T>::Math.into()),
+                    Ok(r) => {
+                        amount = r;
+                        amounts.push(r);
+                    }
+                }
+            }
+
+            let last_amount = amounts.pop().ok_or(Error::<T>::Limit)?;
+            ensure!(last_amount >= limit, Error::<T>::Limit);
+
+            for (amount, trade) in amounts.iter().rev().zip(route) {
+                T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
+                    .map_err(|_| Error::<T>::Execution)?;
+            }
+
+            // Emit event?
+            // check asset out balance to verify that who receives at least last_amount
+
+            Ok(())
+        }
     }
 }

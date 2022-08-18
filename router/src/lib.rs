@@ -28,12 +28,12 @@ use hydradx_traits::router::Executor;
 use orml_traits::MultiCurrency;
 use sp_std::vec::Vec;
 
-#[cfg(test)]
-mod mock;
+mod types;
 
 #[cfg(test)]
+mod mock;
+#[cfg(test)]
 mod tests;
-mod types;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -41,7 +41,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use crate::types::Trade;
+    use types::Trade;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
     use hydradx_traits::router::ExecutorError;

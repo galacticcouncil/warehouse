@@ -14,6 +14,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#[warn(non_upper_case_globals)]
 
 use crate as router;
 use crate::Config;
@@ -116,7 +117,9 @@ pub type AccountId = u64;
 
 pub const ALICE: AccountId = 1;
 
-pub const HDX: AssetId = 1000;
+pub const BSX: AssetId = 1000;
+pub const aUSD: AssetId = 1001;
+pub const KSM: AssetId = 1002;
 
 pub struct ExtBuilder {
     endowed_accounts: Vec<(AccountId, AssetId, Balance)>,
@@ -126,7 +129,7 @@ pub struct ExtBuilder {
 impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
-            endowed_accounts: vec![(ALICE, HDX, 1000u128)],
+            endowed_accounts: vec![(ALICE, BSX, 1000u128)],
         }
     }
 }

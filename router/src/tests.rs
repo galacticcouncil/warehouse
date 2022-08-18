@@ -16,37 +16,66 @@
 // limitations under the License.
 
 use std::borrow::Borrow;
+use std::cell::RefCell;
+use std::ops::Deref;
 use super::*;
-use crate::mock::{Currency, ExtBuilder, Origin, Router, Test, ALICE, HDX, EXECUTED_TRADES, AssetId, Balance};
+use crate::mock::{Currency, ExtBuilder, Origin, Router, Test, ALICE, aUSD, BSX, KSM, EXECUTED_TRADES, AssetId, Balance};
 use frame_support::traits::OnFinalize;
 use frame_support::{assert_noop, assert_ok};
 use hydradx_traits::router::PoolType;
 use crate::types::Trade;
-
+use pretty_assertions::assert_eq;
 
 #[test]
 fn execute_sell_should_when_route_has_single_trade() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
+        let amount = 10;
+        let limit = 5;
         let trade = Trade{
             pool: PoolType::XYK,
-            asset_in: 0,
-            asset_out: 1
+            asset_in: BSX,
+            asset_out: aUSD
         };
         let trades = vec![trade];
 
         //Act
-        assert_ok!(Router::execute_sell(Origin::signed(ALICE), 0, 1, 3, 3,trades));
+        assert_ok!(Router::execute_sell(Origin::signed(ALICE), BSX, aUSD, amount, limit,trades));
 
         //Assert
-        assert_trades(vec![(PoolType::XYK, 3)]);
+        assert_executed_trades(vec![(PoolType::XYK, amount)]);
     });
 }
 
-fn assert_trades(expected_trades :Vec<(PoolType<AssetId>, Balance)>) {
-    for expected_trade in expected_trades {
-        EXECUTED_TRADES.borrow().with(|v| {
-            assert!(v.borrow().contains(&expected_trade));
-        });
-    }
+#[test]
+fn execute_sell_should_when_route_has_multiple_trades() {
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let amount = 10;
+        let limit = 5;
+        let trade1 = Trade{
+            pool: PoolType::XYK,
+            asset_in: BSX,
+            asset_out: aUSD
+        };
+        let trade2 = Trade{
+            pool: PoolType::XYK,
+            asset_in: aUSD,
+            asset_out: KSM
+        };
+        let trades = vec![trade1, trade2];
+
+        //Act
+        assert_ok!(Router::execute_sell(Origin::signed(ALICE), BSX, KSM, amount, limit,trades));
+
+        //Assert
+        assert_executed_trades(vec![(PoolType::XYK, amount), (PoolType::XYK, 5)]);
+    });
+}
+
+fn assert_executed_trades(expected_trades :Vec<(PoolType<AssetId>, Balance)>) {
+    EXECUTED_TRADES.borrow().with(|v| {
+        let trades = v.borrow().deref().clone();
+        assert_eq!(expected_trades,trades);
+    });
 }

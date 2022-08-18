@@ -5,6 +5,7 @@ use scale_info::TypeInfo;
 pub enum PoolType<AssetId> {
     XYK,
     Stableswap(AssetId),
+    Omnipool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -161,28 +162,31 @@ mod tests {
         }
 
         fn calculate_buy(
+            pool_type: PoolType<AssetId>,
             asset_in: AssetId,
             asset_out: AssetId,
             amount_out: Balance,
-        ) -> Result<Self::Output, Self::Error> {
+        ) -> Result<Self::Output, ExecutorError<Self::Error>> {
             todo!()
         }
 
         fn execute_sell(
+            pool_type: PoolType<AssetId>,
             who: &Accountid,
             asset_in: AssetId,
             asset_out: AssetId,
             amount_in: Balance,
-        ) -> Result<(), Self::Error> {
+        ) -> Result<(), ExecutorError<Self::Error>> {
             todo!()
         }
 
         fn execute_buy(
+            pool_type: PoolType<AssetId>,
             who: &Accountid,
             asset_in: AssetId,
             asset_out: AssetId,
             amount_out: Balance,
-        ) -> Result<(), Self::Error> {
+        ) -> Result<(), ExecutorError<Self::Error>> {
             todo!()
         }
     }
@@ -206,28 +210,31 @@ mod tests {
         }
 
         fn calculate_buy(
+            pool_type: PoolType<AssetId>,
             asset_in: AssetId,
             asset_out: AssetId,
             amount_out: Balance,
-        ) -> Result<Self::Output, Self::Error> {
+        ) -> Result<Self::Output, ExecutorError<Self::Error>> {
             todo!()
         }
 
         fn execute_sell(
+            pool_type: PoolType<AssetId>,
             who: &Accountid,
             asset_in: AssetId,
             asset_out: AssetId,
             amount_in: Balance,
-        ) -> Result<(), Self::Error> {
+        ) -> Result<(), ExecutorError<Self::Error>> {
             todo!()
         }
 
         fn execute_buy(
+            pool_type: PoolType<AssetId>,
             who: &Accountid,
             asset_in: AssetId,
             asset_out: AssetId,
             amount_out: Balance,
-        ) -> Result<(), Self::Error> {
+        ) -> Result<(), ExecutorError<Self::Error>> {
             todo!()
         }
     }

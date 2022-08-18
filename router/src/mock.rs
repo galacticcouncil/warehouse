@@ -29,6 +29,8 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup, One},
 };
 use std::{cell::RefCell, collections::HashMap};
+use std::borrow::Borrow;
+use std::ops::Deref;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -229,4 +231,18 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
 
         Ok(())
     }
+}
+
+pub fn assert_executed_sell_trades(expected_trades :Vec<(PoolType<AssetId>, Balance)>) {
+    EXECUTED_SELLS.borrow().with(|v| {
+        let trades = v.borrow().deref().clone();
+        assert_eq!(expected_trades,trades);
+    });
+}
+
+pub fn assert_that_there_is_no_any_executed_buys() {
+    EXECUTED_BUYS.borrow().with(|v| {
+        let trades = v.borrow().deref().clone();
+        assert_eq!(trades.len(),0);
+    });
 }

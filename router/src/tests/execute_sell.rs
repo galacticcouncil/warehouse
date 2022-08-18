@@ -19,7 +19,7 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::ops::Deref;
 use super::*;
-use crate::mock::{Currency, ExtBuilder, Origin, Router, Test, ALICE, aUSD, BSX, KSM, EXECUTED_SELLS, AssetId, Balance};
+use crate::mock::{Currency, ExtBuilder, Origin, Router, Test, ALICE, aUSD, BSX, KSM, EXECUTED_SELLS, AssetId, Balance, assert_executed_sell_trades, assert_that_there_is_no_any_executed_buys};
 use frame_support::traits::OnFinalize;
 use frame_support::{assert_noop, assert_ok};
 use hydradx_traits::router::PoolType;
@@ -43,7 +43,8 @@ fn execute_sell_should_work_when_route_has_single_trade() {
         assert_ok!(Router::execute_sell(Origin::signed(ALICE), BSX, aUSD, amount, limit,trades));
 
         //Assert
-        assert_executed_trades(vec![(PoolType::XYK, amount)]);
+        assert_executed_sell_trades(vec![(PoolType::XYK, amount)]);
+        assert_that_there_is_no_any_executed_buys();
     });
 }
 
@@ -69,13 +70,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades() {
         assert_ok!(Router::execute_sell(Origin::signed(ALICE), BSX, KSM, amount, limit,trades));
 
         //Assert
-        assert_executed_trades(vec![(PoolType::XYK, amount), (PoolType::XYK, 5)]);
-    });
-}
-
-fn assert_executed_trades(expected_trades :Vec<(PoolType<AssetId>, Balance)>) {
-    EXECUTED_SELLS.borrow().with(|v| {
-        let trades = v.borrow().deref().clone();
-        assert_eq!(expected_trades,trades);
+        assert_executed_sell_trades(vec![(PoolType::XYK, amount), (PoolType::XYK, 5)]);
+        assert_that_there_is_no_any_executed_buys();
     });
 }

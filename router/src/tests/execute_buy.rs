@@ -19,7 +19,7 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::ops::Deref;
 use super::*;
-use crate::mock::{Currency, ExtBuilder, Origin, Router, Test, ALICE, aUSD, BSX, KSM, EXECUTED_SELLS, AssetId, Balance};
+use crate::mock::{Currency, ExtBuilder, Origin, Router, Test, ALICE, aUSD, BSX, KSM, EXECUTED_SELLS, AssetId, Balance, assert_executed_sell_trades, assert_that_there_is_no_any_executed_buys};
 use frame_support::traits::OnFinalize;
 use frame_support::{assert_noop, assert_ok};
 use hydradx_traits::router::PoolType;
@@ -44,6 +44,7 @@ fn execute_buy_should_when_route_has_single_trade() {
 
         //Assert
         assert_executed_trades(vec![(PoolType::XYK, 5)]);
+        assert_that_there_is_no_any_executed_buys();
     });
 }
 
@@ -70,6 +71,7 @@ fn execute_buy_should_when_route_has_multiple_trades() {
 
         //Assert
         assert_executed_trades(vec![(PoolType::XYK, 5), (PoolType::XYK, 5)]);
+        assert_that_there_is_no_any_executed_buys();
     });
 }
 

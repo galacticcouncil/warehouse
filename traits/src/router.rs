@@ -130,6 +130,22 @@ impl<O, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> Executor<AccountI
     }
 }
 
+
+pub trait DoIt{
+    fn do_it();
+}
+
+#[impl_trait_for_tuples::impl_for_tuples(1, 5)]
+impl DoIt for Tuple {
+    fn do_it() {
+        for_tuples!(
+            #(
+                Tuple::do_it();
+            )*
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::router::{Executor, ExecutorError, PoolType};
@@ -241,6 +257,8 @@ mod tests {
 
     type Pools = (XYK, Stableswap);
 
+    type doers = (XYK, Stableswap);
+
     #[test]
     fn test_it() {
         assert_eq!(Pools::calculate_sell(PoolType::XYK, 0u32, 1u32, 100u128).unwrap(), 5u8);
@@ -254,5 +272,10 @@ mod tests {
             1u8
         );
         assert!(Pools::calculate_sell(PoolType::Omnipool, 0u32, 1u32, 100u128).is_err());
+    }
+
+    #[test]
+    fn asd() {
+        doers::do_it();
     }
 }

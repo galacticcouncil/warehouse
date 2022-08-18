@@ -27,12 +27,14 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup, One},
 };
+use std::{cell::RefCell, collections::HashMap};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-type AssetId = u32;
-type Balance = u128;
+pub type AssetId = u32;
+pub type Balance = u128;
+
 
 frame_support::construct_runtime!(
     pub enum Test where
@@ -146,7 +148,13 @@ impl ExtBuilder {
 
         t.into()
     }
+
 }
+
+thread_local! {
+    pub static EXECUTED_TRADES: RefCell<Vec<(PoolType<AssetId>, Balance)>> = RefCell::new(Vec::default());
+}
+
 
 pub struct XYK;
 
@@ -164,7 +172,7 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
             return Err(ExecutorError::NotSupported);
         }
 
-        if amount_in != 100u128 {
+        if amount_in == 100u128 {
             return Err(ExecutorError::Error(()));
         }
 
@@ -187,7 +195,12 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
         asset_out: AssetId,
         amount_in: Balance,
     ) -> Result<(), ExecutorError<Self::Error>> {
-        todo!()
+        EXECUTED_TRADES.with(|v| {
+            let mut m = v.borrow_mut();
+            m.push((pool_type, amount_in));
+        });
+
+        Ok(()) //TODO: add spy for storing the sells
     }
 
     fn execute_buy(

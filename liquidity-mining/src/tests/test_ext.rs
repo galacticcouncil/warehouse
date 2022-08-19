@@ -228,6 +228,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         let farm_id = GC_FARM;
 
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
+        let pot_account = LiquidityMining::pot_account_id();
         let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
         let bsx_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
 
@@ -380,11 +381,15 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             },
         );
 
-        //Reward currency balance check. total_rewards - sum(claims from global farm).
+        //Reward currency balance check.
+        //total_rewards - (global_farm_paid_accumulated_rewards + global_farm_accumualted_rewards)
         pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - 1_033_900)
+            (30_000_000_000 - (1_033_900 + 249_650))
         );
+
+        //Pot account balance check
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot_account), 249_650);
 
         //Check of claimed amount from global farm (sum of all claims).
         pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account), 99_900);

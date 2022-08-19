@@ -81,7 +81,9 @@
 //!     the storage. Last yield farm removal from storage triggers global farm removal from
 //!     storage.
 //!     Note: deleted global farm CAN'T be resumed.
-//!
+//! * Pot - account holding all rewards allocated from all `GlobalFarm`s for all `YieldFarm`s.
+//! `GlobalFarm` transfers allocated rewards to pot account and rewards claimed by `YieldFarm` are
+//! transferred from this account.
 //!
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -228,8 +230,8 @@ pub mod pallet {
         /// Planned yielding periods is less than `MinPlannedYieldingPeriods`.
         InvalidPlannedYieldingPeriods,
 
-        /// Insufficient reward currency in global farm.
-        InsufficientBalanceInGlobalFarm,
+        /// Insufficient rewards on `Pot` account.
+        InsufficientPotBalance,
 
         /// Provided farm id is not valid. Valid range is [1, u32::MAX)
         InvalidFarmId,
@@ -1168,6 +1170,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         })
     }
 
+    /// Account id holding rewards allocated from all global farms for all yield farms.
+    pub fn pot_account_id() -> T::AccountId {
+        T::PalletId::get().into_account()
+    }
+
     /// This function returns account from `FarmId` or error.
     ///
     /// WARN: farm_id = 0 is same as `T::PalletId::get().into_account()`. 0 is not valid value.
@@ -1233,8 +1240,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         )
         .map_err(|_| ArithmeticError::Overflow)?;
 
-        let global_pool_account = Self::farm_account_id(global_farm.id)?;
-        let left_to_distribute = T::MultiCurrency::free_balance(global_farm.reward_currency, &global_pool_account);
+        let global_farm_account = Self::farm_account_id(global_farm.id)?;
+        let left_to_distribute = T::MultiCurrency::free_balance(global_farm.reward_currency, &global_farm_account);
 
         // Calculate reward for all periods since last update capped by balance of `GlobalFarm`
         // account.
@@ -1244,6 +1251,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             .min(left_to_distribute);
 
         if !reward.is_zero() {
+            let pot = Self::pot_account_id();
+            T::MultiCurrency::transfer(global_farm.reward_currency, &global_farm_account, &pot, reward)?;
+
             global_farm.accumulated_rpz =
                 math::calculate_accumulated_rps(global_farm.accumulated_rpz, global_farm.total_shares_z, reward)
                     .map_err(|_| ArithmeticError::Overflow)?;
@@ -1319,15 +1329,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         .map_err(|_| ArithmeticError::Overflow)?;
         yield_farm.updated_at = current_period;
 
-        let global_farm_balance =
-            T::MultiCurrency::free_balance(reward_currency, &Self::farm_account_id(global_farm_id)?);
+        let pot_balance = T::MultiCurrency::free_balance(reward_currency, &Self::pot_account_id());
 
-        ensure!(
-            global_farm_balance >= yield_farm_rewards,
-            Error::<T, I>::InsufficientBalanceInGlobalFarm
-        );
+        ensure!(pot_balance >= yield_farm_rewards, Error::<T, I>::InsufficientPotBalance);
 
-        let global_farm_account = Self::farm_account_id(global_farm_id)?;
+        let pot = Self::pot_account_id();
         let yield_farm_account = Self::farm_account_id(yield_farm.id)?;
 
         Pallet::<T, I>::deposit_event(Event::YieldFarmAccRPVSUpdated {
@@ -1337,12 +1343,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             total_valued_shares: yield_farm.total_valued_shares,
         });
 
-        T::MultiCurrency::transfer(
-            reward_currency,
-            &global_farm_account,
-            &yield_farm_account,
-            yield_farm_rewards,
-        )
+        T::MultiCurrency::transfer(reward_currency, &pot, &yield_farm_account, yield_farm_rewards)
     }
 
     /// This function return error if `farm_id` is not valid.

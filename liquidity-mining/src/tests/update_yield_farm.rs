@@ -81,7 +81,6 @@ fn update_yield_farm_should_work() {
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
         let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
 
-        let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
         let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
 
         assert_ok!(LiquidityMining::update_yield_farm_multiplier(
@@ -114,10 +113,7 @@ fn update_yield_farm_should_work() {
             }
         );
 
-        pretty_assertions::assert_eq!(
-            Tokens::free_balance(BSX, &global_farm_account),
-            global_farm_bsx_balance - 1_366_200_000 //1_366_200_000 - yield farm from global farm
-        );
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 28_498_716_450);
         pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &yield_farm_account),
             yield_farm_bsx_balance + 1_366_200_000 //1_366_200_000 - yield farm claim from global farm

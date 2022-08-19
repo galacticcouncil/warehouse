@@ -137,11 +137,7 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        let yield_farm_claims_from_global_farm = 0;
-        pretty_assertions::assert_eq!(
-            Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - yield_farm_claims_from_global_farm)
-        );
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000);
 
         //Check if claim from global farm is transferred to yield farm's account
         pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 0);
@@ -203,10 +199,7 @@ fn deposit_lp_shares_should_work() {
         );
 
         //farm wasn't updated in this period so no claim from global farm happened.
-        pretty_assertions::assert_eq!(
-            Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - yield_farm_claims_from_global_farm)
-        );
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000);
 
         //No claims happened for this farm so this is same as after previous deposit
         pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 0);
@@ -273,10 +266,9 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        let sum_yield_farm_claims_from_global_farm = 2_000;
         pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - sum_yield_farm_claims_from_global_farm)
+            (30_000_000_000 - 35_300)
         );
 
         //Check if claim from global farm is transferred to yield farm's account.
@@ -343,10 +335,9 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        let sum_yield_farm_claims_from_global_farm = 934_000;
         pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - sum_yield_farm_claims_from_global_farm)
+            (30_000_000_000 - 1_283_550)
         );
 
         //Check if claim from global farm is transferred to yield farm's account.
@@ -412,10 +403,9 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        let sum_yield_farm_claims_from_global_farm = 934_000;
         pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - sum_yield_farm_claims_from_global_farm)
+            (30_000_000_000 - 1_283_550)
         );
 
         pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 0);
@@ -480,10 +470,9 @@ fn deposit_lp_shares_should_work() {
             },
         );
 
-        let sum_yield_farm_claims_from_global_farm = 1_033_900;
         pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - sum_yield_farm_claims_from_global_farm)
+            (30_000_000_000 - 1_283_550)
         );
 
         //Check if claim from global farm is transferred to yield farm's account.

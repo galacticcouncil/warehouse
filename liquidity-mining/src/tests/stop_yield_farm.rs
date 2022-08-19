@@ -68,7 +68,6 @@ fn stop_yield_farm_should_work() {
         let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
         let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
         let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
-        let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
         let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
         let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
 
@@ -114,10 +113,7 @@ fn stop_yield_farm_should_work() {
             yield_farm_bsx_balance + 8_424_900 //8_424_900 - yield farm's last claim from global farm
         );
 
-        pretty_assertions::assert_eq!(
-            Tokens::free_balance(BSX, &global_farm_account),
-            global_farm_bsx_balance - 8_424_900 //8_424_900 - yield farm's last claim from global farm
-        );
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 29_972_316_825);
     });
 }
 

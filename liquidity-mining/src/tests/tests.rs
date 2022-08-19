@@ -1413,15 +1413,15 @@ fn update_yield_farm_should_work() {
             BSX_FARM,
             BSX_ACA_YIELD_FARM_ID,
             158_u64,
-            158_u64,
+            159_u64,
             129_u128,
             762784_u128,
             179074933_u128,
             BSX,
-            129_u128,
-            158_u64,
-            0_u128,
-            9000000000000_u128,
+            363_u128,
+            159_u64,
+            179_074_933_u128,
+            8_999_820_925_067_u128,
         ),
     ];
 
@@ -1437,7 +1437,7 @@ fn update_yield_farm_should_work() {
         expected_yield_farm_accumulated_rpvs,
         expected_updated_at,
         expected_yield_farm_reward_currency_balance,
-        expected_global_farm_reward_currency_balance,
+        expected_pot_reward_currency_balance,
     ) in testing_values.iter()
     {
         let owner = ALICE;
@@ -1484,6 +1484,7 @@ fn update_yield_farm_should_work() {
         let mut ext = new_test_ext();
 
         let global_farm_account_id = LiquidityMining::farm_account_id(*global_farm_id).unwrap();
+        let pot_account_id = LiquidityMining::pot_account_id();
         let yield_farm_account_id = LiquidityMining::farm_account_id(*yield_farm_id).unwrap();
 
         ext.execute_with(|| {
@@ -1496,6 +1497,13 @@ fn update_yield_farm_should_work() {
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(global_farm.reward_currency, &global_farm_account_id),
                 9_000_000_000_000_u128
+            );
+
+            let _ = Tokens::transfer(
+                Origin::signed(TREASURY),
+                pot_account_id,
+                global_farm.reward_currency,
+                9_000_000_000_000,
             );
 
             pretty_assertions::assert_eq!(Tokens::free_balance(*reward_currency, &yield_farm_account_id), 0);
@@ -1547,9 +1555,10 @@ fn update_yield_farm_should_work() {
                 }
             );
 
+            //rewards for yield farms are tx from pot account
             pretty_assertions::assert_eq!(
-                Tokens::free_balance(global_farm.reward_currency, &global_farm_account_id),
-                *expected_global_farm_reward_currency_balance
+                Tokens::free_balance(global_farm.reward_currency, &pot_account_id),
+                *expected_pot_reward_currency_balance
             );
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(global_farm.reward_currency, &yield_farm_account_id),

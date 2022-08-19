@@ -28,7 +28,7 @@ fn total_shares_z() -> impl Strategy<Value = Balance> {
 }
 
 fn left_to_distribute() -> impl Strategy<Value = Balance> {
-    ONE..u128::MAX
+    ONE..u128::MAX / 2
 }
 
 fn reward_per_period() -> impl Strategy<Value = Balance> {
@@ -184,6 +184,10 @@ proptest! {
             let yield_farm_account = LiquidityMining::farm_account_id(yield_farm.id).unwrap();
             Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
+            //rewads for yield farm are paid from pot account
+            let pot_account = LiquidityMining::pot_account_id();
+            Tokens::set_balance(Origin::root(), pot_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
+
             //NOTE: _0 - before action, _1 - after action
             let global_farm_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
             let yield_farm_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &yield_farm_account);
@@ -196,8 +200,16 @@ proptest! {
             //invariant 1
             let global_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
             let yield_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &yield_farm_account);
+            let s_0 = global_farm_balance_0 + yield_farm_balance_0;
+            let s_1 = global_farm_balance_1 + yield_farm_balance_1;
+            let invariant = FixedU128::from((s_0, ONE)) / FixedU128::from((s_1, ONE));
 
-            pretty_assertions::assert_eq!(global_farm_balance_0 + yield_farm_balance_0, global_farm_balance_1 + yield_farm_balance_1);
+            assert_eq_approx!(
+                invariant,
+                FixedU128::from(1u128),
+                FixedU128::from((TOLERANCE, ONE)),
+                "invariant: global_farm_balance + yield_farm_balance"
+            );
 
             //invariant 2
             let s_0 = global_farm_balance_0 + accumulated_rpvs_0 * yield_farm.total_valued_shares;
@@ -217,8 +229,8 @@ proptest! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1000))]
     #[test]
-    fn left_to_distribute_invariant(
-        (mut global_farm, mut yield_farm, current_period, _) in get_both_farms_and_current_period_and_yield_farm_rewards(),
+    fn update_global_farm_left_to_distribute_invariant(
+        (mut global_farm, _, current_period, _) in get_both_farms_and_current_period_and_yield_farm_rewards(),
         left_to_distribute in left_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
@@ -231,15 +243,6 @@ proptest! {
 
             let reward =
                 LiquidityMining::update_global_farm(&mut global_farm, current_period, reward_per_period).unwrap();
-
-            //multiplier == 1 => valued_shares == stake_in_global_farm
-            let stake_in_global_farm = yield_farm.total_valued_shares;
-            let yield_farm_rewards =
-                LiquidityMining::claim_from_global_farm(&mut global_farm, &mut yield_farm, stake_in_global_farm).unwrap();
-
-            let _ = LiquidityMining::update_yield_farm(
-                &mut yield_farm, yield_farm_rewards, current_period, GLOBAL_FARM_ID, REWARD_CURRENCY).unwrap();
-
 
             let s_0 = (left_to_distribute_0 - reward).max(0);
             let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);

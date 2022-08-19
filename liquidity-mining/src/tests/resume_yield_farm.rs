@@ -45,24 +45,24 @@ fn resume_yield_farm_should_work() {
 
         let yield_farm_stake_in_global_farm = new_multiplier.checked_mul_int(45_540).unwrap();
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 state: FarmState::Active,
-                accumulated_rpz: 62_996,
+                accumulated_rpz: 62_987,
                 multiplier: new_multiplier,
                 updated_at: 134_200,
                 ..yield_farm
             }
         );
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 total_shares_z: global_farm.total_shares_z + yield_farm_stake_in_global_farm,
                 updated_at: 134_200,
-                accumulated_rpz: 62_996,
-                accumulated_rewards: 29_999_067_250,
+                accumulated_rpz: 62_987,
+                accumulated_rewards: 29_999_215_750,
                 ..global_farm
             }
         );

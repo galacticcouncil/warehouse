@@ -37,9 +37,9 @@ fn create_global_farm_should_work() {
 
         let global_farm_account = LiquidityMining::farm_account_id(global_farm_id).unwrap();
 
-        assert_eq!(Tokens::free_balance(reward_currency, &global_farm_account), 0);
+        pretty_assertions::assert_eq!(Tokens::free_balance(reward_currency, &global_farm_account), 0);
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::create_global_farm(
                 total_rewards,
                 planned_yielding_periods,
@@ -56,11 +56,11 @@ fn create_global_farm_should_work() {
         );
 
         //Check if total_rewards are transferred to farm's account.
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             Tokens::free_balance(reward_currency, &global_farm_account),
             total_rewards
         );
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             Tokens::free_balance(reward_currency, &ALICE),
             (INITIAL_BALANCE - total_rewards)
         );
@@ -81,7 +81,7 @@ fn create_global_farm_should_work() {
             One::one(),
         );
 
-        assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
+        pretty_assertions::assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
     });
 }
 

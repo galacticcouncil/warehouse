@@ -1108,6 +1108,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         math::calculate_global_farm_shares(valued_shares, yield_farm.multiplier)
                             .map_err(|_| ArithmeticError::Overflow)?;
 
+                    if yield_farm.total_shares.is_zero() {
+                        yield_farm.updated_at = current_period;
+                    }
+
                     yield_farm.total_shares = yield_farm
                         .total_shares
                         .checked_add(deposit.shares)
@@ -1117,6 +1121,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         .total_valued_shares
                         .checked_add(valued_shares)
                         .ok_or(ArithmeticError::Overflow)?;
+
+                    if global_farm.total_shares_z.is_zero() {
+                        global_farm.updated_at = current_period;
+                    }
 
                     global_farm.total_shares_z = global_farm
                         .total_shares_z

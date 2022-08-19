@@ -166,7 +166,7 @@ proptest! {
             let sum_accumulated_rewards_1 = global_farm.accumulated_rewards
                 .checked_add(global_farm.paid_accumulated_rewards).unwrap();
 
-            assert_eq!(sum_accumulated_rewards_0, sum_accumulated_rewards_1);
+            pretty_assertions::assert_eq!(sum_accumulated_rewards_0, sum_accumulated_rewards_1);
         });
     }
 }
@@ -197,7 +197,7 @@ proptest! {
             let global_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
             let yield_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &yield_farm_account);
 
-            assert_eq!(global_farm_balance_0 + yield_farm_balance_0, global_farm_balance_1 + yield_farm_balance_1);
+            pretty_assertions::assert_eq!(global_farm_balance_0 + yield_farm_balance_0, global_farm_balance_1 + yield_farm_balance_1);
 
             //invariant 2
             let s_0 = global_farm_balance_0 + accumulated_rpvs_0 * yield_farm.total_valued_shares;

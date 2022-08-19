@@ -39,6 +39,7 @@ pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "p
 # This can be updated to lates after rust update(>=1.61)
 fixed = { version="=1.15.0", default-features = false }
 proptest = "1.0.0"
+pretty_assertions = { version="1.2.1" }
 
 [features]
 default = ["std"]

@@ -29,7 +29,7 @@ fn destroy_global_farm_should_work() {
         let undistributed_rewards =
             Tokens::free_balance(get_predefined_global_farm_ins1(1).reward_currency, &farm_account);
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::destroy_global_farm(BOB, BOB_FARM).unwrap(),
             (
                 get_predefined_global_farm_ins1(1).reward_currency,
@@ -42,7 +42,7 @@ fn destroy_global_farm_should_work() {
         assert!(LiquidityMining::global_farm(BOB_FARM).is_none());
 
         //Undistributed rewards should be transferred to owner.
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             Tokens::free_balance(predefined_global_farm.reward_currency, &BOB),
             bob_reward_currency_balance + undistributed_rewards
         );
@@ -80,7 +80,7 @@ fn destroy_global_farm_should_work() {
         assert_ok!(LiquidityMining::destroy_global_farm(CHARLIE, CHARLIE_FARM));
 
         //Global farm with yield farms should NOT be flushed.
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::global_farm(CHARLIE_FARM).unwrap(),
             GlobalFarmData {
                 yield_farms_count: (0, 1),
@@ -89,7 +89,7 @@ fn destroy_global_farm_should_work() {
             }
         );
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             Tokens::free_balance(predefined_global_farm.reward_currency, &CHARLIE),
             charlie_reward_currency_balance + undistributed_rewards
         );
@@ -104,7 +104,7 @@ fn destroy_global_farm_not_owner_should_not_work() {
             Error::<Test, Instance1>::Forbidden
         );
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::global_farm(BOB_FARM).unwrap(),
             get_predefined_global_farm_ins1(1)
         );
@@ -128,7 +128,7 @@ fn destroy_global_farm_with_yield_farms_should_not_work() {
     predefined_test_ext().execute_with(|| {
         //Destroy farm with active yield farms should not work.
         let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[2].id);
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::active_yield_farm(ACA_KSM_AMM, CHARLIE_FARM).unwrap(),
             yield_farm_id
         );
@@ -138,7 +138,7 @@ fn destroy_global_farm_with_yield_farms_should_not_work() {
             Error::<Test, Instance1>::GlobalFarmIsNotEmpty
         );
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::global_farm(CHARLIE_FARM).unwrap(),
             get_predefined_global_farm_ins1(3)
         );
@@ -153,7 +153,7 @@ fn destroy_global_farm_with_yield_farms_should_not_work() {
             Error::<Test, Instance1>::GlobalFarmIsNotEmpty
         );
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::global_farm(CHARLIE_FARM).unwrap(),
             get_predefined_global_farm_ins1(3)
         );
@@ -172,6 +172,6 @@ fn destroy_global_farm_healthy_farm_should_not_work() {
             Error::<Test, Instance1>::GlobalFarmIsNotEmpty
         );
 
-        assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), predefined_global_farm);
+        pretty_assertions::assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), predefined_global_farm);
     });
 }

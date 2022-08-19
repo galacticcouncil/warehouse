@@ -30,7 +30,7 @@ fn stop_yield_farm_should_work() {
 
         assert!(yield_farm.is_active());
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM).unwrap(),
             yield_farm.id
         );
@@ -40,7 +40,7 @@ fn stop_yield_farm_should_work() {
             .checked_mul_int(yield_farm.total_valued_shares)
             .unwrap();
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 state: FarmState::Stopped,
@@ -51,7 +51,7 @@ fn stop_yield_farm_should_work() {
 
         assert!(LiquidityMining::active_yield_farm(BSX_TKN1_AMM, GC_FARM).is_none());
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 total_shares_z: global_farm.total_shares_z.checked_sub(stake_in_global_farm).unwrap(),
@@ -59,8 +59,8 @@ fn stop_yield_farm_should_work() {
             }
         );
 
-        assert_eq!(Tokens::free_balance(BSX, &yield_farm_account), yield_farm_bsx_balance);
-        assert_eq!(Tokens::free_balance(BSX, &global_farm_account), global_farm_bsx_balance);
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &yield_farm_account), yield_farm_bsx_balance);
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), global_farm_bsx_balance);
     });
 
     //Cancel yield farming with farms update.
@@ -76,7 +76,7 @@ fn stop_yield_farm_should_work() {
 
         set_block_number(10_000);
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM).unwrap(),
             yield_farm.id
         );
@@ -85,36 +85,36 @@ fn stop_yield_farm_should_work() {
             .multiplier
             .checked_mul_int(yield_farm.total_valued_shares)
             .unwrap();
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 100,
-                accumulated_rpvs: 245,
-                accumulated_rpz: 49,
+                accumulated_rpvs: 200,
+                accumulated_rpz: 40,
                 state: FarmState::Stopped,
                 multiplier: 0.into(),
                 ..yield_farm
             }
         );
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 updated_at: 100,
-                accumulated_rpz: 49,
+                accumulated_rpz: 40,
                 total_shares_z: global_farm.total_shares_z.checked_sub(stake_in_global_farm).unwrap(),
-                accumulated_rewards: 18_206_375,
-                paid_accumulated_rewards: 9_589_300,
+                accumulated_rewards: 18_224_375,
+                paid_accumulated_rewards: 9_458_800,
                 ..global_farm
             }
         );
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &yield_farm_account),
             yield_farm_bsx_balance + 8_424_900 //8_424_900 - yield farm's last claim from global farm
         );
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
             global_farm_bsx_balance - 8_424_900 //8_424_900 - yield farm's last claim from global farm
         );
@@ -135,7 +135,7 @@ fn stop_yield_farm_invalid_yield_farm_should_not_work() {
 fn stop_yield_farm_liquidity_mining_already_canceled() {
     predefined_test_ext_with_deposits().execute_with(|| {
         //1-th stop should pass ok.
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM).unwrap(),
             GC_BSX_TKN1_YIELD_FARM_ID
         );

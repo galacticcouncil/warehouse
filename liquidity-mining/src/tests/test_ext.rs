@@ -215,7 +215,7 @@ fn init_yield_farm_ins1(
         asset_b,
     ));
 
-    assert_eq!(
+    pretty_assertions::assert_eq!(
         LiquidityMining::yield_farm((amm_id, farm_id, yield_farm.id)).unwrap(),
         yield_farm
     );
@@ -247,7 +247,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
 
         // DEPOSIT 2 (deposit in same period):
         let deposited_amount = 80;
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::deposit_lp_shares(
                 farm_id,
                 GC_BSX_TKN1_YIELD_FARM_ID,
@@ -329,7 +329,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[6]).is_some());
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 id: GC_FARM,
@@ -341,11 +341,11 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 owner: GC,
                 incentivized_asset: BSX,
                 max_reward_per_period: 60_000_000,
-                accumulated_rpz: 12,
+                accumulated_rpz: 3,
                 yield_farms_count: (2, 2),
                 total_shares_z: 703_990,
-                accumulated_rewards: 231_650,
-                paid_accumulated_rewards: 1_164_400,
+                accumulated_rewards: 249_650,
+                paid_accumulated_rewards: 1_033_900,
                 state: FarmState::Active,
                 min_deposit: 10,
                 price_adjustment: One::one(),
@@ -353,12 +353,12 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         );
 
         let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].id);
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, yield_farm_id)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 60,
-                accumulated_rpz: 12,
+                accumulated_rpvs: 15,
+                accumulated_rpz: 3,
                 total_shares: 616,
                 total_valued_shares: 45_540,
                 entries_count: 3,
@@ -367,12 +367,12 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         );
 
         let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].id);
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, yield_farm_id)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 120,
-                accumulated_rpz: 12,
+                accumulated_rpvs: 30,
+                accumulated_rpz: 3,
                 total_shares: 960,
                 total_valued_shares: 47_629,
                 entries_count: 4,
@@ -381,14 +381,14 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         );
 
         //Reward currency balance check. total_rewards - sum(claims from global farm).
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &global_farm_account),
-            (30_000_000_000 - 1_164_400)
+            (30_000_000_000 - 1_033_900)
         );
 
         //Check of claimed amount from global farm (sum of all claims).
-        assert_eq!(Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account), 212_400);
-        assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 952_000);
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account), 99_900);
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 934_000);
     });
 
     ext

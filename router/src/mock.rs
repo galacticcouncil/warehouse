@@ -156,152 +156,89 @@ impl ExtBuilder {
     }
 }
 
+macro_rules! impl_executor{
+    ($pool_struct:ident, $pool_type: pat)=>{
+            impl Executor<AccountId, AssetId, Balance> for $pool_struct {
+                type Output = Balance;
+                type Error = ();
+
+                fn calculate_sell(
+                    pool_type: PoolType<AssetId>,
+                    asset_in: AssetId,
+                    asset_out: AssetId,
+                    amount_in: Balance,
+                ) -> Result<Self::Output, ExecutorError<Self::Error>> {
+                    if !matches!(pool_type, $pool_type) {
+                        return Err(ExecutorError::NotSupported);
+                    }
+
+                    if amount_in == INVALID_CALCULATION_AMOUNT {
+                        return Err(ExecutorError::Error(()));
+                    }
+
+                    Ok(SELL_CALCULATION_RESULT)
+                }
+
+                fn calculate_buy(
+                    pool_type: PoolType<AssetId>,
+                    asset_in: AssetId,
+                    asset_out: AssetId,
+                    amount_out: Balance,
+                ) -> Result<Self::Output, ExecutorError<Self::Error>> {
+                    if !matches!(pool_type, $pool_type) {
+                        return Err(ExecutorError::NotSupported);
+                    }
+
+                    if amount_out == INVALID_CALCULATION_AMOUNT {
+                        return Err(ExecutorError::Error(()));
+                    }
+
+                    Ok(SELL_CALCULATION_RESULT)
+                }
+
+                fn execute_sell(
+                    pool_type: PoolType<AssetId>,
+                    who: &AccountId,
+                    asset_in: AssetId,
+                    asset_out: AssetId,
+                    amount_in: Balance,
+                ) -> Result<(), ExecutorError<Self::Error>> {
+                    EXECUTED_SELLS.with(|v| {
+                        let mut m = v.borrow_mut();
+                        m.push((pool_type, amount_in, asset_in, asset_out));
+                    });
+
+                    Ok(())
+                }
+
+                fn execute_buy(
+                    pool_type: PoolType<AssetId>,
+                    who: &AccountId,
+                    asset_in: AssetId,
+                    asset_out: AssetId,
+                    amount_out: Balance,
+                ) -> Result<(), ExecutorError<Self::Error>> {
+                    EXECUTED_BUYS.with(|v| {
+                        let mut m = v.borrow_mut();
+                        m.push((pool_type, amount_out, asset_in, asset_out));
+                    });
+
+                    Ok(())
+                }
+            }
+    }
+}
+
 thread_local! {
     pub static EXECUTED_SELLS: RefCell<Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>> = RefCell::new(Vec::default());
     pub static EXECUTED_BUYS: RefCell<Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>> = RefCell::new(Vec::default());
 }
 
 pub struct XYK;
-
-impl Executor<AccountId, AssetId, Balance> for XYK {
-    type Output = Balance;
-    type Error = ();
-
-    fn calculate_sell(
-        pool_type: PoolType<AssetId>,
-        asset_in: AssetId,
-        asset_out: AssetId,
-        amount_in: Balance,
-    ) -> Result<Self::Output, ExecutorError<Self::Error>> {
-        if pool_type != PoolType::XYK {
-            return Err(ExecutorError::NotSupported);
-        }
-
-        if amount_in == INVALID_CALCULATION_AMOUNT {
-            return Err(ExecutorError::Error(()));
-        }
-
-        Ok(SELL_CALCULATION_RESULT)
-    }
-
-    fn calculate_buy(
-        pool_type: PoolType<AssetId>,
-        asset_in: AssetId,
-        asset_out: AssetId,
-        amount_out: Balance,
-    ) -> Result<Self::Output, ExecutorError<Self::Error>> {
-        if pool_type != PoolType::XYK {
-            return Err(ExecutorError::NotSupported);
-        }
-
-        if amount_out == INVALID_CALCULATION_AMOUNT {
-            return Err(ExecutorError::Error(()));
-        }
-
-        Ok(SELL_CALCULATION_RESULT)
-    }
-
-    fn execute_sell(
-        pool_type: PoolType<AssetId>,
-        who: &AccountId,
-        asset_in: AssetId,
-        asset_out: AssetId,
-        amount_in: Balance,
-    ) -> Result<(), ExecutorError<Self::Error>> {
-        EXECUTED_SELLS.with(|v| {
-            let mut m = v.borrow_mut();
-            m.push((pool_type, amount_in, asset_in, asset_out));
-        });
-
-        Ok(())
-    }
-
-    fn execute_buy(
-        pool_type: PoolType<AssetId>,
-        who: &AccountId,
-        asset_in: AssetId,
-        asset_out: AssetId,
-        amount_out: Balance,
-    ) -> Result<(), ExecutorError<Self::Error>> {
-        EXECUTED_BUYS.with(|v| {
-            let mut m = v.borrow_mut();
-            m.push((pool_type, amount_out, asset_in, asset_out));
-        });
-
-        Ok(())
-    }
-}
-
 pub struct StableSwap;
 
-impl Executor<AccountId, AssetId, Balance> for StableSwap {
-    type Output = Balance;
-    type Error = ();
-
-    fn calculate_sell(
-        pool_type: PoolType<AssetId>,
-        asset_in: AssetId,
-        asset_out: AssetId,
-        amount_in: Balance,
-    ) -> Result<Self::Output, ExecutorError<Self::Error>> {
-        if !matches!(pool_type, PoolType::Stableswap(_)) {
-            return Err(ExecutorError::NotSupported);
-        }
-
-        if amount_in == INVALID_CALCULATION_AMOUNT {
-            return Err(ExecutorError::Error(()));
-        }
-
-        Ok(5u128)
-    }
-
-    fn calculate_buy(
-        pool_type: PoolType<AssetId>,
-        asset_in: AssetId,
-        asset_out: AssetId,
-        amount_out: Balance,
-    ) -> Result<Self::Output, ExecutorError<Self::Error>> {
-        if !matches!(pool_type, PoolType::Stableswap(_)) {
-            return Err(ExecutorError::NotSupported);
-        }
-
-        if amount_out == INVALID_CALCULATION_AMOUNT {
-            return Err(ExecutorError::Error(()));
-        }
-
-        Ok(SELL_CALCULATION_RESULT)
-    }
-
-    fn execute_sell(
-        pool_type: PoolType<AssetId>,
-        who: &AccountId,
-        asset_in: AssetId,
-        asset_out: AssetId,
-        amount_in: Balance,
-    ) -> Result<(), ExecutorError<Self::Error>> {
-        EXECUTED_SELLS.with(|v| {
-            let mut m = v.borrow_mut();
-            m.push((pool_type, amount_in, asset_in, asset_out));
-        });
-
-        Ok(())
-    }
-
-    fn execute_buy(
-        pool_type: PoolType<AssetId>,
-        who: &AccountId,
-        asset_in: AssetId,
-        asset_out: AssetId,
-        amount_out: Balance,
-    ) -> Result<(), ExecutorError<Self::Error>> {
-        EXECUTED_BUYS.with(|v| {
-            let mut m = v.borrow_mut();
-            m.push((pool_type, amount_out, asset_in, asset_out));
-        });
-
-        Ok(())
-    }
-}
+impl_executor!(XYK, PoolType::XYK);
+impl_executor!(StableSwap, PoolType::Stableswap(_));
 
 pub fn assert_executed_sell_trades(expected_trades: Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>) {
     EXECUTED_SELLS.borrow().with(|v| {
@@ -316,3 +253,4 @@ pub fn assert_that_there_is_no_any_executed_buys() {
         assert_eq!(trades.len(), 0);
     });
 }
+

@@ -40,6 +40,12 @@ assert_matches = "1.5"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 env_logger = "*"
 
+criterion = "0.3"
+
+[[bench]]
+name = "ema"
+harness = false
+
 [features]
 default = ['std']
 runtime-benchmarks = [

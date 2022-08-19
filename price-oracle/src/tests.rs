@@ -24,7 +24,7 @@ use OraclePeriod::*;
 
 use assert_matches::assert_matches;
 use frame_support::assert_storage_noop;
-use sp_arithmetic::{traits::One, FixedPointNumber};
+use sp_arithmetic::{traits::One, FixedPointNumber, FixedU128};
 
 #[macro_export]
 macro_rules! assert_eq_approx {
@@ -213,28 +213,49 @@ fn update_data_should_work() {
 }
 
 #[test]
+fn ema_stays_stable_if_the_value_does_not_change() {
+    const PERIOD: u32 = 7;
+    let alpha = Price::saturating_from_rational(2u32, PERIOD + 1); // EMA with period of 7
+    debug_assert!(alpha <= Price::one());
+    let complement = Price::one() - alpha;
+
+    let start_price = Price::saturating_from_integer(4u32);
+    let incoming_price = start_price;
+    let next_price = price_ema(start_price, complement, incoming_price, alpha);
+    assert_eq!(next_price, Some(start_price));
+    let start_balance = 4u32.into();
+    let incoming_balance = start_balance;
+    let next_balance = balance_ema(start_balance, complement, incoming_balance, alpha);
+    assert_eq!(next_balance, Some(start_balance));
+}
+
+#[test]
 fn ema_works() {
     const PERIOD: u32 = 7;
     let alpha = Price::saturating_from_rational(2u32, PERIOD + 1); // EMA with period of 7
     debug_assert!(alpha <= Price::one());
-    let inv_alpha = Price::one() - alpha;
+    let complement = Price::one() - alpha;
 
-    // stays stable if the value doesn't change
     let start_price = Price::saturating_from_integer(4u32);
-    let incoming_price = start_price;
-    let next_price = price_ema(start_price, incoming_price, alpha, inv_alpha);
-    assert_eq!(next_price, Some(start_price));
     let start_balance = 4u32.into();
-    let incoming_balance = start_balance;
-    let next_balance = balance_ema(start_balance, incoming_balance, alpha, inv_alpha);
-    assert_eq!(next_balance, Some(start_balance));
 
     // updates by the correct amount if the value changes
     let (incoming_price, incoming_balance) = (Price::saturating_from_integer(8u32), 8u32.into());
-    let next_price = price_ema(start_price, incoming_price, alpha, inv_alpha);
+    let next_price = price_ema(start_price, complement, incoming_price, alpha);
     assert_eq!(next_price, Some(Price::saturating_from_integer(5u32)));
-    let next_balance = balance_ema(start_balance, incoming_balance, alpha, inv_alpha);
+    let next_balance = balance_ema(start_balance, complement, incoming_balance, alpha);
     assert_eq!(next_balance, Some(5u32.into()));
+}
+
+#[test]
+fn ema_does_not_saturate_on_values_smaller_than_u64_max() {
+    let alpha = Price::one();
+    let complement = Price::zero();
+
+    let start_balance = 50_000_000_000_000_000_000_000_u128;
+    let incoming_balance = 50_000_000_000_000_000_000_000_u128;
+    let next_balance = balance_ema(start_balance, complement, incoming_balance, alpha);
+    assert_eq!(next_balance, Some(incoming_balance));
 }
 
 #[test]
@@ -345,7 +366,6 @@ fn get_price_returns_updated_price() {
             };
             System::set_block_number(1_000);
             PriceOracle::on_trade(derive_name(HDX, DOT), on_trade_entry);
-            env_logger::init();
             PriceOracle::on_finalize(1_000);
 
             let e = Price::from_float(0.01);
@@ -374,4 +394,137 @@ fn get_price_returns_updated_price() {
                 "Week Oracle should converge a little."
             );
         });
+}
+
+#[test]
+fn determine_price_convergence() {
+    pub fn determine_iterations(period: Period, start: Price, incoming: Price, delta: Price) -> Option<Price> {
+        let alpha = Price::saturating_from_rational(2u32, period.saturating_add(1));
+        debug_assert!(alpha <= Price::one());
+        let complement = Price::one() - alpha;
+
+        let mut next_value = start;
+        let mut round = 0;
+        let delta = incoming * delta;
+        while next_value.saturating_add(delta) < incoming {
+            if round % 1000 == 0 {
+                log::debug!("round {round}: start {start:?} current {next_value:?} incoming {incoming:?}");
+            }
+            next_value = price_ema(next_value, complement, incoming, alpha)?;
+            round += 1;
+        }
+        log::debug!(
+            "final value reached in {round} rounds: start {start:?} final_value {next_value:?} incoming {incoming:?}"
+        );
+        Some(next_value)
+    }
+
+    env_logger::init();
+
+    let start = Price::saturating_from_integer(1_000u64);
+    let target = Price::saturating_from_integer(100_000u64);
+    let max_delta = Price::saturating_from_rational(1u32, 100u32);
+    let final_value = determine_iterations(7200, start, target, max_delta);
+    assert_eq!(final_value, Some(target));
+}
+
+#[test]
+fn determine_balance_convergence() {
+    pub fn determine_iterations(
+        period: Period,
+        start: Balance,
+        incoming: Balance,
+        max_deviation: FixedU128,
+    ) -> Option<Balance> {
+        let alpha = Price::saturating_from_rational(2u32, period.saturating_add(1));
+        debug_assert!(alpha <= Price::one());
+        let complement = Price::one() - alpha;
+
+        let mut next_value = start;
+        let mut round = 0;
+        let delta = max_deviation.saturating_mul_int(incoming);
+        log::debug!("delta {delta}");
+        while next_value.saturating_add(delta) < incoming {
+            if round % 1000 == 0 {
+                log::debug!("round {round}: start {start:?} current {next_value:?} incoming {incoming:?}");
+            }
+            if round > 1_000_000 {
+                let error1 = Price::one() - Price::saturating_from_rational(next_value, incoming);
+                let error2 = Price::saturating_from_rational(next_value - start, incoming - start);
+                log::debug!("approximating error: {error1:?} {error2:?}");
+                log::debug!("delta {delta}");
+                return None;
+            }
+            next_value = balance_ema(next_value, complement, incoming, alpha)?;
+            round += 1;
+        }
+        log::debug!("delta {delta}");
+        log::debug!(
+            "final value reached in {round} rounds: start {start:?} final_value {next_value:?} incoming {incoming:?}"
+        );
+        let error1 = Price::one() - Price::saturating_from_rational(next_value, incoming);
+        let error2 = Price::saturating_from_rational(next_value - start, incoming - start);
+        log::debug!("approximating error: {error1:?} {error2:?}");
+        Some(next_value)
+    }
+
+    env_logger::init();
+
+    let start = 500_000_000_000_000_000u128;
+    let target = 1_000_000_000_000_000_000u128;
+    let max_deviation = FixedU128::saturating_from_rational(1u32, 100u32);
+    let final_value = determine_iterations(7200, start, target, max_deviation);
+    assert_eq!(final_value, Some(target));
+}
+
+#[test]
+fn fewer_iterations() {
+    pub fn iterative(period: Period, iterations: Period, start: Balance, incoming: Balance) -> Option<Balance> {
+        let alpha = Price::saturating_from_rational(2u32, period.saturating_add(1));
+        debug_assert!(alpha <= Price::one());
+        let complement = Price::one() - alpha;
+
+        let mut next_value = start;
+        for _round in 0..iterations {
+            next_value = balance_ema(next_value, complement, incoming, alpha)?;
+        }
+        Some(next_value)
+    }
+
+    pub fn exponential(period: Period, iterations: Period, start: Balance, incoming: Balance) -> Option<Balance> {
+        let alpha = Price::saturating_from_rational(2u32, period.saturating_add(1));
+        debug_assert!(alpha <= Price::one());
+        let complement = Price::one() - alpha;
+
+        let exp_complement = complement.saturating_pow(iterations as usize);
+        let exp_alpha = Price::one() - exp_complement;
+
+        balance_ema(start, exp_complement, incoming, exp_alpha)
+    }
+
+    env_logger::init();
+
+    // (500, 600), (1, 1_000_000),
+    for (start, target) in [(500_000_000_000_000_000u128, 1_000_000_000_000_000_000u128)] {
+        // 50, 7200, 50400,
+        for period in [7200 * 365] {
+            // 10, 1_000, 10_000,
+            for iterations in [1_000_000_000] {
+                // let final_value = iterative(period, iterations, start, target).unwrap();
+                let final_exp = exponential(period, iterations, start, target).unwrap();
+                let target_diff = target.abs_diff(final_exp);
+                let target_percentage_diff = FixedU128::saturating_from_rational(target_diff * 100, target);
+                // let diff = final_value.abs_diff(final_exp);
+                // let percentage_diff = FixedU128::saturating_from_rational(diff * 100, final_value);
+                log::debug!("--------------------------------");
+                log::debug!("period: {period}, iterations: {iterations}, start: {start}, target: {target}");
+                // log::debug!("target: {target}, iterative: {final_value}, exponential: {final_exp}");
+                log::debug!("target: {target}, exponential: {final_exp}");
+                log::debug!("exponential diff to target: {target_diff}, percentage diff: {target_percentage_diff:?}");
+                // log::debug!("exponential diff to iterative: {diff}, percentage diff: {percentage_diff:?}");
+                // assert!(percentage_diff < FixedU128::saturating_from_rational(1u32, 5u32));
+            }
+        }
+    }
+    assert!(false);
 }

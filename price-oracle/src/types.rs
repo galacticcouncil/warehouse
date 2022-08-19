@@ -24,6 +24,8 @@ use sp_arithmetic::{
     FixedPointNumber,
 };
 
+use sp_arithmetic::traits::CheckedSub;
+
 use sp_std::prelude::*;
 
 #[cfg(feature = "std")]
@@ -46,7 +48,7 @@ pub struct PriceEntry<BlockNumber> {
 
 impl<BlockNumber> PriceEntry<BlockNumber>
 where
-    BlockNumber: UniqueSaturatedInto<u64> + Copy,
+    BlockNumber: CheckedSub + Copy + PartialOrd + UniqueSaturatedInto<u32>,
 {
     /// Determine a new entry based on `self` and a previous entry. Adds the volumes together and
     /// takes the values of `self` for the rest.
@@ -61,37 +63,36 @@ where
     }
 
     /// Determine a new price entry based on self and a previous entry.
+    ///
     /// Uses an exponential moving average with a smoothing factor of `alpha = 2 / (N + 1)`.
     /// `alpha = 2 / (N + 1)` leads to the center of mass of the EMA corresponding to an N-length SMA.
     ///
-    /// Possible alternatives: `alpha = 1 - 0.5^(1 / N)` for a half-life of N periods or
-    /// `alpha = 1 - 0.5^(1 / (0.5N))` to have the same median as an N-length SMA.
+    /// Uses the difference between the `timestamp`s to determine the time to cover and exponentiates
+    /// the complement (`1 - alpha`) with that time difference.
+    ///
+    /// Possible alternatives for `alpha = 2 / (N + 1)`:
+    /// + `alpha = 1 - 0.5^(1 / N)` for a half-life of N periods or
+    /// + `alpha = 1 - 0.5^(1 / (0.5N))` to have the same median as an N-length SMA.
     /// See https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA
     pub fn calculate_new_ema_entry(&self, period: Period, previous_entry: &Self) -> Option<Self> {
+        use sp_arithmetic::traits::Saturating;
         if period <= 1 {
             return Some(self.clone());
         }
         let alpha = Price::saturating_from_rational(2u32, period.saturating_add(1));
         debug_assert!(alpha <= Price::one());
-        let inv_alpha = Price::one() - alpha;
+        let complement = Price::one() - alpha;
 
-        let mut price = previous_entry.price;
-        let mut volume = previous_entry.volume;
-        let mut liquidity = previous_entry.liquidity;
-        log::debug!("before ema: {:?}", (price, volume, liquidity));
-        log::debug!("self before ema: {:?}", (self.price, self.volume, self.liquidity));
-        let range = previous_entry.timestamp.saturated_into::<u64>()..self.timestamp.saturated_into::<u64>();
-        log::debug!("range: {:?}", range);
-        let rounds = range.clone().count() as u64;
-        for round in range {
-            if round % (rounds / 20).max(1) == 0 || round == rounds - 1 {
-                log::debug!("round {}: {:?}", round, (price, volume, liquidity));
-            }
-            price = price_ema(price, self.price, alpha, inv_alpha)?;
-            volume = balance_ema(volume, self.volume, alpha, inv_alpha)?;
-            liquidity = balance_ema(liquidity, self.liquidity, alpha, inv_alpha)?;
-        }
-        log::debug!("after ema: {:?}", (price, volume, liquidity));
+        debug_assert!(self.timestamp > previous_entry.timestamp);
+        let iterations = self.timestamp.checked_sub(&previous_entry.timestamp)?;
+        let exp_complement = complement.saturating_pow(iterations.saturated_into::<u32>() as usize);
+        debug_assert!(exp_complement <= Price::one());
+        let exp_alpha = Price::one() - exp_complement;
+
+        let price = price_ema(previous_entry.price, exp_complement, self.price, exp_alpha)?;
+        let volume = balance_ema(previous_entry.volume, exp_complement, self.volume, exp_alpha)?;
+        let liquidity = balance_ema(previous_entry.liquidity, exp_complement, self.liquidity, exp_alpha)?;
+
         Some(Self {
             price,
             volume,
@@ -101,23 +102,33 @@ where
     }
 }
 
-/// Calculate the next exponential moving average for the given price.
-pub(crate) fn price_ema(prev: Price, incoming: Price, alpha: Price, inv_alpha: Price) -> Option<Price> {
-    debug_assert!(inv_alpha + alpha == Price::one());
-    // Safe to use bare `+` because `inv_alpha + apha == 1`.
-    // `prev_value * inv_alpha + incoming_value * alpha`
-    let price = prev.checked_mul(&inv_alpha)? + incoming.checked_mul(&alpha)?;
+/// Calculate the next exponential moving average for the given prices.
+/// `prev` is the previous oracle value, `incoming` is the new value to integrate.
+pub fn price_ema(prev: Price, prev_weight: FixedU128, incoming: Price, weight: FixedU128) -> Option<Price> {
+    debug_assert!(prev_weight + weight == Price::one());
+    // Safe to use bare `+` because `prev_weight + weight == 1`.
+    // `prev_value * prev_weight + incoming_value * weight`
+    let price = prev.checked_mul(&prev_weight)? + incoming.checked_mul(&weight)?;
     Some(price)
 }
 
 /// Calculate the next exponential moving average for the given values.
-pub(crate) fn balance_ema(prev: Balance, incoming: Balance, alpha: Price, inv_alpha: Price) -> Option<Balance> {
-    debug_assert!(inv_alpha + alpha == Price::one());
-    // Safe to use bare `+` because `inv_alpha + apha == 1`.
-    // `prev_value * inv_alpha + incoming_value * alpha`
-    // `checked_mul` in combination with `Price::from` necessary to avoid rounding errors induced by
-    // using `checked_mul_int` with small values.
-    let new_value = (inv_alpha.checked_mul(&Price::from(prev))? + alpha.checked_mul(&Price::from(incoming))?)
-        .saturating_mul_int(1u32.into());
+/// `prev` is the previous oracle value, `incoming` is the new value to integrate.
+/// `weight` is the weight of the new value, `prev_weight` is the weight of the previous value.
+pub fn balance_ema(prev: Balance, prev_weight: FixedU128, incoming: Balance, weight: FixedU128) -> Option<Balance> {
+    debug_assert!(prev_weight + weight == Price::one());
+    // Safe to use bare `+` because `prev_weight + apha == 1`.
+    // `prev_value * prev_weight + incoming_value * weight`
+    let new_value = if prev < u64::MAX.into() && incoming < u64::MAX.into() {
+        // We use `checked_mul` in combination with `Price::from` to avoid rounding errors induced
+        // by using `checked_mul_int` with small values.
+        (prev_weight.checked_mul(&Price::from(prev))? + weight.checked_mul(&Price::from(incoming))?)
+            .saturating_mul_int(Balance::one())
+    } else {
+        // We use `checked_mul_int` to avoid saturating the fixed point type for big balance values.
+        // Note: Incurs rounding errors for small balance values, but the relative error is small
+        // because the other value is greater than `u64::MAX`.
+        prev_weight.checked_mul_int(prev)? + weight.checked_mul_int(incoming)?
+    };
     Some(new_value)
 }

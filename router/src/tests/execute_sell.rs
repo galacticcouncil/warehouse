@@ -93,3 +93,29 @@ fn execute_sell_should_work_when_route_has_multiple_trades() {
         assert_executed_sell_trades(vec![(PoolType::XYK, amount), (PoolType::XYK, SELL_CALCULATION_RESULT)]);
     });
 }
+
+#[test]
+fn execute_sell_should_work_when_first_trade_is_not_supported_in_the_first_pool() {
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let amount = 10;
+        let limit = 5;
+        let trade1 = Trade{
+            pool: PoolType::Stableswap(aUSD),
+            asset_in: BSX,
+            asset_out: aUSD
+        };
+        let trade2 = Trade{
+            pool: PoolType::XYK,
+            asset_in: aUSD,
+            asset_out: KSM
+        };
+        let trades = vec![trade1, trade2];
+
+        //Act
+        assert_ok!(Router::execute_sell(Origin::signed(ALICE), BSX, KSM, amount, limit,trades));
+
+        //Assert
+        assert_executed_sell_trades(vec![(PoolType::Stableswap(aUSD), amount), (PoolType::XYK, SELL_CALCULATION_RESULT)]);
+    });
+}

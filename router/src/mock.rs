@@ -105,7 +105,7 @@ impl orml_tokens::Config for Test {
     type OnKilledTokenAccount = ();
 }
 
-type Pools = (XYK);
+type Pools = (XYK, StableSwap);
 
 impl Config for Test {
     type Event = ();
@@ -185,7 +185,7 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
             return Err(ExecutorError::Error(()));
         }
 
-        Ok(5u128)
+        Ok(SELL_CALCULATION_RESULT)
     }
 
     fn calculate_buy(
@@ -195,6 +195,79 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
         amount_out: Balance,
     ) -> Result<Self::Output, ExecutorError<Self::Error>> {
         if pool_type != PoolType::XYK {
+            return Err(ExecutorError::NotSupported);
+        }
+
+        if amount_out == INVALID_CALCULATION_AMOUNT {
+            return Err(ExecutorError::Error(()));
+        }
+
+        Ok(SELL_CALCULATION_RESULT)
+    }
+
+    fn execute_sell(
+        pool_type: PoolType<AssetId>,
+        who: &AccountId,
+        asset_in: AssetId,
+        asset_out: AssetId,
+        amount_in: Balance,
+    ) -> Result<(), ExecutorError<Self::Error>> {
+        EXECUTED_SELLS.with(|v| {
+            let mut m = v.borrow_mut();
+            m.push((pool_type, amount_in));
+        });
+
+        Ok(())
+    }
+
+    fn execute_buy(
+        pool_type: PoolType<AssetId>,
+        who: &AccountId,
+        asset_in: AssetId,
+        asset_out: AssetId,
+        amount_out: Balance,
+    ) -> Result<(), ExecutorError<Self::Error>> {
+        EXECUTED_BUYS.with(|v| {
+            let mut m = v.borrow_mut();
+            m.push((pool_type, amount_out));
+        });
+
+        Ok(())
+    }
+}
+
+pub struct StableSwap;
+
+impl Executor<AccountId, AssetId, Balance> for StableSwap {
+    type Output = Balance;
+    type Error = ();
+
+    fn calculate_sell(
+        pool_type: PoolType<AssetId>,
+        asset_in: AssetId,
+        asset_out: AssetId,
+        amount_in: Balance,
+    ) -> Result<Self::Output, ExecutorError<Self::Error>> {
+        if !matches!(pool_type,PoolType::Stableswap(_))
+        {
+            return Err(ExecutorError::NotSupported);
+        }
+
+        if amount_in == INVALID_CALCULATION_AMOUNT {
+            return Err(ExecutorError::Error(()));
+        }
+
+        Ok(5u128)
+    }
+
+    fn calculate_buy(
+        pool_type: PoolType<AssetId>,
+        asset_in: AssetId,
+        asset_out: AssetId,
+        amount_out: Balance,
+    ) -> Result<Self::Output, ExecutorError<Self::Error>> {
+        if !matches!(pool_type,PoolType::Stableswap(_))
+        {
             return Err(ExecutorError::NotSupported);
         }
 

@@ -76,12 +76,12 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn accumulator)]
-    pub type Accumulator<T: Config> = StorageValue<_, BTreeMap<AssetPairId, PriceEntry<T::BlockNumber>>, ValueQuery>;
+    pub type Accumulator<T: Config> = StorageValue<_, BTreeMap<AssetPairId, OracleEntry<T::BlockNumber>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn oracle)]
     pub type Oracles<T: Config> =
-        StorageDoubleMap<_, Twox64Concat, AssetPairId, Twox64Concat, Period, PriceEntry<T::BlockNumber>, OptionQuery>;
+        StorageDoubleMap<_, Twox64Concat, AssetPairId, Twox64Concat, Period, OracleEntry<T::BlockNumber>, OptionQuery>;
 
     #[pallet::genesis_config]
     #[derive(Default)]
@@ -95,7 +95,7 @@ pub mod pallet {
             for &(asset_pair, price, volume, liquidity) in self.price_data.iter() {
                 let pair_id = derive_name(asset_pair.0, asset_pair.1);
 
-                let price_entry: PriceEntry<T::BlockNumber> = PriceEntry {
+                let price_entry: OracleEntry<T::BlockNumber> = OracleEntry {
                     price,
                     volume,
                     liquidity,
@@ -127,7 +127,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
     /// Insert or update data in the accumulator from received price entry. Aggregates volume and
     /// takes the most recent data for the rest.
-    pub(crate) fn on_price_entry(pair_id: AssetPairId, price_entry: PriceEntry<T::BlockNumber>) {
+    pub(crate) fn on_price_entry(pair_id: AssetPairId, price_entry: OracleEntry<T::BlockNumber>) {
         Accumulator::<T>::mutate(|accumulator| {
             accumulator
                 .entry(pair_id)
@@ -138,11 +138,11 @@ impl<T: Config> Pallet<T> {
         });
     }
 
-    pub(crate) fn on_trade(pair_id: AssetPairId, price_entry: PriceEntry<T::BlockNumber>) {
+    pub(crate) fn on_trade(pair_id: AssetPairId, price_entry: OracleEntry<T::BlockNumber>) {
         Self::on_price_entry(pair_id, price_entry)
     }
 
-    pub(crate) fn on_liquidity_changed(pair_id: AssetPairId, price_entry: PriceEntry<T::BlockNumber>) {
+    pub(crate) fn on_liquidity_changed(pair_id: AssetPairId, price_entry: OracleEntry<T::BlockNumber>) {
         Self::on_price_entry(pair_id, price_entry)
     }
 
@@ -155,7 +155,7 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    fn update_oracle(pair_id: &AssetPairId, period: Period, price_entry: &PriceEntry<T::BlockNumber>) {
+    fn update_oracle(pair_id: &AssetPairId, period: Period, price_entry: &OracleEntry<T::BlockNumber>) {
         Oracles::<T>::mutate(pair_id, period, |oracle| {
             let new_entry = oracle
                 .map(|prev_entry| {
@@ -168,7 +168,7 @@ impl<T: Config> Pallet<T> {
         });
     }
 
-    fn get_updated_entry(pair_id: &AssetPairId, period: OraclePeriod) -> Option<PriceEntry<T::BlockNumber>> {
+    fn get_updated_entry(pair_id: &AssetPairId, period: OraclePeriod) -> Option<OracleEntry<T::BlockNumber>> {
         let current_block = <frame_system::Pallet<T>>::block_number();
         let parent = current_block.saturating_sub(One::one());
 
@@ -228,7 +228,7 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
         }
 
         let timestamp = <frame_system::Pallet<T>>::block_number();
-        let price_entry = PriceEntry {
+        let price_entry = OracleEntry {
             price,
             volume: amount,
             liquidity,
@@ -268,7 +268,7 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for PriceOracleHandl
         }
 
         let timestamp = <frame_system::Pallet<T>>::block_number();
-        let price_entry = PriceEntry {
+        let price_entry = OracleEntry {
             price,
             volume: 0,
             liquidity,

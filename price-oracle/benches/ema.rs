@@ -2,7 +2,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use sp_arithmetic::{traits::One, FixedPointNumber, FixedU128};
 
-use pallet_price_oracle::{balance_ema, price_ema, Period, Price, PriceEntry};
+use pallet_price_oracle::{balance_ema, price_ema, OracleEntry, Period, Price};
 
 fn period_to_weights(period: Period) -> (FixedU128, FixedU128) {
     let alpha = FixedU128::saturating_from_rational(2u32, period.saturating_add(1));
@@ -17,7 +17,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         1_000_000_000_000_000u64.into(),
         1_000_000_000_000_000u64.into(),
     );
-    let start_oracle = PriceEntry {
+    let start_oracle = OracleEntry {
         price: start_price,
         volume: start_volume,
         liquidity: start_liquidity,
@@ -28,7 +28,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         1_000_000_000_000_000_000u64.into(),
         1_000_000_000_000_000_000u64.into(),
     );
-    let next_value = PriceEntry {
+    let next_value = OracleEntry {
         price: next_price,
         volume: next_volume,
         liquidity: next_liquidity,

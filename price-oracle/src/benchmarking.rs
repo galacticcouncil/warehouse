@@ -27,7 +27,7 @@ use frame_support::traits::{OnFinalize, OnInitialize};
 
 use crate::Pallet as PriceOracle;
 
-pub const PRICE_ENTRY_1: PriceEntry = PriceEntry {
+pub const PRICE_ENTRY_1: OracleEntry = OracleEntry {
     price: Price::from_inner(2000000000000000000),
     trade_amount: 1_000,
     liquidity_amount: 2_000,

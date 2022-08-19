@@ -25,7 +25,7 @@ use frame_support::sp_runtime::{
 };
 use frame_support::traits::{Everything, GenesisBuild};
 use hydradx_traits::AssetPairAccountIdFor;
-use price_oracle::PriceEntry;
+use price_oracle::OracleEntry;
 use sp_core::H256;
 
 pub type AssetId = u32;
@@ -40,13 +40,13 @@ pub const HDX: AssetId = 1_000;
 pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
 
-pub const PRICE_ENTRY_1: PriceEntry<BlockNumber> = PriceEntry {
+pub const PRICE_ENTRY_1: OracleEntry<BlockNumber> = OracleEntry {
     price: Price::from_inner(2000000000000000000),
     volume: 1_000,
     liquidity: 2_000,
     timestamp: 5,
 };
-pub const PRICE_ENTRY_2: PriceEntry<BlockNumber> = PriceEntry {
+pub const PRICE_ENTRY_2: OracleEntry<BlockNumber> = OracleEntry {
     price: Price::from_inner(5000000000000000000),
     volume: 3_000,
     liquidity: 4_000,

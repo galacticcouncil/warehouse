@@ -39,14 +39,14 @@ pub type Period = u32;
 /// A type representing data produced by a trade.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(RuntimeDebug, Encode, Decode, Copy, Clone, PartialEq, Eq, Default, TypeInfo)]
-pub struct PriceEntry<BlockNumber> {
+pub struct OracleEntry<BlockNumber> {
     pub price: Price,
     pub volume: Balance,
     pub liquidity: Balance,
     pub timestamp: BlockNumber,
 }
 
-impl<BlockNumber> PriceEntry<BlockNumber>
+impl<BlockNumber> OracleEntry<BlockNumber>
 where
     BlockNumber: CheckedSub + Copy + PartialOrd + UniqueSaturatedInto<u32>,
 {

@@ -41,7 +41,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 /// Return the entry of an asset pair in the accumulator.
-fn get_accumulator_entry(pair_id: &AssetPairId) -> Option<PriceEntry<BlockNumber>> {
+fn get_accumulator_entry(pair_id: &AssetPairId) -> Option<OracleEntry<BlockNumber>> {
     let a = Accumulator::<Test>::get();
     a.get(pair_id).map(|e| e.clone())
 }
@@ -58,7 +58,7 @@ fn genesis_config_works() {
             for period in OraclePeriod::all_periods() {
                 assert_eq!(
                     PriceOracle::oracle(derive_name(HDX, DOT), period.into_num::<Test>()),
-                    Some(PriceEntry {
+                    Some(OracleEntry {
                         price: Price::from(1_000_000),
                         volume: 2_000_000,
                         liquidity: 2_000_000,
@@ -68,7 +68,7 @@ fn genesis_config_works() {
 
                 assert_eq!(
                     PriceOracle::oracle(derive_name(HDX, ACA), period.into_num::<Test>()),
-                    Some(PriceEntry {
+                    Some(OracleEntry {
                         price: Price::from(3_000_000),
                         volume: 4_000_000,
                         liquidity: 4_000_000,
@@ -105,7 +105,7 @@ fn on_liquidity_changed_handler_should_work() {
     new_test_ext().execute_with(|| {
         let timestamp = 5;
         System::set_block_number(timestamp);
-        let no_volume_entry = PriceEntry {
+        let no_volume_entry = OracleEntry {
             price: Price::saturating_from_integer(2),
             volume: 0,
             liquidity: 2_000,
@@ -159,21 +159,21 @@ fn price_normalization_should_work() {
         PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1_000, 2_000_000, 2_000);
 
         let price_entry = get_accumulator_entry(&hdx_dot_pair_name).unwrap();
-        let first_entry = PriceEntry {
+        let first_entry = OracleEntry {
             price: Price::from(340282366920938463463),
             volume: 340282366920938463463,
             liquidity: 2_000,
             timestamp: 0,
         };
 
-        let second_entry = PriceEntry {
+        let second_entry = OracleEntry {
             price: Price::from(2_000),
             volume: 2_000_000,
             liquidity: 2_000,
             timestamp: 0,
         };
 
-        let third_entry = PriceEntry {
+        let third_entry = OracleEntry {
             price: Price::from_float(0.0005),
             volume: 1_000,
             liquidity: 2_000,
@@ -262,13 +262,13 @@ fn ema_does_not_saturate_on_values_smaller_than_u64_max() {
 fn calculate_new_ema_entry_works() {
     const PERIOD: u32 = 7;
     let (start_price, start_volume, start_liquidity) = (Price::saturating_from_integer(4u32), 4u32.into(), 4u32.into());
-    let start_oracle = PriceEntry {
+    let start_oracle = OracleEntry {
         price: start_price,
         volume: start_volume,
         liquidity: start_liquidity,
         timestamp: 5,
     };
-    let next_value = PriceEntry {
+    let next_value = OracleEntry {
         timestamp: 6,
         ..start_oracle
     };
@@ -276,14 +276,14 @@ fn calculate_new_ema_entry_works() {
     assert_eq!(next_oracle, Some(next_value));
 
     let (next_price, next_volume, next_liquidity) = (Price::saturating_from_integer(8u32), 8u32.into(), 8u32.into());
-    let next_value = PriceEntry {
+    let next_value = OracleEntry {
         price: next_price,
         volume: next_volume,
         liquidity: next_liquidity,
         timestamp: 6,
     };
     let next_oracle = next_value.calculate_new_ema_entry(PERIOD, &start_oracle);
-    let expected_oracle = PriceEntry {
+    let expected_oracle = OracleEntry {
         price: Price::saturating_from_integer(5u32),
         volume: 5u32.into(),
         liquidity: 5u32.into(),
@@ -297,7 +297,7 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
     const PERIOD: u32 = 7;
     let (start_price, start_volume, start_liquidity) =
         (Price::saturating_from_integer(4000u32), 4000u32.into(), 4000u32.into());
-    let start_oracle = PriceEntry {
+    let start_oracle = OracleEntry {
         price: start_price,
         volume: start_volume,
         liquidity: start_liquidity,
@@ -305,7 +305,7 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
     };
     let (next_price, next_volume, next_liquidity) =
         (Price::saturating_from_integer(8000u32), 8000u32.into(), 8000u32.into());
-    let next_value = PriceEntry {
+    let next_value = OracleEntry {
         price: next_price,
         volume: next_volume,
         liquidity: next_liquidity,
@@ -321,14 +321,14 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
 
     let (next_price, next_volume, next_liquidity) =
         (Price::saturating_from_integer(8000u32), 8000u32.into(), 8000u32.into());
-    let next_value = PriceEntry {
+    let next_value = OracleEntry {
         price: next_price,
         volume: next_volume,
         liquidity: next_liquidity,
         timestamp: 8,
     };
     let next_oracle = next_value.calculate_new_ema_entry(PERIOD, &start_oracle);
-    let expected_oracle = PriceEntry {
+    let expected_oracle = OracleEntry {
         price: Price::saturating_from_rational(63125, 10),
         volume: 6312u32.into(),
         liquidity: 6312u32.into(),
@@ -358,7 +358,7 @@ fn get_price_returns_updated_price() {
         .with_price_data(vec![((HDX, DOT), Price::from(1_000_000), 2_000_000, 2_000_000)])
         .build()
         .execute_with(|| {
-            let on_trade_entry = PriceEntry {
+            let on_trade_entry = OracleEntry {
                 price: Price::from(500_000),
                 volume: 2_000_000,
                 liquidity: 2_000_000,

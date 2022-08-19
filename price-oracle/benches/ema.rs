@@ -5,7 +5,6 @@ use sp_arithmetic::FixedPointNumber;
 
 use pallet_price_oracle::balance_ema;
 use pallet_price_oracle::price_ema;
-use pallet_price_oracle::Balance;
 use pallet_price_oracle::Period;
 use pallet_price_oracle::Price;
 use pallet_price_oracle::PriceEntry;
@@ -51,14 +50,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     // assert_eq!(next_oracle.unwrap().price, next_value.price);
 
     let mut next_volume = None;
-    let (alpha, inv_alpha) = from_period(PERIOD);
+    let (alpha, complement) = from_period(PERIOD);
     c.bench_function("balance_ema", |b| {
         b.iter(|| {
             next_volume = balance_ema(
                 black_box(start_oracle.volume),
+                black_box(complement),
                 black_box(next_value.volume),
-                alpha,
-                inv_alpha,
+                black_box(alpha),
             );
         })
     });
@@ -66,14 +65,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     assert!(next_volume.is_some());
 
     let mut next_price = None;
-    let (alpha, inv_alpha) = from_period(PERIOD);
+    let (alpha, complement) = from_period(PERIOD);
     c.bench_function("price_ema", |b| {
         b.iter(|| {
             next_price = price_ema(
                 black_box(start_oracle.price),
+                black_box(complement),
                 black_box(next_value.price),
-                alpha,
-                inv_alpha,
+                black_box(alpha),
             );
         })
     });

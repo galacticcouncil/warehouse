@@ -24,7 +24,7 @@ use OraclePeriod::*;
 
 use assert_matches::assert_matches;
 use frame_support::assert_storage_noop;
-use sp_arithmetic::{traits::One, FixedPointNumber, FixedU128};
+use sp_arithmetic::{traits::One, FixedPointNumber};
 
 #[macro_export]
 macro_rules! assert_eq_approx {

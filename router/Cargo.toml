@@ -11,7 +11,6 @@ repository = "https://github.com/galacticcouncil/warehouse/tree/master/router"
 codec = { default-features = false, features = ["derive"], package = "parity-scale-codec", version = "2.3.1" }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 serde = { features = ["derive"], optional = true, version = "1.0.136" }
-smallvec = "1.9.0"
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }

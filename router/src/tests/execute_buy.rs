@@ -45,7 +45,6 @@ fn execute_buy_should_when_route_has_single_trade() {
 
         //Assert
         assert_executed_sell_trades(vec![(PoolType::XYK, SELL_CALCULATION_RESULT)]);
-        assert_that_there_is_no_any_executed_buys();
     });
 }
 
@@ -93,6 +92,5 @@ fn execute_buy_should_when_route_has_multiple_trades() {
 
         //Assert
         assert_executed_sell_trades(vec![(PoolType::XYK, SELL_CALCULATION_RESULT), (PoolType::XYK, SELL_CALCULATION_RESULT)]);
-        assert_that_there_is_no_any_executed_buys();
     });
 }

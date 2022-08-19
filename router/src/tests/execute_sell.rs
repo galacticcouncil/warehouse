@@ -45,7 +45,6 @@ fn execute_sell_should_work_when_route_has_single_trade() {
 
         //Assert
         assert_executed_sell_trades(vec![(PoolType::XYK, amount)]);
-        assert_that_there_is_no_any_executed_buys();
     });
 }
 
@@ -92,8 +91,5 @@ fn execute_sell_should_work_when_route_has_multiple_trades() {
 
         //Assert
         assert_executed_sell_trades(vec![(PoolType::XYK, amount), (PoolType::XYK, SELL_CALCULATION_RESULT)]);
-        assert_that_there_is_no_any_executed_buys();
     });
 }
-
-//TODO: Dani - add cases for errors

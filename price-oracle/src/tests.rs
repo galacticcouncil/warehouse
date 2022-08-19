@@ -345,7 +345,7 @@ fn get_price_works() {
         .with_price_data(vec![((HDX, DOT), Price::from(1_000_000), 2_000_000, 2_000_000)])
         .build()
         .execute_with(|| {
-            assert_matches!(PriceOracle::get_price(HDX, DOT, Immediate), (Some(p), _) if p == Price::from(1_000_000));
+            assert_matches!(PriceOracle::get_price(HDX, DOT, LastBlock), (Some(p), _) if p == Price::from(1_000_000));
             assert_matches!(PriceOracle::get_price(HDX, DOT, TenMinutes), (Some(p), _) if p == Price::from(1_000_000));
             assert_matches!(PriceOracle::get_price(HDX, DOT, Day), (Some(p), _) if p == Price::from(1_000_000));
             assert_matches!(PriceOracle::get_price(HDX, DOT, Week), (Some(p), _) if p == Price::from(1_000_000));
@@ -370,10 +370,10 @@ fn get_price_returns_updated_price() {
 
             let e = Price::from_float(0.01);
             assert_eq_approx!(
-                PriceOracle::get_price(HDX, DOT, Immediate).0.unwrap(),
+                PriceOracle::get_price(HDX, DOT, LastBlock).0.unwrap(),
                 Price::from(500_000),
                 e,
-                "Immediate Oracle should have most recent value."
+                "LastBlock Oracle should have most recent value."
             );
             assert_eq_approx!(
                 PriceOracle::get_price(HDX, DOT, TenMinutes).0.unwrap(),

@@ -172,10 +172,10 @@ impl<T: Config> Pallet<T> {
         let current_block = <frame_system::Pallet<T>>::block_number();
         let parent = current_block.saturating_sub(One::one());
 
-        let mut immediate = Oracles::<T>::get(pair_id, Immediate.into_num::<T>())?;
+        let mut immediate = Oracles::<T>::get(pair_id, LastBlock.into_num::<T>())?;
         if immediate.timestamp < parent {
             immediate.timestamp = parent;
-            Oracles::<T>::insert(pair_id, Immediate.into_num::<T>(), &immediate);
+            Oracles::<T>::insert(pair_id, LastBlock.into_num::<T>(), &immediate);
         }
 
         let mut r = None;
@@ -200,7 +200,7 @@ impl<T: Config> Pallet<T> {
                 Some(())
             })
             .for_each(|_| {});
-        if period == Immediate {
+        if period == LastBlock {
             Some(immediate)
         } else {
             r
@@ -333,7 +333,7 @@ use frame_support::RuntimeDebug;
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
 pub enum OraclePeriod {
-    Immediate, // TODO: rename to LastBlock?
+    LastBlock,
     TenMinutes,
     Day,
     Week,
@@ -342,7 +342,7 @@ use OraclePeriod::*;
 
 impl OraclePeriod {
     pub fn all_periods() -> &'static [OraclePeriod] {
-        &[Immediate, TenMinutes, Day, Week]
+        &[LastBlock, TenMinutes, Day, Week]
     }
 
     pub fn non_immediate_periods() -> &'static [OraclePeriod] {
@@ -355,7 +355,7 @@ impl OraclePeriod {
         let hours = 60 * minutes;
         let days = 24 * hours;
         match self {
-            OraclePeriod::Immediate => 1,
+            OraclePeriod::LastBlock => 1,
             OraclePeriod::TenMinutes => 10 * minutes,
             OraclePeriod::Day => 1 * days,
             OraclePeriod::Week => 7 * days,

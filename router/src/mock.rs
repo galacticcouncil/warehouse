@@ -103,7 +103,7 @@ impl orml_tokens::Config for Test {
     type OnKilledTokenAccount = ();
 }
 
-type Pools = (XYK, StableSwap);
+type Pools = (XYK, StableSwap, OmniPool);
 
 impl Config for Test {
     type Event = ();
@@ -119,7 +119,9 @@ pub const ALICE: AccountId = 1;
 
 pub const BSX: AssetId = 1000;
 pub const aUSD: AssetId = 1001;
-pub const KSM: AssetId = 1002;
+pub const MOVR: AssetId = 1002;
+pub const KSM: AssetId = 1003;
+
 
 pub const SELL_CALCULATION_RESULT: u128 = 5;
 pub const INVALID_CALCULATION_AMOUNT: u128 = 999999999;
@@ -156,7 +158,12 @@ impl ExtBuilder {
     }
 }
 
-macro_rules! impl_executor{
+thread_local! {
+    pub static EXECUTED_SELLS: RefCell<Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>> = RefCell::new(Vec::default());
+    pub static EXECUTED_BUYS: RefCell<Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>> = RefCell::new(Vec::default());
+}
+
+macro_rules! impl_fake_executor {
     ($pool_struct:ident, $pool_type: pat)=>{
             impl Executor<AccountId, AssetId, Balance> for $pool_struct {
                 type Output = Balance;
@@ -229,16 +236,14 @@ macro_rules! impl_executor{
     }
 }
 
-thread_local! {
-    pub static EXECUTED_SELLS: RefCell<Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>> = RefCell::new(Vec::default());
-    pub static EXECUTED_BUYS: RefCell<Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>> = RefCell::new(Vec::default());
-}
 
 pub struct XYK;
 pub struct StableSwap;
+pub struct OmniPool;
 
-impl_executor!(XYK, PoolType::XYK);
-impl_executor!(StableSwap, PoolType::Stableswap(_));
+impl_fake_executor!(XYK, PoolType::XYK);
+impl_fake_executor!(StableSwap, PoolType::Stableswap(_));
+impl_fake_executor!(OmniPool, PoolType::Omnipool);
 
 pub fn assert_executed_sell_trades(expected_trades: Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>) {
     EXECUTED_SELLS.borrow().with(|v| {

@@ -83,7 +83,7 @@ fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_er
 }
 
 #[test]
-fn execute_buy_should_when_route_has_multiple_trades() {
+fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount = 10;
@@ -96,9 +96,14 @@ fn execute_buy_should_when_route_has_multiple_trades() {
         let trade2 = Trade {
             pool: PoolType::XYK,
             asset_in: aUSD,
+            asset_out: MOVR,
+        };
+        let trade3 = Trade {
+            pool: PoolType::XYK,
+            asset_in: MOVR,
             asset_out: KSM,
         };
-        let trades = vec![trade1, trade2];
+        let trades = vec![trade1, trade2, trade3];
 
         //Act
         assert_ok!(Router::execute_buy(
@@ -113,7 +118,50 @@ fn execute_buy_should_when_route_has_multiple_trades() {
         //Assert
         assert_executed_sell_trades(vec![
             (PoolType::XYK, SELL_CALCULATION_RESULT, BSX, aUSD),
-            (PoolType::XYK, SELL_CALCULATION_RESULT, aUSD, KSM),
+            (PoolType::XYK, SELL_CALCULATION_RESULT, aUSD, MOVR),
+            (PoolType::XYK, SELL_CALCULATION_RESULT, MOVR, KSM),
+        ]);
+    });
+}
+
+#[test]
+fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_type() {
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let amount = 10;
+        let limit = 5;
+        let trade1 = Trade {
+            pool: PoolType::XYK,
+            asset_in: BSX,
+            asset_out: MOVR,
+        };
+        let trade2 = Trade {
+            pool: PoolType::Stableswap(aUSD),
+            asset_in: MOVR,
+            asset_out: aUSD,
+        };
+        let trade3 = Trade {
+            pool: PoolType::Omnipool,
+            asset_in: aUSD,
+            asset_out: KSM,
+        };
+        let trades = vec![trade1, trade2, trade3];
+
+        //Act
+        assert_ok!(Router::execute_buy(
+            Origin::signed(ALICE),
+            BSX,
+            KSM,
+            amount,
+            limit,
+            trades
+        ));
+
+        //Assert
+        assert_executed_sell_trades(vec![
+            (PoolType::XYK, SELL_CALCULATION_RESULT, BSX, MOVR),
+            (PoolType::Stableswap(aUSD), SELL_CALCULATION_RESULT, MOVR, aUSD),
+            (PoolType::Omnipool, SELL_CALCULATION_RESULT, aUSD, KSM),
         ]);
     });
 }

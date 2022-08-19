@@ -123,6 +123,8 @@ pub const BSX: AssetId = 1000;
 pub const aUSD: AssetId = 1001;
 pub const KSM: AssetId = 1002;
 
+pub const SELL_CALCULATION_RESULT: u128 = 5;
+
 pub struct ExtBuilder {
     endowed_accounts: Vec<(AccountId, AssetId, Balance)>,
 }
@@ -199,7 +201,7 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
             return Err(ExecutorError::Error(()));
         }
 
-        Ok(5u128)
+        Ok(SELL_CALCULATION_RESULT)
     }
 
     fn execute_sell(

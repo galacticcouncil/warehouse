@@ -19,7 +19,7 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::ops::Deref;
 use super::*;
-use crate::mock::{Currency, ExtBuilder, Origin, Router, Test, ALICE, aUSD, BSX, KSM, EXECUTED_SELLS, AssetId, Balance, assert_executed_sell_trades, assert_that_there_is_no_any_executed_buys};
+use crate::mock::{Currency, ExtBuilder, Origin, Router, Test, ALICE, aUSD, BSX, KSM, EXECUTED_SELLS,SELL_CALCULATION_RESULT, AssetId, Balance, assert_executed_sell_trades, assert_that_there_is_no_any_executed_buys};
 use frame_support::traits::OnFinalize;
 use frame_support::{assert_noop, assert_ok};
 use hydradx_traits::router::PoolType;
@@ -70,7 +70,9 @@ fn execute_sell_should_work_when_route_has_multiple_trades() {
         assert_ok!(Router::execute_sell(Origin::signed(ALICE), BSX, KSM, amount, limit,trades));
 
         //Assert
-        assert_executed_sell_trades(vec![(PoolType::XYK, amount), (PoolType::XYK, 5)]);
+        assert_executed_sell_trades(vec![(PoolType::XYK, amount), (PoolType::XYK, SELL_CALCULATION_RESULT)]);
         assert_that_there_is_no_any_executed_buys();
     });
 }
+
+//TODO: Dani - add cases for errors

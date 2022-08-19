@@ -1,18 +1,13 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use sp_arithmetic::traits::One;
-use sp_arithmetic::FixedPointNumber;
+use sp_arithmetic::{traits::One, FixedPointNumber, FixedU128};
 
-use pallet_price_oracle::balance_ema;
-use pallet_price_oracle::price_ema;
-use pallet_price_oracle::Period;
-use pallet_price_oracle::Price;
-use pallet_price_oracle::PriceEntry;
+use pallet_price_oracle::{balance_ema, price_ema, Period, Price, PriceEntry};
 
-fn from_period(period: Period) -> (Price, Price) {
-    let alpha = Price::saturating_from_rational(2u32, period.saturating_add(1));
-    debug_assert!(alpha <= Price::one());
-    (alpha, Price::one() - alpha)
+fn period_to_weights(period: Period) -> (FixedU128, FixedU128) {
+    let alpha = FixedU128::saturating_from_rational(2u32, period.saturating_add(1));
+    debug_assert!(alpha <= FixedU128::one());
+    (alpha, FixedU128::one() - alpha)
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
@@ -47,10 +42,8 @@ fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 
-    // assert_eq!(next_oracle.unwrap().price, next_value.price);
-
     let mut next_volume = None;
-    let (alpha, complement) = from_period(PERIOD);
+    let (alpha, complement) = period_to_weights(PERIOD);
     c.bench_function("balance_ema", |b| {
         b.iter(|| {
             next_volume = balance_ema(
@@ -65,7 +58,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     assert!(next_volume.is_some());
 
     let mut next_price = None;
-    let (alpha, complement) = from_period(PERIOD);
+    let (alpha, complement) = period_to_weights(PERIOD);
     c.bench_function("price_ema", |b| {
         b.iter(|| {
             next_price = price_ema(

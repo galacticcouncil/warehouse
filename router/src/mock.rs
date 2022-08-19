@@ -160,8 +160,8 @@ impl ExtBuilder {
 }
 
 thread_local! {
-    pub static EXECUTED_SELLS: RefCell<Vec<(PoolType<AssetId>, Balance)>> = RefCell::new(Vec::default());
-    pub static EXECUTED_BUYS: RefCell<Vec<(PoolType<AssetId>, Balance)>> = RefCell::new(Vec::default());
+    pub static EXECUTED_SELLS: RefCell<Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>> = RefCell::new(Vec::default());
+    pub static EXECUTED_BUYS: RefCell<Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>> = RefCell::new(Vec::default());
 }
 
 
@@ -214,7 +214,7 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
     ) -> Result<(), ExecutorError<Self::Error>> {
         EXECUTED_SELLS.with(|v| {
             let mut m = v.borrow_mut();
-            m.push((pool_type, amount_in));
+            m.push((pool_type, amount_in, asset_in, asset_out));
         });
 
         Ok(())
@@ -229,7 +229,7 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
     ) -> Result<(), ExecutorError<Self::Error>> {
         EXECUTED_BUYS.with(|v| {
             let mut m = v.borrow_mut();
-            m.push((pool_type, amount_out));
+            m.push((pool_type, amount_out, asset_in, asset_out));
         });
 
         Ok(())
@@ -287,7 +287,7 @@ impl Executor<AccountId, AssetId, Balance> for StableSwap {
     ) -> Result<(), ExecutorError<Self::Error>> {
         EXECUTED_SELLS.with(|v| {
             let mut m = v.borrow_mut();
-            m.push((pool_type, amount_in));
+            m.push((pool_type, amount_in, asset_in, asset_out));
         });
 
         Ok(())
@@ -302,14 +302,14 @@ impl Executor<AccountId, AssetId, Balance> for StableSwap {
     ) -> Result<(), ExecutorError<Self::Error>> {
         EXECUTED_BUYS.with(|v| {
             let mut m = v.borrow_mut();
-            m.push((pool_type, amount_out));
+            m.push((pool_type, amount_out, asset_in, asset_out));
         });
 
         Ok(())
     }
 }
 
-pub fn assert_executed_sell_trades(expected_trades :Vec<(PoolType<AssetId>, Balance)>) {
+pub fn assert_executed_sell_trades(expected_trades :Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>) {
     EXECUTED_SELLS.borrow().with(|v| {
         let trades = v.borrow().deref().clone();
         assert_eq!(expected_trades,trades);

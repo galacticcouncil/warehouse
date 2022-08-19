@@ -44,7 +44,7 @@ fn execute_sell_should_work_when_route_has_single_trade() {
         assert_ok!(Router::execute_sell(Origin::signed(ALICE), BSX, aUSD, amount, limit,trades));
 
         //Assert
-        assert_executed_sell_trades(vec![(PoolType::XYK, amount)]);
+        assert_executed_sell_trades(vec![(PoolType::XYK, amount, BSX, aUSD)]);
     });
 }
 
@@ -90,7 +90,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades() {
         assert_ok!(Router::execute_sell(Origin::signed(ALICE), BSX, KSM, amount, limit,trades));
 
         //Assert
-        assert_executed_sell_trades(vec![(PoolType::XYK, amount), (PoolType::XYK, SELL_CALCULATION_RESULT)]);
+        assert_executed_sell_trades(vec![(PoolType::XYK, amount, BSX, aUSD), (PoolType::XYK, SELL_CALCULATION_RESULT, aUSD, KSM)]);
     });
 }
 
@@ -116,6 +116,6 @@ fn execute_sell_should_work_when_first_trade_is_not_supported_in_the_first_pool(
         assert_ok!(Router::execute_sell(Origin::signed(ALICE), BSX, KSM, amount, limit,trades));
 
         //Assert
-        assert_executed_sell_trades(vec![(PoolType::Stableswap(aUSD), amount), (PoolType::XYK, SELL_CALCULATION_RESULT)]);
+        assert_executed_sell_trades(vec![(PoolType::Stableswap(aUSD), amount, BSX, aUSD), (PoolType::XYK, SELL_CALCULATION_RESULT,aUSD, KSM)]);
     });
 }

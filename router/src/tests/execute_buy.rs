@@ -15,17 +15,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::borrow::Borrow;
-use std::cell::RefCell;
-use std::ops::Deref;
 use super::*;
 use crate::mock::*;
+use crate::types::Trade;
+use crate::Error;
 use frame_support::traits::OnFinalize;
 use frame_support::{assert_noop, assert_ok};
 use hydradx_traits::router::PoolType;
-use crate::types::Trade;
 use pretty_assertions::assert_eq;
-use crate::Error;
+use std::borrow::Borrow;
+use std::cell::RefCell;
+use std::ops::Deref;
 
 #[test]
 fn execute_buy_should_when_route_has_single_trade() {
@@ -33,15 +33,22 @@ fn execute_buy_should_when_route_has_single_trade() {
         //Arrange
         let amount = 10;
         let limit = 5;
-        let trade = Trade{
+        let trade = Trade {
             pool: PoolType::XYK,
             asset_in: BSX,
-            asset_out: aUSD
+            asset_out: aUSD,
         };
         let trades = vec![trade];
 
         //Act
-        assert_ok!(Router::execute_buy(Origin::signed(ALICE), BSX, aUSD, amount, limit,trades));
+        assert_ok!(Router::execute_buy(
+            Origin::signed(ALICE),
+            BSX,
+            aUSD,
+            amount,
+            limit,
+            trades
+        ));
 
         //Assert
         assert_executed_sell_trades(vec![(PoolType::XYK, SELL_CALCULATION_RESULT, BSX, aUSD)]);
@@ -53,21 +60,27 @@ fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_er
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let limit = 5;
-        let trade = Trade{
+        let trade = Trade {
             pool: PoolType::XYK,
             asset_in: BSX,
-            asset_out: aUSD
+            asset_out: aUSD,
         };
         let trades = vec![trade];
 
         //Act and Assert
         assert_noop!(
-            Router::execute_buy(Origin::signed(ALICE), BSX, aUSD, INVALID_CALCULATION_AMOUNT, limit,trades),
+            Router::execute_buy(
+                Origin::signed(ALICE),
+                BSX,
+                aUSD,
+                INVALID_CALCULATION_AMOUNT,
+                limit,
+                trades
+            ),
             Error::<Test>::PriceCalculationFailed
         );
     });
 }
-
 
 #[test]
 fn execute_buy_should_when_route_has_multiple_trades() {
@@ -75,23 +88,33 @@ fn execute_buy_should_when_route_has_multiple_trades() {
         //Arrange
         let amount = 10;
         let limit = 5;
-        let trade1 = Trade{
+        let trade1 = Trade {
             pool: PoolType::XYK,
             asset_in: BSX,
-            asset_out: aUSD
+            asset_out: aUSD,
         };
-        let trade2 = Trade{
+        let trade2 = Trade {
             pool: PoolType::XYK,
             asset_in: aUSD,
-            asset_out: KSM
+            asset_out: KSM,
         };
         let trades = vec![trade1, trade2];
 
         //Act
-        assert_ok!(Router::execute_buy(Origin::signed(ALICE), BSX, KSM, amount, limit,trades));
+        assert_ok!(Router::execute_buy(
+            Origin::signed(ALICE),
+            BSX,
+            KSM,
+            amount,
+            limit,
+            trades
+        ));
 
         //Assert
-        assert_executed_sell_trades(vec![(PoolType::XYK, SELL_CALCULATION_RESULT,BSX, aUSD), (PoolType::XYK, SELL_CALCULATION_RESULT,aUSD, KSM)]);
+        assert_executed_sell_trades(vec![
+            (PoolType::XYK, SELL_CALCULATION_RESULT, BSX, aUSD),
+            (PoolType::XYK, SELL_CALCULATION_RESULT, aUSD, KSM),
+        ]);
     });
 }
 
@@ -101,22 +124,32 @@ fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool()
         //Arrange
         let amount = 10;
         let limit = 5;
-        let trade1 = Trade{
+        let trade1 = Trade {
             pool: PoolType::Stableswap(aUSD),
             asset_in: BSX,
-            asset_out: aUSD
+            asset_out: aUSD,
         };
-        let trade2 = Trade{
+        let trade2 = Trade {
             pool: PoolType::XYK,
             asset_in: aUSD,
-            asset_out: KSM
+            asset_out: KSM,
         };
         let trades = vec![trade1, trade2];
 
         //Act
-        assert_ok!(Router::execute_buy(Origin::signed(ALICE), BSX, KSM, amount, limit,trades));
+        assert_ok!(Router::execute_buy(
+            Origin::signed(ALICE),
+            BSX,
+            KSM,
+            amount,
+            limit,
+            trades
+        ));
 
         //Assert
-        assert_executed_sell_trades(vec![(PoolType::Stableswap(aUSD), SELL_CALCULATION_RESULT, BSX, aUSD), (PoolType::XYK, SELL_CALCULATION_RESULT, aUSD, KSM)]);
+        assert_executed_sell_trades(vec![
+            (PoolType::Stableswap(aUSD), SELL_CALCULATION_RESULT, BSX, aUSD),
+            (PoolType::XYK, SELL_CALCULATION_RESULT, aUSD, KSM),
+        ]);
     });
 }

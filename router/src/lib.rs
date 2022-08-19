@@ -41,11 +41,11 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use types::Trade;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
     use hydradx_traits::router::ExecutorError;
     use sp_runtime::traits::AtLeast32BitUnsigned;
+    use types::Trade;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]

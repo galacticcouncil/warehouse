@@ -124,6 +124,7 @@ pub const aUSD: AssetId = 1001;
 pub const KSM: AssetId = 1002;
 
 pub const SELL_CALCULATION_RESULT: u128 = 5;
+pub const INVALID_CALCULATION_AMOUNT: u128 = 999999999;
 
 pub struct ExtBuilder {
     endowed_accounts: Vec<(AccountId, AssetId, Balance)>,
@@ -180,7 +181,7 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
             return Err(ExecutorError::NotSupported);
         }
 
-        if amount_in == 100u128 {
+        if amount_in == INVALID_CALCULATION_AMOUNT {
             return Err(ExecutorError::Error(()));
         }
 
@@ -197,7 +198,7 @@ impl Executor<AccountId, AssetId, Balance> for XYK {
             return Err(ExecutorError::NotSupported);
         }
 
-        if amount_out == 200u128 {
+        if amount_out == INVALID_CALCULATION_AMOUNT {
             return Err(ExecutorError::Error(()));
         }
 

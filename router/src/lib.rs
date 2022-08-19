@@ -72,7 +72,7 @@ pub mod pallet {
     pub enum Error<T> {
         Limit,
         PoolNotSupported,
-        Math,
+        PriceCalculationFailed,
         Execution,
     }
 
@@ -104,7 +104,7 @@ pub mod pallet {
 
                 match result {
                     Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
-                    Err(ExecutorError::Error(_)) => return Err(Error::<T>::Math.into()),
+                    Err(ExecutorError::Error(_)) => return Err(Error::<T>::PriceCalculationFailed.into()),
                     Ok(r) => {
                         amount = r;
                         amounts.push(r);
@@ -151,7 +151,7 @@ pub mod pallet {
 
                 match result {
                     Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
-                    Err(ExecutorError::Error(_)) => return Err(Error::<T>::Math.into()),
+                    Err(ExecutorError::Error(_)) => return Err(Error::<T>::PriceCalculationFailed.into()),
                     Ok(r) => {
                         amount = r;
                         amounts.push(r);

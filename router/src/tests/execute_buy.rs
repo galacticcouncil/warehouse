@@ -19,12 +19,13 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::ops::Deref;
 use super::*;
-use crate::mock::{Currency, ExtBuilder, Origin, Router, Test, ALICE, aUSD, BSX, KSM, EXECUTED_SELLS,SELL_CALCULATION_RESULT, AssetId, Balance, assert_executed_sell_trades, assert_that_there_is_no_any_executed_buys};
+use crate::mock::*;
 use frame_support::traits::OnFinalize;
 use frame_support::{assert_noop, assert_ok};
 use hydradx_traits::router::PoolType;
 use crate::types::Trade;
 use pretty_assertions::assert_eq;
+use crate::Error;
 
 #[test]
 fn execute_buy_should_when_route_has_single_trade() {
@@ -47,6 +48,27 @@ fn execute_buy_should_when_route_has_single_trade() {
         assert_that_there_is_no_any_executed_buys();
     });
 }
+
+#[test]
+fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_error() {
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let limit = 5;
+        let trade = Trade{
+            pool: PoolType::XYK,
+            asset_in: BSX,
+            asset_out: aUSD
+        };
+        let trades = vec![trade];
+
+        //Act and Assert
+        assert_noop!(
+            Router::execute_buy(Origin::signed(ALICE), BSX, aUSD, INVALID_CALCULATION_AMOUNT, limit,trades),
+            Error::<Test>::PriceCalculationFailed
+        );
+    });
+}
+
 
 #[test]
 fn execute_buy_should_when_route_has_multiple_trades() {

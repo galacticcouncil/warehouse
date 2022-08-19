@@ -28,7 +28,7 @@ use hydradx_traits::router::Executor;
 use orml_traits::MultiCurrency;
 use sp_std::vec::Vec;
 
-mod types;
+pub mod types;
 
 #[cfg(test)]
 mod mock;

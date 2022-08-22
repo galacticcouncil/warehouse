@@ -111,8 +111,8 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_same_pooltype() 
         //Assert
         assert_executed_sell_trades(vec![
             (PoolType::XYK, amount, BSX, aUSD),
-            (PoolType::XYK, SELL_CALCULATION_RESULT, aUSD, MOVR),
-            (PoolType::XYK, SELL_CALCULATION_RESULT, MOVR, KSM),
+            (PoolType::XYK, XYK_SELL_CALCULATION_RESULT, aUSD, MOVR),
+            (PoolType::XYK, XYK_SELL_CALCULATION_RESULT, MOVR, KSM),
         ]);
     });
 }
@@ -122,7 +122,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_different_pool_t
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount = 10;
-        let limit = 5;
+        let limit = 1;
         let trade1 = Trade {
             pool: PoolType::XYK,
             asset_in: BSX,
@@ -153,8 +153,8 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_different_pool_t
         //Assert
         assert_executed_sell_trades(vec![
             (PoolType::XYK, amount, BSX, MOVR),
-            (PoolType::Stableswap(aUSD), SELL_CALCULATION_RESULT, MOVR, aUSD),
-            (PoolType::Omnipool, SELL_CALCULATION_RESULT, aUSD, KSM),
+            (PoolType::Stableswap(aUSD), XYK_SELL_CALCULATION_RESULT, MOVR, aUSD),
+            (PoolType::Omnipool, STABLESWAP_SELL_CALCULATION_RESULT, aUSD, KSM),
         ]);
     });
 }
@@ -190,7 +190,7 @@ fn execute_sell_should_work_when_first_trade_is_not_supported_in_the_first_pool(
         //Assert
         assert_executed_sell_trades(vec![
             (PoolType::Stableswap(aUSD), amount, BSX, aUSD),
-            (PoolType::XYK, SELL_CALCULATION_RESULT, aUSD, KSM),
+            (PoolType::XYK, STABLESWAP_SELL_CALCULATION_RESULT, aUSD, KSM),
         ]);
     });
 }

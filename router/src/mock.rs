@@ -124,7 +124,12 @@ pub const MOVR: AssetId = 1002;
 pub const KSM: AssetId = 1003;
 
 
-pub const SELL_CALCULATION_RESULT: u128 = 5;
+pub const XYK_SELL_CALCULATION_RESULT: u128 = 6;
+pub const XYK_BUY_CALCULATION_RESULT: u128 = 5;
+pub const STABLESWAP_SELL_CALCULATION_RESULT: u128 = 4;
+pub const STABLESWAP_BUY_CALCULATION_RESULT: u128 = 3;
+pub const OMNIPOOL_SELL_CALCULATION_RESULT: u128 = 2;
+pub const OMNIPOOL_BUY_CALCULATION_RESULT: u128 = 1;
 pub const INVALID_CALCULATION_AMOUNT: u128 = 999999999;
 
 pub const BSX_AUSD_TRADE_IN_XYK : Trade<AssetId> = Trade {
@@ -171,7 +176,7 @@ thread_local! {
 }
 
 macro_rules! impl_fake_executor {
-    ($pool_struct:ident, $pool_type: pat)=>{
+    ($pool_struct:ident, $pool_type: pat, $sell_calculation_result: expr, $buy_calculation_result: expr)=>{
             impl Executor<AccountId, AssetId, Balance> for $pool_struct {
                 type Output = Balance;
                 type Error = ();
@@ -190,7 +195,7 @@ macro_rules! impl_fake_executor {
                         return Err(ExecutorError::Error(()));
                     }
 
-                    Ok(SELL_CALCULATION_RESULT)
+                    Ok($sell_calculation_result)
                 }
 
                 fn calculate_buy(
@@ -207,7 +212,7 @@ macro_rules! impl_fake_executor {
                         return Err(ExecutorError::Error(()));
                     }
 
-                    Ok(SELL_CALCULATION_RESULT)
+                    Ok($buy_calculation_result)
                 }
 
                 fn execute_sell(
@@ -248,9 +253,9 @@ pub struct XYK;
 pub struct StableSwap;
 pub struct OmniPool;
 
-impl_fake_executor!(XYK, PoolType::XYK);
-impl_fake_executor!(StableSwap, PoolType::Stableswap(_));
-impl_fake_executor!(OmniPool, PoolType::Omnipool);
+impl_fake_executor!(XYK, PoolType::XYK, XYK_SELL_CALCULATION_RESULT, XYK_BUY_CALCULATION_RESULT);
+impl_fake_executor!(StableSwap, PoolType::Stableswap(_), STABLESWAP_SELL_CALCULATION_RESULT, STABLESWAP_BUY_CALCULATION_RESULT);
+impl_fake_executor!(OmniPool, PoolType::Omnipool, OMNIPOOL_SELL_CALCULATION_RESULT, OMNIPOOL_BUY_CALCULATION_RESULT);
 
 pub fn assert_executed_sell_trades(expected_trades: Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>) {
     EXECUTED_SELLS.borrow().with(|v| {

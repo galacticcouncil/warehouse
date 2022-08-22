@@ -48,7 +48,7 @@ fn execute_buy_should_when_route_has_single_trade() {
         ));
 
         //Assert
-        assert_executed_sell_trades(vec![(PoolType::XYK, SELL_CALCULATION_RESULT, BSX, aUSD)]);
+        assert_executed_sell_trades(vec![(PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, aUSD)]);
     });
 }
 
@@ -114,9 +114,9 @@ fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
 
         //Assert
         assert_executed_sell_trades(vec![
-            (PoolType::XYK, SELL_CALCULATION_RESULT, BSX, aUSD),
-            (PoolType::XYK, SELL_CALCULATION_RESULT, aUSD, MOVR),
-            (PoolType::XYK, SELL_CALCULATION_RESULT, MOVR, KSM),
+            (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, aUSD),
+            (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, aUSD, MOVR),
+            (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, MOVR, KSM),
         ]);
     });
 }
@@ -156,9 +156,9 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
 
         //Assert
         assert_executed_sell_trades(vec![
-            (PoolType::XYK, SELL_CALCULATION_RESULT, BSX, MOVR),
-            (PoolType::Stableswap(aUSD), SELL_CALCULATION_RESULT, MOVR, aUSD),
-            (PoolType::Omnipool, SELL_CALCULATION_RESULT, aUSD, KSM),
+            (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, MOVR),
+            (PoolType::Stableswap(aUSD), STABLESWAP_BUY_CALCULATION_RESULT, MOVR, aUSD),
+            (PoolType::Omnipool, OMNIPOOL_BUY_CALCULATION_RESULT, aUSD, KSM),
         ]);
     });
 }
@@ -193,8 +193,8 @@ fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool()
 
         //Assert
         assert_executed_sell_trades(vec![
-            (PoolType::Stableswap(aUSD), SELL_CALCULATION_RESULT, BSX, aUSD),
-            (PoolType::XYK, SELL_CALCULATION_RESULT, aUSD, KSM),
+            (PoolType::Stableswap(aUSD), STABLESWAP_BUY_CALCULATION_RESULT, BSX, aUSD),
+            (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, aUSD, KSM),
         ]);
     });
 }

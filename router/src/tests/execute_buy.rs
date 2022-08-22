@@ -217,3 +217,24 @@ fn execute_buy_should_fail_when_called_with_non_signed_origin() {
         );
     });
 }
+
+#[test]
+fn execute_buy_should_fail_when_route_has_no_trades() {
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let trades = vec![];
+
+        //Act and Assert
+        assert_noop!(
+            Router::execute_buy(
+                Origin::signed(ALICE),
+                BSX,
+                AUSD,
+                10,
+                5,
+                trades
+            ),
+            Error::<Test>::RouteHasNoTrades
+        );
+    });
+}

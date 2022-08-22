@@ -71,6 +71,7 @@ pub mod pallet {
         PoolNotSupported,
         PriceCalculationFailed,
         Execution,
+        RouteHasNoTrades
     }
 
     #[pallet::call]
@@ -85,8 +86,8 @@ pub mod pallet {
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(route.len() > 0, Error::<T>::RouteHasNoTrades);
             // TODO:
-            // ensure route has at least 1 entry
             // ensure that who has enough balance
 
             //let mut amounts = SmallVec::<T::Balance>::with_capacity(route.len() + 1);
@@ -132,8 +133,9 @@ pub mod pallet {
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(route.len() > 0, Error::<T>::RouteHasNoTrades);
+
             // TODO:
-            // ensure route has at least 1 entry
             // ensure that who has enough balance
 
             //let mut amounts = SmallVec::<T::Balance>::with_capacity(route.len() + 1);

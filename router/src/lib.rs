@@ -31,8 +31,6 @@ use sp_std::vec::Vec;
 pub mod types;
 
 #[cfg(test)]
-mod mock;
-#[cfg(test)]
 mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.

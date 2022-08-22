@@ -16,7 +16,6 @@
 // limitations under the License.
 
 use super::*;
-use crate::mock::*;
 use crate::types::Trade;
 use crate::Error;
 use frame_support::traits::OnFinalize;
@@ -27,6 +26,7 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::ops::Deref;
 use sp_runtime::DispatchError::BadOrigin;
+use crate::tests::mock::*;
 
 #[test]
 fn execute_sell_should_work_when_route_has_single_trade() {

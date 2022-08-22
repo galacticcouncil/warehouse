@@ -26,6 +26,7 @@ use pretty_assertions::assert_eq;
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::ops::Deref;
+use sp_runtime::DispatchError::BadOrigin;
 
 #[test]
 fn execute_buy_should_when_route_has_single_trade() {
@@ -199,5 +200,33 @@ fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool()
             (PoolType::Stableswap(aUSD), SELL_CALCULATION_RESULT, BSX, aUSD),
             (PoolType::XYK, SELL_CALCULATION_RESULT, aUSD, KSM),
         ]);
+    });
+}
+
+#[test]
+fn execute_buy_should_fail_when_called_with_non_signed_origin() {
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let amount = 10;
+        let limit = 5;
+        let trade = Trade {
+            pool: PoolType::XYK,
+            asset_in: BSX,
+            asset_out: aUSD,
+        };
+        let trades = vec![trade];
+
+        //Act and Assert
+        assert_noop!(
+            Router::execute_buy(
+            Origin::none(),
+            BSX,
+            aUSD,
+            amount,
+            limit,
+            trades
+        ),
+            BadOrigin
+        );
     });
 }

@@ -27,7 +27,7 @@ use crate::tests::mock::*;
 fn execute_buy_should_when_route_has_single_trade() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
-        let amount = 10;
+        let amount_to_buy = 10;
         let limit = 5;
 
         let trades = vec![BSX_AUSD_TRADE_IN_XYK];
@@ -37,7 +37,7 @@ fn execute_buy_should_when_route_has_single_trade() {
             Origin::signed(ALICE),
             BSX,
             AUSD,
-            amount,
+            amount_to_buy,
             limit,
             trades
         ));
@@ -49,18 +49,17 @@ fn execute_buy_should_when_route_has_single_trade() {
 
 #[test]
 fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_error() {
-    ExtBuilder::default().build().execute_with(|| {
-        //Arrange
-        let limit = 5;
-        let trade = Trade {
-            pool: PoolType::XYK,
-            asset_in: BSX,
-            asset_out: AUSD,
-        };
-        let trades = vec![trade];
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, BSX, INVALID_CALCULATION_AMOUNT)])
+        .build()
+        .execute_with(|| {
+            //Arrange
+            let limit = 5;
 
-        //Act and Assert
-        assert_noop!(
+            let trades = vec![BSX_AUSD_TRADE_IN_XYK];
+
+            //Act and Assert
+            assert_noop!(
             Router::execute_buy(
                 Origin::signed(ALICE),
                 BSX,
@@ -71,14 +70,15 @@ fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_er
             ),
             Error::<Test>::PriceCalculationFailed
         );
-    });
+        });
 }
+
 
 #[test]
 fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
-        let amount = 10;
+        let amount_to_buy = 10;
         let limit = 5;
         let trade1 = Trade {
             pool: PoolType::XYK,
@@ -102,7 +102,7 @@ fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
             Origin::signed(ALICE),
             BSX,
             KSM,
-            amount,
+            amount_to_buy,
             limit,
             trades
         ));
@@ -120,7 +120,7 @@ fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
 fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_type() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
-        let amount = 10;
+        let amount_to_buy = 10;
         let limit = 5;
         let trade1 = Trade {
             pool: PoolType::XYK,
@@ -144,7 +144,7 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
             Origin::signed(ALICE),
             BSX,
             KSM,
-            amount,
+            amount_to_buy,
             limit,
             trades
         ));
@@ -162,7 +162,7 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
 fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
-        let amount = 10;
+        let amount_to_buy = 10;
         let limit = 5;
         let trade1 = Trade {
             pool: PoolType::Stableswap(AUSD),
@@ -181,7 +181,7 @@ fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool()
             Origin::signed(ALICE),
             BSX,
             KSM,
-            amount,
+            amount_to_buy,
             limit,
             trades
         ));
@@ -198,7 +198,7 @@ fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool()
 fn execute_buy_should_fail_when_called_with_non_signed_origin() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
-        let amount = 10;
+        let amount_to_buy = 10;
         let limit = 5;
 
         let trades = vec![BSX_AUSD_TRADE_IN_XYK];
@@ -209,7 +209,7 @@ fn execute_buy_should_fail_when_called_with_non_signed_origin() {
             Origin::none(),
             BSX,
             AUSD,
-            amount,
+            amount_to_buy,
             limit,
             trades
         ),
@@ -237,4 +237,30 @@ fn execute_buy_should_fail_when_route_has_no_trades() {
             Error::<Test>::RouteHasNoTrades
         );
     });
+}
+
+#[test]
+fn execute_buy_should_fail_when_caller_has_not_enough_balance() {
+    //Arrange
+    let amount_to_buy = 10;
+    let limit = 5;
+    let trades = vec![BSX_AUSD_TRADE_IN_XYK];
+
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, BSX, amount_to_buy - 1)])
+        .build()
+        .execute_with(|| {
+            //Act and Assert
+            assert_noop!(
+                Router::execute_buy(
+                Origin::signed(ALICE),
+                BSX,
+                AUSD,
+                amount_to_buy,
+                limit,
+                trades
+            ),
+                Error::<Test>::InsufficientAssetBalance
+            );
+        });
 }

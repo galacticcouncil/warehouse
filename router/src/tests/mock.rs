@@ -18,7 +18,7 @@
 use crate as router;
 use crate::Config;
 use frame_support::parameter_types;
-use frame_support::traits::{Everything, Nothing};
+use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
 use hydradx_traits::router::{Executor, ExecutorError, PoolType};
 use orml_traits::parameter_type_with_key;
@@ -139,20 +139,32 @@ pub const BSX_AUSD_TRADE_IN_XYK : Trade<AssetId> = Trade {
 };
 
 pub struct ExtBuilder {
+    endowed_accounts: Vec<(AccountId, AssetId, Balance)>,
 }
 
 // Returns default values for genesis config
 impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
+            endowed_accounts: vec![(ALICE, BSX, 1000u128)],
         }
     }
 }
 
 impl ExtBuilder {
+    pub fn with_endowed_accounts(mut self, accounts: Vec<(AccountId, AssetId, Balance)>) -> Self {
+        self.endowed_accounts = accounts;
+        self
+    }
 
     pub fn build(self) -> sp_io::TestExternalities {
-        let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+        let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+        orml_tokens::GenesisConfig::<Test> {
+            balances: self.endowed_accounts,
+        }
+            .assimilate_storage(&mut t)
+            .unwrap();
 
         t.into()
     }

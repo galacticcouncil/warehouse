@@ -47,6 +47,7 @@ frame_support::construct_runtime!(
          System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
          Router: router::{Pallet, Call,Event<T>},
          Currency: orml_tokens::{Pallet, Event<T>},
+		 Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
      }
 );
 
@@ -68,12 +69,12 @@ impl system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = ();
+    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = ();
+    type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
@@ -91,7 +92,7 @@ parameter_type_with_key! {
 }
 
 impl orml_tokens::Config for Test {
-    type Event = ();
+    type Event = Event;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = AssetId;
@@ -104,10 +105,28 @@ impl orml_tokens::Config for Test {
     type OnKilledTokenAccount = ();
 }
 
+parameter_types! {
+	pub const ExistentialDeposit: u128 = 500;
+	pub const MaxReserves: u32 = 50;
+}
+
+
+impl pallet_balances::Config for Test {
+    type MaxLocks = ();
+    type Balance = Balance;
+    type Event = Event;
+    type DustRemoval = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type AccountStore = frame_system::Pallet<Test>;
+    type WeightInfo = ();
+    type MaxReserves = ();
+    type ReserveIdentifier = ();
+}
+
 type Pools = (XYK, StableSwap, OmniPool);
 
 impl Config for Test {
-    type Event = ();
+    type Event = Event;
     type AssetId = AssetId;
     type Balance = Balance;
     type Currency = Currency;

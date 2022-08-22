@@ -29,6 +29,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 pretty_assertions = "1.2.1"
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 
 [features]
 default = ['std']

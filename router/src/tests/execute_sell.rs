@@ -34,12 +34,8 @@ fn execute_sell_should_work_when_route_has_single_trade() {
         //Arrange
         let amount = 10;
         let limit = 5;
-        let trade = Trade {
-            pool: PoolType::XYK,
-            asset_in: BSX,
-            asset_out: aUSD,
-        };
-        let trades = vec![trade];
+
+        let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
         //Act
         assert_ok!(Router::execute_sell(
@@ -61,12 +57,8 @@ fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_er
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let limit = 5;
-        let trade = Trade {
-            pool: PoolType::XYK,
-            asset_in: BSX,
-            asset_out: aUSD,
-        };
-        let trades = vec![trade];
+
+        let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
         //Act and Assert
         assert_noop!(
@@ -209,12 +201,7 @@ fn execute_sell_should_fail_when_called_with_non_signed_origin() {
         //Arrange
         let amount = 10;
         let limit = 5;
-        let trade = Trade {
-            pool: PoolType::XYK,
-            asset_in: BSX,
-            asset_out: aUSD,
-        };
-        let trades = vec![trade];
+        let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
         //Act and Assert
         assert_noop!(

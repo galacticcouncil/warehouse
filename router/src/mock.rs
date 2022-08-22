@@ -30,6 +30,7 @@ use sp_runtime::{
 use std::borrow::Borrow;
 use std::ops::Deref;
 use std::{cell::RefCell, collections::HashMap};
+use crate::types::Trade;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -125,6 +126,12 @@ pub const KSM: AssetId = 1003;
 
 pub const SELL_CALCULATION_RESULT: u128 = 5;
 pub const INVALID_CALCULATION_AMOUNT: u128 = 999999999;
+
+pub const BSX_AUSD_TRADE_IN_XYK : Trade<AssetId> = Trade {
+    pool: PoolType::XYK,
+    asset_in: BSX,
+    asset_out: aUSD,
+};
 
 pub struct ExtBuilder {
     endowed_accounts: Vec<(AccountId, AssetId, Balance)>,

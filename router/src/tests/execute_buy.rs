@@ -34,12 +34,8 @@ fn execute_buy_should_when_route_has_single_trade() {
         //Arrange
         let amount = 10;
         let limit = 5;
-        let trade = Trade {
-            pool: PoolType::XYK,
-            asset_in: BSX,
-            asset_out: aUSD,
-        };
-        let trades = vec![trade];
+
+        let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
         //Act
         assert_ok!(Router::execute_buy(
@@ -209,12 +205,8 @@ fn execute_buy_should_fail_when_called_with_non_signed_origin() {
         //Arrange
         let amount = 10;
         let limit = 5;
-        let trade = Trade {
-            pool: PoolType::XYK,
-            asset_in: BSX,
-            asset_out: aUSD,
-        };
-        let trades = vec![trade];
+
+        let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
         //Act and Assert
         assert_noop!(

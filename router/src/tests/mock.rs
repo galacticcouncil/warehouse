@@ -18,7 +18,7 @@
 use crate as router;
 use crate::Config;
 use frame_support::parameter_types;
-use frame_support::traits::{Everything, GenesisBuild, Nothing};
+use frame_support::traits::{Everything, Nothing};
 use frame_system as system;
 use hydradx_traits::router::{Executor, ExecutorError, PoolType};
 use orml_traits::parameter_type_with_key;
@@ -29,7 +29,7 @@ use sp_runtime::{
 };
 use std::borrow::Borrow;
 use std::ops::Deref;
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell};
 use crate::types::Trade;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -119,7 +119,7 @@ pub type AccountId = u64;
 pub const ALICE: AccountId = 1;
 
 pub const BSX: AssetId = 1000;
-pub const aUSD: AssetId = 1001;
+pub const AUSD: AssetId = 1001;
 pub const MOVR: AssetId = 1002;
 pub const KSM: AssetId = 1003;
 
@@ -135,36 +135,24 @@ pub const INVALID_CALCULATION_AMOUNT: u128 = 999999999;
 pub const BSX_AUSD_TRADE_IN_XYK : Trade<AssetId> = Trade {
     pool: PoolType::XYK,
     asset_in: BSX,
-    asset_out: aUSD,
+    asset_out: AUSD,
 };
 
 pub struct ExtBuilder {
-    endowed_accounts: Vec<(AccountId, AssetId, Balance)>,
 }
 
 // Returns default values for genesis config
 impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
-            endowed_accounts: vec![(ALICE, BSX, 1000u128)],
         }
     }
 }
 
 impl ExtBuilder {
-    pub fn with_endowed_accounts(mut self, accounts: Vec<(AccountId, AssetId, Balance)>) -> Self {
-        self.endowed_accounts = accounts;
-        self
-    }
 
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-        orml_tokens::GenesisConfig::<Test> {
-            balances: self.endowed_accounts,
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
+        let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
         t.into()
     }
@@ -183,8 +171,8 @@ macro_rules! impl_fake_executor {
 
                 fn calculate_sell(
                     pool_type: PoolType<AssetId>,
-                    asset_in: AssetId,
-                    asset_out: AssetId,
+                    _asset_in: AssetId,
+                    _asset_out: AssetId,
                     amount_in: Balance,
                 ) -> Result<Self::Output, ExecutorError<Self::Error>> {
                     if !matches!(pool_type, $pool_type) {
@@ -200,8 +188,8 @@ macro_rules! impl_fake_executor {
 
                 fn calculate_buy(
                     pool_type: PoolType<AssetId>,
-                    asset_in: AssetId,
-                    asset_out: AssetId,
+                    _asset_in: AssetId,
+                    _asset_out: AssetId,
                     amount_out: Balance,
                 ) -> Result<Self::Output, ExecutorError<Self::Error>> {
                     if !matches!(pool_type, $pool_type) {
@@ -217,7 +205,7 @@ macro_rules! impl_fake_executor {
 
                 fn execute_sell(
                     pool_type: PoolType<AssetId>,
-                    who: &AccountId,
+                    _who: &AccountId,
                     asset_in: AssetId,
                     asset_out: AssetId,
                     amount_in: Balance,
@@ -232,7 +220,7 @@ macro_rules! impl_fake_executor {
 
                 fn execute_buy(
                     pool_type: PoolType<AssetId>,
-                    who: &AccountId,
+                    _who: &AccountId,
                     asset_in: AssetId,
                     asset_out: AssetId,
                     amount_out: Balance,
@@ -248,7 +236,6 @@ macro_rules! impl_fake_executor {
     }
 }
 
-
 pub struct XYK;
 pub struct StableSwap;
 pub struct OmniPool;
@@ -263,11 +250,3 @@ pub fn assert_executed_sell_trades(expected_trades: Vec<(PoolType<AssetId>, Bala
         assert_eq!(expected_trades, trades);
     });
 }
-
-pub fn assert_that_there_is_no_any_executed_buys() {
-    EXECUTED_BUYS.borrow().with(|v| {
-        let trades = v.borrow().deref().clone();
-        assert_eq!(trades.len(), 0);
-    });
-}
-

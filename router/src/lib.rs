@@ -25,7 +25,6 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use hydradx_traits::router::Executor;
-use orml_traits::MultiCurrency;
 use sp_std::vec::Vec;
 
 pub mod types;

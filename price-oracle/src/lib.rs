@@ -20,7 +20,10 @@
 use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::{CheckedDiv, One, Zero};
 use frame_support::sp_runtime::FixedPointNumber;
-use hydradx_traits::{OnLiquidityChangedHandler, OnTradeHandler};
+use hydradx_traits::{
+    AggregatedEntry, AggregatedOracle, AggregatedPriceOracle, OnLiquidityChangedHandler, OnTradeHandler,
+    OraclePeriod::{self, *},
+};
 use sp_arithmetic::traits::Saturating;
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::marker::PhantomData;
@@ -65,7 +68,7 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
 
         /// Number of seconds between blocks, used to convert periods.
-        type SecsPerBlock: Get<Period>;
+        type SecsPerBlock: Get<Self::BlockNumber>;
     }
 
     #[pallet::error]
@@ -80,8 +83,15 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn oracle)]
-    pub type Oracles<T: Config> =
-        StorageDoubleMap<_, Twox64Concat, AssetPairId, Twox64Concat, Period, OracleEntry<T::BlockNumber>, OptionQuery>;
+    pub type Oracles<T: Config> = StorageDoubleMap<
+        _,
+        Twox64Concat,
+        AssetPairId,
+        Twox64Concat,
+        T::BlockNumber,
+        (OracleEntry<T::BlockNumber>, T::BlockNumber),
+        OptionQuery,
+    >;
 
     #[pallet::genesis_config]
     #[derive(Default)]
@@ -102,7 +112,7 @@ pub mod pallet {
                     timestamp: T::BlockNumber::zero(),
                 };
                 for period in OraclePeriod::all_periods() {
-                    Pallet::<T>::update_oracle(&pair_id, period.into_num::<T>(), &price_entry);
+                    Pallet::<T>::update_oracle(&pair_id, into_blocks::<T>(period), &price_entry);
                 }
             }
         }
@@ -127,67 +137,73 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
     /// Insert or update data in the accumulator from received price entry. Aggregates volume and
     /// takes the most recent data for the rest.
-    pub(crate) fn on_price_entry(pair_id: AssetPairId, price_entry: OracleEntry<T::BlockNumber>) {
+    pub(crate) fn on_entry(pair_id: AssetPairId, oracle_entry: OracleEntry<T::BlockNumber>) {
         Accumulator::<T>::mutate(|accumulator| {
             accumulator
                 .entry(pair_id)
                 .and_modify(|entry| {
-                    *entry = price_entry.accumulate_volume(&entry);
+                    *entry = oracle_entry.accumulate_volume(&entry);
                 })
-                .or_insert(price_entry);
+                .or_insert(oracle_entry);
         });
     }
 
-    pub(crate) fn on_trade(pair_id: AssetPairId, price_entry: OracleEntry<T::BlockNumber>) {
-        Self::on_price_entry(pair_id, price_entry)
+    pub(crate) fn on_trade(pair_id: AssetPairId, oracle_entry: OracleEntry<T::BlockNumber>) {
+        Self::on_entry(pair_id, oracle_entry)
     }
 
-    pub(crate) fn on_liquidity_changed(pair_id: AssetPairId, price_entry: OracleEntry<T::BlockNumber>) {
-        Self::on_price_entry(pair_id, price_entry)
+    pub(crate) fn on_liquidity_changed(pair_id: AssetPairId, oracle_entry: OracleEntry<T::BlockNumber>) {
+        Self::on_entry(pair_id, oracle_entry)
     }
 
     fn update_data() {
         // update oracles based on data accumulated during the block
-        for (pair_id, price_entry) in Accumulator::<T>::take().into_iter() {
+        for (pair_id, oracle_entry) in Accumulator::<T>::take().into_iter() {
             for period in OraclePeriod::all_periods() {
-                Self::update_oracle(&pair_id, period.into_num::<T>(), &price_entry);
+                Self::update_oracle(&pair_id, into_blocks::<T>(period), &oracle_entry);
             }
         }
     }
 
-    fn update_oracle(pair_id: &AssetPairId, period: Period, price_entry: &OracleEntry<T::BlockNumber>) {
+    fn update_oracle(pair_id: &AssetPairId, period: T::BlockNumber, oracle_entry: &OracleEntry<T::BlockNumber>) {
         Oracles::<T>::mutate(pair_id, period, |oracle| {
-            let new_entry = oracle
-                .map(|prev_entry| {
-                    price_entry
-                        .calculate_new_ema_entry(period, &prev_entry)
-                        .unwrap_or(prev_entry)
+            let new_oracle = oracle
+                .map(|(prev_entry, init)| {
+                    (
+                        oracle_entry
+                            .calculate_new_ema_entry(period, &prev_entry)
+                            .unwrap_or(prev_entry),
+                        init,
+                    )
                 })
-                .unwrap_or(price_entry.clone());
-            *oracle = Some(new_entry);
+                .unwrap_or((oracle_entry.clone(), <frame_system::Pallet<T>>::block_number()));
+            *oracle = Some(new_oracle);
         });
     }
 
-    fn get_updated_entry(pair_id: &AssetPairId, period: OraclePeriod) -> Option<OracleEntry<T::BlockNumber>> {
+    fn get_updated_entry(
+        pair_id: &AssetPairId,
+        period: OraclePeriod,
+    ) -> Option<(OracleEntry<T::BlockNumber>, T::BlockNumber)> {
         let current_block = <frame_system::Pallet<T>>::block_number();
         let parent = current_block.saturating_sub(One::one());
 
-        let mut immediate = Oracles::<T>::get(pair_id, LastBlock.into_num::<T>())?;
+        let (mut immediate, init) = Self::oracle(pair_id, into_blocks::<T>(&LastBlock))?;
         if immediate.timestamp < parent {
             immediate.timestamp = parent;
-            Oracles::<T>::insert(pair_id, LastBlock.into_num::<T>(), &immediate);
+            Oracles::<T>::insert(pair_id, into_blocks::<T>(&LastBlock), &(immediate, init));
         }
 
         let mut r = None;
         OraclePeriod::non_immediate_periods()
             .iter()
             .map(|p| {
-                let entry = Self::oracle(pair_id, p.into_num::<T>())?;
+                let (entry, init) = Self::oracle(pair_id, into_blocks::<T>(p))?;
                 let return_entry = if entry.timestamp < parent {
                     immediate
-                        .calculate_new_ema_entry(p.into_num::<T>(), &entry)
+                        .calculate_new_ema_entry(into_blocks::<T>(p), &entry)
                         .map(|new_entry| {
-                            Oracles::<T>::insert(pair_id, period.into_num::<T>(), &new_entry);
+                            Oracles::<T>::insert(pair_id, into_blocks::<T>(&period), &(new_entry, init));
                             new_entry
                         })
                         .unwrap_or(entry)
@@ -195,22 +211,23 @@ impl<T: Config> Pallet<T> {
                     entry
                 };
                 if p == &period {
-                    r = Some(return_entry);
+                    r = Some((return_entry, init));
                 }
                 Some(())
             })
             .for_each(|_| {});
         if period == LastBlock {
-            Some(immediate)
+            Some((immediate, init))
         } else {
             r
         }
     }
 }
 
-pub struct PriceOracleHandler<T>(PhantomData<T>);
+/// A callback handler for trading and liquidity activity that schedules oracle updates.
+pub struct OnActivityHandler<T>(PhantomData<T>);
 
-impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
+impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
     fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liquidity: Balance) {
         let (price, amount) =
             if let Some(price_tuple) = determine_normalized_price(asset_a, asset_b, amount_in, amount_out) {
@@ -243,7 +260,7 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
     }
 }
 
-impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for PriceOracleHandler<T> {
+impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandler<T> {
     fn on_liquidity_changed(
         asset_a: AssetId,
         asset_b: AssetId,
@@ -328,53 +345,85 @@ pub fn derive_name(asset_a: AssetId, asset_b: AssetId) -> Vec<u8> {
     buf
 }
 
-use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
-
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
-pub enum OraclePeriod {
-    LastBlock,
-    TenMinutes,
-    Day,
-    Week,
-}
-use OraclePeriod::*;
-
-impl OraclePeriod {
-    pub fn all_periods() -> &'static [OraclePeriod] {
-        &[LastBlock, TenMinutes, Day, Week]
-    }
-
-    pub fn non_immediate_periods() -> &'static [OraclePeriod] {
-        &[TenMinutes, Day, Week]
-    }
-
-    pub fn into_num<T: Config>(self) -> Period {
-        let secs_per_block = T::SecsPerBlock::get();
-        let minutes = 60 / secs_per_block;
-        let hours = 60 * minutes;
-        let days = 24 * hours;
-        match self {
-            OraclePeriod::LastBlock => 1,
-            OraclePeriod::TenMinutes => 10 * minutes,
-            OraclePeriod::Day => 1 * days,
-            OraclePeriod::Week => 7 * days,
-        }
+/// Convert the given `period` into a number of blocks based on `T::SecsPerBlock`.
+pub fn into_blocks<T: Config>(period: &OraclePeriod) -> T::BlockNumber {
+    let secs_per_block = T::SecsPerBlock::get();
+    let minutes = T::BlockNumber::from(60u8) / secs_per_block;
+    let days = T::BlockNumber::from(24u8) * T::BlockNumber::from(60u8) * minutes;
+    match period {
+        OraclePeriod::LastBlock => One::one(),
+        OraclePeriod::TenMinutes => T::BlockNumber::from(10u8) * minutes,
+        OraclePeriod::Day => days,
+        OraclePeriod::Week => T::BlockNumber::from(7u8) * days,
     }
 }
 
-// TODO: better name and extract
-pub trait EmaOracle {
-    fn get_price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod) -> (Option<Price>, Weight);
+/// Determine whether an oracle of the given `age` is ready to be returned for `period`.
+///
+// Note: Currently a super simple implementation that just compares the age against the block
+// number. TODO: reconsider / get the correct algorithm from Colin
+pub fn is_ready<T: Config>(period: OraclePeriod, age: T::BlockNumber) -> bool {
+    age >= into_blocks::<T>(&period)
 }
 
-impl<T: Config> EmaOracle for Pallet<T> {
-    // TODO: return error if oracle is not initialized yet.
-    fn get_price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod) -> (Option<Price>, Weight) {
+/// Ensure that the given `entry` initialized at `initialized` is valid for `period`.
+pub fn ensure_ready<T: Config>(
+    entry: OracleEntry<T::BlockNumber>,
+    period: OraclePeriod,
+    initialized: T::BlockNumber,
+) -> Result<OracleEntry<T::BlockNumber>, OracleError> {
+    if is_ready::<T>(period, entry.timestamp.saturating_sub(initialized)) {
+        Ok(entry)
+    } else {
+        Err(OracleError::NotReady)
+    }
+}
+
+/// Possible errors when requesting an oracle value.
+#[derive(RuntimeDebug, Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo)]
+pub enum OracleError {
+    /// The oracle could not be found
+    NotPresent,
+    /// The oracle is not yet available for consumption for the given period.
+    ///
+    /// Note: The longer the period of the oracle, the longer it will usually take to provide data.
+    NotReady,
+}
+
+impl<T: Config> AggregatedOracle<AssetId, Balance, Price> for Pallet<T> {
+    type Error = OracleError;
+
+    fn get_entry(
+        asset_a: AssetId,
+        asset_b: AssetId,
+        period: OraclePeriod,
+    ) -> (Result<AggregatedEntry<Balance, Price>, OracleError>, Weight) {
         let pair_id = derive_name(asset_a, asset_b);
-        let entry = Self::get_updated_entry(&pair_id, period);
-        (entry.map(|entry| entry.price), 100) // TODO: weight
+        let oracle_res = Self::get_updated_entry(&pair_id, period)
+            .ok_or(OracleError::NotPresent)
+            .and_then(|(entry, initialized)| ensure_ready::<T>(entry, period, initialized))
+            .map(|entry| entry.into());
+        (oracle_res, 100) // TODO: accurate weight
     }
+
+    fn get_entry_weight() -> Weight {
+        100
+    } // TODO: weight
 }
 
-// TODO: volume and liquidity oracles
+impl<T: Config> AggregatedPriceOracle<AssetId, Price> for Pallet<T> {
+    type Error = OracleError;
+
+    fn get_price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod) -> (Result<Price, OracleError>, Weight) {
+        let pair_id = derive_name(asset_a, asset_b);
+        let oracle_res = Self::get_updated_entry(&pair_id, period)
+            .ok_or(OracleError::NotPresent)
+            .and_then(|(entry, initialized)| ensure_ready::<T>(entry, period, initialized))
+            .map(|entry| entry.price);
+        (oracle_res, 100) // TODO: accurate weight
+    }
+
+    fn get_price_weight() -> Weight {
+        100
+    } // TODO: weight
+}

@@ -18,13 +18,12 @@
 use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::CheckedMul;
 use frame_support::sp_runtime::{FixedU128, RuntimeDebug};
+use hydradx_traits::AggregatedEntry;
 use scale_info::TypeInfo;
 use sp_arithmetic::{
-    traits::{One, SaturatedConversion, UniqueSaturatedInto},
+    traits::{AtLeast32BitUnsigned, One, SaturatedConversion, Saturating, UniqueSaturatedInto},
     FixedPointNumber,
 };
-
-use sp_arithmetic::traits::CheckedSub;
 
 use sp_std::prelude::*;
 
@@ -34,7 +33,6 @@ use serde::{Deserialize, Serialize};
 pub type AssetId = u32;
 pub type Balance = u128;
 pub type Price = FixedU128;
-pub type Period = u32;
 
 /// A type representing data produced by a trade.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -48,7 +46,7 @@ pub struct OracleEntry<BlockNumber> {
 
 impl<BlockNumber> OracleEntry<BlockNumber>
 where
-    BlockNumber: CheckedSub + Copy + PartialOrd + UniqueSaturatedInto<u32>,
+    BlockNumber: AtLeast32BitUnsigned + Copy + UniqueSaturatedInto<u64>,
 {
     /// Determine a new entry based on `self` and a previous entry. Adds the volumes together and
     /// takes the values of `self` for the rest.
@@ -74,12 +72,11 @@ where
     /// + `alpha = 1 - 0.5^(1 / N)` for a half-life of N periods or
     /// + `alpha = 1 - 0.5^(1 / (0.5N))` to have the same median as an N-length SMA.
     /// See https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA
-    pub fn calculate_new_ema_entry(&self, period: Period, previous_entry: &Self) -> Option<Self> {
-        use sp_arithmetic::traits::Saturating;
-        if period <= 1 {
+    pub fn calculate_new_ema_entry(&self, period: BlockNumber, previous_entry: &Self) -> Option<Self> {
+        if period <= One::one() {
             return Some(self.clone());
         }
-        let alpha = Price::saturating_from_rational(2u32, period.saturating_add(1));
+        let alpha = Price::saturating_from_rational(2u64, period.saturating_add(One::one()).saturated_into::<u64>());
         debug_assert!(alpha <= Price::one());
         let complement = Price::one() - alpha;
 
@@ -131,4 +128,25 @@ pub fn balance_ema(prev: Balance, prev_weight: FixedU128, incoming: Balance, wei
         prev_weight.checked_mul_int(prev)? + weight.checked_mul_int(incoming)?
     };
     Some(new_value)
+}
+
+impl<BlockNumber> From<OracleEntry<BlockNumber>> for AggregatedEntry<Balance, Price> {
+    fn from(entry: OracleEntry<BlockNumber>) -> Self {
+        Self {
+            price: entry.price,
+            volume: entry.volume,
+            liquidity: entry.liquidity,
+        }
+    }
+}
+
+impl<BlockNumber> From<(Price, Balance, Balance, BlockNumber)> for OracleEntry<BlockNumber> {
+    fn from((price, volume, liquidity, timestamp): (Price, Balance, Balance, BlockNumber)) -> Self {
+        Self {
+            price,
+            volume,
+            liquidity,
+            timestamp,
+        }
+    }
 }

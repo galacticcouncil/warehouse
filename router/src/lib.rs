@@ -41,7 +41,6 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
     use hydradx_traits::router::ExecutorError;
-    use sp_runtime::traits::AtLeast32BitUnsigned;
     use types::Trade;
 
     #[pallet::pallet]

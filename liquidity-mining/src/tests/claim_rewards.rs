@@ -215,7 +215,7 @@ fn claim_rewards_should_work() {
                 max_reward_per_period: 60_000_000,
                 accumulated_rpz: FixedU128::from(620),
                 total_shares_z: 703_990,
-                accumulated_rewards: 29_2442_060,
+                accumulated_rewards: 292_442_060,
                 paid_accumulated_rewards: 142_851_325,
                 ..get_predefined_global_farm_ins1(2)
             }

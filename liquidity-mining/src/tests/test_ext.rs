@@ -342,11 +342,11 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 owner: GC,
                 incentivized_asset: BSX,
                 max_reward_per_period: 60_000_000,
-                accumulated_rpz: 3,
+                accumulated_rpz: FixedU128::from_float(3.5_f64),
                 yield_farms_count: (2, 2),
                 total_shares_z: 703_990,
-                accumulated_rewards: 249_650,
-                paid_accumulated_rewards: 1_033_900,
+                accumulated_rewards: 0,
+                paid_accumulated_rewards: 1_283_550,
                 state: FarmState::Active,
                 min_deposit: 10,
                 price_adjustment: One::one(),
@@ -358,8 +358,8 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, yield_farm_id)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 15,
-                accumulated_rpz: 3,
+                accumulated_rpvs: FixedU128::from_float(17.5_f64),
+                accumulated_rpz: FixedU128::from_float(3.5_f64),
                 total_shares: 616,
                 total_valued_shares: 45_540,
                 entries_count: 3,
@@ -372,8 +372,8 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, yield_farm_id)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 30,
-                accumulated_rpz: 3,
+                accumulated_rpvs: FixedU128::from(35),
+                accumulated_rpz: FixedU128::from_float(3.5_f64),
                 total_shares: 960,
                 total_valued_shares: 47_629,
                 entries_count: 4,
@@ -389,11 +389,11 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         );
 
         //Pot account balance check
-        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot_account), 249_650);
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot_account), 0);
 
-        //Check of claimed amount from global farm (sum of all claims).
-        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account), 99_900);
-        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 934_000);
+        //Check of claimed amount from global farm.
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account), 116_550);
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 1_167_000);
     });
 
     ext

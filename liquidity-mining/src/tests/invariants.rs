@@ -18,21 +18,25 @@
 use super::*;
 use crate::tests::test_ext::new_test_ext;
 use proptest::prelude::*;
+use sp_arithmetic::traits::{CheckedAdd, CheckedMul};
 
 const ONE: Balance = 1_000_000_000_000;
-const TOLERANCE: Balance = 1_000;
+const TOLERANCE: Balance = 1;
 const REWARD_CURRENCY: AssetId = BSX;
+
+//6s blocks
+const BLOCK_PER_YEAR: u64 = 5_256_000;
 
 fn total_shares_z() -> impl Strategy<Value = Balance> {
     0..100_000_000_000_000_u128
 }
 
 fn left_to_distribute() -> impl Strategy<Value = Balance> {
-    ONE..u128::MAX / 2
+    190 * ONE..100_000 * ONE
 }
 
 fn reward_per_period() -> impl Strategy<Value = Balance> {
-    190 * ONE..1_000_000_000 * ONE //190BSX -> distribute 3B in 3 years(6s blocks) with 1 block per period
+    190 * ONE..1_000_000 * ONE //190BSX -> distribute 3B in 3 years(6s blocks) with 1 block per period
 }
 
 fn global_farm_accumulated_rewards() -> impl Strategy<Value = (Balance, Balance)> {
@@ -40,9 +44,8 @@ fn global_farm_accumulated_rewards() -> impl Strategy<Value = (Balance, Balance)
 }
 
 prop_compose! {
-    fn global_farm_and_current_period()
+    fn get_global_farm()
         (
-            current_period in 1_000_000..52_560_000_u64,
             total_shares_z in total_shares_z(),
             (accumulated_rewards, paid_accumulated_rewards) in global_farm_accumulated_rewards(),
             reward_per_period in reward_per_period(),
@@ -52,16 +55,15 @@ prop_compose! {
             paid_accumulated_rewards in Just(paid_accumulated_rewards),
             reward_per_period in Just(reward_per_period),
             total_shares_z in Just(total_shares_z),
-            updated_at in 0..current_period,
-            current_period in Just(current_period),
+            updated_at in 1_000_000..(BLOCK_PER_YEAR + 1_000_000),
         )
-    -> (GlobalFarmData<Test, Instance1>, BlockNumber) {
-        (GlobalFarmData::<Test, Instance1> {
+    -> GlobalFarmData<Test, Instance1> {
+        GlobalFarmData::<Test, Instance1> {
             id: 1,
             owner: ALICE,
             updated_at,
             total_shares_z,
-            accumulated_rpz,
+            accumulated_rpz: FixedU128::from(accumulated_rpz),
             reward_currency: REWARD_CURRENCY,
             accumulated_rewards,
             paid_accumulated_rewards,
@@ -74,48 +76,94 @@ prop_compose! {
             yield_farms_count: (0,0),
             price_adjustment: FixedU128::one(),
             state: FarmState::Active,
-        }, current_period)
+        }
     }
 }
 
 prop_compose! {
-    fn get_both_farms_and_current_period_and_yield_farm_rewards ()(
-            (global_farm, current_period) in global_farm_and_current_period(),
+    fn get_farms()
+        (
+            global_farm in get_global_farm(),
         )(
-            current_period in Just(current_period),
-            yield_farm_accumulated_rpz in 0..global_farm.accumulated_rpz,
-            yield_farm_updated_at in global_farm.updated_at..current_period,
+            yield_farm_accumulated_rpz in 0..global_farm.accumulated_rpz.checked_div_int(1_u128).unwrap(),
+            tmp_reward in 100_000 * ONE..5_256_000_000 * ONE, //max: 10K for 1 year, every block
+            yield_farm_updated_at in global_farm.updated_at..global_farm.updated_at + 1_000,
             global_farm in Just(global_farm),
-            yield_farm_reward_per_period in reward_per_period(),
-        ) -> (GlobalFarmData<Test,Instance1>, YieldFarmData<Test, Instance1>, BlockNumber, Balance) {
-            let yield_farm_rewards = yield_farm_reward_per_period * (current_period - yield_farm_updated_at) as u128;
+        )
+    -> (GlobalFarmData<Test, Instance1>, YieldFarmData<Test,Instance1>) {
+        //multiplier == 1 => valued_shares== Z
+        let rpvs = tmp_reward.checked_div(global_farm.total_shares_z).unwrap();
 
-            //multiplier == 1 => valued_shares== Z
-            let rpvs = yield_farm_rewards.checked_div(global_farm.total_shares_z).unwrap();
+        let yield_farm = YieldFarmData::<Test, Instance1> {
+            id: 2,
+            updated_at: yield_farm_updated_at,
+            total_shares: Default::default(),
+            total_valued_shares: global_farm.total_shares_z,
+            accumulated_rpvs: FixedU128::from(rpvs),
+            accumulated_rpz: FixedU128::from(yield_farm_accumulated_rpz),
+            loyalty_curve: Default::default(),
+            multiplier: One::one(),
+            state: FarmState::Active,
+            entries_count: Default::default(),
+            _phantom: Default::default(),
+        };
 
-            let yield_farm = YieldFarmData::<Test, Instance1> {
-                id: 2,
-                updated_at: yield_farm_updated_at,
-                total_shares: Default::default(),
-                total_valued_shares: global_farm.total_shares_z,
-                accumulated_rpvs: rpvs,
-                accumulated_rpz: yield_farm_accumulated_rpz,
-                loyalty_curve: Default::default(),
-                multiplier: One::one(),
-                state: FarmState::Active,
-                entries_count: Default::default(),
-                _phantom: Default::default(),
-            };
+        (global_farm, yield_farm)
+    }
+}
 
-            (global_farm, yield_farm, current_period, yield_farm_rewards)
-        }
+prop_compose! {
+    fn get_global_farm_and_current_period()
+        (
+            global_farm in get_global_farm(),
+        )(
+            current_period in global_farm.updated_at..(global_farm.updated_at + BLOCK_PER_YEAR),
+            global_farm in Just(global_farm),
+        )
+    -> (GlobalFarmData<Test, Instance1>, BlockNumber) {
+        (global_farm, current_period)
+    }
+}
+
+prop_compose! {
+    fn get_farms_and_current_period_and_yield_farm_rewards()
+        (
+            (global_farm, yield_farm) in get_farms(),
+        )(
+            current_period in yield_farm.updated_at..(yield_farm.updated_at + BLOCK_PER_YEAR),
+            yield_farm in Just(yield_farm),
+            global_farm in Just(global_farm),
+        )
+    -> (GlobalFarmData<Test, Instance1>, YieldFarmData<Test, Instance1>, BlockNumber, Balance) {
+        //+1 rounding
+        let yield_farm_rewards = yield_farm.accumulated_rpvs.checked_mul_int(yield_farm.total_valued_shares).unwrap() + 1;
+
+        (global_farm, yield_farm, current_period, yield_farm_rewards)
+    }
+}
+
+prop_compose! {
+    fn get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute()
+        (
+            (global_farm, yield_farm, current_period, yield_farm_rewards) in get_farms_and_current_period_and_yield_farm_rewards(),
+        )(
+            left_to_distribute in yield_farm_rewards + ONE..yield_farm_rewards + 1_000_000 * ONE,
+            global_farm in Just(global_farm),
+            yield_farm in Just(yield_farm),
+            current_period in Just(current_period),
+            yield_farm_rewards in Just(yield_farm_rewards),
+        )
+    -> (GlobalFarmData<Test, Instance1>, YieldFarmData<Test, Instance1>, BlockNumber, Balance, Balance) {
+
+        (global_farm, yield_farm, current_period, yield_farm_rewards, left_to_distribute)
+    }
 }
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
     fn update_global_farm(
-        (mut farm, current_period) in global_farm_and_current_period(),
+        (mut farm, current_period) in get_global_farm_and_current_period(),
         left_to_distribute in left_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
@@ -129,14 +177,13 @@ proptest! {
             let reward = LiquidityMining::update_global_farm(&mut farm, current_period, reward_per_period).unwrap();
 
             let s_0 = accumulated_rpz_0
-                .checked_mul(farm.total_shares_z).unwrap()
-                .checked_add(reward).unwrap();
-            let s_1 = farm.accumulated_rpz.checked_mul(farm.total_shares_z).unwrap();
-            let invariant = FixedU128::from((s_0, ONE)) / FixedU128::from((s_1, ONE));
+                .checked_mul(&FixedU128::from((farm.total_shares_z, ONE))).unwrap()
+                .checked_add(&FixedU128::from((reward, ONE))).unwrap();
+            let s_1 = farm.accumulated_rpz.checked_mul(&FixedU128::from((farm.total_shares_z, ONE))).unwrap();
 
             assert_eq_approx!(
-                invariant,
-                FixedU128::from(1u128),
+                s_0,
+                s_1,
                 FixedU128::from((TOLERANCE, ONE)),
                 "acc_rpz[1] x shares = acc_rpz[0] x shares + reward"
             );
@@ -150,10 +197,10 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(1000))]
+    #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
     fn claim_from_global_farm(
-        (mut global_farm, mut yield_farm, _, _) in get_both_farms_and_current_period_and_yield_farm_rewards()
+        (mut global_farm, mut yield_farm) in get_farms()
     ) {
         new_test_ext().execute_with(|| {
             //NOTE: _0 - before action, _1 - after action
@@ -172,24 +219,21 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(1000))]
+    #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
     fn update_yield_farm(
-        (_, mut yield_farm, current_period, yield_farm_rewards) in get_both_farms_and_current_period_and_yield_farm_rewards(),
-        left_to_distribute in left_to_distribute(),
+        (_, mut yield_farm, current_period, yield_farm_rewards, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
             const GLOBAL_FARM_ID: GlobalFarmId = 1;
-            let global_farm_account = LiquidityMining::farm_account_id(GLOBAL_FARM_ID).unwrap();
             let yield_farm_account = LiquidityMining::farm_account_id(yield_farm.id).unwrap();
-            Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
             //rewads for yield farm are paid from pot account
             let pot_account = LiquidityMining::pot_account_id();
             Tokens::set_balance(Origin::root(), pot_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
             //NOTE: _0 - before action, _1 - after action
-            let global_farm_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
+            let pot_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &pot_account);
             let yield_farm_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &yield_farm_account);
 
             let accumulated_rpvs_0 = yield_farm.accumulated_rpvs;
@@ -198,27 +242,29 @@ proptest! {
                 &mut yield_farm, yield_farm_rewards, current_period, GLOBAL_FARM_ID, REWARD_CURRENCY).unwrap();
 
             //invariant 1
-            let global_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
+            let pot_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &pot_account);
             let yield_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &yield_farm_account);
-            let s_0 = global_farm_balance_0 + yield_farm_balance_0;
-            let s_1 = global_farm_balance_1 + yield_farm_balance_1;
-            let invariant = FixedU128::from((s_0, ONE)) / FixedU128::from((s_1, ONE));
+            let s_0 = pot_balance_0 + yield_farm_balance_0;
+            let s_1 = pot_balance_1 + yield_farm_balance_1;
 
             assert_eq_approx!(
-                invariant,
-                FixedU128::from(1u128),
+                FixedU128::from((s_0, ONE)),
+                FixedU128::from((s_1, ONE)),
                 FixedU128::from((TOLERANCE, ONE)),
                 "invariant: global_farm_balance + yield_farm_balance"
             );
 
             //invariant 2
-            let s_0 = global_farm_balance_0 + accumulated_rpvs_0 * yield_farm.total_valued_shares;
-            let s_1 = global_farm_balance_1 + yield_farm.accumulated_rpz * yield_farm.total_valued_shares;
-            let invariant = FixedU128::from((s_0, ONE)) / FixedU128::from((s_1, ONE));
+            let s_0 = accumulated_rpvs_0
+                .checked_mul(&FixedU128::from((yield_farm.total_valued_shares, ONE))).unwrap()
+                .checked_add(&FixedU128::from((pot_balance_0, ONE))).unwrap();
+            let s_1 = yield_farm.accumulated_rpvs
+                .checked_mul(&FixedU128::from((yield_farm.total_valued_shares, ONE))).unwrap()
+                .checked_add(&FixedU128::from((pot_balance_1, ONE))).unwrap();
 
             assert_eq_approx!(
-                invariant,
-                FixedU128::from(1u128),
+                s_0,
+                s_1,
                 FixedU128::from((TOLERANCE, ONE)),
                 "invariant: global_farm_balance + acc_rpvs * total_valued_shares"
             );
@@ -230,8 +276,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(1000))]
     #[test]
     fn update_global_farm_left_to_distribute_invariant(
-        (mut global_farm, _, current_period, _) in get_both_farms_and_current_period_and_yield_farm_rewards(),
-        left_to_distribute in left_to_distribute(),
+        (mut global_farm, _, current_period, _, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
             const GLOBAL_FARM_ID: GlobalFarmId = 1;
@@ -246,11 +291,10 @@ proptest! {
 
             let s_0 = (left_to_distribute_0 - reward).max(0);
             let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
-            let invariant = FixedU128::from((s_0, ONE)) / FixedU128::from((s_1, ONE));
 
             assert_eq_approx!(
-                invariant,
-                FixedU128::from(1u128),
+                FixedU128::from((s_0, ONE)),
+                FixedU128::from((s_1, ONE)),
                 FixedU128::from((TOLERANCE, ONE)),
                 "left_to_distribute[1] = max(0, left_to_distribute[0] - reward)"
             );

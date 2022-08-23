@@ -102,6 +102,8 @@ pub const KSM_FARM: FarmId = 2;
 pub const GC_FARM: FarmId = 3;
 pub const ACA_FARM: FarmId = 4;
 
+pub const ONE: Balance = 1_000_000_000_000;
+
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -294,8 +296,8 @@ impl Config<Instance1> for Test {
 
 parameter_types! {
     pub const LMPalletId2: PalletId = PalletId(*b"TEST_lm2");
-    pub const MinPlannedYieldingPeriods2: BlockNumber = 100;
-    pub const MinTotalFarmRewards2: Balance = 1_000_000;
+    pub const MinPlannedYieldingPeriods2: BlockNumber = 10;
+    pub const MinTotalFarmRewards2: Balance = 100_000;
     pub const MininumDeposit2: Balance = 1;
     pub const MaxEntriesPerDeposit2: u8 = 1;
 }
@@ -391,7 +393,7 @@ impl Default for ExtBuilder {
                 (DAVE, BSX, INITIAL_BALANCE),
                 (DAVE, KSM, INITIAL_BALANCE),
                 (DAVE, ACA, INITIAL_BALANCE),
-                (GC, BSX, INITIAL_BALANCE),
+                (GC, BSX, INITIAL_BALANCE * ONE),
                 (TREASURY, BSX, 1_000_000_000_000_000_000),
                 (TREASURY, ACA, 1_000_000_000_000_000_000),
                 (TREASURY, HDX, 1_000_000_000_000_000_000),

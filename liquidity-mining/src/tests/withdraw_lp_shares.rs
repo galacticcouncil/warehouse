@@ -55,10 +55,10 @@ fn withdraw_shares_should_work() {
             GlobalFarmData {
                 updated_at: 25,
                 reward_currency: BSX,
-                accumulated_rpz: 3,
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                 total_shares_z: 691_490,
-                accumulated_rewards: 249_650,
-                paid_accumulated_rewards: 1_033_900,
+                accumulated_rewards: 0,
+                paid_accumulated_rewards: 1_283_550,
                 ..get_predefined_global_farm_ins1(2)
             }
         );
@@ -67,8 +67,8 @@ fn withdraw_shares_should_work() {
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 15,
-                accumulated_rpz: 3,
+                accumulated_rpvs: FixedU128::from_inner(17_500_000_000_000_000_000_u128),
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                 total_shares: 566,
                 total_valued_shares: 43_040,
                 entries_count: 2,
@@ -118,9 +118,9 @@ fn withdraw_shares_should_work() {
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 updated_at: 25,
-                accumulated_rpz: 3,
-                accumulated_rewards: 249_650,
-                paid_accumulated_rewards: 1_033_900,
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
+                accumulated_rewards: 0,
+                paid_accumulated_rewards: 1_283_550,
                 total_shares_z: 688_880,
                 ..get_predefined_global_farm_ins1(2)
             }
@@ -131,8 +131,8 @@ fn withdraw_shares_should_work() {
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 15,
-                accumulated_rpz: 3,
+                accumulated_rpvs: FixedU128::from_inner(17_500_000_000_000_000_000_u128),
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                 total_shares: 566,
                 total_valued_shares: 43_040,
                 entries_count: 2,
@@ -144,8 +144,8 @@ fn withdraw_shares_should_work() {
             LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 30,
-                accumulated_rpz: 3,
+                accumulated_rpvs: FixedU128::from_inner(35_000_000_000_000_000_000_u128),
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                 total_shares: 873,
                 total_valued_shares: 47_368,
                 entries_count: 3,
@@ -193,9 +193,9 @@ fn withdraw_shares_should_work() {
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 updated_at: 25,
-                accumulated_rpz: 3,
-                accumulated_rewards: 249_650,
-                paid_accumulated_rewards: 1_033_900,
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
+                accumulated_rewards: 0,
+                paid_accumulated_rewards: 1_283_550,
                 total_shares_z: 494480,
                 ..get_predefined_global_farm_ins1(2)
             }
@@ -205,8 +205,8 @@ fn withdraw_shares_should_work() {
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 15,
-                accumulated_rpz: 3,
+                accumulated_rpvs: FixedU128::from_inner(17_500_000_000_000_000_000_u128),
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                 total_shares: 80,
                 total_valued_shares: 4_160,
                 entries_count: 1,
@@ -255,9 +255,9 @@ fn withdraw_shares_should_work() {
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 updated_at: 25,
-                accumulated_rpz: 3,
-                accumulated_rewards: 249_650,
-                paid_accumulated_rewards: 1_033_900,
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
+                accumulated_rewards: 0,
+                paid_accumulated_rewards: 1_283_550,
                 total_shares_z: 473_680,
                 ..get_predefined_global_farm_ins1(2)
             }
@@ -267,8 +267,8 @@ fn withdraw_shares_should_work() {
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 15,
-                accumulated_rpz: 3,
+                accumulated_rpvs: FixedU128::from_inner(17_500_000_000_000_000_000_u128),
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                 total_shares: 0,
                 total_valued_shares: 0,
                 entries_count: 0,
@@ -310,9 +310,9 @@ fn withdraw_shares_should_work() {
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 updated_at: 25,
-                accumulated_rpz: 3,
-                accumulated_rewards: 249_650,
-                paid_accumulated_rewards: 1_033_900,
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
+                accumulated_rewards: 0,
+                paid_accumulated_rewards: 1_283_550,
                 total_shares_z: 471_680,
                 ..get_predefined_global_farm_ins1(2)
             }
@@ -322,8 +322,8 @@ fn withdraw_shares_should_work() {
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 15,
-                accumulated_rpz: 3,
+                accumulated_rpvs: FixedU128::from_inner(17_500_000_000_000_000_000_u128),
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                 total_shares: 0,
                 total_valued_shares: 0,
                 ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
@@ -334,8 +334,8 @@ fn withdraw_shares_should_work() {
             LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 30,
-                accumulated_rpz: 3,
+                accumulated_rpvs: FixedU128::from_inner(35_000_000_000_000_000_000_u128),
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                 total_shares: 848,
                 total_valued_shares: 47_168,
                 entries_count: 2,
@@ -384,9 +384,9 @@ fn withdraw_shares_should_work() {
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 updated_at: 25,
-                accumulated_rpz: 3,
-                accumulated_rewards: 249_650,
-                paid_accumulated_rewards: 1_033_900,
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
+                accumulated_rewards: 0,
+                paid_accumulated_rewards: 1_283_550,
                 total_shares_z: 464_000,
                 ..get_predefined_global_farm_ins1(2)
             }
@@ -396,8 +396,8 @@ fn withdraw_shares_should_work() {
             LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 30,
-                accumulated_rpz: 3,
+                accumulated_rpvs: FixedU128::from_inner(35_000_000_000_000_000_000_u128),
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                 total_shares: 800,
                 total_valued_shares: 46_400,
                 entries_count: 1,
@@ -444,9 +444,9 @@ fn withdraw_shares_should_work() {
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 updated_at: 25,
-                accumulated_rpz: 3,
-                accumulated_rewards: 249_650,
-                paid_accumulated_rewards: 1_033_900,
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
+                accumulated_rewards: 0,
+                paid_accumulated_rewards: 1_283_550,
                 total_shares_z: 0,
                 ..get_predefined_global_farm_ins1(2)
             }
@@ -456,8 +456,8 @@ fn withdraw_shares_should_work() {
             LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 25,
-                accumulated_rpvs: 30,
-                accumulated_rpz: 3,
+                accumulated_rpvs: FixedU128::from_inner(35_000_000_000_000_000_000_u128),
+                accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                 total_shares: 0,
                 total_valued_shares: 0,
                 entries_count: 0,
@@ -505,7 +505,7 @@ fn withdraw_shares_should_work() {
                 yield_farm_entries: vec![YieldFarmEntry {
                     global_farm_id,
                     yield_farm_id: CHARLIE_ACA_KSM_YIELD_FARM_ID,
-                    accumulated_rpvs: 0,
+                    accumulated_rpvs: Zero::zero(),
                     accumulated_claimed_rewards: 0,
                     entered_at: 18,
                     updated_at: 18,

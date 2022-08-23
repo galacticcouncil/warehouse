@@ -49,7 +49,7 @@ fn resume_yield_farm_should_work() {
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 state: FarmState::Active,
-                accumulated_rpz: 62_987,
+                accumulated_rpz: FixedU128::from_inner(62_987_640_859_560_351_886_455_u128),
                 multiplier: new_multiplier,
                 updated_at: 134_200,
                 ..yield_farm
@@ -61,8 +61,8 @@ fn resume_yield_farm_should_work() {
             GlobalFarmData {
                 total_shares_z: global_farm.total_shares_z + yield_farm_stake_in_global_farm,
                 updated_at: 134_200,
-                accumulated_rpz: 62_987,
-                accumulated_rewards: 29_998_966_100,
+                accumulated_rpz: FixedU128::from_inner(62_987_640_859_560_351_886_455_u128),
+                accumulated_rewards: 29_998_716_450,
                 ..global_farm
             }
         );

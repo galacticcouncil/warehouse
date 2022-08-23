@@ -22,8 +22,8 @@ use mock::{
     AMM_POOLS, BOB, BSX, BSX_ACA_AMM, BSX_ACA_SHARE_ID, BSX_ACA_YIELD_FARM_ID, BSX_DOT_AMM, BSX_DOT_SHARE_ID,
     BSX_DOT_YIELD_FARM_ID, BSX_ETH_AMM, BSX_ETH_SHARE_ID, BSX_FARM, BSX_HDX_AMM, BSX_HDX_SHARE_ID, BSX_KSM_AMM,
     BSX_KSM_SHARE_ID, BSX_KSM_YIELD_FARM_ID, BSX_TKN1_AMM, BSX_TKN1_SHARE_ID, BSX_TKN2_AMM, BSX_TKN2_SHARE_ID, CHARLIE,
-    DAVE, DOT, ETH, EVE, GC, GC_FARM, HDX, INITIAL_BALANCE, KSM, KSM_DOT_AMM, KSM_DOT_SHARE_ID, KSM_FARM, TKN1, TKN2,
-    TREASURY,
+    DAVE, DOT, ETH, EVE, GC, GC_FARM, HDX, INITIAL_BALANCE, KSM, KSM_DOT_AMM, KSM_DOT_SHARE_ID, KSM_FARM, ONE, TKN1,
+    TKN2, TREASURY,
 };
 
 use frame_support::{assert_err, assert_noop, assert_ok};
@@ -49,7 +49,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         owner: ALICE,
         incentivized_asset: BSX,
         max_reward_per_period: 333_333_333,
-        accumulated_rpz: 0,
+        accumulated_rpz: Zero::zero(),
         yield_farms_count: (0, 0),
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
@@ -68,7 +68,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         owner: BOB,
         incentivized_asset: BSX,
         max_reward_per_period: 200_000,
-        accumulated_rpz: 0,
+        accumulated_rpz: Zero::zero(),
         yield_farms_count: (0, 0),
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
@@ -87,7 +87,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         owner: GC,
         incentivized_asset: BSX,
         max_reward_per_period: 60_000_000,
-        accumulated_rpz: 0,
+        accumulated_rpz: Zero::zero(),
         yield_farms_count: (2, 2),
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
@@ -106,7 +106,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         owner: CHARLIE,
         incentivized_asset: KSM,
         max_reward_per_period: 60_000_000,
-        accumulated_rpz: 0,
+        accumulated_rpz: Zero::zero(),
         yield_farms_count: (1, 1),
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
@@ -125,7 +125,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         owner: DAVE,
         incentivized_asset: TKN1,
         max_reward_per_period: 333_333_333,
-        accumulated_rpz: 0,
+        accumulated_rpz: Zero::zero(),
         yield_farms_count: (0, 0),
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
@@ -144,7 +144,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         owner: EVE,
         incentivized_asset: BSX,
         max_reward_per_period: 333_333_333,
-        accumulated_rpz: 0,
+        accumulated_rpz: Zero::zero(),
         yield_farms_count: (0, 0),
         paid_accumulated_rewards: 0,
         total_shares_z: 0,
@@ -247,6 +247,7 @@ pub mod create_yield_farm;
 pub mod deposit_lp_shares;
 pub mod destroy_global_farm;
 pub mod destroy_yield_farm;
+pub mod full_run;
 pub mod invariants;
 pub mod mock;
 pub mod redeposit_lp_shares;

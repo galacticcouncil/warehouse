@@ -302,7 +302,7 @@ pub mod pallet {
         /// Global farm accumulated reward per share was updated.
         GlobalFarmAccRPZUpdated {
             global_farm_id: GlobalFarmId,
-            accumulated_rpz: Balance,
+            accumulated_rpz: FixedU128,
             total_shares_z: Balance,
         },
 
@@ -310,7 +310,7 @@ pub mod pallet {
         YieldFarmAccRPVSUpdated {
             global_farm_id: GlobalFarmId,
             yield_farm_id: YieldFarmId,
-            accumulated_rpvs: Balance,
+            accumulated_rpvs: FixedU128,
             total_valued_shares: Balance,
         },
     }

@@ -29,8 +29,8 @@ fn claim_rewards_should_work() {
         let bsx_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
         let bsx_tkn1_yield_farm_reward_balance = Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account);
 
-        let expected_claimed_rewards = 19_976;
-        let unclaimable_rewards = 17_524;
+        let expected_claimed_rewards = 23_306;
+        let unclaimable_rewards = 20_444;
 
         //claim A1.1  (dep. A1 1-th time)
         pretty_assertions::assert_eq!(
@@ -57,7 +57,7 @@ fn claim_rewards_should_work() {
                 yield_farm_entries: vec![YieldFarmEntry {
                     global_farm_id,
                     yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
-                    accumulated_rpvs: 0,
+                    accumulated_rpvs: Zero::zero(),
                     accumulated_claimed_rewards: expected_claimed_rewards,
                     entered_at: 18,
                     updated_at: 25,
@@ -86,8 +86,8 @@ fn claim_rewards_should_work() {
         let bsx_tkn2_yield_farm_reward_balance = Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account);
         let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
 
-        let expected_claimed_rewards = 2_734;
-        let unclaimable_rewards = 2_486;
+        let expected_claimed_rewards = 3_417;
+        let unclaimable_rewards = 3_108;
 
         pretty_assertions::assert_eq!(
             LiquidityMining::claim_rewards(
@@ -114,7 +114,7 @@ fn claim_rewards_should_work() {
                     global_farm_id,
                     yield_farm_id: GC_BSX_TKN2_YIELD_FARM_ID,
                     valued_shares: 261,
-                    accumulated_rpvs: 30,
+                    accumulated_rpvs: FixedU128::from(35),
                     accumulated_claimed_rewards: expected_claimed_rewards,
                     entered_at: 25,
                     updated_at: 30,
@@ -129,10 +129,10 @@ fn claim_rewards_should_work() {
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 updated_at: 30,
-                accumulated_rpz: 5,
+                accumulated_rpz: FixedU128::from(6),
                 total_shares_z: 703_990,
-                accumulated_rewards: 1_057_045,
-                paid_accumulated_rewards: 1_986_480,
+                accumulated_rewards: 569_250,
+                paid_accumulated_rewards: 2_474_275,
                 ..get_predefined_global_farm_ins1(2)
             }
         );
@@ -141,8 +141,8 @@ fn claim_rewards_should_work() {
             LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 30,
-                accumulated_rpvs: 50,
-                accumulated_rpz: 5,
+                accumulated_rpvs: FixedU128::from(60),
+                accumulated_rpz: FixedU128::from(6),
                 total_shares: 960,
                 total_valued_shares: 47_629,
                 entries_count: 4,
@@ -156,7 +156,7 @@ fn claim_rewards_should_work() {
             alice_bsx_balance + expected_claimed_rewards
         );
 
-        let yield_farm_claim_from_global_farm = 952_580;
+        let yield_farm_claim_from_global_farm = 1_190_725;
         pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account),
             bsx_tkn2_yield_farm_reward_balance + yield_farm_claim_from_global_farm - expected_claimed_rewards
@@ -169,8 +169,8 @@ fn claim_rewards_should_work() {
         let bst_tkn1_yield_farm_reward_balance = Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account);
         let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
 
-        let expected_claimed_rewards = 7_428_811;
-        let unclaimable_rewards = 288_713;
+        let expected_claimed_rewards = 7_437_514;
+        let unclaimable_rewards = 289_180;
 
         pretty_assertions::assert_eq!(
             LiquidityMining::claim_rewards(
@@ -197,8 +197,8 @@ fn claim_rewards_should_work() {
                     global_farm_id,
                     yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
                     valued_shares: 2_500,
-                    accumulated_rpvs: 0,
-                    accumulated_claimed_rewards: 7_448_787,
+                    accumulated_rpvs: Zero::zero(),
+                    accumulated_claimed_rewards: 7_460_820,
                     entered_at: 18,
                     updated_at: 1_258,
                     _phantom: PhantomData::default(),
@@ -213,10 +213,10 @@ fn claim_rewards_should_work() {
             GlobalFarmData {
                 updated_at: 1_258,
                 max_reward_per_period: 60_000_000,
-                accumulated_rpz: 619,
+                accumulated_rpz: FixedU128::from(620),
                 total_shares_z: 703_990,
-                accumulated_rewards: 293_043_705,
-                paid_accumulated_rewards: 142_249_680,
+                accumulated_rewards: 29_2442_060,
+                paid_accumulated_rewards: 142_851_325,
                 ..get_predefined_global_farm_ins1(2)
             }
         );
@@ -225,8 +225,8 @@ fn claim_rewards_should_work() {
             LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 1_258,
-                accumulated_rpvs: 3_095,
-                accumulated_rpz: 619,
+                accumulated_rpvs: FixedU128::from(3_100),
+                accumulated_rpz: FixedU128::from(620),
                 total_shares: 616,
                 total_valued_shares: 45_540,
                 entries_count: 3,
@@ -238,8 +238,8 @@ fn claim_rewards_should_work() {
             LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 30,
-                accumulated_rpvs: 50,
-                accumulated_rpz: 5,
+                accumulated_rpvs: FixedU128::from(60),
+                accumulated_rpz: FixedU128::from(6),
                 total_shares: 960,
                 total_valued_shares: 47_629,
                 entries_count: 4,
@@ -253,7 +253,7 @@ fn claim_rewards_should_work() {
             alice_bsx_balance + expected_claimed_rewards
         );
 
-        let yield_farm_claim_from_global_farm = 140_263_200;
+        let yield_farm_claim_from_global_farm = 140_377_050;
         pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account),
             bst_tkn1_yield_farm_reward_balance + yield_farm_claim_from_global_farm - expected_claimed_rewards
@@ -268,8 +268,8 @@ fn claim_rewards_should_work() {
         set_block_number(1_800); //period 18
 
         let global_farm_id = CHARLIE_FARM;
-        let expected_claimed_rewards = 39_953; //ACA
-        let unclaimable_rewards = 35_047;
+        let expected_claimed_rewards = 46_612; //ACA
+        let unclaimable_rewards = 40_888;
         let deposited_amount = 50;
         let deposit_id = 1;
         assert_ok!(LiquidityMining::deposit_lp_shares(
@@ -288,7 +288,7 @@ fn claim_rewards_should_work() {
                 yield_farm_entries: vec![YieldFarmEntry {
                     global_farm_id,
                     yield_farm_id: CHARLIE_ACA_KSM_YIELD_FARM_ID,
-                    accumulated_rpvs: 0,
+                    accumulated_rpvs: Zero::zero(),
                     accumulated_claimed_rewards: 0,
                     entered_at: 18,
                     updated_at: 18,
@@ -344,7 +344,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     valued_shares: 2_500,
                     yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
                     accumulated_claimed_rewards: 0,
-                    accumulated_rpvs: 0,
+                    accumulated_rpvs: Zero::zero(),
                     entered_at: 18,
                     updated_at: 18,
                     _phantom: PhantomData::default(),
@@ -354,7 +354,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     valued_shares: 4_000,
                     yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
                     accumulated_claimed_rewards: 0,
-                    accumulated_rpvs: 0,
+                    accumulated_rpvs: Zero::zero(),
                     entered_at: 50,
                     updated_at: 50,
                     _phantom: PhantomData::default(),
@@ -364,7 +364,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     valued_shares: 5_000,
                     yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
                     accumulated_claimed_rewards: 0,
-                    accumulated_rpvs: 0,
+                    accumulated_rpvs: Zero::zero(),
                     entered_at: 800,
                     updated_at: 800,
                     _phantom: PhantomData::default(),
@@ -402,7 +402,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 FAIL_ON_DOUBLECLAIM
             )
             .unwrap(),
-            (GC_FARM, BSX, 62_065_661, 309_339)
+            (GC_FARM, BSX, 62_078_099, 309_401)
         );
 
         let deposit = LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap();
@@ -413,8 +413,8 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     global_farm_id: GC_FARM,
                     valued_shares: 2_500,
                     yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
-                    accumulated_claimed_rewards: 62_065_661,
-                    accumulated_rpvs: 0,
+                    accumulated_claimed_rewards: 62_078_099,
+                    accumulated_rpvs: Zero::zero(),
                     entered_at: 18,
                     updated_at: 10_000,
                     _phantom: PhantomData::default(),
@@ -424,7 +424,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     valued_shares: 4_000,
                     yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
                     accumulated_claimed_rewards: 7_238_095,
-                    accumulated_rpvs: 0,
+                    accumulated_rpvs: Zero::zero(),
                     entered_at: 50,
                     updated_at: 1_000,
                     _phantom: PhantomData::default(),
@@ -434,7 +434,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     valued_shares: 5_000,
                     yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
                     accumulated_claimed_rewards: 0,
-                    accumulated_rpvs: 0,
+                    accumulated_rpvs: Zero::zero(),
                     entered_at: 800,
                     updated_at: 800,
                     _phantom: PhantomData::default(),
@@ -483,8 +483,8 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     global_farm_id: GC_FARM,
                     valued_shares: 2_500,
                     yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
-                    accumulated_claimed_rewards: 62_065_661,
-                    accumulated_rpvs: 0,
+                    accumulated_claimed_rewards: 62_078_099,
+                    accumulated_rpvs: Zero::zero(),
                     entered_at: 18,
                     updated_at: 10_000,
                     _phantom: PhantomData::default(),
@@ -494,7 +494,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     valued_shares: 4_000,
                     yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
                     accumulated_claimed_rewards: 7_238_095,
-                    accumulated_rpvs: 0,
+                    accumulated_rpvs: Zero::zero(),
                     entered_at: 50,
                     updated_at: 1_000,
                     _phantom: PhantomData::default(),
@@ -504,7 +504,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     valued_shares: 5_000,
                     yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
                     accumulated_claimed_rewards: 1_666_666,
-                    accumulated_rpvs: 0,
+                    accumulated_rpvs: Zero::zero(),
                     entered_at: 800,
                     updated_at: 1_000,
                     _phantom: PhantomData::default(),
@@ -540,8 +540,8 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
                     global_farm_id,
                     yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
                     valued_shares: 2_500,
-                    accumulated_rpvs: 0,
-                    accumulated_claimed_rewards: 19_976,
+                    accumulated_rpvs: Zero::zero(),
+                    accumulated_claimed_rewards: 23_306,
                     entered_at: 18,
                     updated_at: 25,
                     _phantom: PhantomData::default(),
@@ -551,10 +551,10 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
             },
         );
 
-        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &ALICE), alice_bsx_balance + 19_976);
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &ALICE), alice_bsx_balance + 23_306);
         pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account),
-            bsx_tkn1_yield_farm_reward_balance - 19_976
+            bsx_tkn1_yield_farm_reward_balance - 23_306
         );
 
         //Second claim should fail.
@@ -582,8 +582,8 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
         //Stop yield farming before claiming.
         assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
-        let expected_claimed_rewards = 19_976;
-        let unclaimable_rewards = 17_524;
+        let expected_claimed_rewards = 23_306;
+        let unclaimable_rewards = 20_444;
 
         //claim A1.1  (dep. A1 1-th time)
         pretty_assertions::assert_eq!(
@@ -606,7 +606,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                     global_farm_id,
                     yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
                     valued_shares: 2_500,
-                    accumulated_rpvs: 0,
+                    accumulated_rpvs: Zero::zero(),
                     accumulated_claimed_rewards: expected_claimed_rewards,
                     entered_at: 18,
                     updated_at: 25,
@@ -671,8 +671,8 @@ fn claim_rewards_doubleclaim_should_work() {
         )
         .unwrap();
 
-        pretty_assertions::assert_eq!(claimable_rewards, 19_976);
-        pretty_assertions::assert_eq!(unclaimable_rewards, 17_524);
+        pretty_assertions::assert_eq!(claimable_rewards, 23_306);
+        pretty_assertions::assert_eq!(unclaimable_rewards, 20_444);
 
         //Second claim in the same period should return 0 for `claimable_rewards` and real value for
         //`unclaimable_rewards`
@@ -685,7 +685,7 @@ fn claim_rewards_doubleclaim_should_work() {
         .unwrap();
 
         pretty_assertions::assert_eq!(claimable_rewards, 0);
-        pretty_assertions::assert_eq!(unclaimable_rewards, 17_524);
+        pretty_assertions::assert_eq!(unclaimable_rewards, 20_444);
 
         //check if double claim fails
         assert_noop!(

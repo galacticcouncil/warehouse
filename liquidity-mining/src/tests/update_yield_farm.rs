@@ -94,8 +94,8 @@ fn update_yield_farm_should_work() {
             LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
             YieldFarmData {
                 updated_at: 50,
-                accumulated_rpvs: 30_015,
-                accumulated_rpz: 6,
+                accumulated_rpvs: FixedU128::from_inner(32_921_163_394_817_742_643_829_u128),
+                accumulated_rpz: FixedU128::from_inner(6_790_366_340_394_671_545_u128),
                 multiplier: new_multiplier,
                 ..yield_farm
             }
@@ -105,10 +105,10 @@ fn update_yield_farm_should_work() {
             LiquidityMining::global_farm(GC_FARM).unwrap(),
             GlobalFarmData {
                 updated_at: 50,
-                accumulated_rpz: 6,
+                accumulated_rpz: FixedU128::from_inner(6_790_366_340_394_671_545_u128),
                 total_shares_z: 228_176_290,
-                accumulated_rewards: global_farm.accumulated_rewards + 133_800_000,
-                paid_accumulated_rewards: global_farm.paid_accumulated_rewards + 1_366_200_000,
+                accumulated_rewards: global_farm.accumulated_rewards + 1_567_169,
+                paid_accumulated_rewards: global_farm.paid_accumulated_rewards + 1_498_432_831,
                 ..global_farm
             }
         );
@@ -116,7 +116,7 @@ fn update_yield_farm_should_work() {
         pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 28_498_716_450);
         pretty_assertions::assert_eq!(
             Tokens::free_balance(BSX, &yield_farm_account),
-            yield_farm_bsx_balance + 1_366_200_000 //1_366_200_000 - yield farm claim from global farm
+            yield_farm_bsx_balance + 1_498_432_831 //1_498_432_831 - yield farm claim from global farm
         );
     });
 }

@@ -120,6 +120,14 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_same_pooltype() 
             (PoolType::XYK, XYK_SELL_CALCULATION_RESULT, AUSD, MOVR),
             (PoolType::XYK, XYK_SELL_CALCULATION_RESULT, MOVR, KSM),
         ]);
+        expect_events(vec![
+            Event::TradeIsExecuted {
+                asset_in: BSX,
+                asset_out: KSM,
+                amount_in: amount_to_sell,
+                amount_out: XYK_SELL_CALCULATION_RESULT,
+            }.into(),
+        ]);
     });
 }
 
@@ -161,6 +169,15 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_different_pool_t
             (PoolType::XYK, amount_to_sell, BSX, MOVR),
             (PoolType::Stableswap(AUSD), XYK_SELL_CALCULATION_RESULT, MOVR, AUSD),
             (PoolType::Omnipool, STABLESWAP_SELL_CALCULATION_RESULT, AUSD, KSM),
+        ]);
+
+        expect_events(vec![
+            Event::TradeIsExecuted {
+                asset_in: BSX,
+                asset_out: KSM,
+                amount_in: amount_to_sell,
+                amount_out: OMNIPOOL_SELL_CALCULATION_RESULT,
+            }.into(),
         ]);
     });
 }

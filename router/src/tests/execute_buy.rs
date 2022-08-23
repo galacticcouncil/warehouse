@@ -121,6 +121,15 @@ fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
             (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, AUSD, MOVR),
             (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, MOVR, KSM),
         ]);
+
+        expect_events(vec![
+            Event::TradeIsExecuted {
+                asset_in: BSX,
+                asset_out: KSM,
+                amount_in: XYK_BUY_CALCULATION_RESULT,
+                amount_out: amount_to_buy,
+            }.into(),
+        ]);
     });
 }
 
@@ -162,6 +171,15 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
             (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, MOVR),
             (PoolType::Stableswap(AUSD), STABLESWAP_BUY_CALCULATION_RESULT, MOVR, AUSD),
             (PoolType::Omnipool, OMNIPOOL_BUY_CALCULATION_RESULT, AUSD, KSM),
+        ]);
+
+        expect_events(vec![
+            Event::TradeIsExecuted {
+                asset_in: BSX,
+                asset_out: KSM,
+                amount_in: XYK_BUY_CALCULATION_RESULT,
+                amount_out: amount_to_buy,
+            }.into(),
         ]);
     });
 }

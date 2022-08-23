@@ -16,7 +16,7 @@
 // limitations under the License.
 
 use crate::types::Trade;
-use crate::Error;
+use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
 use hydradx_traits::router::PoolType;
 use pretty_assertions::assert_eq;
@@ -44,11 +44,19 @@ fn execute_buy_should_when_route_has_single_trade() {
 
         //Assert
         assert_executed_sell_trades(vec![(PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, AUSD)]);
+        expect_events(vec![
+            Event::TradeIsExecuted {
+                asset_in: BSX,
+                asset_out: AUSD,
+                amount_in: XYK_BUY_CALCULATION_RESULT,
+                amount_out: amount_to_buy,
+            }.into(),
+        ]);
     });
 }
 
 #[test]
-fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_error() {
+fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_error() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, BSX, INVALID_CALCULATION_AMOUNT)])
         .build()

@@ -16,7 +16,7 @@
 // limitations under the License.
 
 use crate::types::Trade;
-use crate::Error;
+use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
 use hydradx_traits::router::PoolType;
 use pretty_assertions::assert_eq;
@@ -44,6 +44,14 @@ fn execute_sell_should_work_when_route_has_single_trade() {
 
         //Assert
         assert_executed_sell_trades(vec![(PoolType::XYK, amount_to_sell, BSX, AUSD)]);
+        expect_events(vec![
+            Event::TradeIsExecuted {
+                asset_in: BSX,
+                asset_out: AUSD,
+                amount_in: amount_to_sell,
+                amount_out: XYK_SELL_CALCULATION_RESULT,
+            }.into(),
+        ]);
     });
 }
 

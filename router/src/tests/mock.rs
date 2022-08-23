@@ -31,6 +31,7 @@ use std::borrow::Borrow;
 use std::ops::Deref;
 use std::{cell::RefCell};
 use crate::types::Trade;
+use pretty_assertions::assert_eq;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -185,7 +186,9 @@ impl ExtBuilder {
             .assimilate_storage(&mut t)
             .unwrap();
 
-        t.into()
+        let mut ext = sp_io::TestExternalities::new(t);
+        ext.execute_with(|| System::set_block_number(1));
+        ext
     }
 }
 
@@ -281,3 +284,18 @@ pub fn assert_executed_sell_trades(expected_trades: Vec<(PoolType<AssetId>, Bala
         assert_eq!(expected_trades, trades);
     });
 }
+
+pub fn expect_events(e: Vec<Event>) {
+    let last_events = last_events(e.len());
+    assert_eq!(last_events, e);
+}
+fn last_events(n: usize) -> Vec<Event> {
+    frame_system::Pallet::<Test>::events()
+        .into_iter()
+        .rev()
+        .take(n)
+        .rev()
+        .map(|e| e.event)
+        .collect()
+}
+

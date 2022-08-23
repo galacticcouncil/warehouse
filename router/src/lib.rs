@@ -63,7 +63,14 @@ pub mod pallet {
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
-    pub enum Event<T: Config> {}
+    pub enum Event<T: Config> {
+        TradeIsExecuted {
+            asset_in: T::AssetId,
+            asset_out: T::AssetId,
+            amount_in: T::Balance,
+            amount_out: T::Balance,
+        }
+    }
 
     #[pallet::error]
     pub enum Error<T> {
@@ -82,21 +89,21 @@ pub mod pallet {
             origin: OriginFor<T>,
             asset_in: T::AssetId,
             asset_out: T::AssetId,
-            amount: T::Balance,
+            amount_in: T::Balance,
             limit: T::Balance,
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(route.len() > 0, Error::<T>::RouteHasNoTrades);
             ensure!(
-                T::Currency::reducible_balance(asset_in, &who, false) >= amount,
+                T::Currency::reducible_balance(asset_in, &who, false) >= amount_in,
                 Error::<T>::InsufficientAssetBalance
             );
 
             //let mut amounts = SmallVec::<T::Balance>::with_capacity(route.len() + 1);
             let mut amounts = Vec::<T::Balance>::with_capacity(route.len() + 1);
 
-            let mut amount = amount;
+            let mut amount = amount_in;
 
             amounts.push(amount);
 
@@ -121,7 +128,12 @@ pub mod pallet {
                     .map_err(|_| Error::<T>::Execution)?;
             }
 
-            // Emit event?
+            Self::deposit_event(Event::TradeIsExecuted {
+                asset_in,
+                asset_out,
+                amount_in,
+                amount_out: last_amount
+            });
             // check asset out balance to verify that who receives at least last_amount
 
             Ok(())
@@ -131,7 +143,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             asset_in: T::AssetId,
             asset_out: T::AssetId,
-            amount: T::Balance,
+            amount_out: T::Balance,
             limit: T::Balance,
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
@@ -139,14 +151,14 @@ pub mod pallet {
             ensure!(route.len() > 0, Error::<T>::RouteHasNoTrades);
 
             ensure!(
-                T::Currency::reducible_balance(asset_in, &who, false) >= amount,
+                T::Currency::reducible_balance(asset_in, &who, false) >= amount_out,
                 Error::<T>::InsufficientAssetBalance
             );
 
             //let mut amounts = SmallVec::<T::Balance>::with_capacity(route.len() + 1);
             let mut amounts = Vec::<T::Balance>::with_capacity(route.len() + 1);
 
-            let mut amount = amount;
+            let mut amount = amount_out;
 
             amounts.push(amount);
 
@@ -171,7 +183,13 @@ pub mod pallet {
                     .map_err(|_| Error::<T>::Execution)?;
             }
 
-            // Emit event?
+            Self::deposit_event(Event::TradeIsExecuted {
+                asset_in,
+                asset_out,
+                amount_in: *last_amount,
+                amount_out
+            });
+
             // check asset out balance to verify that who receives at least last_amount
 
             Ok(())

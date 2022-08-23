@@ -18,7 +18,7 @@
 use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::CheckedMul;
 use frame_support::sp_runtime::{FixedU128, RuntimeDebug};
-use hydradx_traits::AggregatedEntry;
+use hydradx_traits::{AggregatedEntry, Volume};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
     traits::{AtLeast32BitUnsigned, One, SaturatedConversion, Saturating, UniqueSaturatedInto},
@@ -36,10 +36,10 @@ pub type Price = FixedU128;
 
 /// A type representing data produced by a trade.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(RuntimeDebug, Encode, Decode, Copy, Clone, PartialEq, Eq, Default, TypeInfo)]
+#[derive(RuntimeDebug, Encode, Decode, Clone, PartialEq, Eq, Default, TypeInfo)]
 pub struct OracleEntry<BlockNumber> {
     pub price: Price,
-    pub volume: Balance,
+    pub volume: Volume<Balance>,
     pub liquidity: Balance,
     pub timestamp: BlockNumber,
 }
@@ -51,7 +51,7 @@ where
     /// Determine a new entry based on `self` and a previous entry. Adds the volumes together and
     /// takes the values of `self` for the rest.
     pub fn accumulate_volume(&self, previous_entry: &Self) -> Self {
-        let volume = previous_entry.volume.saturating_add(self.volume);
+        let volume = previous_entry.volume.saturating_add(&self.volume);
         Self {
             price: self.price,
             volume,
@@ -87,7 +87,7 @@ where
         let exp_alpha = Price::one() - exp_complement;
 
         let price = price_ema(previous_entry.price, exp_complement, self.price, exp_alpha)?;
-        let volume = balance_ema(previous_entry.volume, exp_complement, self.volume, exp_alpha)?;
+        let volume = volume_ema(&previous_entry.volume, exp_complement, &self.volume, exp_alpha)?;
         let liquidity = balance_ema(previous_entry.liquidity, exp_complement, self.liquidity, exp_alpha)?;
 
         Some(Self {
@@ -130,6 +130,39 @@ pub fn balance_ema(prev: Balance, prev_weight: FixedU128, incoming: Balance, wei
     Some(new_value)
 }
 
+/// Calculate the next exponential moving average for the given volumes.
+/// `prev` is the previous oracle value, `incoming` is the new value to integrate.
+/// `weight` is the weight of the new value, `prev_weight` is the weight of the previous value.
+///
+/// Note: Just delegates to `balance_ema` under the hood.
+pub fn volume_ema(
+    prev: &Volume<Balance>,
+    prev_weight: FixedU128,
+    incoming: &Volume<Balance>,
+    weight: FixedU128,
+) -> Option<Volume<Balance>> {
+    debug_assert!(prev_weight + weight == Price::one());
+    let Volume {
+        a_in: p_a_in,
+        b_out: p_b_out,
+        a_out: p_a_out,
+        b_in: p_b_in,
+    } = prev;
+    let Volume {
+        a_in,
+        b_out,
+        a_out,
+        b_in,
+    } = incoming;
+    let volume = Volume {
+        a_in: balance_ema(*p_a_in, prev_weight, *a_in, weight)?,
+        b_out: balance_ema(*p_b_out, prev_weight, *b_out, weight)?,
+        a_out: balance_ema(*p_a_out, prev_weight, *a_out, weight)?,
+        b_in: balance_ema(*p_b_in, prev_weight, *b_in, weight)?,
+    };
+    Some(volume)
+}
+
 impl<BlockNumber> From<OracleEntry<BlockNumber>> for AggregatedEntry<Balance, Price> {
     fn from(entry: OracleEntry<BlockNumber>) -> Self {
         Self {
@@ -140,8 +173,8 @@ impl<BlockNumber> From<OracleEntry<BlockNumber>> for AggregatedEntry<Balance, Pr
     }
 }
 
-impl<BlockNumber> From<(Price, Balance, Balance, BlockNumber)> for OracleEntry<BlockNumber> {
-    fn from((price, volume, liquidity, timestamp): (Price, Balance, Balance, BlockNumber)) -> Self {
+impl<BlockNumber> From<(Price, Volume<Balance>, Balance, BlockNumber)> for OracleEntry<BlockNumber> {
+    fn from((price, volume, liquidity, timestamp): (Price, Volume<Balance>, Balance, BlockNumber)) -> Self {
         Self {
             price,
             volume,

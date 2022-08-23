@@ -23,6 +23,7 @@ use frame_support::sp_runtime::FixedPointNumber;
 use hydradx_traits::{
     AggregatedEntry, AggregatedOracle, AggregatedPriceOracle, OnLiquidityChangedHandler, OnTradeHandler,
     OraclePeriod::{self, *},
+    Volume,
 };
 use sp_arithmetic::traits::Saturating;
 use sp_std::collections::btree_map::BTreeMap;
@@ -96,23 +97,23 @@ pub mod pallet {
     #[pallet::genesis_config]
     #[derive(Default)]
     pub struct GenesisConfig {
-        pub price_data: Vec<((AssetId, AssetId), Price, Balance, Balance)>,
+        pub price_data: Vec<((AssetId, AssetId), Price, Balance)>,
     }
 
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
-            for &(asset_pair, price, volume, liquidity) in self.price_data.iter() {
+            for &(asset_pair, price, liquidity) in self.price_data.iter() {
                 let pair_id = derive_name(asset_pair.0, asset_pair.1);
 
-                let price_entry: OracleEntry<T::BlockNumber> = OracleEntry {
+                let entry: OracleEntry<T::BlockNumber> = OracleEntry {
                     price,
-                    volume,
+                    volume: Volume::default(),
                     liquidity,
                     timestamp: T::BlockNumber::zero(),
                 };
                 for period in OraclePeriod::all_periods() {
-                    Pallet::<T>::update_oracle(&pair_id, into_blocks::<T>(period), &price_entry);
+                    Pallet::<T>::update_oracle(&pair_id, into_blocks::<T>(period), entry.clone());
                 }
             }
         }
@@ -160,20 +161,21 @@ impl<T: Config> Pallet<T> {
         // update oracles based on data accumulated during the block
         for (pair_id, oracle_entry) in Accumulator::<T>::take().into_iter() {
             for period in OraclePeriod::all_periods() {
-                Self::update_oracle(&pair_id, into_blocks::<T>(period), &oracle_entry);
+                Self::update_oracle(&pair_id, into_blocks::<T>(period), oracle_entry.clone());
             }
         }
     }
 
-    fn update_oracle(pair_id: &AssetPairId, period: T::BlockNumber, oracle_entry: &OracleEntry<T::BlockNumber>) {
+    fn update_oracle(pair_id: &AssetPairId, period: T::BlockNumber, oracle_entry: OracleEntry<T::BlockNumber>) {
         Oracles::<T>::mutate(pair_id, period, |oracle| {
             let new_oracle = oracle
+                .as_ref()
                 .map(|(prev_entry, init)| {
                     (
                         oracle_entry
-                            .calculate_new_ema_entry(period, &prev_entry)
-                            .unwrap_or(prev_entry),
-                        init,
+                            .calculate_new_ema_entry(period, prev_entry)
+                            .unwrap_or(prev_entry.clone()),
+                        *init,
                     )
                 })
                 .unwrap_or((oracle_entry.clone(), <frame_system::Pallet<T>>::block_number()));
@@ -191,9 +193,10 @@ impl<T: Config> Pallet<T> {
         let (mut immediate, init) = Self::oracle(pair_id, into_blocks::<T>(&LastBlock))?;
         if immediate.timestamp < parent {
             immediate.timestamp = parent;
-            Oracles::<T>::insert(pair_id, into_blocks::<T>(&LastBlock), &(immediate, init));
+            Oracles::<T>::insert(pair_id, into_blocks::<T>(&LastBlock), &(immediate.clone(), init));
         }
 
+        let immediate = immediate;
         let mut r = None;
         OraclePeriod::non_immediate_periods()
             .iter()
@@ -203,7 +206,7 @@ impl<T: Config> Pallet<T> {
                     immediate
                         .calculate_new_ema_entry(into_blocks::<T>(p), &entry)
                         .map(|new_entry| {
-                            Oracles::<T>::insert(pair_id, into_blocks::<T>(&period), &(new_entry, init));
+                            Oracles::<T>::insert(pair_id, into_blocks::<T>(&period), &(new_entry.clone(), init));
                             new_entry
                         })
                         .unwrap_or(entry)
@@ -228,30 +231,28 @@ impl<T: Config> Pallet<T> {
 pub struct OnActivityHandler<T>(PhantomData<T>);
 
 impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
-    fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liquidity: Balance) {
-        let (price, amount) =
-            if let Some(price_tuple) = determine_normalized_price(asset_a, asset_b, amount_in, amount_out) {
-                price_tuple
-            } else {
-                // We don't want to throw an error here because this method is used in different extrinsics.
-                // Invalid prices are ignored and not added to the queue.
-                return;
-            };
-
-        // We assume that zero values are not valid.
-        // Zero values are ignored and not added to the queue.
-        if price.is_zero() || amount.is_zero() || liquidity.is_zero() {
+    fn on_trade(asset_in: AssetId, asset_out: AssetId, amount_in: Balance, amount_out: Balance, liquidity: Balance) {
+        // We assume that zero values are not valid and can be ignored.
+        if liquidity.is_zero() {
+            return;
+        }
+        // We don't want to throw an error here because this method is used in different extrinsics.
+        let price = determine_normalized_price(asset_in, asset_out, amount_in, amount_out).unwrap_or(Zero::zero());
+        // We assume that zero values are not valid and are ignored.
+        if price.is_zero() || amount_in.is_zero() || amount_out.is_zero() {
             return;
         }
 
+        let volume = determine_normalized_volume(asset_in, asset_out, amount_in, amount_out);
+
         let timestamp = <frame_system::Pallet<T>>::block_number();
-        let price_entry = OracleEntry {
+        let entry = OracleEntry {
             price,
-            volume: amount,
+            volume,
             liquidity,
             timestamp,
         };
-        Pallet::<T>::on_trade(derive_name(asset_a, asset_b), price_entry);
+        Pallet::<T>::on_trade(derive_name(asset_in, asset_out), entry);
     }
 
     fn on_trade_weight() -> Weight {
@@ -268,30 +269,26 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
         amount_b: Balance,
         liquidity: Balance,
     ) {
-        // We ignore the amount as liquidity changes don't affect trade volume.
-        let (price, _amount) =
-            if let Some(price_tuple) = determine_normalized_price(asset_a, asset_b, amount_a, amount_b) {
-                price_tuple
-            } else {
-                // We don't want to throw an error here because this method is used in different extrinsics.
-                // Invalid prices are ignored and not added to the queue.
-                return;
-            };
-
-        // We assume that zero values are not valid.
-        // Zero values are ignored and not added to the queue.
-        if price.is_zero() || liquidity.is_zero() {
+        // We assume that zero values are not valid and can be ignored.
+        if liquidity.is_zero() {
+            return;
+        }
+        // We don't want to throw an error here because this method is used in different extrinsics.
+        let price = determine_normalized_price(asset_a, asset_b, amount_a, amount_b).unwrap_or(Zero::zero());
+        // We assume that zero values are not valid and are ignored.
+        if price.is_zero() {
             return;
         }
 
         let timestamp = <frame_system::Pallet<T>>::block_number();
-        let price_entry = OracleEntry {
+        let entry = OracleEntry {
             price,
-            volume: 0,
+            // liquidity provision does not count as trade volume
+            volume: Volume::default(),
             liquidity,
             timestamp,
         };
-        Pallet::<T>::on_liquidity_changed(derive_name(asset_a, asset_b), price_entry);
+        Pallet::<T>::on_liquidity_changed(derive_name(asset_a, asset_b), entry);
     }
 
     fn on_liquidity_changed_weight() -> Weight {
@@ -303,13 +300,13 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
 // TODO: extract
 /// Calculate price from ordered assets
 pub fn determine_normalized_price(
-    asset_a: AssetId,
-    asset_b: AssetId,
+    asset_in: AssetId,
+    asset_out: AssetId,
     amount_in: Balance,
     amount_out: Balance,
-) -> Option<(Price, Balance)> {
-    let ordered_asset_pair = ordered_pair(asset_a, asset_b);
-    let (balance_a, balance_b) = if ordered_asset_pair.0 == asset_a {
+) -> Option<Price> {
+    let ordered_asset_pair = ordered_pair(asset_in, asset_out);
+    let (balance_a, balance_b) = if ordered_asset_pair == (asset_in, asset_out) {
         (amount_in, amount_out)
     } else {
         (amount_out, amount_in)
@@ -317,8 +314,21 @@ pub fn determine_normalized_price(
 
     let price_a = Price::checked_from_integer(balance_a)?;
     let price_b = Price::checked_from_integer(balance_b)?;
-    let price = price_a.checked_div(&price_b);
-    price.map(|p| (p, balance_a))
+    price_a.checked_div(&price_b)
+}
+
+pub fn determine_normalized_volume(
+    asset_in: AssetId,
+    asset_out: AssetId,
+    amount_in: Balance,
+    amount_out: Balance,
+) -> Volume<Balance> {
+    let ordered_asset_pair = ordered_pair(asset_in, asset_out);
+    if ordered_asset_pair == (asset_in, asset_out) {
+        Volume::from_a_in_b_out(amount_in, amount_out)
+    } else {
+        Volume::from_a_out_b_in(amount_out, amount_in)
+    }
 }
 
 /// Return ordered asset tuple (A,B) where A < B
@@ -393,6 +403,8 @@ pub enum OracleError {
 impl<T: Config> AggregatedOracle<AssetId, Balance, Price> for Pallet<T> {
     type Error = OracleError;
 
+    // TODO: What to do about switched order of assets? Adjust price and volume? Return predictable
+    // normalized version?
     fn get_entry(
         asset_a: AssetId,
         asset_b: AssetId,

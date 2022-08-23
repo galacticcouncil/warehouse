@@ -24,7 +24,7 @@ use frame_support::sp_runtime::{
     FixedU128,
 };
 use frame_support::traits::{Everything, GenesisBuild};
-use hydradx_traits::AssetPairAccountIdFor;
+use hydradx_traits::{AssetPairAccountIdFor, Volume};
 use price_oracle::OracleEntry;
 use sp_core::H256;
 
@@ -42,13 +42,23 @@ pub const ACA: AssetId = 3_000;
 
 pub const PRICE_ENTRY_1: OracleEntry<BlockNumber> = OracleEntry {
     price: Price::from_inner(2000000000000000000),
-    volume: 1_000,
+    volume: Volume {
+        a_in: 1_000,
+        b_out: 500,
+        a_out: 0,
+        b_in: 0,
+    },
     liquidity: 2_000,
     timestamp: 5,
 };
 pub const PRICE_ENTRY_2: OracleEntry<BlockNumber> = OracleEntry {
     price: Price::from_inner(5000000000000000000),
-    volume: 3_000,
+    volume: Volume {
+        a_in: 0,
+        b_out: 0,
+        a_out: 2_000,
+        b_in: 2_000,
+    },
     liquidity: 4_000,
     timestamp: 5,
 };
@@ -124,11 +134,11 @@ impl Config for Test {
 
 #[derive(Default)]
 pub struct ExtBuilder {
-    pub price_data: Vec<((AssetId, AssetId), Price, Balance, Balance)>,
+    pub price_data: Vec<((AssetId, AssetId), Price, Balance)>,
 }
 
 impl ExtBuilder {
-    pub fn with_price_data(mut self, data: Vec<((AssetId, AssetId), Price, Balance, Balance)>) -> Self {
+    pub fn with_price_data(mut self, data: Vec<((AssetId, AssetId), Price, Balance)>) -> Self {
         self.price_data = data;
         self
     }

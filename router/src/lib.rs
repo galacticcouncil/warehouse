@@ -35,6 +35,12 @@ mod tests;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
+//TODO: Dani
+//- add integration tests
+//- refactoring
+//- add API doc
+//- benchmarking
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -99,7 +105,6 @@ pub mod pallet {
                 Error::<T>::InsufficientAssetBalance
             );
 
-            //let mut amounts = SmallVec::<T::Balance>::with_capacity(route.len() + 1);
             let mut amounts = Vec::<T::Balance>::with_capacity(route.len() + 1);
 
             let mut amount = amount_in;
@@ -154,7 +159,6 @@ pub mod pallet {
                 Error::<T>::InsufficientAssetBalance
             );
 
-            //let mut amounts = SmallVec::<T::Balance>::with_capacity(route.len() + 1);
             let mut amounts = Vec::<T::Balance>::with_capacity(route.len() + 1);
 
             let mut amount = amount_out;

@@ -249,12 +249,12 @@ fn ema_works() {
 }
 
 #[test]
-fn ema_does_not_saturate_on_values_smaller_than_u64_max() {
+fn ema_does_not_saturate_on_values_less_or_equal_to_u64_max() {
     let alpha = Price::one();
     let complement = Price::zero();
 
-    let start_balance = 50_000_000_000_000_000_000_000_u128;
-    let incoming_balance = 50_000_000_000_000_000_000_000_u128;
+    let start_balance = u64::MAX as u128;
+    let incoming_balance = u64::MAX as u128;
     let next_balance = balance_ema(start_balance, complement, incoming_balance, alpha);
     assert_eq!(next_balance, Some(incoming_balance));
 }

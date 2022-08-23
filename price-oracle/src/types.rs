@@ -143,10 +143,10 @@ pub fn volume_ema(
 ) -> Option<Volume<Balance>> {
     debug_assert!(prev_weight + weight == Price::one());
     let Volume {
-        a_in: p_a_in,
-        b_out: p_b_out,
-        a_out: p_a_out,
-        b_in: p_b_in,
+        a_in: prev_a_in,
+        b_out: prev_b_out,
+        a_out: prev_a_out,
+        b_in: prev_b_in,
     } = prev;
     let Volume {
         a_in,
@@ -155,10 +155,10 @@ pub fn volume_ema(
         b_in,
     } = incoming;
     let volume = Volume {
-        a_in: balance_ema(*p_a_in, prev_weight, *a_in, weight)?,
-        b_out: balance_ema(*p_b_out, prev_weight, *b_out, weight)?,
-        a_out: balance_ema(*p_a_out, prev_weight, *a_out, weight)?,
-        b_in: balance_ema(*p_b_in, prev_weight, *b_in, weight)?,
+        a_in: balance_ema(*prev_a_in, prev_weight, *a_in, weight)?,
+        b_out: balance_ema(*prev_b_out, prev_weight, *b_out, weight)?,
+        a_out: balance_ema(*prev_a_out, prev_weight, *a_out, weight)?,
+        b_in: balance_ema(*prev_b_in, prev_weight, *b_in, weight)?,
     };
     Some(volume)
 }

@@ -237,24 +237,50 @@ fn ema_works() {
     debug_assert!(alpha <= Price::one());
     let complement = Price::one() - alpha;
 
-    let start_price = Price::saturating_from_integer(4u32);
-    let start_balance = 4u32.into();
+    // price
+    let start_price = 4.into();
+    let incoming_price = 8.into();
+    let next_price = price_ema(start_price, complement, incoming_price, alpha).unwrap();
+    assert_eq!(next_price, 5.into());
 
-    // updates by the correct amount if the value changes
-    let (incoming_price, incoming_balance) = (Price::saturating_from_integer(8u32), 8u32.into());
-    let next_price = price_ema(start_price, complement, incoming_price, alpha);
-    assert_eq!(next_price, Some(Price::saturating_from_integer(5u32)));
-    let next_balance = balance_ema(start_balance, complement, incoming_balance, alpha);
-    assert_eq!(next_balance, Some(5u32.into()));
+    // balance
+    let start_balance = 4u128;
+    let incoming_balance = 8u128;
+    let next_balance = balance_ema(start_balance, complement, incoming_balance, alpha).unwrap();
+    assert_eq!(next_balance, 5u128);
+
+    // volume
+    let start_volume = Volume {
+        a_in: 4u128,
+        b_out: 1u128,
+        a_out: 8u128,
+        b_in: 0u128,
+    };
+    let incoming_volume = Volume {
+        a_in: 8u128,
+        b_out: 1u128,
+        a_out: 4u128,
+        b_in: 0u128,
+    };
+    let next_volume = volume_ema(&start_volume, complement, &incoming_volume, alpha).unwrap();
+    assert_eq!(
+        next_volume,
+        Volume {
+            a_in: 5u128,
+            b_out: 1u128,
+            a_out: 7u128,
+            b_in: 0u128
+        }
+    );
 }
 
 #[test]
-fn ema_does_not_saturate_on_values_less_or_equal_to_u64_max() {
+fn ema_does_not_saturate() {
     let alpha = Price::one();
     let complement = Price::zero();
 
-    let start_balance = u64::MAX as u128;
-    let incoming_balance = u64::MAX as u128;
+    let start_balance = u128::MAX;
+    let incoming_balance = u128::MAX;
     let next_balance = balance_ema(start_balance, complement, incoming_balance, alpha);
     assert_eq!(next_balance, Some(incoming_balance));
 }

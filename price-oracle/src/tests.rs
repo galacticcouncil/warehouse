@@ -215,8 +215,7 @@ fn update_data_should_work() {
 
 #[test]
 fn ema_stays_stable_if_the_value_does_not_change() {
-    const PERIOD: u32 = 7;
-    let alpha = Price::saturating_from_rational(2u32, PERIOD + 1); // EMA with period of 7
+    let alpha = alpha_from_period::<u32>(7);
     debug_assert!(alpha <= Price::one());
     let complement = Price::one() - alpha;
 
@@ -232,8 +231,7 @@ fn ema_stays_stable_if_the_value_does_not_change() {
 
 #[test]
 fn ema_works() {
-    const PERIOD: u32 = 7;
-    let alpha = Price::saturating_from_rational(2u32, PERIOD + 1); // EMA with period of 7
+    let alpha = alpha_from_period::<u32>(7);
     debug_assert!(alpha <= Price::one());
     let complement = Price::one() - alpha;
 
@@ -242,6 +240,11 @@ fn ema_works() {
     let incoming_price = 8.into();
     let next_price = price_ema(start_price, complement, incoming_price, alpha).unwrap();
     assert_eq!(next_price, 5.into());
+
+    let start_price = Price::saturating_from_rational(4, 100);
+    let incoming_price = Price::saturating_from_rational(8, 100);
+    let next_price = price_ema(start_price, complement, incoming_price, alpha).unwrap();
+    assert_eq!(next_price, Price::saturating_from_rational(5, 100));
 
     // balance
     let start_balance = 4u128;
@@ -286,37 +289,43 @@ fn ema_does_not_saturate() {
 }
 
 #[test]
-fn calculate_new_ema_entry_works() {
-    const PERIOD: u32 = 7;
-    let (start_price, start_volume, start_liquidity) = (
-        Price::saturating_from_integer(4u32),
-        Volume::from_a_in_b_out(1, 4),
-        4u32.into(),
-    );
+fn calculate_new_ema_entry_only_updates_timestamp_on_stable_values() {
+    let period: u32 = 7;
     let start_oracle = OracleEntry {
-        price: start_price,
-        volume: start_volume,
-        liquidity: start_liquidity,
+        price: 4.into(),
+        volume: Volume::from_a_in_b_out(1u128, 4u128),
+        liquidity: 4u128,
         timestamp: 5,
     };
     let next_value = OracleEntry {
         timestamp: 6,
         ..start_oracle.clone()
     };
-    let next_oracle = next_value.calculate_new_ema_entry(PERIOD, &start_oracle);
+    let next_oracle = next_value.calculate_new_ema_entry(period, &start_oracle);
     assert_eq!(next_oracle, Some(next_value));
+}
+
+#[test]
+fn calculate_new_ema_entry_works() {
+    let period: u32 = 7;
+    let start_oracle = OracleEntry {
+        price: 4.into(),
+        volume: Volume::from_a_in_b_out(1u128, 4u128),
+        liquidity: 4u128,
+        timestamp: 5,
+    };
 
     let next_value = OracleEntry {
-        price: Price::saturating_from_integer(8u32),
-        volume: Volume::from_a_in_b_out(1, 8),
-        liquidity: 8u32.into(),
+        price: 8.into(),
+        volume: Volume::from_a_in_b_out(1u128, 8u128),
+        liquidity: 8u128,
         timestamp: 6,
     };
-    let next_oracle = next_value.calculate_new_ema_entry(PERIOD, &start_oracle);
+    let next_oracle = next_value.calculate_new_ema_entry(period, &start_oracle);
     let expected_oracle = OracleEntry {
-        price: Price::saturating_from_integer(5u32),
-        volume: Volume::from_a_in_b_out(1, 5),
-        liquidity: 5u32.into(),
+        price: 5.into(),
+        volume: Volume::from_a_in_b_out(1u128, 5u128),
+        liquidity: 5u128,
         timestamp: 6,
     };
     assert_eq!(next_oracle, Some(expected_oracle));
@@ -324,7 +333,7 @@ fn calculate_new_ema_entry_works() {
 
 #[test]
 fn calculate_new_ema_should_incorporate_longer_time_deltas() {
-    const PERIOD: u32 = 7;
+    let period: u32 = 7;
     let start_oracle = OracleEntry {
         price: Price::saturating_from_integer(4000u32),
         volume: Volume::from_a_in_b_out(1, 4_000),
@@ -337,7 +346,7 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
         liquidity: 8_000u32.into(),
         timestamp: 100,
     };
-    let next_oracle = next_value.calculate_new_ema_entry(PERIOD, &start_oracle).unwrap();
+    let next_oracle = next_value.calculate_new_ema_entry(period, &start_oracle).unwrap();
     assert_eq_approx!(
         next_oracle.price,
         next_value.price,
@@ -351,7 +360,7 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
         liquidity: 8_000u32.into(),
         timestamp: 8,
     };
-    let next_oracle = next_value.calculate_new_ema_entry(PERIOD, &start_oracle);
+    let next_oracle = next_value.calculate_new_ema_entry(period, &start_oracle);
     let expected_oracle = OracleEntry {
         price: Price::saturating_from_rational(63125, 10),
         volume: Volume::from_a_in_b_out(1, 6_312),

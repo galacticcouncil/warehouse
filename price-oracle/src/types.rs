@@ -67,16 +67,11 @@ where
     ///
     /// Uses the difference between the `timestamp`s to determine the time to cover and exponentiates
     /// the complement (`1 - alpha`) with that time difference.
-    ///
-    /// Possible alternatives for `alpha = 2 / (N + 1)`:
-    /// + `alpha = 1 - 0.5^(1 / N)` for a half-life of N periods or
-    /// + `alpha = 1 - 0.5^(1 / (0.5N))` to have the same median as an N-length SMA.
-    /// See https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA
     pub fn calculate_new_ema_entry(&self, period: BlockNumber, previous_entry: &Self) -> Option<Self> {
         if period <= One::one() {
             return Some(self.clone());
         }
-        let alpha = Price::saturating_from_rational(2u64, period.saturating_add(One::one()).saturated_into::<u64>());
+        let alpha = alpha_from_period(period);
         debug_assert!(alpha <= Price::one());
         let complement = Price::one() - alpha;
 
@@ -97,6 +92,21 @@ where
             timestamp: self.timestamp,
         })
     }
+}
+
+/// Calculates smoothing factor alpha for an exponential moving average based on `period`:
+/// `alpha = 2 / (period + 1)`.
+/// `alpha = 2 / (period + 1)` leads to the center of mass of the EMA corresponding to a `period`-length SMA.
+///
+/// Possible alternatives for `alpha = 2 / (period + 1)`:
+/// + `alpha = 1 - 0.5^(1 / period)` for a half-life of `period` or
+/// + `alpha = 1 - 0.5^(2 / period)` to have the same median as a `period`-length SMA.
+/// See https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA (N = period).
+pub fn alpha_from_period<BlockNumber>(period: BlockNumber) -> Price
+where
+    BlockNumber: AtLeast32BitUnsigned + Copy + UniqueSaturatedInto<u64>,
+{
+    Price::saturating_from_rational(2u64, period.saturating_add(One::one()).saturated_into::<u64>())
 }
 
 /// Calculate the next exponential moving average for the given prices.

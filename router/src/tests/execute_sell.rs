@@ -76,7 +76,7 @@ fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_er
                 limit,
                 trades
             ),
-            Error::<Test>::PriceCalculationFailed
+            Error::<Test>::PriceCalculationIsFailed
         );
     });
 }

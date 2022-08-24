@@ -88,11 +88,11 @@ pub mod pallet {
         ///The maximum limit to spend on a buy is reached
         MaxLimitToSpendIsReached,
         ///The AMM pool is not supported for executing trades
-        PoolNotSupported,
+        PoolIsNotSupported,
         /// The price calculation has failed in the AMM pool
-        PriceCalculationFailed,
+        PriceCalculationIsFailed,
         /// The trade execution has failed in the AMM pool
-        ExecutionFailed,
+        ExecutionIsFailed,
         /// Route has not trades to be executed
         RouteHasNoTrades,
         ///The user has not enough balance to execute the trade
@@ -141,8 +141,8 @@ pub mod pallet {
                 let result = T::AMM::calculate_sell(trade.pool, trade.asset_in, trade.asset_out, amount);
 
                 match result {
-                    Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
-                    Err(ExecutorError::Error(_)) => return Err(Error::<T>::PriceCalculationFailed.into()),
+                    Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolIsNotSupported.into()),
+                    Err(ExecutorError::Error(_)) => return Err(Error::<T>::PriceCalculationIsFailed.into()),
                     Ok(r) => {
                         amount = r;
                         amounts.push(r);
@@ -155,7 +155,7 @@ pub mod pallet {
 
             for (amount, trade) in amounts.iter().zip(route) {
                 T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
-                    .map_err(|_| Error::<T>::ExecutionFailed)?;
+                    .map_err(|_| Error::<T>::ExecutionIsFailed)?;
             }
 
             Self::deposit_event(Event::RouteIsExecuted {
@@ -208,8 +208,8 @@ pub mod pallet {
                 let result = T::AMM::calculate_buy(trade.pool, trade.asset_in, trade.asset_out, amount);
 
                 match result {
-                    Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
-                    Err(ExecutorError::Error(_)) => return Err(Error::<T>::PriceCalculationFailed.into()),
+                    Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolIsNotSupported.into()),
+                    Err(ExecutorError::Error(_)) => return Err(Error::<T>::PriceCalculationIsFailed.into()),
                     Ok(r) => {
                         amount = r;
                         amounts.push(r);
@@ -222,7 +222,7 @@ pub mod pallet {
 
             for (amount, trade) in amounts.iter().rev().zip(route) {
                 T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
-                    .map_err(|_| Error::<T>::ExecutionFailed)?;
+                    .map_err(|_| Error::<T>::ExecutionIsFailed)?;
             }
 
             Self::deposit_event(Event::RouteIsExecuted {

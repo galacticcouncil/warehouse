@@ -45,7 +45,7 @@ fn execute_buy_should_when_route_has_single_trade() {
         //Assert
         assert_executed_sell_trades(vec![(PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, AUSD)]);
         expect_events(vec![
-            Event::TradeIsExecuted {
+            Event::RouteIsExecuted {
                 asset_in: BSX,
                 asset_out: AUSD,
                 amount_in: XYK_BUY_CALCULATION_RESULT,
@@ -123,7 +123,7 @@ fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
         ]);
 
         expect_events(vec![
-            Event::TradeIsExecuted {
+            Event::RouteIsExecuted {
                 asset_in: BSX,
                 asset_out: KSM,
                 amount_in: XYK_BUY_CALCULATION_RESULT,
@@ -174,7 +174,7 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
         ]);
 
         expect_events(vec![
-            Event::TradeIsExecuted {
+            Event::RouteIsExecuted {
                 asset_in: BSX,
                 asset_out: KSM,
                 amount_in: XYK_BUY_CALCULATION_RESULT,

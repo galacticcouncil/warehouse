@@ -38,7 +38,10 @@ pub use pallet::*;
 //TODO: Dani
 //- add integration tests
 //- refactoring
-//- add API doc
+//----renaming main traits
+//----simplify logic in lib.rs
+//- XYK execute_sell map error in a better way, also in other
+//- use UNITS in tests
 //- benchmarking
 
 #[frame_support::pallet]
@@ -69,7 +72,8 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        TradeIsExecuted {
+        ///The route with trades has been successfully executed
+        RouteIsExecuted {
             asset_in: T::AssetId,
             asset_out: T::AssetId,
             amount_in: T::Balance,
@@ -79,16 +83,36 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        Limit,
+        ///The minimum limit to receive after a sell is not reached
+        MinLimitToReceiveIsNotReached,
+        ///The maximum limit to spend on a buy is reached
+        MaxLimitToSpendIsReached,
+        ///The AMM pool is not supported for executing trades
         PoolNotSupported,
+        /// The price calculation has failed in the AMM pool
         PriceCalculationFailed,
-        Execution,
+        /// The trade execution has failed in the AMM pool
+        ExecutionFailed,
+        /// Route has not trades to be executed
         RouteHasNoTrades,
+        ///The user has not enough balance to execute the trade
         InsufficientAssetBalance
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+
+        /// Executes a sell with a series of trades specified in the route.
+        /// The price for each trade is determined by the corresponding AMM.
+        ///
+        /// - `origin`: The executor of the trade
+        /// - `asset_in`: The identifier of the asset to sell
+        /// - `asset_out`: The identifier of the asset to receive
+        /// - `amount_in`: The amount of `asset_in` to sell
+        /// - `limit`: The minimum amount of `asset_out` to receive.
+        /// - `route`: Series of trades containing AMM and asset pair information
+        ///
+        /// Emits `RouteIsExecuted` when successful.
         #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
         pub fn execute_sell(
             origin: OriginFor<T>,
@@ -124,15 +148,15 @@ pub mod pallet {
                 }
             }
 
-            let last_amount = amounts.pop().ok_or(Error::<T>::Limit)?;
-            ensure!(last_amount >= limit, Error::<T>::Limit);
+            let last_amount = amounts.pop().ok_or(Error::<T>::MinLimitToReceiveIsNotReached)?;
+            ensure!(last_amount >= limit, Error::<T>::MinLimitToReceiveIsNotReached);
 
             for (amount, trade) in amounts.iter().zip(route) {
                 T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
-                    .map_err(|_| Error::<T>::Execution)?;
+                    .map_err(|_| Error::<T>::ExecutionFailed)?;
             }
 
-            Self::deposit_event(Event::TradeIsExecuted {
+            Self::deposit_event(Event::RouteIsExecuted {
                 asset_in,
                 asset_out,
                 amount_in,
@@ -142,6 +166,19 @@ pub mod pallet {
 
             Ok(())
         }
+
+
+        /// Executes a buy with a series of trades specified in the route.
+        /// The price for each trade is determined by the corresponding AMM.
+        ///
+        /// - `origin`: The executor of the trade
+        /// - `asset_in`: The identifier of the asset to be swapped to buy `asset_out`
+        /// - `asset_out`: The identifier of the asset to buy
+        /// - `amount_out`: The amount of `asset_out` to buy
+        /// - `limit`: The max amount of `asset_in` to spend on the buy.
+        /// - `route`: Series of trades containing AMM and asset pair info
+        ///
+        /// Emits `RouteIsExecuted` when successful.
         #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
         pub fn execute_buy(
             origin: OriginFor<T>,
@@ -178,15 +215,15 @@ pub mod pallet {
                 }
             }
 
-            let last_amount = amounts.last().ok_or(Error::<T>::Limit)?;
-            ensure!(*last_amount <= limit, Error::<T>::Limit);
+            let last_amount = amounts.last().ok_or(Error::<T>::MinLimitToReceiveIsNotReached)?;
+            ensure!(*last_amount <= limit, Error::<T>::MinLimitToReceiveIsNotReached);
 
             for (amount, trade) in amounts.iter().rev().zip(route) {
                 T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
-                    .map_err(|_| Error::<T>::Execution)?;
+                    .map_err(|_| Error::<T>::ExecutionFailed)?;
             }
 
-            Self::deposit_event(Event::TradeIsExecuted {
+            Self::deposit_event(Event::RouteIsExecuted {
                 asset_in,
                 asset_out,
                 amount_in: *last_amount,

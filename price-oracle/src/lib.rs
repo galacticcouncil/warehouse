@@ -18,7 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::pallet_prelude::*;
-use frame_support::sp_runtime::traits::{CheckedDiv, One, Zero};
+use frame_support::sp_runtime::traits::{One, Zero};
 use frame_support::sp_runtime::FixedPointNumber;
 use hydradx_traits::{
     AggregatedEntry, AggregatedOracle, AggregatedPriceOracle, OnLiquidityChangedHandler, OnTradeHandler,
@@ -190,6 +190,8 @@ impl<T: Config> Pallet<T> {
         let current_block = <frame_system::Pallet<T>>::block_number();
         let parent = current_block.saturating_sub(One::one());
 
+        // First update the `LastBlock` oracle as we will use it to calculate the updates for the
+        // others.
         let (mut immediate, init) = Self::oracle(pair_id, into_blocks::<T>(&LastBlock))?;
         if immediate.timestamp < parent {
             immediate.timestamp = parent;
@@ -312,9 +314,7 @@ pub fn determine_normalized_price(
         (amount_out, amount_in)
     };
 
-    let price_a = Price::checked_from_integer(balance_a)?;
-    let price_b = Price::checked_from_integer(balance_b)?;
-    price_a.checked_div(&price_b)
+    Price::checked_from_rational(balance_a, balance_b)
 }
 
 pub fn determine_normalized_volume(

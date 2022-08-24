@@ -146,28 +146,6 @@ fn price_normalization_should_exclude_extreme_values() {
     });
 }
 
-fn valid_asset_ids() -> impl Strategy<Value = (AssetId, AssetId)> {
-    (any::<AssetId>(), any::<AssetId>()).prop_filter("asset ids should not be equal", |(a, b)| a != b)
-}
-
-fn non_zero_amounts() -> impl Strategy<Value = (Balance, Balance)> {
-    (any::<Balance>(), any::<Balance>()).prop_filter("balances should be greater 0", |(a, b)| a > &0 && b > &0)
-}
-
-proptest! {
-    #[test]
-    fn price_normalization_should_be_independent_of_asset_order(
-        (asset_a, asset_b) in valid_asset_ids(),
-        (amount_a, amount_b) in non_zero_amounts()
-    ) {
-        let a_then_b = determine_normalized_price(asset_a, asset_b, amount_a, amount_b);
-        let b_then_a = determine_normalized_price(asset_b, asset_a, amount_b, amount_a);
-        prop_assert!(a_then_b.is_some());
-        prop_assert!(b_then_a.is_some());
-        prop_assert_eq!(a_then_b.unwrap(), b_then_a.unwrap());
-    }
-}
-
 #[test]
 fn volume_normalization_should_factor_in_asset_order() {
     assert_ne!(
@@ -439,4 +417,50 @@ fn get_price_returns_updated_price_or_not_ready() {
             );
             assert_eq!(PriceOracle::get_price(HDX, DOT, Week).0, Err(OracleError::NotReady));
         });
+}
+
+// Invariant Testing
+
+// Strategies
+fn valid_asset_ids() -> impl Strategy<Value = (AssetId, AssetId)> {
+    (any::<AssetId>(), any::<AssetId>()).prop_filter("asset ids should not be equal", |(a, b)| a != b)
+}
+
+fn non_zero_amount() -> impl Strategy<Value = Balance> {
+    any::<Balance>().prop_filter("balances should be greater 0", |b| b > &0)
+}
+
+proptest! {
+    #[test]
+    fn price_normalization_should_be_independent_of_asset_order(
+        (asset_a, asset_b) in valid_asset_ids(),
+        (amount_a, amount_b) in (non_zero_amount(), non_zero_amount())
+    ) {
+        let a_then_b = determine_normalized_price(asset_a, asset_b, amount_a, amount_b);
+        let b_then_a = determine_normalized_price(asset_b, asset_a, amount_b, amount_a);
+        prop_assert!(a_then_b.is_some());
+        prop_assert!(b_then_a.is_some());
+        prop_assert_eq!(a_then_b.unwrap(), b_then_a.unwrap());
+    }
+}
+
+proptest! {
+    #[test]
+    fn on_liquidity_changed_should_not_change_volume(
+        (asset_a, asset_b) in valid_asset_ids(),
+        (amount_a, amount_b) in (non_zero_amount(), non_zero_amount()),
+        liquidity in non_zero_amount(),
+        (second_amount_a, second_amount_b) in (non_zero_amount(), non_zero_amount()),
+        second_liquidity in non_zero_amount(),
+    ) {
+        new_test_ext().execute_with(|| {
+            let timestamp = 5;
+            System::set_block_number(timestamp);
+            OnActivityHandler::<Test>::on_trade(asset_a, asset_b, amount_a, amount_b, liquidity);
+            let volume_before = get_accumulator_entry(&derive_name(asset_a, asset_b)).unwrap().volume;
+            OnActivityHandler::<Test>::on_liquidity_changed(asset_a, asset_b, second_amount_a, second_amount_b, second_liquidity);
+            let volume_after = get_accumulator_entry(&derive_name(asset_a, asset_b)).unwrap().volume;
+            assert_eq!(volume_before, volume_after);
+        });
+    }
 }

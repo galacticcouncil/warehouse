@@ -49,18 +49,22 @@ impl OraclePeriod {
 }
 
 #[derive(Encode, Decode, Eq, PartialEq, Clone, Default, RuntimeDebug, TypeInfo)]
-pub struct AggregatedEntry<Balance, Price> {
+pub struct AggregatedEntry<Balance, BlockNumber, Price> {
     pub price: Price,
     pub volume: Volume<Balance>,
     pub liquidity: Balance,
+    pub oracle_age: BlockNumber,
 }
 
-impl<Balance, Price> From<(Price, Volume<Balance>, Balance)> for AggregatedEntry<Balance, Price> {
-    fn from((price, volume, liquidity): (Price, Volume<Balance>, Balance)) -> Self {
+impl<Balance, BlockNumber, Price> From<(Price, Volume<Balance>, Balance, BlockNumber)>
+    for AggregatedEntry<Balance, BlockNumber, Price>
+{
+    fn from((price, volume, liquidity, oracle_age): (Price, Volume<Balance>, Balance, BlockNumber)) -> Self {
         Self {
             price,
             volume,
             liquidity,
+            oracle_age,
         }
     }
 }
@@ -126,25 +130,31 @@ where
     }
 }
 
-pub trait AggregatedOracle<AssetId, Balance, Price> {
+pub trait AggregatedOracle<AssetId, Balance, BlockNumber, Price> {
     type Error;
     fn get_entry(
         asset_a: AssetId,
         asset_b: AssetId,
         period: OraclePeriod,
-    ) -> (Result<AggregatedEntry<Balance, Price>, Self::Error>, Weight);
+    ) -> (
+        Result<AggregatedEntry<Balance, BlockNumber, Price>, Self::Error>,
+        Weight,
+    );
 
     fn get_entry_weight() -> Weight;
 }
 
-impl<AssetId, Balance, Price> AggregatedOracle<AssetId, Balance, Price> for () {
+impl<AssetId, Balance, BlockNumber, Price> AggregatedOracle<AssetId, Balance, BlockNumber, Price> for () {
     type Error = ();
 
     fn get_entry(
         _asset_a: AssetId,
         _asset_b: AssetId,
         _period: OraclePeriod,
-    ) -> (Result<AggregatedEntry<Balance, Price>, Self::Error>, Weight) {
+    ) -> (
+        Result<AggregatedEntry<Balance, BlockNumber, Price>, Self::Error>,
+        Weight,
+    ) {
         (Err(()), Weight::zero())
     }
 

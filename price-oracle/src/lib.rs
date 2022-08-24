@@ -18,7 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::pallet_prelude::*;
-use frame_support::sp_runtime::traits::{One, Zero};
+use frame_support::sp_runtime::traits::{BlockNumberProvider, One, Zero};
 use frame_support::sp_runtime::FixedPointNumber;
 use hydradx_traits::{
     AggregatedEntry, AggregatedOracle, AggregatedPriceOracle, OnLiquidityChangedHandler, OnTradeHandler,
@@ -67,6 +67,8 @@ pub mod pallet {
 
         /// Weight information for the extrinsics.
         type WeightInfo: WeightInfo;
+
+        type BlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
 
         /// Number of seconds between blocks, used to convert periods.
         type SecsPerBlock: Get<Self::BlockNumber>;
@@ -178,7 +180,7 @@ impl<T: Config> Pallet<T> {
                         *init,
                     )
                 })
-                .unwrap_or((oracle_entry.clone(), <frame_system::Pallet<T>>::block_number()));
+                .unwrap_or((oracle_entry.clone(), T::BlockNumberProvider::current_block_number()));
             *oracle = Some(new_oracle);
         });
     }
@@ -187,7 +189,7 @@ impl<T: Config> Pallet<T> {
         pair_id: &AssetPairId,
         period: OraclePeriod,
     ) -> Option<(OracleEntry<T::BlockNumber>, T::BlockNumber)> {
-        let current_block = <frame_system::Pallet<T>>::block_number();
+        let current_block = T::BlockNumberProvider::current_block_number();
         let parent = current_block.saturating_sub(One::one());
 
         // First update the `LastBlock` oracle as we will use it to calculate the updates for the
@@ -247,7 +249,7 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
 
         let volume = determine_normalized_volume(asset_in, asset_out, amount_in, amount_out);
 
-        let timestamp = <frame_system::Pallet<T>>::block_number();
+        let timestamp = T::BlockNumberProvider::current_block_number();
         let entry = OracleEntry {
             price,
             volume,
@@ -282,7 +284,7 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
             return;
         }
 
-        let timestamp = <frame_system::Pallet<T>>::block_number();
+        let timestamp = T::BlockNumberProvider::current_block_number();
         let entry = OracleEntry {
             price,
             // liquidity provision does not count as trade volume
@@ -368,39 +370,16 @@ pub fn into_blocks<T: Config>(period: &OraclePeriod) -> T::BlockNumber {
     }
 }
 
-/// Determine whether an oracle of the given `age` is ready to be returned for `period`.
-///
-// Note: Currently a super simple implementation that just compares the age against the block
-// number. TODO: reconsider / get the correct algorithm from Colin
-pub fn is_ready<T: Config>(period: OraclePeriod, age: T::BlockNumber) -> bool {
-    age >= into_blocks::<T>(&period)
-}
-
-/// Ensure that the given `entry` initialized at `initialized` is valid for `period`.
-pub fn ensure_ready<T: Config>(
-    entry: OracleEntry<T::BlockNumber>,
-    period: OraclePeriod,
-    initialized: T::BlockNumber,
-) -> Result<OracleEntry<T::BlockNumber>, OracleError> {
-    if is_ready::<T>(period, entry.timestamp.saturating_sub(initialized)) {
-        Ok(entry)
-    } else {
-        Err(OracleError::NotReady)
-    }
-}
-
 /// Possible errors when requesting an oracle value.
 #[derive(RuntimeDebug, Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo)]
 pub enum OracleError {
     /// The oracle could not be found
     NotPresent,
-    /// The oracle is not yet available for consumption for the given period.
-    ///
-    /// Note: The longer the period of the oracle, the longer it will usually take to provide data.
-    NotReady,
+    /// The oracle is not defined if the asset ids are the same.
+    SameAsset,
 }
 
-impl<T: Config> AggregatedOracle<AssetId, Balance, Price> for Pallet<T> {
+impl<T: Config> AggregatedOracle<AssetId, Balance, T::BlockNumber, Price> for Pallet<T> {
     type Error = OracleError;
 
     // TODO: What to do about switched order of assets? Adjust price and volume? Return predictable
@@ -409,12 +388,17 @@ impl<T: Config> AggregatedOracle<AssetId, Balance, Price> for Pallet<T> {
         asset_a: AssetId,
         asset_b: AssetId,
         period: OraclePeriod,
-    ) -> (Result<AggregatedEntry<Balance, Price>, OracleError>, Weight) {
+    ) -> (
+        Result<AggregatedEntry<Balance, T::BlockNumber, Price>, OracleError>,
+        Weight,
+    ) {
+        if asset_a == asset_b {
+            return (Err(OracleError::SameAsset), 100);
+        };
         let pair_id = derive_name(asset_a, asset_b);
         let oracle_res = Self::get_updated_entry(&pair_id, period)
             .ok_or(OracleError::NotPresent)
-            .and_then(|(entry, initialized)| ensure_ready::<T>(entry, period, initialized))
-            .map(|entry| entry.into());
+            .map(|(entry, initialized)| entry.into_aggegrated(initialized));
         (oracle_res, 100) // TODO: accurate weight
     }
 
@@ -427,11 +411,13 @@ impl<T: Config> AggregatedPriceOracle<AssetId, Price> for Pallet<T> {
     type Error = OracleError;
 
     fn get_price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod) -> (Result<Price, OracleError>, Weight) {
+        if asset_a == asset_b {
+            return (Err(OracleError::SameAsset), 100);
+        };
         let pair_id = derive_name(asset_a, asset_b);
         let oracle_res = Self::get_updated_entry(&pair_id, period)
             .ok_or(OracleError::NotPresent)
-            .and_then(|(entry, initialized)| ensure_ready::<T>(entry, period, initialized))
-            .map(|entry| entry.price);
+            .map(|(entry, _)| entry.price);
         (oracle_res, 100) // TODO: accurate weight
     }
 

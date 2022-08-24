@@ -370,13 +370,11 @@ fn get_price_works() {
         .build()
         .execute_with(|| {
             System::set_block_number(2);
-            assert_matches!(PriceOracle::get_price(HDX, DOT, LastBlock), (Ok(p), _) if p == Price::from(1_000_000));
-            assert_matches!(
-                PriceOracle::get_price(HDX, DOT, TenMinutes),
-                (Err(OracleError::NotReady), _)
-            );
-            assert_matches!(PriceOracle::get_price(HDX, DOT, Day), (Err(OracleError::NotReady), _));
-            assert_matches!(PriceOracle::get_price(HDX, DOT, Week), (Err(OracleError::NotReady), _));
+            let expected = Price::from(1_000_000);
+            assert_matches!(PriceOracle::get_price(HDX, DOT, LastBlock), (Ok(p), _) if p == expected);
+            assert_matches!(PriceOracle::get_price(HDX, DOT, TenMinutes), (Ok(p), _) if p == expected);
+            assert_matches!(PriceOracle::get_price(HDX, DOT, Day), (Ok(p), _) if p == expected);
+            assert_matches!(PriceOracle::get_price(HDX, DOT, Week), (Ok(p), _) if p == expected);
         });
 }
 
@@ -391,13 +389,14 @@ fn get_entry_works() {
             price: Price::from((1_000, 500)),
             volume: Volume::from_a_in_b_out(1_000, 500),
             liquidity: 2_000,
+            oracle_age: 98,
         };
         assert_matches!(PriceOracle::get_entry(HDX, DOT, LastBlock), (Ok(e), _) if e == expected);
         assert_matches!(
                 PriceOracle::get_entry(HDX, DOT, TenMinutes),
                 (Ok(e), _) if e == expected);
-        assert_matches!(PriceOracle::get_entry(HDX, DOT, Day), (Err(OracleError::NotReady), _));
-        assert_matches!(PriceOracle::get_entry(HDX, DOT, Week), (Err(OracleError::NotReady), _));
+        assert_matches!(PriceOracle::get_entry(HDX, DOT, Day), (Ok(e), _) if e == expected);
+        assert_matches!(PriceOracle::get_entry(HDX, DOT, Week), (Ok(e), _) if e == expected);
     });
 }
 
@@ -436,7 +435,12 @@ fn get_price_returns_updated_price_or_not_ready() {
                 e,
                 "Day Oracle should converge somewhat."
             );
-            assert_eq!(PriceOracle::get_price(HDX, DOT, Week).0, Err(OracleError::NotReady));
+            assert_eq_approx!(
+                PriceOracle::get_price(HDX, DOT, Day).0.unwrap(),
+                Price::from_float(531088.261455783831),
+                e,
+                "Week Oracle should converge somewhat."
+            );
         });
 }
 

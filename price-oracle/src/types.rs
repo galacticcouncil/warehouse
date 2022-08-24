@@ -48,6 +48,15 @@ impl<BlockNumber> OracleEntry<BlockNumber>
 where
     BlockNumber: AtLeast32BitUnsigned + Copy + UniqueSaturatedInto<u64>,
 {
+    pub fn into_aggegrated(self, initialized: BlockNumber) -> AggregatedEntry<Balance, BlockNumber, Price> {
+        AggregatedEntry {
+            price: self.price,
+            volume: self.volume,
+            liquidity: self.liquidity,
+            oracle_age: self.timestamp.saturating_sub(initialized),
+        }
+    }
+
     /// Determine a new entry based on `self` and a previous entry. Adds the volumes together and
     /// takes the values of `self` for the rest.
     pub fn accumulate_volume(&self, previous_entry: &Self) -> Self {
@@ -171,16 +180,6 @@ pub fn volume_ema(
         b_in: balance_ema(*prev_b_in, prev_weight, *b_in, weight)?,
     };
     Some(volume)
-}
-
-impl<BlockNumber> From<OracleEntry<BlockNumber>> for AggregatedEntry<Balance, Price> {
-    fn from(entry: OracleEntry<BlockNumber>) -> Self {
-        Self {
-            price: entry.price,
-            volume: entry.volume,
-            liquidity: entry.liquidity,
-        }
-    }
 }
 
 impl<BlockNumber> From<(Price, Volume<Balance>, Balance, BlockNumber)> for OracleEntry<BlockNumber> {

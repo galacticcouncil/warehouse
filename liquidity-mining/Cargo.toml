@@ -37,9 +37,10 @@ orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-modul
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "aac79b3b31953381669a2ffa9b3e9bfe48e87f38", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 # This can be updated to lates after rust update(>=1.61)
-fixed = { version="=1.15.0", default-features = false }
+fixed = { version = "=1.15.0", default-features = false }
 proptest = "1.0.0"
-pretty_assertions = { version="1.2.1" }
+pretty_assertions = "1.2.1"
+rand = "0.8.5"
 
 [features]
 default = ["std"]

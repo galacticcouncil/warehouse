@@ -47,7 +47,7 @@ frame_support::construct_runtime!(
      {
          System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
          Router: router::{Pallet, Call,Event<T>},
-         Currency: orml_tokens::{Pallet, Event<T>},
+         Tokens: orml_tokens::{Pallet, Event<T>},
 		 Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
      }
 );
@@ -126,11 +126,17 @@ impl pallet_balances::Config for Test {
 
 type Pools = (XYK, StableSwap, OmniPool);
 
+parameter_types! {
+	pub NativeCurrencyId: AssetId = 1000;
+}
+
 impl Config for Test {
     type Event = Event;
     type AssetId = AssetId;
     type Balance = Balance;
-    type Currency = Currency;
+    type GetNativeCurrencyId = NativeCurrencyId;
+    type Currency = Tokens;
+    type NativeCurrency = Balances;
     type AMM = Pools;
 }
 
@@ -143,6 +149,7 @@ pub const AUSD: AssetId = 1001;
 pub const MOVR: AssetId = 1002;
 pub const KSM: AssetId = 1003;
 
+pub const ALICE_INITIAL_NATIVE_BALANCE: u128 = 1000;
 
 pub const XYK_SELL_CALCULATION_RESULT: u128 = 6;
 pub const XYK_BUY_CALCULATION_RESULT: u128 = 5;
@@ -150,7 +157,7 @@ pub const STABLESWAP_SELL_CALCULATION_RESULT: u128 = 4;
 pub const STABLESWAP_BUY_CALCULATION_RESULT: u128 = 3;
 pub const OMNIPOOL_SELL_CALCULATION_RESULT: u128 = 2;
 pub const OMNIPOOL_BUY_CALCULATION_RESULT: u128 = 1;
-pub const INVALID_CALCULATION_AMOUNT: u128 = 999999999;
+pub const INVALID_CALCULATION_AMOUNT: u128 = 999;
 
 pub const BSX_AUSD_TRADE_IN_XYK : Trade<AssetId> = Trade {
     pool: PoolType::XYK,
@@ -180,9 +187,17 @@ impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
+        pallet_balances::GenesisConfig::<Test> {
+                balances: vec![
+                    (AccountId::from(ALICE), ALICE_INITIAL_NATIVE_BALANCE), //TODO: Dani - use const
+                ],
+            }
+            .assimilate_storage(&mut t)
+            .unwrap();
+
         orml_tokens::GenesisConfig::<Test> {
             balances: self.endowed_accounts,
-        }
+            }
             .assimilate_storage(&mut t)
             .unwrap();
 

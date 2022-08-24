@@ -18,11 +18,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use frame_support::traits::fungibles::Inspect;
+use frame_support::traits::fungibles::Inspect as MultiCurrencyInspect;
+use frame_support::traits::fungible::Inspect as NativeCurrencyInspect;
 use frame_support::{
     ensure,
     weights::{DispatchClass, Pays},
 };
+use frame_support::traits::Get;
 use frame_system::ensure_signed;
 use hydradx_traits::router::Executor;
 use sp_std::vec::Vec;
@@ -43,6 +45,7 @@ pub use pallet::*;
 //- XYK execute_sell map error in a better way, also in other
 //- use UNITS in tests
 //- benchmarking
+//- TODO: Danis
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -64,7 +67,12 @@ pub mod pallet {
 
         type Balance: Parameter + Member + Copy + PartialOrd + MaybeSerializeDeserialize;
 
-        type Currency: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
+        #[pallet::constant]
+        type GetNativeCurrencyId: Get<Self::AssetId>;
+
+        type Currency: MultiCurrencyInspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
+
+        type NativeCurrency: NativeCurrencyInspect<Self::AccountId, Balance = Self::Balance>;
 
         type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, Output = Self::Balance>;
     }
@@ -126,8 +134,9 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(route.len() > 0, Error::<T>::RouteHasNoTrades);
+
             ensure!(
-                T::Currency::reducible_balance(asset_in, &who, false) >= amount_in,
+                <Self as InspectReducibleBalance<T>>::reducible_balance(asset_in, &who, false) >= amount_in,
                 Error::<T>::InsufficientAssetBalance
             );
 
@@ -194,7 +203,7 @@ pub mod pallet {
             ensure!(route.len() > 0, Error::<T>::RouteHasNoTrades);
 
             ensure!(
-                T::Currency::reducible_balance(asset_in, &who, false) >= amount_out,
+                <Self as InspectReducibleBalance<T>>::reducible_balance(asset_out, &who, false) >= amount_out,
                 Error::<T>::InsufficientAssetBalance
             );
 
@@ -235,6 +244,20 @@ pub mod pallet {
             // check asset out balance to verify that who receives at least last_amount
 
             Ok(())
+        }
+    }
+}
+
+pub trait InspectReducibleBalance<T: Config> {
+    fn reducible_balance(asset: T::AssetId, who: &T::AccountId, _keep_alive: bool) -> T::Balance;
+}
+
+impl<T: Config> InspectReducibleBalance<T> for Pallet<T> {
+    fn reducible_balance(asset: T::AssetId, who: &T::AccountId, _keep_alive: bool) -> T::Balance {
+        if asset == T::GetNativeCurrencyId::get() {
+            T::NativeCurrency::reducible_balance(&who, false)
+        } else {
+            T::Currency::reducible_balance(asset, &who, false)
         }
     }
 }

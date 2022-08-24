@@ -56,6 +56,36 @@ fn execute_sell_should_work_when_route_has_single_trade() {
 }
 
 #[test]
+fn execute_sell_should_work_when_route_has_single_trade_without_native_balance() {
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
+        .build().execute_with(|| {
+        //Arrange
+        let amount_to_sell = 10;
+        let limit = 5;
+
+        let trades = vec![Trade {
+            pool: PoolType::XYK,
+            asset_in: KSM,
+            asset_out: AUSD,
+        }];
+
+        //Act
+        assert_ok!(Router::execute_sell(
+            Origin::signed(ALICE),
+            KSM,
+            AUSD,
+            amount_to_sell,
+            limit,
+            trades
+        ));
+
+        //Assert
+        assert_executed_sell_trades(vec![(PoolType::XYK, amount_to_sell, KSM, AUSD)]);
+    });
+}
+
+#[test]
 fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_error() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, BSX, INVALID_CALCULATION_AMOUNT)])
@@ -265,12 +295,11 @@ fn execute_sell_should_fail_when_route_has_no_trades() {
 #[test]
 fn execute_sell_should_fail_when_caller_has_not_enough_balance() {
     //Arrange
-    let amount_to_sell = 10;
+    let amount_to_sell = ALICE_INITIAL_NATIVE_BALANCE + 1;
     let limit = 5;
     let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, BSX, amount_to_sell - 1)])
         .build()
         .execute_with(|| {
             //Act and Assert

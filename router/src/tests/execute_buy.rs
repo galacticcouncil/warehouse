@@ -25,7 +25,9 @@ use crate::tests::mock::*;
 
 #[test]
 fn execute_buy_should_work_when_route_has_single_trade() {
-    ExtBuilder::default().build().execute_with(|| {
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
+        .build().execute_with(|| {
         //Arrange
         let amount_to_buy = 10;
         let limit = 5;
@@ -56,9 +58,39 @@ fn execute_buy_should_work_when_route_has_single_trade() {
 }
 
 #[test]
+fn execute_buy_should_work_when_route_has_single_trade_without_native_balance() {
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
+        .build().execute_with(|| {
+        //Arrange
+        let amount_to_buy = 10;
+        let limit = 5;
+
+        let trades = vec![Trade {
+            pool: PoolType::XYK,
+            asset_in: AUSD,
+            asset_out: KSM,
+        }];
+
+        //Act
+        assert_ok!(Router::execute_buy(
+            Origin::signed(ALICE),
+            AUSD,
+            KSM,
+            amount_to_buy,
+            limit,
+            trades
+        ));
+
+        //Assert
+        assert_executed_sell_trades(vec![(PoolType::XYK, XYK_BUY_CALCULATION_RESULT, AUSD, KSM)]);
+    });
+}
+
+#[test]
 fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_error() {
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, BSX, INVALID_CALCULATION_AMOUNT)])
+        .with_endowed_accounts(vec![(ALICE, AUSD, INVALID_CALCULATION_AMOUNT)])
         .build()
         .execute_with(|| {
             //Arrange
@@ -84,7 +116,9 @@ fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_err
 
 #[test]
 fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
-    ExtBuilder::default().build().execute_with(|| {
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
+        .build().execute_with(|| {
         //Arrange
         let amount_to_buy = 10;
         let limit = 5;
@@ -135,7 +169,9 @@ fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
 
 #[test]
 fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_type() {
-    ExtBuilder::default().build().execute_with(|| {
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
+        .build().execute_with(|| {
         //Arrange
         let amount_to_buy = 10;
         let limit = 5;
@@ -186,7 +222,9 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
 
 #[test]
 fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool() {
-    ExtBuilder::default().build().execute_with(|| {
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
+        .build().execute_with(|| {
         //Arrange
         let amount_to_buy = 10;
         let limit = 5;
@@ -222,7 +260,9 @@ fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool()
 
 #[test]
 fn execute_buy_should_fail_when_called_with_non_signed_origin() {
-    ExtBuilder::default().build().execute_with(|| {
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
+        .build().execute_with(|| {
         //Arrange
         let amount_to_buy = 10;
         let limit = 5;
@@ -246,7 +286,9 @@ fn execute_buy_should_fail_when_called_with_non_signed_origin() {
 
 #[test]
 fn execute_buy_should_fail_when_route_has_no_trades() {
-    ExtBuilder::default().build().execute_with(|| {
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
+        .build().execute_with(|| {
         //Arrange
         let trades = vec![];
 
@@ -273,7 +315,7 @@ fn execute_buy_should_fail_when_caller_has_not_enough_balance() {
     let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, BSX, amount_to_buy - 1)])
+        .with_endowed_accounts(vec![(ALICE, AUSD, amount_to_buy - 1)])
         .build()
         .execute_with(|| {
             //Act and Assert
@@ -293,7 +335,9 @@ fn execute_buy_should_fail_when_caller_has_not_enough_balance() {
 
 #[test]
 fn execute_buy_should_fail_when_max_limit_to_spend_is_reached() {
-    ExtBuilder::default().build().execute_with(|| {
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
+        .build().execute_with(|| {
         //Arrange
         let amount_to_buy = 10;
         let limit = XYK_BUY_CALCULATION_RESULT - 1;
@@ -312,16 +356,5 @@ fn execute_buy_should_fail_when_max_limit_to_spend_is_reached() {
                 ),
                 Error::<Test>::MaxLimitToSpendIsReached
             );
-
-        //Assert
-        /*assert_executed_sell_trades(vec![(PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, AUSD)]);
-        expect_events(vec![
-            Event::RouteIsExecuted {
-                asset_in: BSX,
-                asset_out: AUSD,
-                amount_in: XYK_BUY_CALCULATION_RESULT,
-                amount_out: amount_to_buy,
-            }.into(),
-        ]);*/
     });
 }

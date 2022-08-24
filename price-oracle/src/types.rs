@@ -34,7 +34,8 @@ pub type AssetId = u32;
 pub type Balance = u128;
 pub type Price = FixedU128;
 
-/// A type representing data produced by a trade.
+/// A type representing data produced by a trade or liquidity event. Timestamped to the block where
+/// it was created.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(RuntimeDebug, Encode, Decode, Clone, PartialEq, Eq, Default, TypeInfo)]
 pub struct OracleEntry<BlockNumber> {
@@ -48,6 +49,8 @@ impl<BlockNumber> OracleEntry<BlockNumber>
 where
     BlockNumber: AtLeast32BitUnsigned + Copy + UniqueSaturatedInto<u64>,
 {
+    /// Convert the `OracleEntry` into an `AggregatedEntry` for consumption. Determines the age by
+    /// subtracting `initialized` from the timestamp.
     pub fn into_aggegrated(self, initialized: BlockNumber) -> AggregatedEntry<Balance, BlockNumber, Price> {
         AggregatedEntry {
             price: self.price,

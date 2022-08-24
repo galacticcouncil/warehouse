@@ -381,6 +381,27 @@ fn get_price_works() {
 }
 
 #[test]
+fn get_entry_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        System::set_block_number(1);
+        OnActivityHandler::<Test>::on_trade(HDX, DOT, 1_000, 500, 2_000);
+        PriceOracle::on_finalize(1);
+        System::set_block_number(100);
+        let expected = AggregatedEntry {
+            price: Price::from((1_000, 500)),
+            volume: Volume::from_a_in_b_out(1_000, 500),
+            liquidity: 2_000,
+        };
+        assert_matches!(PriceOracle::get_entry(HDX, DOT, LastBlock), (Ok(e), _) if e == expected);
+        assert_matches!(
+                PriceOracle::get_entry(HDX, DOT, TenMinutes),
+                (Ok(e), _) if e == expected);
+        assert_matches!(PriceOracle::get_entry(HDX, DOT, Day), (Err(OracleError::NotReady), _));
+        assert_matches!(PriceOracle::get_entry(HDX, DOT, Week), (Err(OracleError::NotReady), _));
+    });
+}
+
+#[test]
 fn get_price_returns_updated_price_or_not_ready() {
     ExtBuilder::default()
         .with_price_data(vec![((HDX, DOT), Price::from(1_000_000), 2_000_000)])

@@ -215,8 +215,8 @@ pub mod pallet {
                 }
             }
 
-            let last_amount = amounts.last().ok_or(Error::<T>::MinLimitToReceiveIsNotReached)?;
-            ensure!(*last_amount <= limit, Error::<T>::MinLimitToReceiveIsNotReached);
+            let last_amount = amounts.last().ok_or(Error::<T>::MaxLimitToSpendIsReached)?;
+            ensure!(*last_amount <= limit, Error::<T>::MaxLimitToSpendIsReached);
 
             for (amount, trade) in amounts.iter().rev().zip(route) {
                 T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)

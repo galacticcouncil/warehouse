@@ -287,3 +287,27 @@ fn execute_sell_should_fail_when_caller_has_not_enough_balance() {
             );
     });
 }
+
+#[test]
+fn execute_sell_should_fail_when_min_limit_to_receive_is_not_reached() {
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let amount_to_sell = 10;
+        let limit = XYK_SELL_CALCULATION_RESULT + 1;
+
+        let trades = vec![BSX_AUSD_TRADE_IN_XYK];
+
+        //Act and Assert
+        assert_noop!(
+                Router::execute_sell(
+                Origin::signed(ALICE),
+                BSX,
+                AUSD,
+                amount_to_sell,
+                limit,
+                trades
+            ),
+                Error::<Test>::MinLimitToReceiveIsNotReached
+            );
+    });
+}

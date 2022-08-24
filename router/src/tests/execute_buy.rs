@@ -24,7 +24,7 @@ use sp_runtime::DispatchError::BadOrigin;
 use crate::tests::mock::*;
 
 #[test]
-fn execute_buy_should_when_route_has_single_trade() {
+fn execute_buy_should_work_when_route_has_single_trade() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount_to_buy = 10;
@@ -289,4 +289,39 @@ fn execute_buy_should_fail_when_caller_has_not_enough_balance() {
                 Error::<Test>::InsufficientAssetBalance
             );
         });
+}
+
+#[test]
+fn execute_buy_should_fail_when_max_limit_to_spend_is_reached() {
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let amount_to_buy = 10;
+        let limit = XYK_BUY_CALCULATION_RESULT - 1;
+
+        let trades = vec![BSX_AUSD_TRADE_IN_XYK];
+
+        //Act and Assert
+        assert_noop!(
+                Router::execute_buy(
+                    Origin::signed(ALICE),
+                    BSX,
+                    AUSD,
+                    amount_to_buy,
+                    limit,
+                    trades
+                ),
+                Error::<Test>::MaxLimitToSpendIsReached
+            );
+
+        //Assert
+        /*assert_executed_sell_trades(vec![(PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, AUSD)]);
+        expect_events(vec![
+            Event::RouteIsExecuted {
+                asset_in: BSX,
+                asset_out: AUSD,
+                amount_in: XYK_BUY_CALCULATION_RESULT,
+                amount_out: amount_to_buy,
+            }.into(),
+        ]);*/
+    });
 }

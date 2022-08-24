@@ -95,13 +95,13 @@ where
 }
 
 /// Calculates smoothing factor alpha for an exponential moving average based on `period`:
-/// `alpha = 2 / (period + 1)`.
-/// `alpha = 2 / (period + 1)` leads to the center of mass of the EMA corresponding to a `period`-length SMA.
+/// `alpha = 2 / (period + 1)`. It leads to the "center of mass" of the EMA corresponding to the
+/// "center of mass" of a `period`-length SMA.
 ///
 /// Possible alternatives for `alpha = 2 / (period + 1)`:
 /// + `alpha = 1 - 0.5^(1 / period)` for a half-life of `period` or
-/// + `alpha = 1 - 0.5^(2 / period)` to have the same median as a `period`-length SMA.
-/// See https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA (N = period).
+/// + `alpha = 1 - 0.5^(2 / period)` to have the same median as a `period`-length SMA. See
+/// https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA (N = period).
 pub fn alpha_from_period<BlockNumber>(period: BlockNumber) -> Price
 where
     BlockNumber: AtLeast32BitUnsigned + Copy + UniqueSaturatedInto<u64>,

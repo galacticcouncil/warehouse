@@ -370,11 +370,25 @@ fn get_price_works() {
         .build()
         .execute_with(|| {
             System::set_block_number(2);
-            let expected = Price::from(1_000_000);
+            let expected = (Price::from(1_000_000), 1);
             assert_matches!(PriceOracle::get_price(HDX, DOT, LastBlock), (Ok(p), _) if p == expected);
             assert_matches!(PriceOracle::get_price(HDX, DOT, TenMinutes), (Ok(p), _) if p == expected);
             assert_matches!(PriceOracle::get_price(HDX, DOT, Day), (Ok(p), _) if p == expected);
             assert_matches!(PriceOracle::get_price(HDX, DOT, Week), (Ok(p), _) if p == expected);
+        });
+}
+
+#[test]
+fn trying_to_get_price_for_same_asset_should_error() {
+    ExtBuilder::default()
+        .with_price_data(vec![((HDX, DOT), Price::from(1_000_000), 2_000_000)])
+        .build()
+        .execute_with(|| {
+            System::set_block_number(2);
+            assert_matches!(
+                PriceOracle::get_price(HDX, HDX, LastBlock),
+                (Err(OracleError::SameAsset), _)
+            );
         });
 }
 
@@ -417,26 +431,31 @@ fn get_price_returns_updated_price_or_not_ready() {
             PriceOracle::on_finalize(10_000);
 
             let e = Price::from_float(0.01);
+            assert_eq!(
+                PriceOracle::get_price(HDX, DOT, LastBlock).0.unwrap().1,
+                10_000,
+                "Oracle should be 10_000 blocks old."
+            );
             assert_eq_approx!(
-                PriceOracle::get_price(HDX, DOT, LastBlock).0.unwrap(),
+                PriceOracle::get_price(HDX, DOT, LastBlock).0.unwrap().0,
                 Price::from(500_000),
                 e,
                 "LastBlock Oracle should have most recent value."
             );
             assert_eq_approx!(
-                PriceOracle::get_price(HDX, DOT, TenMinutes).0.unwrap(),
+                PriceOracle::get_price(HDX, DOT, TenMinutes).0.unwrap().0,
                 Price::from(500_000),
                 e,
                 "TenMinutes Oracle should converge within 1000 blocks."
             );
             assert_eq_approx!(
-                PriceOracle::get_price(HDX, DOT, Day).0.unwrap(),
+                PriceOracle::get_price(HDX, DOT, Day).0.unwrap().0,
                 Price::from_float(531088.261455783831),
                 e,
                 "Day Oracle should converge somewhat."
             );
             assert_eq_approx!(
-                PriceOracle::get_price(HDX, DOT, Day).0.unwrap(),
+                PriceOracle::get_price(HDX, DOT, Day).0.unwrap().0,
                 Price::from_float(531088.261455783831),
                 e,
                 "Week Oracle should converge somewhat."

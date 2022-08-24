@@ -28,11 +28,16 @@ where
     }
 }
 
+/// Defines the different kinds of aggregation periods for oracles.
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
 pub enum OraclePeriod {
+    /// The oracle data is from the last block, thus unaggregated.
     LastBlock,
+    /// The oracle data was aggregated over the blocks of the last ten minutes.
     TenMinutes,
+    /// The oracle data was aggregated over the blocks of the last day.
     Day,
+    /// The oracle data was aggregated over the blocks of the last week.
     Week,
 }
 
@@ -48,6 +53,8 @@ impl OraclePeriod {
     }
 }
 
+/// Struct to represent oracle data aggregated over a time period. Includes the age of the oracle
+/// as metadata. Age is the blocks between first data and the timestamp of the most recent value.
 #[derive(Encode, Decode, Eq, PartialEq, Clone, Default, RuntimeDebug, TypeInfo)]
 pub struct AggregatedEntry<Balance, BlockNumber, Price> {
     pub price: Price,
@@ -69,6 +76,7 @@ impl<Balance, BlockNumber, Price> From<(Price, Volume<Balance>, Balance, BlockNu
     }
 }
 
+/// Struct to represent trade volume for an asset pair.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(RuntimeDebug, Encode, Decode, Clone, PartialEq, Eq, Default, TypeInfo)]
 pub struct Volume<Balance> {
@@ -82,6 +90,7 @@ impl<Balance> Volume<Balance>
 where
     Balance: Copy + AtLeast32BitUnsigned,
 {
+    /// Constructor for volume flowing based on trades from asset a to asset b.
     pub fn from_a_in_b_out(a_in: Balance, b_out: Balance) -> Self {
         Self {
             a_in,
@@ -91,6 +100,7 @@ where
         }
     }
 
+    /// Constructor for volume flowing based on trades from asset b to asset a.
     pub fn from_a_out_b_in(a_out: Balance, b_in: Balance) -> Self {
         Self {
             a_in: Zero::zero(),
@@ -100,6 +110,7 @@ where
         }
     }
 
+    /// Utility function that sums the underlying values of the volumes.
     pub fn saturating_add(&self, rhs: &Self) -> Self {
         let Self {
             a_in: r_a_in,
@@ -130,6 +141,7 @@ where
     }
 }
 
+/// An oracle returning an entry of oracle data aggregated over `period`.
 pub trait AggregatedOracle<AssetId, Balance, BlockNumber, Price> {
     type Error;
     fn get_entry(
@@ -144,6 +156,7 @@ pub trait AggregatedOracle<AssetId, Balance, BlockNumber, Price> {
     fn get_entry_weight() -> Weight;
 }
 
+/// Default implementation of the oracle trait that always returns `Err`.
 impl<AssetId, Balance, BlockNumber, Price> AggregatedOracle<AssetId, Balance, BlockNumber, Price> for () {
     type Error = ();
 
@@ -163,17 +176,28 @@ impl<AssetId, Balance, BlockNumber, Price> AggregatedOracle<AssetId, Balance, Bl
     }
 }
 
-pub trait AggregatedPriceOracle<AssetId, Price> {
+/// An oracle returning a price aggregated over `period` with the associated oracle age (to allow
+/// judging whether the oracle had a chance to settle yet).
+pub trait AggregatedPriceOracle<AssetId, BlockNumber, Price> {
     type Error;
-    fn get_price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod) -> (Result<Price, Self::Error>, Weight);
+    fn get_price(
+        asset_a: AssetId,
+        asset_b: AssetId,
+        period: OraclePeriod,
+    ) -> (Result<(Price, BlockNumber), Self::Error>, Weight);
 
     fn get_price_weight() -> Weight;
 }
 
-impl<AssetId, Price> AggregatedPriceOracle<AssetId, Price> for () {
+/// Default implementation of the oracle trait that always returns `Err`.
+impl<AssetId, BlockNumber, Price> AggregatedPriceOracle<AssetId, BlockNumber, Price> for () {
     type Error = ();
 
-    fn get_price(_asset_a: AssetId, _asset_b: AssetId, _period: OraclePeriod) -> (Result<Price, Self::Error>, Weight) {
+    fn get_price(
+        _asset_a: AssetId,
+        _asset_b: AssetId,
+        _period: OraclePeriod,
+    ) -> (Result<(Price, BlockNumber), Self::Error>, Weight) {
         (Err(()), Weight::zero())
     }
 
@@ -182,14 +206,21 @@ impl<AssetId, Price> AggregatedPriceOracle<AssetId, Price> for () {
     }
 }
 
-impl<AssetId, Price> AggregatedPriceOracle<AssetId, Price> for AlwaysPriceOfOne
+/// Mock implementation of the oracle trait that always returns `Price::one()` and oracle age of
+/// `BlockNumber::one()`.
+impl<AssetId, BlockNumber, Price> AggregatedPriceOracle<AssetId, BlockNumber, Price> for AlwaysPriceOfOne
 where
     Price: One,
+    BlockNumber: One,
 {
     type Error = ();
 
-    fn get_price(_asset_a: AssetId, _asset_b: AssetId, _period: OraclePeriod) -> (Result<Price, Self::Error>, Weight) {
-        (Ok(Price::one()), Weight::zero())
+    fn get_price(
+        _asset_a: AssetId,
+        _asset_b: AssetId,
+        _period: OraclePeriod,
+    ) -> (Result<(Price, BlockNumber), Self::Error>, Weight) {
+        (Ok((Price::one(), BlockNumber::one())), Weight::zero())
     }
 
     fn get_price_weight() -> Weight {

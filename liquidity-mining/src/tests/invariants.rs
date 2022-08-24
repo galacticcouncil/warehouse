@@ -281,10 +281,12 @@ proptest! {
         new_test_ext().execute_with(|| {
             const GLOBAL_FARM_ID: GlobalFarmId = 1;
             let global_farm_account = LiquidityMining::farm_account_id(GLOBAL_FARM_ID).unwrap();
+            let pot = LiquidityMining::pot_account_id();
             Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
             let left_to_distribute_0 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
             let reward_per_period = global_farm.max_reward_per_period;
+            let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
 
             let reward =
                 LiquidityMining::update_global_farm(&mut global_farm, current_period, reward_per_period).unwrap();
@@ -298,6 +300,11 @@ proptest! {
                 FixedU128::from((TOLERANCE, ONE)),
                 "left_to_distribute[1] = max(0, left_to_distribute[0] - reward)"
             );
+
+            let s_0 = left_to_distribute_0 + pot_balance_0;
+            let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account) + Tokens::free_balance(REWARD_CURRENCY, &pot);
+
+            assert_eq_approx!(s_0, s_1, TOLERANCE, "global_farm_account[0] + pot[0] = global_farm_account[1] + pot[1]");
         });
     }
 }

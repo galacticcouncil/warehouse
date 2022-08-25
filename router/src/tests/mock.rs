@@ -134,9 +134,7 @@ impl Config for Test {
     type Event = Event;
     type AssetId = AssetId;
     type Balance = Balance;
-    type GetNativeCurrencyId = NativeCurrencyId;
     type Currency = Tokens;
-    type NativeCurrency = Balances;
     type AMM = Pools;
 }
 

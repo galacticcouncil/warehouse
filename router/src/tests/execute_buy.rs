@@ -26,7 +26,8 @@ use crate::tests::mock::*;
 #[test]
 fn execute_buy_should_work_when_route_has_single_trade() {
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
+        .with_endowed_accounts(vec![
+            (ALICE, AUSD, 1000),])
         .build().execute_with(|| {
         //Arrange
         let amount_to_buy = 10;

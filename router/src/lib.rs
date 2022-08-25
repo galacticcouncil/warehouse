@@ -224,7 +224,7 @@ pub mod pallet {
             ensure!(*last_amount <= limit, Error::<T>::MaxLimitToSpendIsReached);
 
             for (amount, trade) in amounts.iter().rev().zip(route) {
-                T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
+                T::AMM::execute_buy(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
                     .map_err(|_| Error::<T>::ExecutionIsFailed)?;
             }
 

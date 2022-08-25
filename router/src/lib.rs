@@ -220,8 +220,8 @@ pub mod pallet {
                 }
             }
 
-            let last_amount = amounts.last().ok_or(Error::<T>::UnexpectedErrorWhenRetrievingLastTradeCalculationAmount)?;
-            ensure!(*last_amount <= limit, Error::<T>::MaxLimitToSpendIsReached);
+            let last_amount = amounts.pop().ok_or(Error::<T>::UnexpectedErrorWhenRetrievingLastTradeCalculationAmount)?;
+            ensure!(last_amount <= limit, Error::<T>::MaxLimitToSpendIsReached);
 
             for (amount, trade) in amounts.iter().rev().zip(route) {
                 T::AMM::execute_buy(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
@@ -231,7 +231,7 @@ pub mod pallet {
             Self::deposit_event(Event::RouteIsExecuted {
                 asset_in,
                 asset_out,
-                amount_in: *last_amount,
+                amount_in: last_amount,
                 amount_out
             });
 

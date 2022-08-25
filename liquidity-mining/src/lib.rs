@@ -30,16 +30,16 @@
 //!
 //! ## Overview
 //!
-//! This pallet provide functionality for liquidity mining program with time incentive(loyalty
+//! This pallet provides functionality for a liquidity mining program with a time incentive (loyalty
 //! factor) and multiple incentives scheme.
-//! Users are rewarded for each period they stay in liq. mining program.
+//! Users are rewarded for each period they stay in the liq. mining program.
 //!
-//! Reward per one period is derived from the user's loyalty factor which grows with time(periods)
-//! the user is in the liq. mining and amount of LP shares user locked into deposit.
+//! Reward per one period is derived from the user's loyalty factor which grows with time (periods)
+//! the user is in the liq. mining program and the amount of LP shares the user locked into deposit.
 //! User's loyalty factor is reset if the user exits and reenters liquidity mining.
 //! User can claim rewards without resetting loyalty factor, only withdrawing shares
 //! is penalized by loyalty factor reset.
-//! User is rewarded from the next period after he enters.
+//! The user is rewarded from the next period after they enters.
 //!
 //! Multiple Incentives
 //!
@@ -58,16 +58,16 @@
 //! resetting loyalty factor for yield farm user is withdrawing from(other farm entries in the
 //! deposit are not affected). If deposit has no more farm entries, deposit is destroyed and LP
 //! shares are returned back to user.
-//! * `YiedlFarm` -  can be in the 3 states: [`Active`, `Stopped`, `Canceled`]
+//! * `YieldFarm` -  can be in the 3 states: [`Active`, `Stopped`, `Canceled`]
 //!     * `Active` - liquidity mining is running, users are able to deposit, claim and withdraw LP
-//!     shares. `YiedlFarm` is rewarded from `GlobalFarm` in this state.
+//!     shares. `YieldFarm` is rewarded from `GlobalFarm` in this state.
 //!     * `Stopped` - liquidity mining is stopped. Users can claim and withdraw LP shares from the
 //!     farm. Users CAN'T deposit new LP shares to stopped farm. Stopped farm is not rewarded from the
 //!     `GlobalFarm`.
 //!     Note: stopped farm can be resumed or destroyed.
 //!     * `Deleted` - liquidity mining is ended. User's CAN'T deposit or claim rewards from
 //!     stopped farm. Users CAN only withdraw LP shares(without rewards).
-//!     `YiedlFarm` must be stopped before it can be deleted. Deleted farm stays in the storage
+//!     `YieldFarm` must be stopped before it can be deleted. Deleted farm stays in the storage
 //!     until last farm's entry is withdrawn. Last withdrawn from yield farm will remove deleted
 //!     farm from the storage.
 //!     Note: Deleted farm CAN'T be resumed.
@@ -288,7 +288,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn deposit)]
     pub type Deposit<T: Config<I>, I: 'static = ()> =
-        StorageMap<_, Blake2_128Concat, DepositId, DepositData<T, I>, OptionQuery>;
+        StorageMap<_, Twox64Concat, DepositId, DepositData<T, I>, OptionQuery>;
 
     /// Active(farms able to receive LP shares deposits) yield farms.
     #[pallet::storage]
@@ -362,10 +362,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             price_adjustment,
         )?;
 
-        ensure!(
-            T::MultiCurrency::free_balance(reward_currency, &owner) >= total_rewards,
-            Error::<T, I>::InsufficientRewardCurrencyBalance
-        );
+        T::MultiCurrency::ensure_can_withdraw(reward_currency, &owner, total_rewards)
+            .map_err(|_| Error::<T, I>::InsufficientRewardCurrencyBalance)?;
 
         let planned_periods =
             TryInto::<u128>::try_into(planned_yielding_periods).map_err(|_| ArithmeticError::Overflow)?;

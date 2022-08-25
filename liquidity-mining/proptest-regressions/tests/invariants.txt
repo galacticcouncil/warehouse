@@ -1,7 +1,0 @@
-# Seeds for failure cases proptest has generated in the past. It is
-# automatically read and these particular cases re-run before any
-# novel cases are generated.
-#
-# It is recommended to check this file in to source control so that
-# everyone who runs the test benefits from these saved cases.
-cc 7131fc94b812d13b7008fedfd69597c266f5f276972d08f2ec0cd73aecf3f26b # shrinks to (mut farm, current_period) = (GlobalFarmData { id: 1, owner: 1, updated_at: 915, total_shares_z: 46908706686577, accumulated_rpz: FixedU128(0.000000000000000000), reward_currency: 1000, accumulated_rewards: 8770548490717333813193, paid_accumulated_rewards: 2283554827575321170784, yield_per_period: Perquintill(2000000000000000), planned_yielding_periods: 1000, blocks_per_period: 1000, incentivized_asset: 1000, max_reward_per_period: 876059958281379002067, min_deposit: 1, yield_farms_count: (0, 0), price_adjustment: FixedU128(1.000000000000000000), state: FarmState::Active }, 46346159), left_to_distribute = 164127937851925072552093271023489483958

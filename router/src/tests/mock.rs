@@ -294,7 +294,14 @@ impl_fake_executor!(OmniPool, PoolType::Omnipool, OMNIPOOL_SELL_CALCULATION_RESU
 pub fn assert_executed_sell_trades(expected_trades: Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>) {
     EXECUTED_SELLS.borrow().with(|v| {
         let trades = v.borrow().deref().clone();
-        assert_eq!(expected_trades, trades);
+        assert_eq!(trades, expected_trades);
+    });
+}
+
+pub fn assert_executed_buy_trades(expected_trades: Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>) {
+    EXECUTED_BUYS.borrow().with(|v| {
+        let trades = v.borrow().deref().clone();
+        assert_eq!(trades, expected_trades);
     });
 }
 

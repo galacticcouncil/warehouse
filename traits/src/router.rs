@@ -1,4 +1,5 @@
 use codec::{Decode, Encode};
+use frame_support::sp_runtime::traits::Zero;
 use scale_info::TypeInfo;
 
 #[derive(Encode, Decode, Clone, Copy, Debug, Eq, PartialEq, TypeInfo)]
@@ -14,6 +15,21 @@ pub enum ExecutorError<E> {
     Error(E),
 }
 
+#[derive(Encode, Decode, Clone, Copy, Debug, Eq, PartialEq, TypeInfo)]
+pub struct TradeCalculation<Balance> {
+    pub amount: Balance,
+    pub fee: Balance,
+}
+
+impl<Balance: Zero> TradeCalculation<Balance> {
+    pub fn new_without_fee(amount: Balance) -> Self {
+        TradeCalculation {
+            amount,
+            fee: Balance::zero()
+        }
+    }
+}
+
 pub trait Executor<AccountId, AssetId, Balance> {
     type Output;
     type Error;
@@ -22,14 +38,14 @@ pub trait Executor<AccountId, AssetId, Balance> {
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_in: Balance,
+        amount_in: TradeCalculation<Balance>,
     ) -> Result<Self::Output, ExecutorError<Self::Error>>;
 
     fn calculate_buy(
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_out: Balance,
+        amount_out: TradeCalculation<Balance>,
     ) -> Result<Self::Output, ExecutorError<Self::Error>>;
 
     fn execute_sell(
@@ -37,7 +53,7 @@ pub trait Executor<AccountId, AssetId, Balance> {
         who: &AccountId,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_in: Balance,
+        amount_in: TradeCalculation<Balance>,
     ) -> Result<(), ExecutorError<Self::Error>>;
 
     fn execute_buy(
@@ -45,7 +61,7 @@ pub trait Executor<AccountId, AssetId, Balance> {
         who: &AccountId,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_out: Balance,
+        amount_out: TradeCalculation<Balance>,
     ) -> Result<(), ExecutorError<Self::Error>>;
 }
 
@@ -59,7 +75,7 @@ impl<O, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> Executor<AccountI
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_in: Balance,
+        amount_in: TradeCalculation<Balance>,
     ) -> Result<Self::Output, ExecutorError<Self::Error>> {
         for_tuples!(
             #(
@@ -77,7 +93,7 @@ impl<O, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> Executor<AccountI
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_out: Balance,
+        amount_out: TradeCalculation<Balance>,
     ) -> Result<Self::Output, ExecutorError<Self::Error>> {
         for_tuples!(
             #(
@@ -96,7 +112,7 @@ impl<O, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> Executor<AccountI
         who: &AccountId,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_in: Balance,
+        amount_in: TradeCalculation<Balance>,
     ) -> Result<(), ExecutorError<Self::Error>> {
         for_tuples!(
             #(
@@ -115,7 +131,7 @@ impl<O, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> Executor<AccountI
         who: &AccountId,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_out: Balance,
+        amount_out: TradeCalculation<Balance>,
     ) -> Result<(), ExecutorError<Self::Error>> {
         for_tuples!(
             #(

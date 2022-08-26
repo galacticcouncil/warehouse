@@ -43,7 +43,8 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
-    use hydradx_traits::router::ExecutorError;
+    use sp_runtime::traits::Zero;
+    use hydradx_traits::router::{ExecutorError, TradeCalculation};
     use types::Trade;
 
     #[pallet::pallet]
@@ -56,11 +57,11 @@ pub mod pallet {
 
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
-        type Balance: Parameter + Member + Copy + PartialOrd + MaybeSerializeDeserialize;
+        type Balance: Parameter + Member + Copy + PartialOrd + MaybeSerializeDeserialize + Zero;
 
         type Currency: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
 
-        type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, Output = Self::Balance>;
+        type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, Output=TradeCalculation<Self::Balance>>;
     }
 
     #[pallet::event]
@@ -126,13 +127,12 @@ pub mod pallet {
                 Error::<T>::InsufficientAssetBalance
             );
 
-            let mut amounts_to_sell = Vec::<T::Balance>::with_capacity(route.len() + 1);
-            let mut amount = amount_in;
+            let mut amounts_to_sell = Vec::<TradeCalculation<T::Balance>>::with_capacity(route.len() + 1);
+            let mut amount = TradeCalculation::new_without_fee(amount_in);
             amounts_to_sell.push(amount);
 
             for trade in route.iter() {
                 let result = T::AMM::calculate_sell(trade.pool, trade.asset_in, trade.asset_out, amount);
-
                 match result {
                     Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolIsNotSupported.into()),
                     Err(ExecutorError::Error(_)) => return Err(Error::<T>::PriceCalculationIsFailed.into()),
@@ -144,7 +144,7 @@ pub mod pallet {
             }
 
             let last_amount = amounts_to_sell.pop().ok_or(Error::<T>::UnexpectedErrorWhenRetrievingLastTradeCalculationAmount)?;
-            ensure!(last_amount >= limit, Error::<T>::MinLimitToReceiveIsNotReached);
+            ensure!(last_amount.amount >= limit, Error::<T>::MinLimitToReceiveIsNotReached);
 
             for (amount, trade) in amounts_to_sell.iter().zip(route) {
                 T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
@@ -155,8 +155,9 @@ pub mod pallet {
                 asset_in,
                 asset_out,
                 amount_in,
-                amount_out: last_amount
+                amount_out: last_amount.amount
             });
+            //TODO: shall we add fee to the event?
             // check asset out balance to verify that who receives at least last_amount
 
             Ok(())
@@ -191,8 +192,8 @@ pub mod pallet {
                 Error::<T>::InsufficientAssetBalance
             );
 
-            let mut amounts_to_buy = Vec::<T::Balance>::with_capacity(route.len() + 1);
-            let mut amount = amount_out;
+            let mut amounts_to_buy = Vec::<TradeCalculation<T::Balance>>::with_capacity(route.len() + 1);
+            let mut amount = TradeCalculation::new_without_fee(amount_out);
             amounts_to_buy.push(amount);
 
             for trade in route.iter().rev() {
@@ -209,7 +210,7 @@ pub mod pallet {
             }
 
             let last_amount = amounts_to_buy.pop().ok_or(Error::<T>::UnexpectedErrorWhenRetrievingLastTradeCalculationAmount)?;
-            ensure!(last_amount <= limit, Error::<T>::MaxLimitToSpendIsReached);
+            ensure!(last_amount.amount <= limit, Error::<T>::MaxLimitToSpendIsReached);
 
             for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {
                 T::AMM::execute_buy(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
@@ -219,7 +220,7 @@ pub mod pallet {
             Self::deposit_event(Event::RouteIsExecuted {
                 asset_in,
                 asset_out,
-                amount_in: last_amount,
+                amount_in: last_amount.amount,
                 amount_out
             });
 

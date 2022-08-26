@@ -1,11 +1,11 @@
 [package]
-name = 'pallet-router'
+name = 'pallet-route-executor'
 version = '0.1.0'
-description = 'A pallet to execute a list of trades based on the routes.'
+description = 'A pallet to execute a route containing a sequence of trades'
 authors = ['GalacticCouncil']
 edition = '2021'
 license = 'Apache 2.0'
-repository = "https://github.com/galacticcouncil/warehouse/tree/master/router"
+repository = "https://github.com/galacticcouncil/warehouse/tree/master/route-executor"
 
 [dependencies]
 codec = { default-features = false, features = ["derive"], package = "parity-scale-codec", version = "2.3.1" }

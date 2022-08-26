@@ -36,14 +36,7 @@ mod tests;
 pub use pallet::*;
 
 //TODO: Dani
-//- add integration tests
-//- refactoring
-//----renaming main traits
-//----simplify logic in lib.rs
-//- XYK execute_sell map error in a better way, also in other
-//- use UNITS in tests
 //- benchmarking
-//- TODO: Danis
 
 #[frame_support::pallet]
 pub mod pallet {

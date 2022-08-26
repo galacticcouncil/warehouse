@@ -134,9 +134,7 @@ pub mod pallet {
             );
 
             let mut amounts = Vec::<T::Balance>::with_capacity(route.len() + 1);
-
             let mut amount = amount_in;
-
             amounts.push(amount);
 
             for trade in route.iter() {
@@ -201,9 +199,7 @@ pub mod pallet {
             );
 
             let mut amounts = Vec::<T::Balance>::with_capacity(route.len() + 1);
-
             let mut amount = amount_out;
-
             amounts.push(amount);
 
             for trade in route.iter().rev() {

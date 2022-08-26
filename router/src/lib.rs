@@ -133,9 +133,9 @@ pub mod pallet {
                 Error::<T>::InsufficientAssetBalance
             );
 
-            let mut amounts = Vec::<T::Balance>::with_capacity(route.len() + 1);
+            let mut amounts_to_sell = Vec::<T::Balance>::with_capacity(route.len() + 1);
             let mut amount = amount_in;
-            amounts.push(amount);
+            amounts_to_sell.push(amount);
 
             for trade in route.iter() {
                 let result = T::AMM::calculate_sell(trade.pool, trade.asset_in, trade.asset_out, amount);
@@ -143,17 +143,17 @@ pub mod pallet {
                 match result {
                     Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolIsNotSupported.into()),
                     Err(ExecutorError::Error(_)) => return Err(Error::<T>::PriceCalculationIsFailed.into()),
-                    Ok(r) => {
-                        amount = r;
-                        amounts.push(r);
+                    Ok(amount_to_sell) => {
+                        amount = amount_to_sell;
+                        amounts_to_sell.push(amount_to_sell);
                     }
                 }
             }
 
-            let last_amount = amounts.pop().ok_or(Error::<T>::UnexpectedErrorWhenRetrievingLastTradeCalculationAmount)?;
+            let last_amount = amounts_to_sell.pop().ok_or(Error::<T>::UnexpectedErrorWhenRetrievingLastTradeCalculationAmount)?;
             ensure!(last_amount >= limit, Error::<T>::MinLimitToReceiveIsNotReached);
 
-            for (amount, trade) in amounts.iter().zip(route) {
+            for (amount, trade) in amounts_to_sell.iter().zip(route) {
                 T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
                     .map_err(|_| Error::<T>::ExecutionIsFailed)?;
             }
@@ -198,9 +198,9 @@ pub mod pallet {
                 Error::<T>::InsufficientAssetBalance
             );
 
-            let mut amounts = Vec::<T::Balance>::with_capacity(route.len() + 1);
+            let mut amounts_to_buy = Vec::<T::Balance>::with_capacity(route.len() + 1);
             let mut amount = amount_out;
-            amounts.push(amount);
+            amounts_to_buy.push(amount);
 
             for trade in route.iter().rev() {
                 let result = T::AMM::calculate_buy(trade.pool, trade.asset_in, trade.asset_out, amount);
@@ -208,17 +208,17 @@ pub mod pallet {
                 match result {
                     Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolIsNotSupported.into()),
                     Err(ExecutorError::Error(_)) => return Err(Error::<T>::PriceCalculationIsFailed.into()),
-                    Ok(r) => {
-                        amount = r;
-                        amounts.push(r);
+                    Ok(amount_to_buy) => {
+                        amount = amount_to_buy;
+                        amounts_to_buy.push(amount_to_buy);
                     }
                 }
             }
 
-            let last_amount = amounts.pop().ok_or(Error::<T>::UnexpectedErrorWhenRetrievingLastTradeCalculationAmount)?;
+            let last_amount = amounts_to_buy.pop().ok_or(Error::<T>::UnexpectedErrorWhenRetrievingLastTradeCalculationAmount)?;
             ensure!(last_amount <= limit, Error::<T>::MaxLimitToSpendIsReached);
 
-            for (amount, trade) in amounts.iter().rev().zip(route) {
+            for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {
                 T::AMM::execute_buy(trade.pool, &who, trade.asset_in, trade.asset_out, *amount)
                     .map_err(|_| Error::<T>::ExecutionIsFailed)?;
             }

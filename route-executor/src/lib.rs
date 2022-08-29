@@ -61,7 +61,7 @@ pub mod pallet {
 
         type Currency: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
 
-        type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, Output=TradeCalculation<Self::Balance>>;
+        type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, TradeCalculationResult=TradeCalculation<Self::Balance>>;
     }
 
     #[pallet::event]

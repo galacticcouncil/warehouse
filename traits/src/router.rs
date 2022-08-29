@@ -31,29 +31,29 @@ impl<Balance: Zero> TradeCalculation<Balance> {
 }
 
 pub trait Executor<AccountId, AssetId, Balance> {
-    type Output;
+    type TradeCalculationResult;
     type Error;
 
     fn calculate_sell(
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_in: TradeCalculation<Balance>,
-    ) -> Result<Self::Output, ExecutorError<Self::Error>>;
+        amount_in: Self::TradeCalculationResult,
+    ) -> Result<Self::TradeCalculationResult, ExecutorError<Self::Error>>;
 
     fn calculate_buy(
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_out: TradeCalculation<Balance>,
-    ) -> Result<Self::Output, ExecutorError<Self::Error>>;
+        amount_out: Self::TradeCalculationResult,
+    ) -> Result<Self::TradeCalculationResult, ExecutorError<Self::Error>>;
 
     fn execute_sell(
         pool_type: PoolType<AssetId>,
         who: &AccountId,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_in: TradeCalculation<Balance>,
+        amount_in: Self::TradeCalculationResult,
     ) -> Result<(), ExecutorError<Self::Error>>;
 
     fn execute_buy(
@@ -61,22 +61,22 @@ pub trait Executor<AccountId, AssetId, Balance> {
         who: &AccountId,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_out: TradeCalculation<Balance>,
+        amount_out: Self::TradeCalculationResult,
     ) -> Result<(), ExecutorError<Self::Error>>;
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(1, 5)]
-impl<O, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> Executor<AccountId, AssetId, Balance> for Tuple {
-    for_tuples!( where #(Tuple: Executor<AccountId, AssetId, Balance, Output=O, Error=E>)*);
-    type Output = O;
+impl<R: Copy, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> Executor<AccountId, AssetId, Balance> for Tuple {
+    for_tuples!( where #(Tuple: Executor<AccountId, AssetId, Balance, TradeCalculationResult=R, Error=E>)*);
+    type TradeCalculationResult = R;
     type Error = E;
 
     fn calculate_sell(
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_in: TradeCalculation<Balance>,
-    ) -> Result<Self::Output, ExecutorError<Self::Error>> {
+        amount_in: Self::TradeCalculationResult,
+    ) -> Result<Self::TradeCalculationResult, ExecutorError<Self::Error>> {
         for_tuples!(
             #(
                 let value = match Tuple::calculate_sell(pool_type, asset_in,asset_out,amount_in) {
@@ -93,8 +93,8 @@ impl<O, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> Executor<AccountI
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_out: TradeCalculation<Balance>,
-    ) -> Result<Self::Output, ExecutorError<Self::Error>> {
+        amount_out: Self::TradeCalculationResult,
+    ) -> Result<Self::TradeCalculationResult, ExecutorError<Self::Error>> {
         for_tuples!(
             #(
                 let value = match Tuple::calculate_buy(pool_type, asset_in,asset_out,amount_out) {
@@ -112,7 +112,7 @@ impl<O, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> Executor<AccountI
         who: &AccountId,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_in: TradeCalculation<Balance>,
+        amount_in: Self::TradeCalculationResult,
     ) -> Result<(), ExecutorError<Self::Error>> {
         for_tuples!(
             #(
@@ -131,7 +131,7 @@ impl<O, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> Executor<AccountI
         who: &AccountId,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_out: TradeCalculation<Balance>,
+        amount_out: Self::TradeCalculationResult,
     ) -> Result<(), ExecutorError<Self::Error>> {
         for_tuples!(
             #(

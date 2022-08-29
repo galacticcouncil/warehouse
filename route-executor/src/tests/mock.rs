@@ -237,15 +237,15 @@ thread_local! {
 macro_rules! impl_fake_executor {
     ($pool_struct:ident, $pool_type: pat, $sell_calculation_result: expr, $buy_calculation_result: expr)=>{
             impl Executor<AccountId, AssetId, Balance> for $pool_struct {
-                type Output = TradeCalculation<Balance>;
+                type TradeCalculationResult = TradeCalculation<Balance>;
                 type Error = ();
 
                 fn calculate_sell(
                     pool_type: PoolType<AssetId>,
                     _asset_in: AssetId,
                     _asset_out: AssetId,
-                    amount_in: TradeCalculation<Balance>,
-                ) -> Result<Self::Output, ExecutorError<Self::Error>> {
+                    amount_in: Self::TradeCalculationResult,
+                ) -> Result<Self::TradeCalculationResult, ExecutorError<Self::Error>> {
                     if !matches!(pool_type, $pool_type) {
                         return Err(ExecutorError::NotSupported);
                     }
@@ -261,8 +261,8 @@ macro_rules! impl_fake_executor {
                     pool_type: PoolType<AssetId>,
                     _asset_in: AssetId,
                     _asset_out: AssetId,
-                    amount_out: TradeCalculation<Balance>,
-                ) -> Result<Self::Output, ExecutorError<Self::Error>> {
+                    amount_out: Self::TradeCalculationResult,
+                ) -> Result<Self::TradeCalculationResult, ExecutorError<Self::Error>> {
                     if !matches!(pool_type, $pool_type) {
                         return Err(ExecutorError::NotSupported);
                     }
@@ -279,7 +279,7 @@ macro_rules! impl_fake_executor {
                     _who: &AccountId,
                     asset_in: AssetId,
                     asset_out: AssetId,
-                    amount_in: TradeCalculation<Balance>,
+                    amount_in: Self::TradeCalculationResult,
                 ) -> Result<(), ExecutorError<Self::Error>> {
                     EXECUTED_SELLS.with(|v| {
                         let mut m = v.borrow_mut();
@@ -294,7 +294,7 @@ macro_rules! impl_fake_executor {
                     _who: &AccountId,
                     asset_in: AssetId,
                     asset_out: AssetId,
-                    amount_out: TradeCalculation<Balance>,
+                    amount_out: Self::TradeCalculationResult,
                 ) -> Result<(), ExecutorError<Self::Error>> {
                     EXECUTED_BUYS.with(|v| {
                         let mut m = v.borrow_mut();

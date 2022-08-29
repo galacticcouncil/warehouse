@@ -155,9 +155,8 @@ pub mod pallet {
                 asset_in,
                 asset_out,
                 amount_in,
-                amount_out: last_amount.amount
+                amount_out: last_amount.amount + last_amount.fee //TODO: ask if it is fine or using checked_add? That does not work with balance
             });
-            //TODO: shall we add fee to the event?
             // check asset out balance to verify that who receives at least last_amount
 
             Ok(())

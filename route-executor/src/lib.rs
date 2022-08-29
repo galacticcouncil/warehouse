@@ -92,8 +92,8 @@ pub mod pallet {
         RouteHasNoTrades,
         ///The user has not enough balance to execute the trade
         InsufficientAssetBalance,
-        ///Unexpected error when retrieving the last trade calculation amount
-        UnexpectedErrorWhenRetrievingLastTradeCalculationAmount
+        ///Unexpected error which should never really happen. If so, please get in contact with the admins of the chain
+        UnexpectedError
     }
 
     #[pallet::call]
@@ -143,7 +143,7 @@ pub mod pallet {
                 }
             }
 
-            let last_amount = amounts_to_sell.pop().ok_or(Error::<T>::UnexpectedErrorWhenRetrievingLastTradeCalculationAmount)?;
+            let last_amount = amounts_to_sell.pop().ok_or(Error::<T>::UnexpectedError)?;
             ensure!(last_amount.amount >= limit, Error::<T>::MinLimitToReceiveIsNotReached);
 
             for (amount, trade) in amounts_to_sell.iter().zip(route) {
@@ -208,7 +208,7 @@ pub mod pallet {
                 }
             }
 
-            let last_amount = amounts_to_buy.pop().ok_or(Error::<T>::UnexpectedErrorWhenRetrievingLastTradeCalculationAmount)?;
+            let last_amount = amounts_to_buy.pop().ok_or(Error::<T>::UnexpectedError)?;
             ensure!(last_amount.amount <= limit, Error::<T>::MaxLimitToSpendIsReached);
 
             for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {

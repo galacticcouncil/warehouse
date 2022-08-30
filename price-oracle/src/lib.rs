@@ -414,18 +414,15 @@ impl<T: Config> AggregatedPriceOracle<AssetId, T::BlockNumber, Price> for Pallet
         asset_a: AssetId,
         asset_b: AssetId,
         period: OraclePeriod,
-    ) -> (Result<(Price, T::BlockNumber), OracleError>, Weight) {
-        if asset_a == asset_b {
-            return (Err(OracleError::SameAsset), 100);
-        };
-        let pair_id = derive_name(asset_a, asset_b);
-        let oracle_res = Self::get_updated_entry(&pair_id, period)
-            .ok_or(OracleError::NotPresent)
-            .map(|(entry, initialized)| (entry.price, entry.timestamp.saturating_sub(initialized)));
-        (oracle_res, 100) // TODO: accurate weight
+    ) -> (Result<(Price, T::BlockNumber), Self::Error>, Weight) {
+        let (maybe_entry, weight) = Self::get_entry(asset_a, asset_b, period);
+        (
+            maybe_entry.map(|AggregatedEntry { price, oracle_age, .. }| (price, oracle_age)),
+            weight,
+        )
     }
 
     fn get_price_weight() -> Weight {
-        100
-    } // TODO: weight
+        Self::get_entry_weight()
+    }
 }

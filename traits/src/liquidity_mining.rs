@@ -23,6 +23,13 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         price_adjustment: FixedU128,
     ) -> Result<(u32, Self::Balance), Self::Error>;
 
+    /// Update price adjustment of the existing global farm.
+    fn update_global_farm_price_adjustment(
+        who: AccountId,
+        global_farm_id: u32,
+        price_adjustment: FixedU128,
+    ) -> Result<(), Self::Error>;
+
     /// Destroy existing global farm.
     fn destroy_global_farm(
         who: AccountId,

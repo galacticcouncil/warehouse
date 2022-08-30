@@ -340,7 +340,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// global farm must to have `incentivized_asset` in their pair.
     /// - `reward_currency`: payoff currency of rewards.
     /// - `owner`: liq. mining farm owner.
-    /// - `yield_per_period`: percentage return on `reward_currency` of all pools
+    /// - `yield_per_period`: percentage return on `reward_currency` of all pools.
+    /// - `min_deposit`: minimum amount of LP shares to be deposited into liquidity mining by each user.
+    /// - `price_adjustment`: price adjustment between `incentivized_asset` and `reward_currency`.
+    /// This value should be `1` if `incentivized_asset` and `reward_currency` are the same.
     #[allow(clippy::too_many_arguments)]
     fn create_global_farm(
         total_rewards: Balance,
@@ -393,6 +396,48 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         T::MultiCurrency::transfer(reward_currency, &global_farm.owner, &global_farm_account, total_rewards)?;
 
         Ok((farm_id, max_reward_per_period))
+    }
+
+    /// Update global farm's price adjustment.
+    ///  
+    /// Only farm's owner can perform this action.
+    ///
+    /// Parameters:
+    /// - `who`: farm's owner
+    /// - `global_farm_id`: global farm id.
+    /// - `price_adjustment`: new price adjustment value.
+    fn update_global_farm_price_adjustment(
+        who: T::AccountId,
+        global_farm_id: GlobalFarmId,
+        price_adjustment: FixedU128,
+    ) -> Result<(), DispatchError> {
+        <GlobalFarm<T, I>>::try_mutate(global_farm_id, |maybe_global_farm| {
+            ensure!(!price_adjustment.is_zero(), Error::<T, I>::InvalidPriceAdjustment);
+
+            let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
+
+            ensure!(who == global_farm.owner, Error::<T, I>::Forbidden);
+
+            // update global farm accumulated RPZ
+            let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
+            let total_shares_z_adjusted =
+                math::calculate_adjusted_shares(global_farm.total_shares_z, global_farm.price_adjustment)
+                    .map_err(|_| ArithmeticError::Overflow)?;
+
+            if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
+                let reward_per_period = math::calculate_global_farm_reward_per_period(
+                    global_farm.yield_per_period.into(),
+                    total_shares_z_adjusted,
+                    global_farm.max_reward_per_period,
+                )
+                .map_err(|_| ArithmeticError::Overflow)?;
+                Self::update_global_farm(global_farm, current_period, reward_per_period)?;
+            }
+
+            global_farm.price_adjustment = price_adjustment;
+
+            Ok(())
+        })
     }
 
     /// Destroy existing liquidity mining program. Undistributed rewards are transferred to
@@ -1409,10 +1454,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         if !yield_farm.total_shares.is_zero() && yield_farm.updated_at != current_period {
             if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
-                let total_shares_z_adjusted = global_farm
-                    .price_adjustment
-                    .checked_mul_int(global_farm.total_shares_z)
-                    .ok_or(ArithmeticError::Overflow)?;
+                let total_shares_z_adjusted =
+                    math::calculate_adjusted_shares(global_farm.total_shares_z, global_farm.price_adjustment)
+                        .map_err(|_| ArithmeticError::Overflow)?;
+
                 let rewards = math::calculate_global_farm_reward_per_period(
                     global_farm.yield_per_period.into(),
                     total_shares_z_adjusted,
@@ -1497,6 +1542,14 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
             min_deposit,
             price_adjustment,
         )
+    }
+
+    fn update_global_farm_price_adjustment(
+        who: T::AccountId,
+        global_farm_id: u32,
+        price_adjustment: FixedU128,
+    ) -> Result<(), Self::Error> {
+        Self::update_global_farm_price_adjustment(who, global_farm_id, price_adjustment)
     }
 
     fn destroy_global_farm(

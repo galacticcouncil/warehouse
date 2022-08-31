@@ -1,0 +1,68 @@
+[package]
+name = 'pallet-ema-oracle'
+version = '0.1.0'
+description = 'Exponential moving average oracle for AMM pools'
+authors = ['GalacticCouncil']
+edition = '2021'
+license = 'Apache 2.0'
+repository = 'https://github.com/galacticcouncil/warehouse'
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+# alias "parity-scale-code" to "codec"
+[dependencies.codec]
+default-features = false
+features = ['derive']
+package = 'parity-scale-codec'
+version = '2.3.1'
+
+[dependencies]
+serde = {features = ['derive'], optional = true, version = '1.0.136'}
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+
+# HydraDX dependencies
+hydradx-traits = { path = "../traits", default-features = false }
+
+# Substrate dependencies
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false, optional = true }
+sp-arithmetic = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.17", default-features = false }
+sp-core = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.17", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+
+log = { version = "0.4.14", default-features = false }
+
+[dev-dependencies]
+assert_matches = "1.5"
+proptest = "1.0.0"
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+
+env_logger = "*"
+
+criterion = "0.3"
+
+[[bench]]
+name = "ema"
+harness = false
+
+[features]
+default = ['std']
+runtime-benchmarks = [
+  "frame-benchmarking/runtime-benchmarks",
+  "frame-system/runtime-benchmarks",
+  "frame-support/runtime-benchmarks",
+]
+std = [
+  'serde',
+  'codec/std',
+  'frame-support/std',
+  'frame-system/std',
+  'frame-benchmarking/std',
+  'sp-core/std',
+  'sp-std/std',
+  'hydradx-traits/std',
+  'scale-info/std',
+]

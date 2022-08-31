@@ -12,6 +12,7 @@ members = [
 	"adapters",
 	"collator-rewards",
 	"transaction-pause",
+	"ema-oracle",
 ]
 
 resolver = "2"

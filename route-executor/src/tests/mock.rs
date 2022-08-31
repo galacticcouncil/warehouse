@@ -200,6 +200,10 @@ impl Default for ExtBuilder {
     }
 }
 
+pub fn new_test_ext() -> sp_io::TestExternalities {
+    ExtBuilder::default().build()
+}
+
 impl ExtBuilder {
     pub fn with_endowed_accounts(mut self, accounts: Vec<(AccountId, AssetId, Balance)>) -> Self {
         self.endowed_accounts = accounts;

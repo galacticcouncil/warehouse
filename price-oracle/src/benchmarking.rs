@@ -23,17 +23,11 @@ pub const HDX: AssetId = 1_000;
 pub const DOT: AssetId = 2_000;
 
 use frame_benchmarking::benchmarks;
-use frame_support::traits::{OnFinalize, OnInitialize};
+use frame_support::traits::Hooks;
 
 use crate::Pallet as PriceOracle;
 
-pub const PRICE_ENTRY_1: OracleEntry = OracleEntry {
-    price: Price::from_inner(2000000000000000000),
-    trade_amount: 1_000,
-    liquidity_amount: 2_000,
-};
-
-pub const NUM_OF_ITERS: u32 = 100;
+const MAX_TOKENS: u32 = 700;
 
 benchmarks! {
     on_finalize_no_entry {
@@ -42,179 +36,224 @@ benchmarks! {
     verify {
     }
 
-    on_finalize_one_token {
-        let block_num: u32 = 5;
-        let hdx_dot_pair_name = PriceOracle::<T>::get_name(HDX, DOT);
+    on_finalize_insert_one_token {
+        let block_num: T::BlockNumber = 5u32.into();
+        let prev_block = block_num.saturating_sub(One::one());
 
-        frame_system::Pallet::<T>::set_block_number((block_num - 1).into());
-        PriceOracle::<T>::on_initialize((block_num - 1).into());
-        PriceOracle::<T>::on_create_pool(HDX, DOT)?;
-        PriceOracle::<T>::on_finalize((block_num - 1).into());
+        frame_system::Pallet::<T>::set_block_number(prev_block);
+        PriceOracle::<T>::on_initialize(prev_block);
+        PriceOracle::<T>::on_finalize(prev_block);
 
-        frame_system::Pallet::<T>::set_block_number(block_num.into());
-        PriceOracle::<T>::on_initialize(block_num.into());
-        PriceOracle::<T>::on_trade(HDX, DOT, PRICE_ENTRY_1);
+        frame_system::Pallet::<T>::set_block_number(block_num);
+        PriceOracle::<T>::on_initialize(block_num);
 
-        assert_eq!(<PriceDataAccumulator<T>>::try_get(hdx_dot_pair_name.clone()), Ok(PRICE_ENTRY_1));
+        let (amount_in, amount_out, liquidity) = (1_000_000_000_000, 2_000_000_000_000, 500_000_000_000);
+        OnActivityHandler::<T>::on_trade(HDX, DOT, amount_in, amount_out, liquidity);
+        let entry = OracleEntry {
+            price: Price::from((amount_in, amount_out)),
+            volume: Volume::from_a_in_b_out(amount_in, amount_out),
+            liquidity,
+            timestamp: block_num,
+        };
 
-        let price_data = PriceOracle::<T>::price_data_ten();
-        let bucket_queue = price_data.iter().find(|&x| x.0 == hdx_dot_pair_name).unwrap().1;
-        assert_eq!(bucket_queue.get_last(), PriceInfo{ avg_price: Price::zero(), volume: 0});
+        assert_eq!(Accumulator::<T>::get(), [(derive_name(HDX, DOT), entry.clone())].into_iter().collect());
 
-    }: { PriceOracle::<T>::on_finalize(block_num.into()); }
+    }: { PriceOracle::<T>::on_finalize(block_num); }
     verify {
-        assert!(!PriceDataAccumulator::<T>::contains_key(hdx_dot_pair_name.clone()));
-        let price_data = PriceOracle::<T>::price_data_ten();
-        let bucket_queue = price_data.iter().find(|&x| x.0 == hdx_dot_pair_name).unwrap().1;
-        assert_eq!(bucket_queue.get_last(), PriceInfo{ avg_price: Price::from(2), volume: 1_000});
+        assert!(Accumulator::<T>::get().is_empty());
+        assert_eq!(Oracles::<T>::get(derive_name(HDX, DOT), into_blocks::<T>(&LastBlock)).unwrap(), (entry, block_num));
     }
 
-    on_finalize_multiple_tokens_all_bucket_levels {
-        let block_num: u32 = BUCKET_SIZE.pow(2);
-        let a in 1 .. NUM_OF_ITERS; // trade_num
-        frame_system::Pallet::<T>::set_block_number(Zero::zero());
-        PriceOracle::<T>::on_initialize(Zero::zero());
+    on_finalize_update_one_token {
+        let initial_data_block: T::BlockNumber = 5u32.into();
+        // higher update time difference might make exponentiation more expensive
+        let block_num = initial_data_block.saturating_add(1_000_000u32.into());
 
-        let asset_a = AssetId::default();
-        let asset_b = AssetId::default();
+        frame_system::Pallet::<T>::set_block_number(initial_data_block);
+        PriceOracle::<T>::on_initialize(initial_data_block);
+        let (amount_in, amount_out, liquidity) = (1_000_000_000_000, 2_000_000_000_000, 500_000_000_000);
+        OnActivityHandler::<T>::on_trade(HDX, DOT, amount_in, amount_out, liquidity);
+        PriceOracle::<T>::on_finalize(initial_data_block);
 
-        for i in 0 .. a {
-            let asset_a = i * 1_000;
-            let asset_b = i * 2_000;
-            PriceOracle::<T>::on_create_pool(asset_a, asset_b)?;
-        }
+        frame_system::Pallet::<T>::set_block_number(block_num);
+        PriceOracle::<T>::on_initialize(block_num);
 
-        PriceOracle::<T>::on_finalize(Zero::zero());
-        frame_system::Pallet::<T>::set_block_number((block_num - 1).into());
-        PriceOracle::<T>::on_initialize((block_num - 1).into());
+        OnActivityHandler::<T>::on_trade(HDX, DOT, amount_in, amount_out, liquidity);
+        let entry = OracleEntry {
+            price: Price::from((amount_in, amount_out)),
+            volume: Volume::from_a_in_b_out(amount_in, amount_out),
+            liquidity,
+            timestamp: block_num,
+        };
 
-        for i in 0 .. a {
-            let asset_a = i * 1_000;
-            let asset_b = i * 2_000;
-            PriceOracle::<T>::on_trade(asset_a, asset_b, PRICE_ENTRY_1);
-        }
+        assert_eq!(Accumulator::<T>::get(), [(derive_name(HDX, DOT), entry.clone())].into_iter().collect());
 
-        let asset_pair_name = PriceOracle::<T>::get_name(asset_a, asset_b);
-        assert_eq!(PriceDataAccumulator::<T>::try_get(asset_pair_name), Ok(PRICE_ENTRY_1));
-        let price_data = PriceOracle::<T>::price_data_ten();
-        for i in 0 .. a {
-            let asset_a = i * 1_000;
-            let asset_b = i * 2_000;
-            let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::get_name(asset_a, asset_b)).unwrap().1;
-            assert_eq!(bucket_queue.get_last(), PriceInfo{ avg_price: Price::zero(), volume: 0});
-        }
-
-        for round in block_num .. 2 * block_num - 1 {
-            PriceOracle::<T>::on_finalize((round - 1).into());
-            frame_system::Pallet::<T>::set_block_number(round.into());
-            PriceOracle::<T>::on_initialize(round.into());
-
-            for i in 0 .. a {
-                let asset_a = i * 1_000;
-                let asset_b = i * 2_000;
-                PriceOracle::<T>::on_trade(asset_a, asset_b, PRICE_ENTRY_1);
-            }
-
-            assert_eq!(PriceDataAccumulator::<T>::try_get(PriceOracle::<T>::get_name(asset_a, asset_b)), Ok(PRICE_ENTRY_1));
-        }
-
-        frame_system::Pallet::<T>::set_block_number(block_num.into());
-
-    }: { PriceOracle::<T>::on_finalize((2 * block_num - 1).into()); }
+    }: { PriceOracle::<T>::on_finalize(block_num); }
     verify {
-        let asset_a = 1_000;
-        let asset_b = 2_000;
-        let asset_pair_name = PriceOracle::<T>::get_name(asset_a, asset_b);
-        assert!(!PriceDataAccumulator::<T>::contains_key(PriceOracle::<T>::get_name(asset_a, asset_b)));
-        let price_data = PriceOracle::<T>::price_data_ten();
-        for i in 0 .. BucketQueue::BUCKET_SIZE {
-            for j in 0 .. a {
-                let asset_a = j * 1_000;
-                let asset_b = j * 2_000;
-                let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::get_name(asset_a, asset_b)).unwrap().1;
-                assert_eq!(bucket_queue[i as usize], PriceInfo{ avg_price: Price::from(2), volume: 1_000});
-            }
-        }
-
-        let bucket_queue = PriceOracle::<T>::price_data_hundred(asset_pair_name.clone());
-        for i in 0 .. BucketQueue::BUCKET_SIZE {
-            for j in 0 .. a {
-                let asset_a = j * 1_000;
-                let asset_b = j * 2_000;
-                let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::get_name(asset_a, asset_b)).unwrap().1;
-                assert_eq!(bucket_queue[i as usize], PriceInfo{ avg_price: Price::from(2), volume: 1_000});
-            }
-        }
-
-        let bucket_queue = PriceOracle::<T>::price_data_thousand(asset_pair_name);
-        for i in 0 .. BucketQueue::BUCKET_SIZE {
-            for j in 0 .. a {
-                let asset_a = j * 1_000;
-                let asset_b = j * 2_000;
-                let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::get_name(asset_a, asset_b)).unwrap().1;
-                assert_eq!(bucket_queue[i as usize], PriceInfo{ avg_price: Price::from(2), volume: 1_000});
-            }
-        }
+        assert!(Accumulator::<T>::get().is_empty());
+        assert_eq!(Oracles::<T>::get(derive_name(HDX, DOT), into_blocks::<T>(&LastBlock)).unwrap(), (entry, initial_data_block));
     }
 
     on_finalize_multiple_tokens {
-        let block_num: u32 = 5;
-        let b in 1 .. NUM_OF_ITERS; // token num
-        let mut vec = Vec::new();
-        let asset_a = AssetId::default();
-        let asset_b = AssetId::default();
+        let b in 1 .. MAX_TOKENS;
 
-        frame_system::Pallet::<T>::set_block_number((block_num - 1).into());
-        PriceOracle::<T>::on_initialize((block_num - 1).into());
+        let initial_data_block: T::BlockNumber = 5u32.into();
+        let block_num = initial_data_block.saturating_add(1_000_000u32.into());
 
+        frame_system::Pallet::<T>::set_block_number(initial_data_block);
+        PriceOracle::<T>::on_initialize(initial_data_block);
+        let (amount_in, amount_out, liquidity) = (1_000_000_000_000, 2_000_000_000_000, 500_000_000_000);
         for i in 0 .. b {
             let asset_a = i * 1_000;
-            let asset_a = i * 2_000;
-            PriceOracle::<T>::on_create_pool(asset_a, asset_b)?;
+            let asset_b = asset_a + 500;
+            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
         }
+        PriceOracle::<T>::on_finalize(initial_data_block);
 
-        PriceOracle::<T>::on_finalize((block_num - 1).into());
-        frame_system::Pallet::<T>::set_block_number(block_num.into());
-        PriceOracle::<T>::on_initialize((block_num).into());
-
+        frame_system::Pallet::<T>::set_block_number(block_num);
+        PriceOracle::<T>::on_initialize(block_num);
         for i in 0 .. b {
             let asset_a = i * 1_000;
-            let asset_a = i * 2_000;
-            PriceOracle::<T>::on_trade(asset_a, asset_b, PRICE_ENTRY_1);
-            vec.push(PRICE_ENTRY_1);
+            let asset_b = asset_a + 500;
+            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
         }
-
-        let price_data = PriceOracle::<T>::price_data_ten();
-        let bucket_queue = price_data.iter().find(|&x| x.0 == PriceOracle::<T>::get_name(asset_a, asset_b)).unwrap().1;
-        assert_eq!(bucket_queue.get_last(), PriceInfo{ avg_price: Price::zero(), volume: 0});
-
-    }: { PriceOracle::<T>::on_finalize(block_num.into()); }
+    }: { PriceOracle::<T>::on_finalize(block_num); }
     verify {
+        let entry = OracleEntry {
+            price: Price::from((amount_in, amount_out)),
+            volume: Volume::from_a_in_b_out(amount_in, amount_out),
+            liquidity,
+            timestamp: block_num,
+        };
+
         for i in 0 .. b {
             let asset_a = i * 1_000;
-            let asset_a = i * 2_000;
-            let asset_pair_name = PriceOracle::<T>::get_name(asset_a, asset_b);
-            assert!(!PriceDataAccumulator::<T>::contains_key(asset_pair_name.clone()));
-            let price_data = PriceOracle::<T>::price_data_ten();
-            let bucket_queue = price_data.iter().find(|&x| x.0 == asset_pair_name).unwrap().1;
-            assert_eq!(bucket_queue.get_last(), PriceInfo{ avg_price: Price::from(2), volume: 1_000});
+            let asset_b = asset_a + 500;
+            assert_eq!(Oracles::<T>::get(derive_name(asset_a, asset_b), into_blocks::<T>(&LastBlock)).unwrap(), (entry.clone(), initial_data_block));
         }
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::tests::{new_test_ext, Test};
-    use frame_support::assert_ok;
+    on_trade_multiple_tokens {
+        let b in 1 .. MAX_TOKENS;
 
-    #[test]
-    fn test_benchmarks() {
-        new_test_ext().execute_with(|| {
-            assert_ok!(Pallet::<Test>::test_benchmark_on_finalize_no_entry());
-            assert_ok!(Pallet::<Test>::test_benchmark_on_finalize_one_token());
-            assert_ok!(Pallet::<Test>::test_benchmark_on_finalize_multiple_tokens_all_bucket_levels());
-            assert_ok!(Pallet::<Test>::test_benchmark_on_finalize_multiple_tokens());
-        });
+        let initial_data_block: T::BlockNumber = 5u32.into();
+        let block_num = initial_data_block.saturating_add(1_000_000u32.into());
+
+        let mut entries = Vec::new();
+
+        frame_system::Pallet::<T>::set_block_number(initial_data_block);
+        PriceOracle::<T>::on_initialize(initial_data_block);
+        let (amount_in, amount_out, liquidity) = (1_000_000_000_000, 2_000_000_000_000, 500_000_000_000);
+        for i in 0 .. b {
+            let asset_a = i * 1_000;
+            let asset_b = asset_a + 500;
+            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
+        }
+        PriceOracle::<T>::on_finalize(initial_data_block);
+
+        frame_system::Pallet::<T>::set_block_number(block_num);
+        PriceOracle::<T>::on_initialize(block_num);
+        let entry = OracleEntry {
+            price: Price::from((amount_in, amount_out)),
+            volume: Volume::from_a_in_b_out(amount_in, amount_out),
+            liquidity,
+            timestamp: block_num,
+        };
+        for i in 0 .. b {
+            let asset_a = i * 1_000;
+            let asset_b = asset_a + 500;
+            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
+            entries.push((derive_name(asset_a, asset_b), entry.clone()));
+        }
+        let asset_a = b * 1_000;
+        let asset_b = asset_a + 500;
+    }: { OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity); }
+    verify {
+        entries.push((derive_name(asset_a, asset_b), entry.clone()));
+
+        assert_eq!(Accumulator::<T>::get(), entries.into_iter().collect());
     }
+
+    on_liquidity_changed_multiple_tokens {
+        let b in 1 .. MAX_TOKENS;
+
+        let initial_data_block: T::BlockNumber = 5u32.into();
+        let block_num = initial_data_block.saturating_add(1_000_000u32.into());
+
+        let mut entries = Vec::new();
+
+        frame_system::Pallet::<T>::set_block_number(initial_data_block);
+        PriceOracle::<T>::on_initialize(initial_data_block);
+        let (amount_in, amount_out, liquidity) = (1_000_000_000_000, 2_000_000_000_000, 500_000_000_000);
+        for i in 0 .. b {
+            let asset_a = i * 1_000;
+            let asset_b = asset_a + 500;
+            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
+        }
+        PriceOracle::<T>::on_finalize(initial_data_block);
+
+        frame_system::Pallet::<T>::set_block_number(block_num);
+        PriceOracle::<T>::on_initialize(block_num);
+        let entry = OracleEntry {
+            price: Price::from((amount_in, amount_out)),
+            volume: Volume::from_a_in_b_out(amount_in, amount_out),
+            liquidity,
+            timestamp: block_num,
+        };
+        for i in 0 .. b {
+            let asset_a = i * 1_000;
+            let asset_b = asset_a + 500;
+            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
+            entries.push((derive_name(asset_a, asset_b), entry.clone()));
+        }
+        let asset_a = b * 1_000;
+        let asset_b = asset_a + 500;
+        let amount_a = amount_in;
+        let amount_b = amount_out;
+    }: { OnActivityHandler::<T>::on_liquidity_changed(asset_a, asset_b, amount_a, amount_b, liquidity); }
+    verify {
+        let liquidity_entry = OracleEntry {
+            price: Price::from((amount_a, amount_b)),
+            volume: Volume::default(),
+            liquidity,
+            timestamp: block_num,
+        };
+        entries.push((derive_name(asset_a, asset_b), liquidity_entry.clone()));
+
+        assert_eq!(Accumulator::<T>::get(), entries.into_iter().collect());
+    }
+
+    get_entry_multiple_tokens {
+        let b in 1 .. MAX_TOKENS;
+
+        let initial_data_block: T::BlockNumber = 5u32.into();
+        let oracle_age: T::BlockNumber = 999_999u32.into();
+        let block_num = initial_data_block.saturating_add(oracle_age.saturating_add(One::one()));
+
+        frame_system::Pallet::<T>::set_block_number(initial_data_block);
+        PriceOracle::<T>::on_initialize(initial_data_block);
+        let (amount_in, amount_out, liquidity) = (1_000_000_000_000, 2_000_000_000_000, 500_000_000_000);
+        for i in 0 .. b {
+            let asset_a = i * 1_000;
+            let asset_b = asset_a + 500;
+            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
+        }
+        PriceOracle::<T>::on_finalize(initial_data_block);
+
+        frame_system::Pallet::<T>::set_block_number(block_num);
+        PriceOracle::<T>::on_initialize(block_num);
+
+        let res = core::cell::RefCell::new((Err(OracleError::NotPresent), 0));
+
+    }: { let _ = res.replace(PriceOracle::<T>::get_entry(0, 500, TenMinutes)); }
+    verify {
+        assert_eq!(*res.borrow(), (Ok(AggregatedEntry {
+            price: Price::from((amount_in, amount_out)),
+            volume: Volume::from_a_in_b_out(amount_in, amount_out),
+            liquidity,
+            oracle_age,
+        }), 100));
+    }
+
+    impl_benchmark_test_suite!(Pallet, crate::tests::new_test_ext(), crate::tests::Test);
 }

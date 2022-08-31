@@ -235,9 +235,9 @@ impl<T: Config> Pallet<T> {
 /// A callback handler for trading and liquidity activity that schedules oracle updates.
 pub struct OnActivityHandler<T>(PhantomData<T>);
 
-impl<T: Config> OnCreatePoolHandler<AssetId> for PriceOracleHandler<T> {
+impl<T: Config> OnCreatePoolHandler<AssetId> for OnActivityHandler<T> {
     // Nothing to do on pool creation. Oracles are created lazily.
-    fn on_create_pool(asset_a: AssetId, asset_b: AssetId) -> DispatchResult {
+    fn on_create_pool(_asset_a: AssetId, _asset_b: AssetId) -> DispatchResult {
         Ok(())
     }
 }

@@ -21,7 +21,8 @@ use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::{BlockNumberProvider, One, Zero};
 use frame_support::sp_runtime::FixedPointNumber;
 use hydradx_traits::{
-    AggregatedEntry, AggregatedOracle, AggregatedPriceOracle, OnLiquidityChangedHandler, OnTradeHandler,
+    AggregatedEntry, AggregatedOracle, AggregatedPriceOracle, OnCreatePoolHandler, OnLiquidityChangedHandler,
+    OnTradeHandler,
     OraclePeriod::{self, *},
     Volume,
 };
@@ -233,6 +234,13 @@ impl<T: Config> Pallet<T> {
 
 /// A callback handler for trading and liquidity activity that schedules oracle updates.
 pub struct OnActivityHandler<T>(PhantomData<T>);
+
+impl<T: Config> OnCreatePoolHandler<AssetId> for PriceOracleHandler<T> {
+    // Nothing to do on pool creation. Oracles are created lazily.
+    fn on_create_pool(asset_a: AssetId, asset_b: AssetId) -> DispatchResult {
+        Ok(())
+    }
+}
 
 impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
     fn on_trade(asset_in: AssetId, asset_out: AssetId, amount_in: Balance, amount_out: Balance, liquidity: Balance) {

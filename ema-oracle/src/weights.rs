@@ -1,6 +1,6 @@
-// This file is part of pallet-price-oracle.
+// This file is part of pallet-ema-oracle.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +31,7 @@
 // --wasm-execution
 // compiled
 // --pallet
-// pallet-price-oracle
+// pallet-ema-oracle
 // --steps=10
 // --repeat=4
 // --extrinsic

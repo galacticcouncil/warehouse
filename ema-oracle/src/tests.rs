@@ -1,4 +1,4 @@
-// This file is part of pallet-price-oracle.
+// This file is part of pallet-ema-oracle.
 
 // Copyright (C) 2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0

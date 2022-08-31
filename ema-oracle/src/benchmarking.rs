@@ -27,7 +27,7 @@ use frame_support::traits::Hooks;
 
 use crate::Pallet as EmaOracle;
 
-const MAX_TOKENS: u32 = 700;
+pub const MAX_TOKENS: u32 = 700;
 
 benchmarks! {
     on_finalize_no_entry {
@@ -36,6 +36,7 @@ benchmarks! {
     verify {
     }
 
+    #[extra]
     on_finalize_insert_one_token {
         let block_num: T::BlockNumber = 5u32.into();
         let prev_block = block_num.saturating_sub(One::one());
@@ -64,6 +65,7 @@ benchmarks! {
         assert_eq!(Oracles::<T>::get(derive_name(HDX, DOT), into_blocks::<T>(&LastBlock)).unwrap(), (entry, block_num));
     }
 
+    #[extra]
     on_finalize_update_one_token {
         let initial_data_block: T::BlockNumber = 5u32.into();
         // higher update time difference might make exponentiation more expensive
@@ -223,8 +225,8 @@ benchmarks! {
         assert_eq!(Accumulator::<T>::get(), entries.into_iter().collect());
     }
 
-    get_entry_multiple_tokens {
-        let b in 1 .. MAX_TOKENS;
+    get_entry {
+        let b = MAX_TOKENS;
 
         let initial_data_block: T::BlockNumber = 5u32.into();
         let oracle_age: T::BlockNumber = 999_999u32.into();
@@ -233,26 +235,24 @@ benchmarks! {
         frame_system::Pallet::<T>::set_block_number(initial_data_block);
         EmaOracle::<T>::on_initialize(initial_data_block);
         let (amount_in, amount_out, liquidity) = (1_000_000_000_000, 2_000_000_000_000, 500_000_000_000);
-        for i in 0 .. b {
-            let asset_a = i * 1_000;
-            let asset_b = asset_a + 500;
-            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
-        }
+        let asset_a = 1_000;
+        let asset_b = asset_a + 500;
+        OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
         EmaOracle::<T>::on_finalize(initial_data_block);
 
         frame_system::Pallet::<T>::set_block_number(block_num);
         EmaOracle::<T>::on_initialize(block_num);
 
-        let res = core::cell::RefCell::new((Err(OracleError::NotPresent), 0));
+        let res = core::cell::RefCell::new(Err(OracleError::NotPresent));
 
-    }: { let _ = res.replace(EmaOracle::<T>::get_entry(0, 500, TenMinutes)); }
+    }: { let _ = res.replace(EmaOracle::<T>::get_entry(asset_a, asset_b, TenMinutes)); }
     verify {
-        assert_eq!(*res.borrow(), (Ok(AggregatedEntry {
+        assert_eq!(*res.borrow(), Ok(AggregatedEntry {
             price: Price::from((amount_in, amount_out)),
             volume: Volume::from_a_in_b_out(amount_in, amount_out),
             liquidity,
             oracle_age,
-        }), 100));
+        }));
     }
 
     impl_benchmark_test_suite!(Pallet, crate::tests::new_test_ext(), crate::tests::Test);

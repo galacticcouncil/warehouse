@@ -44,7 +44,8 @@ pub use types::*;
 pub mod weights;
 use weights::WeightInfo;
 
-mod benchmarking; // TODO: rebenchmark
+mod benchmarking;
+use benchmarking::MAX_TOKENS;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -125,7 +126,7 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(_n: T::BlockNumber) -> Weight {
-            T::WeightInfo::on_finalize_multiple_tokens_all_bucket_levels(5) // TODO update weights
+            T::WeightInfo::on_finalize_no_entry()
         }
 
         fn on_finalize(_n: T::BlockNumber) {
@@ -268,8 +269,11 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
     }
 
     fn on_trade_weight() -> Weight {
-        T::WeightInfo::on_finalize_one_token() - T::WeightInfo::on_finalize_no_entry()
-        // TODO: update weights
+        T::WeightInfo::on_trade_multiple_tokens(MAX_TOKENS).saturating_add(
+            T::WeightInfo::on_finalize_multiple_tokens(MAX_TOKENS)
+                .saturating_sub(T::WeightInfo::on_finalize_no_entry())
+                / Weight::from(MAX_TOKENS),
+        )
     }
 }
 
@@ -304,8 +308,11 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
     }
 
     fn on_liquidity_changed_weight() -> Weight {
-        T::WeightInfo::on_finalize_one_token() - T::WeightInfo::on_finalize_no_entry()
-        // TODO: update weights
+        T::WeightInfo::on_liquidity_changed_multiple_tokens(MAX_TOKENS).saturating_add(
+            T::WeightInfo::on_finalize_multiple_tokens(MAX_TOKENS)
+                .saturating_sub(T::WeightInfo::on_finalize_no_entry())
+                / Weight::from(MAX_TOKENS),
+        )
     }
 }
 
@@ -396,23 +403,19 @@ impl<T: Config> AggregatedOracle<AssetId, Balance, T::BlockNumber, Price> for Pa
         asset_a: AssetId,
         asset_b: AssetId,
         period: OraclePeriod,
-    ) -> (
-        Result<AggregatedEntry<Balance, T::BlockNumber, Price>, OracleError>,
-        Weight,
-    ) {
+    ) -> Result<AggregatedEntry<Balance, T::BlockNumber, Price>, OracleError> {
         if asset_a == asset_b {
-            return (Err(OracleError::SameAsset), 100);
+            return Err(OracleError::SameAsset);
         };
         let pair_id = derive_name(asset_a, asset_b);
-        let oracle_res = Self::get_updated_entry(&pair_id, period)
+        Self::get_updated_entry(&pair_id, period)
             .ok_or(OracleError::NotPresent)
-            .map(|(entry, initialized)| entry.into_aggegrated(initialized));
-        (oracle_res, 100) // TODO: accurate weight
+            .map(|(entry, initialized)| entry.into_aggegrated(initialized))
     }
 
     fn get_entry_weight() -> Weight {
-        100
-    } // TODO: weight
+        T::WeightInfo::get_entry()
+    }
 }
 
 impl<T: Config> AggregatedPriceOracle<AssetId, T::BlockNumber, Price> for Pallet<T> {
@@ -422,12 +425,8 @@ impl<T: Config> AggregatedPriceOracle<AssetId, T::BlockNumber, Price> for Pallet
         asset_a: AssetId,
         asset_b: AssetId,
         period: OraclePeriod,
-    ) -> (Result<(Price, T::BlockNumber), Self::Error>, Weight) {
-        let (maybe_entry, weight) = Self::get_entry(asset_a, asset_b, period);
-        (
-            maybe_entry.map(|AggregatedEntry { price, oracle_age, .. }| (price, oracle_age)),
-            weight,
-        )
+    ) -> Result<(Price, T::BlockNumber), Self::Error> {
+        Self::get_entry(asset_a, asset_b, period).map(|AggregatedEntry { price, oracle_age, .. }| (price, oracle_age))
     }
 
     fn get_price_weight() -> Weight {

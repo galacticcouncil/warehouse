@@ -23,15 +23,14 @@ use frame_support::sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     FixedU128,
 };
-use frame_support::traits::{Everything, GenesisBuild};
-use hydradx_traits::{AssetPairAccountIdFor, Volume};
-use price_oracle::OracleEntry;
+use frame_support::traits::{Everything, GenesisBuild, Get};
+use hydradx_traits::AssetPairAccountIdFor;
+use price_oracle::PriceEntry;
 use sp_core::H256;
 
 pub type AssetId = u32;
 pub type Balance = u128;
 pub type Price = FixedU128;
-pub type BlockNumber = u64;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -39,28 +38,17 @@ type Block = frame_system::mocking::MockBlock<Test>;
 pub const HDX: AssetId = 1_000;
 pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
+pub const ETH: AssetId = 4_000;
 
-pub const PRICE_ENTRY_1: OracleEntry<BlockNumber> = OracleEntry {
+pub const PRICE_ENTRY_1: PriceEntry = PriceEntry {
     price: Price::from_inner(2000000000000000000),
-    volume: Volume {
-        a_in: 1_000,
-        b_out: 500,
-        a_out: 0,
-        b_in: 0,
-    },
-    liquidity: 2_000,
-    timestamp: 5,
+    trade_amount: 1_000,
+    liquidity_amount: 2_000,
 };
-pub const PRICE_ENTRY_2: OracleEntry<BlockNumber> = OracleEntry {
+pub const PRICE_ENTRY_2: PriceEntry = PriceEntry {
     price: Price::from_inner(5000000000000000000),
-    volume: Volume {
-        a_in: 0,
-        b_out: 0,
-        a_out: 2_000,
-        b_in: 2_000,
-    },
-    liquidity: 4_000,
-    timestamp: 5,
+    trade_amount: 3_000,
+    liquidity_amount: 4_000,
 };
 
 frame_support::construct_runtime!(
@@ -76,7 +64,7 @@ frame_support::construct_runtime!(
 );
 
 parameter_types! {
-    pub const BlockHashCount: BlockNumber = 250;
+    pub const BlockHashCount: u64 = 250;
 }
 
 impl frame_system::Config for Test {
@@ -86,7 +74,7 @@ impl frame_system::Config for Test {
     type Origin = Origin;
     type Call = Call;
     type Index = u64;
-    type BlockNumber = BlockNumber;
+    type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u64;
@@ -121,16 +109,16 @@ impl AssetPairAccountIdFor<AssetId, u64> for AssetPairAccountIdTest {
 
 pub const EXCHANGE_FEE: (u32, u32) = (2, 1_000);
 
-parameter_types! {
-    pub const ExchangeFee: (u32, u32) = EXCHANGE_FEE;
-    pub const SecsPerBlock: u32 = 12;
+struct ExchangeFee;
+impl Get<(u32, u32)> for ExchangeFee {
+    fn get() -> (u32, u32) {
+        EXCHANGE_FEE
+    }
 }
 
 impl Config for Test {
     type Event = Event;
     type WeightInfo = ();
-    type BlockNumberProvider = System;
-    type SecsPerBlock = SecsPerBlock;
 }
 
 #[derive(Default)]
@@ -153,10 +141,6 @@ impl ExtBuilder {
             &mut t,
         )
         .unwrap();
-        let mut ext: sp_io::TestExternalities = t.into();
-        ext.execute_with(|| {
-            System::set_block_number(0);
-        });
-        ext
+        t.into()
     }
 }

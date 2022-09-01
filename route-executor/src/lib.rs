@@ -31,7 +31,7 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
-mod weights;
+pub mod weights;
 use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.

@@ -1,4 +1,4 @@
-// This file is part of pallet-router.
+// This file is part of pallet-route-executor.
 
 // Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
@@ -55,15 +55,18 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        //TODO: Dani - add comments for config
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+        /// Asset id type
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
+        /// Balance type
         type Balance: Parameter + Member + Copy + PartialOrd + MaybeSerializeDeserialize + Zero;
 
+        /// Currency for checking balances
         type Currency: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
 
+        /// Handlers for AMM pools to calculate and execute trades
         type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, TradeCalculationResult=TradeCalculation<Self::Balance>>;
 
         /// Weight information for the extrinsics.

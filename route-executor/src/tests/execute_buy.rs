@@ -18,7 +18,7 @@
 use crate::types::Trade;
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use hydradx_traits::router::{PoolType, TradeCalculation};
+use hydradx_traits::router::{PoolType, AmountWithFee};
 use pretty_assertions::assert_eq;
 use sp_runtime::DispatchError::BadOrigin;
 use crate::tests::mock::*;
@@ -47,7 +47,7 @@ fn execute_buy_should_work_when_route_has_single_trade() {
         ));
 
         //Assert
-        assert_executed_buy_trades(vec![(PoolType::XYK, TradeCalculation::new_without_fee(amount_to_buy), BSX, AUSD)]);
+        assert_executed_buy_trades(vec![(PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), BSX, AUSD)]);
         expect_events(vec![
             Event::RouteIsExecuted {
                 asset_in: BSX,
@@ -85,7 +85,7 @@ fn execute_buy_should_work_when_route_has_single_trade_without_native_balance() 
         ));
 
         //Assert
-        assert_executed_buy_trades(vec![(PoolType::XYK, TradeCalculation::new_without_fee(amount_to_buy), AUSD, KSM)]);
+        assert_executed_buy_trades(vec![(PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), AUSD, KSM)]);
     });
 }
 
@@ -155,7 +155,7 @@ fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
         assert_executed_buy_trades(vec![
             (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, AUSD),
             (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, AUSD, MOVR),
-            (PoolType::XYK, TradeCalculation::new_without_fee(amount_to_buy), MOVR, KSM),
+            (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), MOVR, KSM),
         ]);
 
         expect_events(vec![
@@ -209,7 +209,7 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
         assert_executed_buy_trades(vec![
             (PoolType::XYK, STABLESWAP_BUY_CALCULATION_RESULT, BSX, MOVR),
             (PoolType::Stableswap(AUSD), OMNIPOOL_BUY_CALCULATION_RESULT, MOVR, AUSD),
-            (PoolType::Omnipool, TradeCalculation::new_without_fee(amount_to_buy), AUSD, KSM),
+            (PoolType::Omnipool, AmountWithFee::new_without_fee(amount_to_buy), AUSD, KSM),
         ]);
 
         expect_events(vec![
@@ -256,7 +256,7 @@ fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool()
         //Assert
         assert_executed_buy_trades(vec![
             (PoolType::Stableswap(AUSD), XYK_BUY_CALCULATION_RESULT, BSX, AUSD),
-            (PoolType::XYK, TradeCalculation::new_without_fee(amount_to_buy), AUSD, KSM),
+            (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), AUSD, KSM),
         ]);
     });
 }

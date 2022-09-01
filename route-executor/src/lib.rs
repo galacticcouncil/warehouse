@@ -46,7 +46,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
     use sp_runtime::traits::Zero;
-    use hydradx_traits::router::{ExecutorError, TradeCalculation};
+    use hydradx_traits::router::{ExecutorError, AmountWithFee};
     use types::Trade;
 
     #[pallet::pallet]
@@ -67,7 +67,7 @@ pub mod pallet {
         type Currency: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
 
         /// Handlers for AMM pools to calculate and execute trades
-        type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, TradeCalculationResult=TradeCalculation<Self::Balance>>;
+        type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, TradeCalculationResult=AmountWithFee<Self::Balance>>;
 
         /// Weight information for the extrinsics.
         type WeightInfo: WeightInfo;
@@ -136,8 +136,8 @@ pub mod pallet {
                 Error::<T>::InsufficientBalance
             );
 
-            let mut amounts_to_sell = Vec::<TradeCalculation<T::Balance>>::with_capacity(route.len() + 1);
-            let mut amount = TradeCalculation::new_without_fee(amount_in);
+            let mut amounts_to_sell = Vec::<AmountWithFee<T::Balance>>::with_capacity(route.len() + 1);
+            let mut amount = AmountWithFee::new_without_fee(amount_in);
             amounts_to_sell.push(amount);
 
             for trade in route.iter() {
@@ -200,8 +200,8 @@ pub mod pallet {
                 Error::<T>::InsufficientBalance
             );
 
-            let mut amounts_to_buy = Vec::<TradeCalculation<T::Balance>>::with_capacity(route.len() + 1);
-            let mut amount = TradeCalculation::new_without_fee(amount_out);
+            let mut amounts_to_buy = Vec::<AmountWithFee<T::Balance>>::with_capacity(route.len() + 1);
+            let mut amount = AmountWithFee::new_without_fee(amount_out);
             amounts_to_buy.push(amount);
 
             for trade in route.iter().rev() {

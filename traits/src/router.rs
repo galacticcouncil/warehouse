@@ -16,14 +16,14 @@ pub enum ExecutorError<E> {
 }
 
 #[derive(Encode, Decode, Clone, Copy, Debug, Eq, PartialEq, TypeInfo)]
-pub struct TradeCalculation<Balance> {
+pub struct AmountWithFee<Balance> {
     pub amount: Balance,
     pub fee: Balance,
 }
 
-impl<Balance: Zero> TradeCalculation<Balance> {
+impl<Balance: Zero> AmountWithFee<Balance> {
     pub fn new_without_fee(amount: Balance) -> Self {
-        TradeCalculation {
+        AmountWithFee {
             amount,
             fee: Balance::zero()
         }

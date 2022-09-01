@@ -20,7 +20,7 @@ use crate::Config;
 use frame_support::parameter_types;
 use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
-use hydradx_traits::router::{Executor, ExecutorError, PoolType, TradeCalculation};
+use hydradx_traits::router::{Executor, ExecutorError, PoolType, AmountWithFee};
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
@@ -152,32 +152,32 @@ pub const ALICE_INITIAL_NATIVE_BALANCE: u128 = 1000;
 
 
 
-pub const XYK_SELL_CALCULATION_RESULT: TradeCalculation<Balance> = TradeCalculation {
+pub const XYK_SELL_CALCULATION_RESULT: AmountWithFee<Balance> = AmountWithFee {
     amount: 6,
     fee: 0
 };
 
-pub const XYK_BUY_CALCULATION_RESULT: TradeCalculation<Balance> = TradeCalculation {
+pub const XYK_BUY_CALCULATION_RESULT: AmountWithFee<Balance> = AmountWithFee {
     amount: 5,
     fee: 0
 };
-pub const STABLESWAP_SELL_CALCULATION_RESULT: TradeCalculation<Balance> = TradeCalculation {
+pub const STABLESWAP_SELL_CALCULATION_RESULT: AmountWithFee<Balance> = AmountWithFee {
     amount: 4,
     fee: 0
 };
-pub const STABLESWAP_BUY_CALCULATION_RESULT: TradeCalculation<Balance> = TradeCalculation {
+pub const STABLESWAP_BUY_CALCULATION_RESULT: AmountWithFee<Balance> = AmountWithFee {
     amount: 3,
     fee: 0
 };
-pub const OMNIPOOL_SELL_CALCULATION_RESULT: TradeCalculation<Balance> = TradeCalculation {
+pub const OMNIPOOL_SELL_CALCULATION_RESULT: AmountWithFee<Balance> = AmountWithFee {
     amount: 2,
     fee: 0
 };
-pub const OMNIPOOL_BUY_CALCULATION_RESULT: TradeCalculation<Balance>= TradeCalculation {
+pub const OMNIPOOL_BUY_CALCULATION_RESULT: AmountWithFee<Balance>= AmountWithFee {
     amount: 1,
     fee: 0
 };
-pub const INVALID_CALCULATION_AMOUNT: TradeCalculation<Balance> = TradeCalculation {
+pub const INVALID_CALCULATION_AMOUNT: AmountWithFee<Balance> = AmountWithFee {
     amount: 999,
     fee: 0
 };
@@ -231,14 +231,14 @@ impl ExtBuilder {
 }
 
 thread_local! {
-    pub static EXECUTED_SELLS: RefCell<Vec<(PoolType<AssetId>, TradeCalculation<Balance>, AssetId, AssetId)>> = RefCell::new(Vec::default());
-    pub static EXECUTED_BUYS: RefCell<Vec<(PoolType<AssetId>, TradeCalculation<Balance>, AssetId, AssetId)>> = RefCell::new(Vec::default());
+    pub static EXECUTED_SELLS: RefCell<Vec<(PoolType<AssetId>, AmountWithFee<Balance>, AssetId, AssetId)>> = RefCell::new(Vec::default());
+    pub static EXECUTED_BUYS: RefCell<Vec<(PoolType<AssetId>, AmountWithFee<Balance>, AssetId, AssetId)>> = RefCell::new(Vec::default());
 }
 
 macro_rules! impl_fake_executor {
     ($pool_struct:ident, $pool_type: pat, $sell_calculation_result: expr, $buy_calculation_result: expr)=>{
             impl Executor<AccountId, AssetId, Balance> for $pool_struct {
-                type TradeCalculationResult = TradeCalculation<Balance>;
+                type TradeCalculationResult = AmountWithFee<Balance>;
                 type Error = ();
 
                 fn calculate_sell(
@@ -316,14 +316,14 @@ impl_fake_executor!(XYK, PoolType::XYK, XYK_SELL_CALCULATION_RESULT, XYK_BUY_CAL
 impl_fake_executor!(StableSwap, PoolType::Stableswap(_), STABLESWAP_SELL_CALCULATION_RESULT, STABLESWAP_BUY_CALCULATION_RESULT);
 impl_fake_executor!(OmniPool, PoolType::Omnipool, OMNIPOOL_SELL_CALCULATION_RESULT, OMNIPOOL_BUY_CALCULATION_RESULT);
 
-pub fn assert_executed_sell_trades(expected_trades: Vec<(PoolType<AssetId>,TradeCalculation<Balance>, AssetId, AssetId)>) {
+pub fn assert_executed_sell_trades(expected_trades: Vec<(PoolType<AssetId>, AmountWithFee<Balance>, AssetId, AssetId)>) {
     EXECUTED_SELLS.borrow().with(|v| {
         let trades = v.borrow().deref().clone();
         assert_eq!(trades, expected_trades);
     });
 }
 
-pub fn assert_executed_buy_trades(expected_trades: Vec<(PoolType<AssetId>, TradeCalculation<Balance>, AssetId, AssetId)>) {
+pub fn assert_executed_buy_trades(expected_trades: Vec<(PoolType<AssetId>, AmountWithFee<Balance>, AssetId, AssetId)>) {
     EXECUTED_BUYS.borrow().with(|v| {
         let trades = v.borrow().deref().clone();
         assert_eq!(trades, expected_trades);

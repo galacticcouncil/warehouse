@@ -18,7 +18,7 @@
 use crate::types::Trade;
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use hydradx_traits::router::{PoolType, TradeCalculation};
+use hydradx_traits::router::{PoolType, AmountWithFee};
 use pretty_assertions::assert_eq;
 use sp_runtime::DispatchError::BadOrigin;
 use crate::tests::mock::*;
@@ -43,7 +43,7 @@ fn execute_sell_should_work_when_route_has_single_trade() {
         ));
 
         //Assert
-        assert_executed_sell_trades(vec![(PoolType::XYK, TradeCalculation::new_without_fee(amount_to_sell), BSX, AUSD)]);
+        assert_executed_sell_trades(vec![(PoolType::XYK, AmountWithFee::new_without_fee(amount_to_sell), BSX, AUSD)]);
         expect_events(vec![
             Event::RouteIsExecuted {
                 asset_in: BSX,
@@ -81,7 +81,7 @@ fn execute_sell_should_work_when_route_has_single_trade_without_native_balance()
         ));
 
         //Assert
-        assert_executed_sell_trades(vec![(PoolType::XYK, TradeCalculation::new_without_fee(amount_to_sell), KSM, AUSD)]);
+        assert_executed_sell_trades(vec![(PoolType::XYK, AmountWithFee::new_without_fee(amount_to_sell), KSM, AUSD)]);
     });
 }
 
@@ -146,7 +146,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_same_pooltype() 
 
         //Assert
         assert_executed_sell_trades(vec![
-            (PoolType::XYK, TradeCalculation::new_without_fee(amount_to_sell), BSX, AUSD),
+            (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_sell), BSX, AUSD),
             (PoolType::XYK, XYK_SELL_CALCULATION_RESULT, AUSD, MOVR),
             (PoolType::XYK, XYK_SELL_CALCULATION_RESULT, MOVR, KSM),
         ]);
@@ -196,7 +196,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_different_pool_t
 
         //Assert
         assert_executed_sell_trades(vec![
-            (PoolType::XYK, TradeCalculation::new_without_fee(amount_to_sell), BSX, MOVR),
+            (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_sell), BSX, MOVR),
             (PoolType::Stableswap(AUSD), XYK_SELL_CALCULATION_RESULT, MOVR, AUSD),
             (PoolType::Omnipool, STABLESWAP_SELL_CALCULATION_RESULT, AUSD, KSM),
         ]);
@@ -242,7 +242,7 @@ fn execute_sell_should_work_when_first_trade_is_not_supported_in_the_first_pool(
 
         //Assert
         assert_executed_sell_trades(vec![
-            (PoolType::Stableswap(AUSD), TradeCalculation::new_without_fee(amount_to_sell), BSX, AUSD),
+            (PoolType::Stableswap(AUSD), AmountWithFee::new_without_fee(amount_to_sell), BSX, AUSD),
             (PoolType::XYK, STABLESWAP_SELL_CALCULATION_RESULT, AUSD, KSM),
         ]);
     });

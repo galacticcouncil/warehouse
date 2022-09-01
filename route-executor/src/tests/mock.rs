@@ -136,6 +136,7 @@ impl Config for Test {
     type Balance = Balance;
     type Currency = Tokens;
     type AMM = Pools;
+    type WeightInfo = ();
 }
 
 pub type AccountId = u64;
@@ -198,10 +199,6 @@ impl Default for ExtBuilder {
             endowed_accounts: vec![(ALICE, BSX, 1000u128)],
         }
     }
-}
-
-pub fn new_test_ext() -> sp_io::TestExternalities {
-    ExtBuilder::default().build()
 }
 
 impl ExtBuilder {

@@ -21,7 +21,6 @@
 use frame_support::traits::fungibles::Inspect;
 use frame_support::{
     ensure,
-    weights::{DispatchClass, Pays},
 };
 use frame_system::ensure_signed;
 use hydradx_traits::router::Executor;
@@ -31,6 +30,9 @@ pub mod types;
 
 #[cfg(test)]
 mod tests;
+
+mod weights;
+use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -53,6 +55,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        //TODO: Dani - add comments for config
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
@@ -62,6 +65,9 @@ pub mod pallet {
         type Currency: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
 
         type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, TradeCalculationResult=TradeCalculation<Self::Balance>>;
+
+        /// Weight information for the extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::event]
@@ -110,7 +116,7 @@ pub mod pallet {
         /// - `route`: Series of trades containing AMM and asset pair information
         ///
         /// Emits `RouteIsExecuted` when successful.
-        #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+        #[pallet::weight(<T as Config>::WeightInfo::execute_sell(route.len() as u32))]
         pub fn execute_sell(
             origin: OriginFor<T>,
             asset_in: T::AssetId,
@@ -174,7 +180,7 @@ pub mod pallet {
         /// - `route`: Series of trades containing AMM and asset pair info
         ///
         /// Emits `RouteIsExecuted` when successful.
-        #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+        #[pallet::weight(<T as Config>::WeightInfo::execute_buy(route.len() as u32))]
         pub fn execute_buy(
             origin: OriginFor<T>,
             asset_in: T::AssetId,

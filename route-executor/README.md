@@ -1,6 +1,10 @@
-### Faucet pallet
+### Route executor
 
 ## Overview
-Simple token faucet to dispense resource on development chain.
+This pallet is responsible for executing a series of trades specified in the route.
+The specific price calculations and execution logics are implemented by the AMM pools
+configured for the pallet.
 
-Only works with AssetId = u32 and Balance = u128.
+Both buy and sell trades are supported. 
+
+The extrinsic weights are calculated based on the size of the route.

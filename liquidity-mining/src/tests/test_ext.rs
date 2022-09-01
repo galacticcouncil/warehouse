@@ -211,8 +211,7 @@ fn init_yield_farm_ins1(
         yield_farm.multiplier,
         yield_farm.loyalty_curve.clone(),
         amm_id,
-        asset_a,
-        asset_b,
+        vec![asset_a, asset_b]
     ));
 
     pretty_assertions::assert_eq!(

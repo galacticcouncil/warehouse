@@ -149,8 +149,7 @@ fn create_yield_farm_should_work() {
                     yield_farm.multiplier,
                     yield_farm.loyalty_curve.clone(),
                     amm_id,
-                    assets.asset_in,
-                    assets.asset_out,
+                    vec![assets.asset_in, assets.asset_out]
                 )
                 .unwrap(),
                 yield_farm.id
@@ -182,8 +181,7 @@ fn add_yield_farm_missing_incentivized_asset_should_not_work() {
                 None,
                 KSM_DOT_AMM,
                 //Neither KSM nor DOT is incentivized by the farm.
-                KSM,
-                DOT,
+                vec![KSM, DOT]
             ),
             Error::<Test, Instance1>::MissingIncentivizedAsset
         );
@@ -200,8 +198,7 @@ fn add_yield_farm_not_owner_should_not_work() {
                 FixedU128::from(10_000_u128),
                 None,
                 BSX_HDX_AMM,
-                BSX,
-                HDX,
+                vec![BSX, HDX],
             ),
             Error::<Test, Instance1>::Forbidden
         );
@@ -213,8 +210,7 @@ fn add_yield_farm_not_owner_should_not_work() {
                 FixedU128::from(10_000_u128),
                 Some(LoyaltyCurve::default()),
                 BSX_HDX_AMM,
-                BSX,
-                HDX,
+                vec![BSX, HDX],
             ),
             Error::<Test, Instance1>::Forbidden
         );
@@ -259,8 +255,7 @@ fn add_yield_farm_invalid_loyalty_curve_should_not_work() {
                     FixedU128::from(10_000_u128),
                     c,
                     BSX_HDX_AMM,
-                    BSX,
-                    HDX,
+                    vec![BSX, HDX],
                 ),
                 Error::<Test, Instance1>::InvalidInitialRewardPercentage
             );
@@ -278,8 +273,7 @@ fn add_yield_farm_invalid_multiplier_should_not_work() {
                 FixedU128::from(0_u128),
                 Some(LoyaltyCurve::default()),
                 BSX_HDX_AMM,
-                BSX,
-                HDX,
+                vec![BSX, HDX],
             ),
             Error::<Test, Instance1>::InvalidMultiplier
         );
@@ -308,8 +302,7 @@ fn add_yield_farm_add_duplicate_amm_should_not_work() {
                 FixedU128::from(9_000_u128),
                 Some(LoyaltyCurve::default()),
                 ACA_KSM_AMM,
-                ACA,
-                KSM,
+                vec![ACA, KSM],
             ),
             Error::<Test, Instance1>::YieldFarmAlreadyExists
         );
@@ -324,8 +317,7 @@ fn add_yield_farm_add_duplicate_amm_should_not_work() {
                 FixedU128::from(9_000_u128),
                 Some(LoyaltyCurve::default()),
                 ACA_KSM_AMM,
-                ACA,
-                KSM,
+                vec![ACA, KSM],
             ),
             Error::<Test, Instance1>::YieldFarmAlreadyExists
         );
@@ -344,8 +336,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
             10_000.into(),
             Some(LoyaltyCurve::default()),
             BSX_ACA_AMM,
-            BSX,
-            ACA
+            vec![BSX, ACA]
         ));
 
         // This should works 4-th yield farm
@@ -355,8 +346,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
             10_000.into(),
             Some(LoyaltyCurve::default()),
             BSX_DOT_AMM,
-            BSX,
-            DOT,
+            vec![BSX, DOT],
         )
         .unwrap();
 
@@ -368,8 +358,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
                 10_000.into(),
                 Some(LoyaltyCurve::default()),
                 BSX_HDX_AMM,
-                BSX,
-                HDX
+                vec![BSX, HDX]
             ),
             Error::<Test, Instance1>::GlobalFarmIsFull
         );
@@ -385,8 +374,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
                 10_000.into(),
                 Some(LoyaltyCurve::default()),
                 BSX_HDX_AMM,
-                BSX,
-                HDX
+                vec![BSX, HDX]
             ),
             Error::<Test, Instance1>::GlobalFarmIsFull
         );
@@ -425,8 +413,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
                 10_000.into(),
                 Some(LoyaltyCurve::default()),
                 BSX_HDX_AMM,
-                BSX,
-                HDX
+                vec![BSX, HDX]
             ),
             Error::<Test, Instance1>::GlobalFarmIsFull
         );
@@ -446,8 +433,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
             10_000.into(),
             Some(LoyaltyCurve::default()),
             BSX_HDX_AMM,
-            BSX,
-            HDX
+            vec![BSX, HDX]
         ));
     });
 }

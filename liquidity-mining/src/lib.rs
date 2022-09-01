@@ -501,16 +501,14 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `loyalty_curve`: curve to calculate loyalty multiplier to distribute rewards to users
     /// with time incentive. `None` means no loyalty multiplier.
     /// - `amm_pool_id`: identifier of the AMM pool.
-    /// - `asset_a`: one of the assets in the AMM.
-    /// - `asset_b`: second asset in the AMM.
+    /// - `assets`: list of assets in the AMM pool. One of this assets must be incentivied asset
     fn create_yield_farm(
         who: T::AccountId,
         global_farm_id: GlobalFarmId,
         multiplier: FarmMultiplier,
         loyalty_curve: Option<LoyaltyCurve>,
         amm_pool_id: T::AmmPoolId,
-        asset_a: T::CurrencyId,
-        asset_b: T::CurrencyId,
+        assets: Vec<T::CurrencyId>,
     ) -> Result<YieldFarmId, DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
 
@@ -534,7 +532,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                 ensure!(!global_farm.is_full(), Error::<T, I>::GlobalFarmIsFull);
 
                 ensure!(
-                    asset_a == global_farm.incentivized_asset || asset_b == global_farm.incentivized_asset,
+                    assets.contains(&global_farm.incentivized_asset),
                     Error::<T, I>::MissingIncentivizedAsset
                 );
 
@@ -1565,18 +1563,9 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         multiplier: FixedU128,
         loyalty_curve: Option<Self::LoyaltyCurve>,
         amm_pool_id: Self::AmmPoolId,
-        asset_a: T::CurrencyId,
-        asset_b: T::CurrencyId,
+        assets: Vec<T::CurrencyId>,
     ) -> Result<u32, Self::Error> {
-        Self::create_yield_farm(
-            who,
-            global_farm_id,
-            multiplier,
-            loyalty_curve,
-            amm_pool_id,
-            asset_a,
-            asset_b,
-        )
+        Self::create_yield_farm(who, global_farm_id, multiplier, loyalty_curve, amm_pool_id, assets)
     }
 
     fn update_yield_farm_multiplier(

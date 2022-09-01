@@ -43,8 +43,7 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         multiplier: FixedU128,
         loyalty_curve: Option<Self::LoyaltyCurve>,
         amm_pool_id: Self::AmmPoolId,
-        asset_a: AssetId,
-        asset_b: AssetId,
+        assets: Vec<AssetId>,
     ) -> Result<u32, Self::Error>;
 
     /// Update multiplier of the existing yield farm.

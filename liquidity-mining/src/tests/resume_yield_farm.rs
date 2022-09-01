@@ -146,8 +146,7 @@ fn resume_yield_farm_same_amm_farm_active_should_not_work() {
             FixedU128::from(10_000_u128),
             None,
             BSX_TKN1_AMM,
-            BSX,
-            TKN1,
+            vec![BSX, TKN1]
         ));
 
         assert_noop!(

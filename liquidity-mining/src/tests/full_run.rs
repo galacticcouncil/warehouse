@@ -56,8 +56,7 @@ fn non_full_farm_running_longer_than_expected() {
             FixedU128::from(2_u128),
             None,
             BSX_TKN1_AMM,
-            BSX,
-            TKN1
+            vec![BSX, TKN1]
         ));
 
         assert_ok!(LiquidityMining2::create_yield_farm(
@@ -66,8 +65,7 @@ fn non_full_farm_running_longer_than_expected() {
             FixedU128::from(1_u128),
             None,
             BSX_TKN2_AMM,
-            BSX,
-            TKN2
+            vec![BSX, TKN2]
         ));
 
         set_block_number(120);
@@ -186,8 +184,7 @@ fn non_full_farm_distribute_everything_and_update_farms() {
             FixedU128::from(2_u128),
             None,
             BSX_TKN1_AMM,
-            BSX,
-            TKN1
+            vec![BSX, TKN1]
         ));
 
         assert_ok!(LiquidityMining2::create_yield_farm(
@@ -196,8 +193,7 @@ fn non_full_farm_distribute_everything_and_update_farms() {
             FixedU128::from(1_u128),
             None,
             BSX_TKN2_AMM,
-            BSX,
-            TKN2
+            vec![BSX, TKN2]
         ));
 
         set_block_number(120);
@@ -306,8 +302,7 @@ fn overcrowded_farm_running_longer_than_expected() {
             FixedU128::from(2_u128),
             None,
             BSX_TKN1_AMM,
-            BSX,
-            TKN1
+            vec![BSX, TKN1]
         ));
 
         assert_ok!(LiquidityMining2::create_yield_farm(
@@ -316,8 +311,7 @@ fn overcrowded_farm_running_longer_than_expected() {
             FixedU128::from(1_u128),
             None,
             BSX_TKN2_AMM,
-            BSX,
-            TKN2
+            vec![BSX, TKN2]
         ));
 
         //NOTE: farm is overcrowded when Z > 20_000
@@ -469,8 +463,7 @@ fn full_farm_running_planned_time() {
             FixedU128::from(2_u128),
             None,
             BSX_TKN1_AMM,
-            BSX,
-            TKN1
+            vec![BSX, TKN1]
         ));
 
         assert_ok!(LiquidityMining2::create_yield_farm(
@@ -479,8 +472,7 @@ fn full_farm_running_planned_time() {
             FixedU128::from(1_u128),
             None,
             BSX_TKN2_AMM,
-            BSX,
-            TKN2
+            vec![BSX, TKN2]
         ));
 
         set_block_number(120);

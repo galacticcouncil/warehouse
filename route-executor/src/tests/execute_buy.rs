@@ -110,7 +110,7 @@ fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_err
                 limit,
                 trades
             ),
-            Error::<Test>::PriceCalculationIsFailed
+            Error::<Test>::CalculationFailed
         );
         });
 }
@@ -331,7 +331,7 @@ fn execute_buy_should_fail_when_caller_has_not_enough_balance() {
                 limit,
                 trades
             ),
-                Error::<Test>::InsufficientAssetBalance
+                Error::<Test>::InsufficientBalance
             );
         });
 }
@@ -357,7 +357,7 @@ fn execute_buy_should_fail_when_max_limit_to_spend_is_reached() {
                     limit,
                     trades
                 ),
-                Error::<Test>::MaxLimitToSpendIsReached
+                Error::<Test>::MaxLimitToSpendReached
             );
     });
 }

@@ -23,16 +23,13 @@ pub struct AmountWithFee<Balance> {
 
 impl<Balance: Zero> AmountWithFee<Balance> {
     pub fn new(amount: Balance, fee: Balance) -> Self {
-        AmountWithFee {
-            amount,
-            fee
-        }
+        AmountWithFee { amount, fee }
     }
 
     pub fn new_without_fee(amount: Balance) -> Self {
         AmountWithFee {
             amount,
-            fee: Balance::zero()
+            fee: Balance::zero(),
         }
     }
 }

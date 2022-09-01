@@ -15,13 +15,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::tests::mock::*;
 use crate::types::Trade;
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use hydradx_traits::router::{PoolType, AmountWithFee};
+use hydradx_traits::router::{AmountWithFee, PoolType};
 use pretty_assertions::assert_eq;
 use sp_runtime::DispatchError::BadOrigin;
-use crate::tests::mock::*;
 
 #[test]
 fn execute_sell_should_work_when_route_has_single_trade() {
@@ -43,15 +43,19 @@ fn execute_sell_should_work_when_route_has_single_trade() {
         ));
 
         //Assert
-        assert_executed_sell_trades(vec![(PoolType::XYK, AmountWithFee::new_without_fee(amount_to_sell), BSX, AUSD)]);
-        expect_events(vec![
-            Event::RouteIsExecuted {
-                asset_in: BSX,
-                asset_out: AUSD,
-                amount_in: amount_to_sell,
-                amount_out: XYK_SELL_CALCULATION_RESULT.amount,
-            }.into(),
-        ]);
+        assert_executed_sell_trades(vec![(
+            PoolType::XYK,
+            AmountWithFee::new_without_fee(amount_to_sell),
+            BSX,
+            AUSD,
+        )]);
+        expect_events(vec![Event::RouteIsExecuted {
+            asset_in: BSX,
+            asset_out: AUSD,
+            amount_in: amount_to_sell,
+            amount_out: XYK_SELL_CALCULATION_RESULT.amount,
+        }
+        .into()]);
     });
 }
 
@@ -59,30 +63,36 @@ fn execute_sell_should_work_when_route_has_single_trade() {
 fn execute_sell_should_work_when_route_has_single_trade_without_native_balance() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
-        .build().execute_with(|| {
-        //Arrange
-        let amount_to_sell = 10;
-        let limit = 5;
+        .build()
+        .execute_with(|| {
+            //Arrange
+            let amount_to_sell = 10;
+            let limit = 5;
 
-        let trades = vec![Trade {
-            pool: PoolType::XYK,
-            asset_in: KSM,
-            asset_out: AUSD,
-        }];
+            let trades = vec![Trade {
+                pool: PoolType::XYK,
+                asset_in: KSM,
+                asset_out: AUSD,
+            }];
 
-        //Act
-        assert_ok!(Router::execute_sell(
-            Origin::signed(ALICE),
-            KSM,
-            AUSD,
-            amount_to_sell,
-            limit,
-            trades
-        ));
+            //Act
+            assert_ok!(Router::execute_sell(
+                Origin::signed(ALICE),
+                KSM,
+                AUSD,
+                amount_to_sell,
+                limit,
+                trades
+            ));
 
-        //Assert
-        assert_executed_sell_trades(vec![(PoolType::XYK, AmountWithFee::new_without_fee(amount_to_sell), KSM, AUSD)]);
-    });
+            //Assert
+            assert_executed_sell_trades(vec![(
+                PoolType::XYK,
+                AmountWithFee::new_without_fee(amount_to_sell),
+                KSM,
+                AUSD,
+            )]);
+        });
 }
 
 #[test]
@@ -98,17 +108,17 @@ fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_er
 
             //Act and Assert
             assert_noop!(
-            Router::execute_sell(
-                Origin::signed(ALICE),
-                BSX,
-                AUSD,
-                INVALID_CALCULATION_AMOUNT.amount,
-                limit,
-                trades
-            ),
-            Error::<Test>::CalculationFailed
-        );
-    });
+                Router::execute_sell(
+                    Origin::signed(ALICE),
+                    BSX,
+                    AUSD,
+                    INVALID_CALCULATION_AMOUNT.amount,
+                    limit,
+                    trades
+                ),
+                Error::<Test>::CalculationFailed
+            );
+        });
 }
 
 #[test]
@@ -150,14 +160,13 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_same_pooltype() 
             (PoolType::XYK, XYK_SELL_CALCULATION_RESULT, AUSD, MOVR),
             (PoolType::XYK, XYK_SELL_CALCULATION_RESULT, MOVR, KSM),
         ]);
-        expect_events(vec![
-            Event::RouteIsExecuted {
-                asset_in: BSX,
-                asset_out: KSM,
-                amount_in: amount_to_sell,
-                amount_out: XYK_SELL_CALCULATION_RESULT.amount,
-            }.into(),
-        ]);
+        expect_events(vec![Event::RouteIsExecuted {
+            asset_in: BSX,
+            asset_out: KSM,
+            amount_in: amount_to_sell,
+            amount_out: XYK_SELL_CALCULATION_RESULT.amount,
+        }
+        .into()]);
     });
 }
 
@@ -201,14 +210,13 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_different_pool_t
             (PoolType::Omnipool, STABLESWAP_SELL_CALCULATION_RESULT, AUSD, KSM),
         ]);
 
-        expect_events(vec![
-            Event::RouteIsExecuted {
-                asset_in: BSX,
-                asset_out: KSM,
-                amount_in: amount_to_sell,
-                amount_out: OMNIPOOL_SELL_CALCULATION_RESULT.amount,
-            }.into(),
-        ]);
+        expect_events(vec![Event::RouteIsExecuted {
+            asset_in: BSX,
+            asset_out: KSM,
+            amount_in: amount_to_sell,
+            amount_out: OMNIPOOL_SELL_CALCULATION_RESULT.amount,
+        }
+        .into()]);
     });
 }
 
@@ -242,7 +250,12 @@ fn execute_sell_should_work_when_first_trade_is_not_supported_in_the_first_pool(
 
         //Assert
         assert_executed_sell_trades(vec![
-            (PoolType::Stableswap(AUSD), AmountWithFee::new_without_fee(amount_to_sell), BSX, AUSD),
+            (
+                PoolType::Stableswap(AUSD),
+                AmountWithFee::new_without_fee(amount_to_sell),
+                BSX,
+                AUSD,
+            ),
             (PoolType::XYK, STABLESWAP_SELL_CALCULATION_RESULT, AUSD, KSM),
         ]);
     });
@@ -258,14 +271,7 @@ fn execute_sell_should_fail_when_called_with_non_signed_origin() {
 
         //Act and Assert
         assert_noop!(
-            Router::execute_sell(
-            Origin::none(),
-            BSX,
-            AUSD,
-            amount_to_sell,
-            limit,
-            trades
-        ),
+            Router::execute_sell(Origin::none(), BSX, AUSD, amount_to_sell, limit, trades),
             BadOrigin
         );
     });
@@ -279,14 +285,7 @@ fn execute_sell_should_fail_when_route_has_no_trades() {
 
         //Act and Assert
         assert_noop!(
-            Router::execute_sell(
-                Origin::signed(ALICE),
-                BSX,
-                AUSD,
-                10,
-                5,
-                trades
-            ),
+            Router::execute_sell(Origin::signed(ALICE), BSX, AUSD, 10, 5, trades),
             Error::<Test>::RouteHasNoTrades
         );
     });
@@ -299,21 +298,12 @@ fn execute_sell_should_fail_when_caller_has_not_enough_balance() {
     let limit = 5;
     let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
-    ExtBuilder::default()
-        .build()
-        .execute_with(|| {
-            //Act and Assert
-            assert_noop!(
-                Router::execute_sell(
-                Origin::signed(ALICE),
-                BSX,
-                AUSD,
-                amount_to_sell,
-                limit,
-                trades
-            ),
-                Error::<Test>::InsufficientBalance
-            );
+    ExtBuilder::default().build().execute_with(|| {
+        //Act and Assert
+        assert_noop!(
+            Router::execute_sell(Origin::signed(ALICE), BSX, AUSD, amount_to_sell, limit, trades),
+            Error::<Test>::InsufficientBalance
+        );
     });
 }
 
@@ -328,15 +318,8 @@ fn execute_sell_should_fail_when_min_limit_to_receive_is_not_reached() {
 
         //Act and Assert
         assert_noop!(
-                Router::execute_sell(
-                Origin::signed(ALICE),
-                BSX,
-                AUSD,
-                amount_to_sell,
-                limit,
-                trades
-            ),
-                Error::<Test>::MinLimitToReceiveNotReached
-            );
+            Router::execute_sell(Origin::signed(ALICE), BSX, AUSD, amount_to_sell, limit, trades),
+            Error::<Test>::MinLimitToReceiveNotReached
+        );
     });
 }

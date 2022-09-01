@@ -39,54 +39,54 @@
 #![allow(clippy::unnecessary_cast)]
 
 use frame_support::{
-	traits::Get,
-	weights::{constants::RocksDbWeight, Weight},
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
 };
 use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_route_executor.
 pub trait WeightInfo {
-	fn execute_sell(n: u32) -> Weight;
-	fn execute_buy(n: u32) -> Weight;
+    fn execute_sell(n: u32) -> Weight;
+    fn execute_buy(n: u32) -> Weight;
 }
 
 pub struct BasiliskWeight<T>(PhantomData<T>);
 
 impl<T: frame_system::Config> WeightInfo for BasiliskWeight<T> {
-	fn execute_sell(n: u32) -> Weight {
-		(14_365_000 as Weight) // Standard Error: 96_000
-			.saturating_add((80_889_000 as Weight).saturating_mul(n as Weight))
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().reads((8 as Weight).saturating_mul(n as Weight)))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes((3 as Weight).saturating_mul(n as Weight)))
-	}
-	fn execute_buy(n: u32) -> Weight {
-		(14_053_000 as Weight) // Standard Error: 87_000
-			.saturating_add((79_113_000 as Weight).saturating_mul(n as Weight))
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().reads((8 as Weight).saturating_mul(n as Weight)))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes((3 as Weight).saturating_mul(n as Weight)))
-	}
+    fn execute_sell(n: u32) -> Weight {
+        (14_365_000 as Weight) // Standard Error: 96_000
+            .saturating_add((80_889_000 as Weight).saturating_mul(n as Weight))
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().reads((8 as Weight).saturating_mul(n as Weight)))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes((3 as Weight).saturating_mul(n as Weight)))
+    }
+    fn execute_buy(n: u32) -> Weight {
+        (14_053_000 as Weight) // Standard Error: 87_000
+            .saturating_add((79_113_000 as Weight).saturating_mul(n as Weight))
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().reads((8 as Weight).saturating_mul(n as Weight)))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes((3 as Weight).saturating_mul(n as Weight)))
+    }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn execute_sell(n: u32) -> Weight {
-		(14_365_000 as Weight) // Standard Error: 96_000
-			.saturating_add((80_889_000 as Weight).saturating_mul(n as Weight))
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().reads((8 as Weight).saturating_mul(n as Weight)))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes((3 as Weight).saturating_mul(n as Weight)))
-	}
-	fn execute_buy(n: u32) -> Weight {
-		(14_053_000 as Weight) // Standard Error: 87_000
-			.saturating_add((79_113_000 as Weight).saturating_mul(n as Weight))
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().reads((8 as Weight).saturating_mul(n as Weight)))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes((3 as Weight).saturating_mul(n as Weight)))
-	}
+    fn execute_sell(n: u32) -> Weight {
+        (14_365_000 as Weight) // Standard Error: 96_000
+            .saturating_add((80_889_000 as Weight).saturating_mul(n as Weight))
+            .saturating_add(RocksDbWeight::get().reads(2 as Weight))
+            .saturating_add(RocksDbWeight::get().reads((8 as Weight).saturating_mul(n as Weight)))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+            .saturating_add(RocksDbWeight::get().writes((3 as Weight).saturating_mul(n as Weight)))
+    }
+    fn execute_buy(n: u32) -> Weight {
+        (14_053_000 as Weight) // Standard Error: 87_000
+            .saturating_add((79_113_000 as Weight).saturating_mul(n as Weight))
+            .saturating_add(RocksDbWeight::get().reads(2 as Weight))
+            .saturating_add(RocksDbWeight::get().reads((8 as Weight).saturating_mul(n as Weight)))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+            .saturating_add(RocksDbWeight::get().writes((3 as Weight).saturating_mul(n as Weight)))
+    }
 }

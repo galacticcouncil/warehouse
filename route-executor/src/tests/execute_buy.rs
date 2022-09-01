@@ -15,78 +15,87 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::tests::mock::*;
 use crate::types::Trade;
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use hydradx_traits::router::{PoolType, AmountWithFee};
+use hydradx_traits::router::{AmountWithFee, PoolType};
 use pretty_assertions::assert_eq;
 use sp_runtime::DispatchError::BadOrigin;
-use crate::tests::mock::*;
-
 
 #[test]
 fn execute_buy_should_work_when_route_has_single_trade() {
     ExtBuilder::default()
-        .with_endowed_accounts(vec![
-            (ALICE, AUSD, 1000),])
-        .build().execute_with(|| {
-        //Arrange
-        let amount_to_buy = 10;
-        let limit = 5;
+        .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
+        .build()
+        .execute_with(|| {
+            //Arrange
+            let amount_to_buy = 10;
+            let limit = 5;
 
-        let trades = vec![BSX_AUSD_TRADE_IN_XYK];
+            let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
-        //Act
-        assert_ok!(Router::execute_buy(
-            Origin::signed(ALICE),
-            BSX,
-            AUSD,
-            amount_to_buy,
-            limit,
-            trades
-        ));
+            //Act
+            assert_ok!(Router::execute_buy(
+                Origin::signed(ALICE),
+                BSX,
+                AUSD,
+                amount_to_buy,
+                limit,
+                trades
+            ));
 
-        //Assert
-        assert_executed_buy_trades(vec![(PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), BSX, AUSD)]);
-        expect_events(vec![
-            Event::RouteIsExecuted {
+            //Assert
+            assert_executed_buy_trades(vec![(
+                PoolType::XYK,
+                AmountWithFee::new_without_fee(amount_to_buy),
+                BSX,
+                AUSD,
+            )]);
+            expect_events(vec![Event::RouteIsExecuted {
                 asset_in: BSX,
                 asset_out: AUSD,
                 amount_in: XYK_BUY_CALCULATION_RESULT.amount,
                 amount_out: amount_to_buy,
-            }.into(),
-        ]);
-    });
+            }
+            .into()]);
+        });
 }
 
 #[test]
 fn execute_buy_should_work_when_route_has_single_trade_without_native_balance() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
-        .build().execute_with(|| {
-        //Arrange
-        let amount_to_buy = 10;
-        let limit = 5;
+        .build()
+        .execute_with(|| {
+            //Arrange
+            let amount_to_buy = 10;
+            let limit = 5;
 
-        let trades = vec![Trade {
-            pool: PoolType::XYK,
-            asset_in: AUSD,
-            asset_out: KSM,
-        }];
+            let trades = vec![Trade {
+                pool: PoolType::XYK,
+                asset_in: AUSD,
+                asset_out: KSM,
+            }];
 
-        //Act
-        assert_ok!(Router::execute_buy(
-            Origin::signed(ALICE),
-            AUSD,
-            KSM,
-            amount_to_buy,
-            limit,
-            trades
-        ));
+            //Act
+            assert_ok!(Router::execute_buy(
+                Origin::signed(ALICE),
+                AUSD,
+                KSM,
+                amount_to_buy,
+                limit,
+                trades
+            ));
 
-        //Assert
-        assert_executed_buy_trades(vec![(PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), AUSD, KSM)]);
-    });
+            //Assert
+            assert_executed_buy_trades(vec![(
+                PoolType::XYK,
+                AmountWithFee::new_without_fee(amount_to_buy),
+                AUSD,
+                KSM,
+            )]);
+        });
 }
 
 #[test]
@@ -102,71 +111,70 @@ fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_err
 
             //Act and Assert
             assert_noop!(
-            Router::execute_buy(
-                Origin::signed(ALICE),
-                BSX,
-                AUSD,
-                INVALID_CALCULATION_AMOUNT.amount,
-                limit,
-                trades
-            ),
-            Error::<Test>::CalculationFailed
-        );
+                Router::execute_buy(
+                    Origin::signed(ALICE),
+                    BSX,
+                    AUSD,
+                    INVALID_CALCULATION_AMOUNT.amount,
+                    limit,
+                    trades
+                ),
+                Error::<Test>::CalculationFailed
+            );
         });
 }
-
 
 #[test]
 fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
-        .build().execute_with(|| {
-        //Arrange
-        let amount_to_buy = 10;
-        let limit = 5;
-        let trade1 = Trade {
-            pool: PoolType::XYK,
-            asset_in: BSX,
-            asset_out: AUSD,
-        };
-        let trade2 = Trade {
-            pool: PoolType::XYK,
-            asset_in: AUSD,
-            asset_out: MOVR,
-        };
-        let trade3 = Trade {
-            pool: PoolType::XYK,
-            asset_in: MOVR,
-            asset_out: KSM,
-        };
-        let trades = vec![trade1, trade2, trade3];
+        .build()
+        .execute_with(|| {
+            //Arrange
+            let amount_to_buy = 10;
+            let limit = 5;
+            let trade1 = Trade {
+                pool: PoolType::XYK,
+                asset_in: BSX,
+                asset_out: AUSD,
+            };
+            let trade2 = Trade {
+                pool: PoolType::XYK,
+                asset_in: AUSD,
+                asset_out: MOVR,
+            };
+            let trade3 = Trade {
+                pool: PoolType::XYK,
+                asset_in: MOVR,
+                asset_out: KSM,
+            };
+            let trades = vec![trade1, trade2, trade3];
 
-        //Act
-        assert_ok!(Router::execute_buy(
-            Origin::signed(ALICE),
-            BSX,
-            KSM,
-            amount_to_buy,
-            limit,
-            trades
-        ));
+            //Act
+            assert_ok!(Router::execute_buy(
+                Origin::signed(ALICE),
+                BSX,
+                KSM,
+                amount_to_buy,
+                limit,
+                trades
+            ));
 
-        //Assert
-        assert_executed_buy_trades(vec![
-            (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, AUSD),
-            (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, AUSD, MOVR),
-            (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), MOVR, KSM),
-        ]);
+            //Assert
+            assert_executed_buy_trades(vec![
+                (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, AUSD),
+                (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, AUSD, MOVR),
+                (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), MOVR, KSM),
+            ]);
 
-        expect_events(vec![
-            Event::RouteIsExecuted {
+            expect_events(vec![Event::RouteIsExecuted {
                 asset_in: BSX,
                 asset_out: KSM,
                 amount_in: XYK_BUY_CALCULATION_RESULT.amount,
                 amount_out: amount_to_buy,
-            }.into(),
-        ]);
-    });
+            }
+            .into()]);
+        });
 }
 
 #[test]
@@ -175,139 +183,132 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
         .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
         .build()
         .execute_with(|| {
-        //Arrange
-        let amount_to_buy = 10;
-        let limit = 5;
-        let trade1 = Trade {
-            pool: PoolType::XYK,
-            asset_in: BSX,
-            asset_out: MOVR,
-        };
-        let trade2 = Trade {
-            pool: PoolType::Stableswap(AUSD),
-            asset_in: MOVR,
-            asset_out: AUSD,
-        };
-        let trade3 = Trade {
-            pool: PoolType::Omnipool,
-            asset_in: AUSD,
-            asset_out: KSM,
-        };
-        let trades = vec![trade1, trade2, trade3];
+            //Arrange
+            let amount_to_buy = 10;
+            let limit = 5;
+            let trade1 = Trade {
+                pool: PoolType::XYK,
+                asset_in: BSX,
+                asset_out: MOVR,
+            };
+            let trade2 = Trade {
+                pool: PoolType::Stableswap(AUSD),
+                asset_in: MOVR,
+                asset_out: AUSD,
+            };
+            let trade3 = Trade {
+                pool: PoolType::Omnipool,
+                asset_in: AUSD,
+                asset_out: KSM,
+            };
+            let trades = vec![trade1, trade2, trade3];
 
-        //Act
-        assert_ok!(Router::execute_buy(
-            Origin::signed(ALICE),
-            BSX,
-            KSM,
-            amount_to_buy,
-            limit,
-            trades
-        ));
+            //Act
+            assert_ok!(Router::execute_buy(
+                Origin::signed(ALICE),
+                BSX,
+                KSM,
+                amount_to_buy,
+                limit,
+                trades
+            ));
 
-        //Assert
-        assert_executed_buy_trades(vec![
-            (PoolType::XYK, STABLESWAP_BUY_CALCULATION_RESULT, BSX, MOVR),
-            (PoolType::Stableswap(AUSD), OMNIPOOL_BUY_CALCULATION_RESULT, MOVR, AUSD),
-            (PoolType::Omnipool, AmountWithFee::new_without_fee(amount_to_buy), AUSD, KSM),
-        ]);
+            //Assert
+            assert_executed_buy_trades(vec![
+                (PoolType::XYK, STABLESWAP_BUY_CALCULATION_RESULT, BSX, MOVR),
+                (PoolType::Stableswap(AUSD), OMNIPOOL_BUY_CALCULATION_RESULT, MOVR, AUSD),
+                (
+                    PoolType::Omnipool,
+                    AmountWithFee::new_without_fee(amount_to_buy),
+                    AUSD,
+                    KSM,
+                ),
+            ]);
 
-        expect_events(vec![
-            Event::RouteIsExecuted {
+            expect_events(vec![Event::RouteIsExecuted {
                 asset_in: BSX,
                 asset_out: KSM,
                 amount_in: XYK_BUY_CALCULATION_RESULT.amount,
                 amount_out: amount_to_buy,
-            }.into(),
-        ]);
-    });
+            }
+            .into()]);
+        });
 }
 
 #[test]
 fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
-        .build().execute_with(|| {
-        //Arrange
-        let amount_to_buy = 10;
-        let limit = 5;
-        let trade1 = Trade {
-            pool: PoolType::Stableswap(AUSD),
-            asset_in: BSX,
-            asset_out: AUSD,
-        };
-        let trade2 = Trade {
-            pool: PoolType::XYK,
-            asset_in: AUSD,
-            asset_out: KSM,
-        };
-        let trades = vec![trade1, trade2];
+        .build()
+        .execute_with(|| {
+            //Arrange
+            let amount_to_buy = 10;
+            let limit = 5;
+            let trade1 = Trade {
+                pool: PoolType::Stableswap(AUSD),
+                asset_in: BSX,
+                asset_out: AUSD,
+            };
+            let trade2 = Trade {
+                pool: PoolType::XYK,
+                asset_in: AUSD,
+                asset_out: KSM,
+            };
+            let trades = vec![trade1, trade2];
 
-        //Act
-        assert_ok!(Router::execute_buy(
-            Origin::signed(ALICE),
-            BSX,
-            KSM,
-            amount_to_buy,
-            limit,
-            trades
-        ));
+            //Act
+            assert_ok!(Router::execute_buy(
+                Origin::signed(ALICE),
+                BSX,
+                KSM,
+                amount_to_buy,
+                limit,
+                trades
+            ));
 
-        //Assert
-        assert_executed_buy_trades(vec![
-            (PoolType::Stableswap(AUSD), XYK_BUY_CALCULATION_RESULT, BSX, AUSD),
-            (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), AUSD, KSM),
-        ]);
-    });
+            //Assert
+            assert_executed_buy_trades(vec![
+                (PoolType::Stableswap(AUSD), XYK_BUY_CALCULATION_RESULT, BSX, AUSD),
+                (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), AUSD, KSM),
+            ]);
+        });
 }
 
 #[test]
 fn execute_buy_should_fail_when_called_with_non_signed_origin() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
-        .build().execute_with(|| {
-        //Arrange
-        let amount_to_buy = 10;
-        let limit = 5;
+        .build()
+        .execute_with(|| {
+            //Arrange
+            let amount_to_buy = 10;
+            let limit = 5;
 
-        let trades = vec![BSX_AUSD_TRADE_IN_XYK];
+            let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
-        //Act and Assert
-        assert_noop!(
-            Router::execute_buy(
-            Origin::none(),
-            BSX,
-            AUSD,
-            amount_to_buy,
-            limit,
-            trades
-        ),
-            BadOrigin
-        );
-    });
+            //Act and Assert
+            assert_noop!(
+                Router::execute_buy(Origin::none(), BSX, AUSD, amount_to_buy, limit, trades),
+                BadOrigin
+            );
+        });
 }
 
 #[test]
 fn execute_buy_should_fail_when_route_has_no_trades() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
-        .build().execute_with(|| {
-        //Arrange
-        let trades = vec![];
+        .build()
+        .execute_with(|| {
+            //Arrange
+            let trades = vec![];
 
-        //Act and Assert
-        assert_noop!(
-            Router::execute_buy(
-                Origin::signed(ALICE),
-                BSX,
-                AUSD,
-                10,
-                5,
-                trades
-            ),
-            Error::<Test>::RouteHasNoTrades
-        );
-    });
+            //Act and Assert
+            assert_noop!(
+                Router::execute_buy(Origin::signed(ALICE), BSX, AUSD, 10, 5, trades),
+                Error::<Test>::RouteHasNoTrades
+            );
+        });
 }
 
 #[test]
@@ -323,14 +324,7 @@ fn execute_buy_should_fail_when_caller_has_not_enough_balance() {
         .execute_with(|| {
             //Act and Assert
             assert_noop!(
-                Router::execute_buy(
-                Origin::signed(ALICE),
-                BSX,
-                AUSD,
-                amount_to_buy,
-                limit,
-                trades
-            ),
+                Router::execute_buy(Origin::signed(ALICE), BSX, AUSD, amount_to_buy, limit, trades),
                 Error::<Test>::InsufficientBalance
             );
         });
@@ -340,24 +334,18 @@ fn execute_buy_should_fail_when_caller_has_not_enough_balance() {
 fn execute_buy_should_fail_when_max_limit_to_spend_is_reached() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
-        .build().execute_with(|| {
-        //Arrange
-        let amount_to_buy = 10;
-        let limit = XYK_BUY_CALCULATION_RESULT.amount - 1;
+        .build()
+        .execute_with(|| {
+            //Arrange
+            let amount_to_buy = 10;
+            let limit = XYK_BUY_CALCULATION_RESULT.amount - 1;
 
-        let trades = vec![BSX_AUSD_TRADE_IN_XYK];
+            let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
-        //Act and Assert
-        assert_noop!(
-                Router::execute_buy(
-                    Origin::signed(ALICE),
-                    BSX,
-                    AUSD,
-                    amount_to_buy,
-                    limit,
-                    trades
-                ),
+            //Act and Assert
+            assert_noop!(
+                Router::execute_buy(Origin::signed(ALICE), BSX, AUSD, amount_to_buy, limit, trades),
                 Error::<Test>::MaxLimitToSpendReached
             );
-    });
+        });
 }

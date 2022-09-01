@@ -18,10 +18,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
+use frame_support::ensure;
 use frame_support::traits::fungibles::Inspect;
-use frame_support::{
-    ensure,
-};
 use frame_system::ensure_signed;
 use hydradx_traits::router::Executor;
 use sp_std::vec::Vec;
@@ -45,8 +43,8 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
+    use hydradx_traits::router::{AmountWithFee, ExecutorError};
     use sp_runtime::traits::Zero;
-    use hydradx_traits::router::{ExecutorError, AmountWithFee};
     use types::Trade;
 
     #[pallet::pallet]
@@ -67,7 +65,12 @@ pub mod pallet {
         type Currency: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
 
         /// Handlers for AMM pools to calculate and execute trades
-        type AMM: Executor<Self::AccountId, Self::AssetId, Self::Balance, TradeCalculationResult=AmountWithFee<Self::Balance>>;
+        type AMM: Executor<
+            Self::AccountId,
+            Self::AssetId,
+            Self::Balance,
+            TradeCalculationResult = AmountWithFee<Self::Balance>,
+        >;
 
         /// Weight information for the extrinsics.
         type WeightInfo: WeightInfo;
@@ -82,7 +85,7 @@ pub mod pallet {
             asset_out: T::AssetId,
             amount_in: T::Balance,
             amount_out: T::Balance,
-        }
+        },
     }
 
     #[pallet::error]
@@ -102,12 +105,11 @@ pub mod pallet {
         ///The user has not enough balance to execute the trade
         InsufficientBalance,
         ///Unexpected error which should never really happen, but the error case must be handled to prevent panics.
-        UnexpectedError
+        UnexpectedError,
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-
         /// Executes a sell with a series of trades specified in the route.
         /// The price for each trade is determined by the corresponding AMM.
         ///
@@ -164,13 +166,12 @@ pub mod pallet {
                 asset_in,
                 asset_out,
                 amount_in,
-                amount_out: last_amount.amount //TODO: ask if it is fine or we should handle fee separately? checked_add/sub does not work balance?!
+                amount_out: last_amount.amount, //TODO: ask if it is fine or we should handle fee separately? checked_add/sub does not work balance?!
             });
             // check asset out balance to verify that who receives at least last_amount
 
             Ok(())
         }
-
 
         /// Executes a buy with a series of trades specified in the route.
         /// The price for each trade is determined by the corresponding AMM.
@@ -229,7 +230,7 @@ pub mod pallet {
                 asset_in,
                 asset_out,
                 amount_in: last_amount.amount,
-                amount_out
+                amount_out,
             });
 
             // check asset out balance to verify that who receives at least last_amount

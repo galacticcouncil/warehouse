@@ -14,7 +14,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#[warn(non_upper_case_globals)]
 use crate as router;
 use crate::types::Trade;
 use crate::Config;
@@ -194,7 +193,7 @@ impl ExtBuilder {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
         pallet_balances::GenesisConfig::<Test> {
-            balances: vec![(AccountId::from(ALICE), ALICE_INITIAL_NATIVE_BALANCE)],
+            balances: vec![(ALICE, ALICE_INITIAL_NATIVE_BALANCE)],
         }
         .assimilate_storage(&mut t)
         .unwrap();
@@ -211,9 +210,10 @@ impl ExtBuilder {
     }
 }
 
+type ExecutedTradeInfo = (PoolType<AssetId>, AmountWithFee<Balance>, AssetId, AssetId);
 thread_local! {
-    pub static EXECUTED_SELLS: RefCell<Vec<(PoolType<AssetId>, AmountWithFee<Balance>, AssetId, AssetId)>> = RefCell::new(Vec::default());
-    pub static EXECUTED_BUYS: RefCell<Vec<(PoolType<AssetId>, AmountWithFee<Balance>, AssetId, AssetId)>> = RefCell::new(Vec::default());
+    pub static EXECUTED_SELLS: RefCell<Vec<ExecutedTradeInfo>> = RefCell::new(Vec::default());
+    pub static EXECUTED_BUYS: RefCell<Vec<ExecutedTradeInfo>> = RefCell::new(Vec::default());
 }
 
 macro_rules! impl_fake_executor {
@@ -289,6 +289,7 @@ macro_rules! impl_fake_executor {
     };
 }
 
+#[allow(clippy::upper_case_acronyms)]
 pub struct XYK;
 pub struct StableSwap;
 pub struct OmniPool;

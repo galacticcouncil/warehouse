@@ -28,6 +28,7 @@ use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup, One},
+    DispatchError
 };
 use std::borrow::Borrow;
 use std::cell::RefCell;
@@ -215,7 +216,7 @@ macro_rules! impl_fake_executor {
     ($pool_struct:ident, $pool_type: pat, $sell_calculation_result: expr, $buy_calculation_result: expr) => {
         impl Executor<AccountId, AssetId, Balance> for $pool_struct {
             type TradeCalculationResult = AmountWithFee<Balance>;
-            type Error = ();
+            type Error = DispatchError;
 
             fn calculate_sell(
                 pool_type: PoolType<AssetId>,
@@ -228,7 +229,7 @@ macro_rules! impl_fake_executor {
                 }
 
                 if amount_in == INVALID_CALCULATION_AMOUNT {
-                    return Err(ExecutorError::Error(()));
+                    return Err(ExecutorError::Error(DispatchError::Other("Some error happened")));
                 }
 
                 Ok($sell_calculation_result)
@@ -245,7 +246,7 @@ macro_rules! impl_fake_executor {
                 }
 
                 if amount_out == INVALID_CALCULATION_AMOUNT {
-                    return Err(ExecutorError::Error(()));
+                    return Err(ExecutorError::Error(DispatchError::Other("Some error happened")));
                 }
 
                 Ok($buy_calculation_result)

@@ -21,6 +21,7 @@ use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
 use hydradx_traits::router::{AmountWithFee, PoolType};
 use pretty_assertions::assert_eq;
+use sp_runtime::DispatchError;
 use sp_runtime::DispatchError::BadOrigin;
 
 #[test]
@@ -119,7 +120,7 @@ fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_err
                     limit,
                     trades
                 ),
-                Error::<Test>::CalculationFailed
+                DispatchError::Other("Some error happened")
             );
         });
 }

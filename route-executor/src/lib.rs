@@ -258,7 +258,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T>{
     fn validate_route_size(route_length: usize) -> Result<(), DispatchError> {
         ensure!(route_length > 0, Error::<T>::RouteHasNoTrades);
-        ensure!((route_length as u32) < T::MaxNumberOfTradesLimitReached::get(), Error::<T>::MaxNumberOfTradesLimitReached);
+        ensure!((route_length as u32) <= T::MaxNumberOfTradesLimitReached::get(), Error::<T>::MaxNumberOfTradesLimitReached);
 
         Ok(())
     }

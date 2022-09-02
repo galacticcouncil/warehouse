@@ -169,7 +169,7 @@ pub const BSX_AUSD_TRADE_IN_XYK: Trade<AssetId> = Trade {
     asset_out: AUSD,
 };
 
-pub const MAX_LIMIT_FOR_TRADES: u32 = 4;
+pub const MAX_LIMIT_FOR_TRADES: u32 = 3;
 
 pub struct ExtBuilder {
     endowed_accounts: Vec<(AccountId, AssetId, Balance)>,

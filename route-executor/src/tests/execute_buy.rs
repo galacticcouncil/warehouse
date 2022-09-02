@@ -102,7 +102,7 @@ fn execute_buy_should_work_when_route_has_single_trade_without_native_balance() 
 #[test]
 fn execute_buy_should_fail_when_max_limit_for_trade_reached() {
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, SDN, 1000)])
+        .with_endowed_accounts(vec![(ALICE, RMRK, 1000)])
         .build()
         .execute_with(|| {
             //Arrange
@@ -126,16 +126,11 @@ fn execute_buy_should_fail_when_max_limit_for_trade_reached() {
                 asset_in: KSM,
                 asset_out: RMRK,
             };
-            let trade5 = Trade {
-                pool: PoolType::XYK,
-                asset_in: RMRK,
-                asset_out: SDN,
-            };
-            let trades = vec![trade1, trade2, trade3, trade4, trade5];
+            let trades = vec![trade1, trade2, trade3, trade4];
 
             //Act and Assert
             assert_noop!(
-                Router::execute_buy(Origin::signed(ALICE), BSX, SDN, 10, 5, trades),
+                Router::execute_buy(Origin::signed(ALICE), BSX, RMRK, 10, 5, trades),
                 Error::<Test>::MaxNumberOfTradesLimitReached
             );
 

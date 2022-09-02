@@ -34,7 +34,7 @@ impl<Balance: Zero> AmountWithFee<Balance> {
     }
 }
 
-pub trait Executor<AccountId, AssetId, Balance> {
+pub trait TradeExecution<AccountId, AssetId, Balance> {
     type TradeCalculationResult;
     type Error;
 
@@ -70,8 +70,8 @@ pub trait Executor<AccountId, AssetId, Balance> {
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(1, 5)]
-impl<R: Copy, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> Executor<AccountId, AssetId, Balance> for Tuple {
-    for_tuples!( where #(Tuple: Executor<AccountId, AssetId, Balance, TradeCalculationResult=R, Error=E>)*);
+impl<R: Copy, E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> TradeExecution<AccountId, AssetId, Balance> for Tuple {
+    for_tuples!( where #(Tuple: TradeExecution<AccountId, AssetId, Balance, TradeCalculationResult=R, Error=E>)*);
     type TradeCalculationResult = R;
     type Error = E;
 

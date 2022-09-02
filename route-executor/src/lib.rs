@@ -23,7 +23,7 @@ use frame_support::traits::fungibles::Inspect;
 use frame_support::traits::Get;
 use frame_system::ensure_signed;
 use sp_runtime::DispatchError;
-use hydradx_traits::router::Executor;
+use hydradx_traits::router::TradeExecution;
 use sp_std::vec::Vec;
 
 pub mod types;
@@ -36,10 +36,6 @@ use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
-use crate::types::Trade;
-
-//TODO: Dani
-//- benchmarking
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -72,7 +68,7 @@ pub mod pallet {
         type Currency: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
 
         /// Handlers for AMM pools to calculate and execute trades
-        type AMM: Executor<
+        type AMM: TradeExecution<
             Self::AccountId,
             Self::AssetId,
             Self::Balance,

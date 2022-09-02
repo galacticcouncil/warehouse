@@ -21,7 +21,7 @@ use crate::Config;
 use frame_support::parameter_types;
 use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
-use hydradx_traits::router::{AmountWithFee, Executor, ExecutorError, PoolType};
+use hydradx_traits::router::{AmountWithFee, TradeExecution, ExecutorError, PoolType};
 use orml_traits::parameter_type_with_key;
 use pretty_assertions::assert_eq;
 use sp_core::H256;
@@ -220,7 +220,7 @@ thread_local! {
 
 macro_rules! impl_fake_executor {
     ($pool_struct:ident, $pool_type: pat, $sell_calculation_result: expr, $buy_calculation_result: expr) => {
-        impl Executor<AccountId, AssetId, Balance> for $pool_struct {
+        impl TradeExecution<AccountId, AssetId, Balance> for $pool_struct {
             type TradeCalculationResult = AmountWithFee<Balance>;
             type Error = DispatchError;
 

@@ -164,14 +164,13 @@ pub mod pallet {
                         ExecutorError::Error(dispatch_error) => Err(dispatch_error)
                     }
                 }
-
             }
 
             Self::deposit_event(Event::RouteIsExecuted {
                 asset_in,
                 asset_out,
                 amount_in,
-                amount_out: last_amount.amount, //TODO: ask if it is fine or we should handle fee separately? checked_add/sub does not work balance?!
+                amount_out: last_amount.amount,
             });
             // check asset out balance to verify that who receives at least last_amount
 

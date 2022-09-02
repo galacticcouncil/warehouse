@@ -195,7 +195,7 @@ impl ExtBuilder {
 
         pallet_balances::GenesisConfig::<Test> {
             balances: vec![
-                (AccountId::from(ALICE), ALICE_INITIAL_NATIVE_BALANCE), //TODO: Dani - use const
+                (AccountId::from(ALICE), ALICE_INITIAL_NATIVE_BALANCE),
             ],
         }
         .assimilate_storage(&mut t)

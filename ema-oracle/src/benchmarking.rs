@@ -27,6 +27,7 @@ use frame_support::traits::Hooks;
 
 use crate::Pallet as EmaOracle;
 
+/// Maximum number of tokens to run the benchmark for.
 pub const MAX_TOKENS: u32 = 700;
 
 benchmarks! {
@@ -226,8 +227,6 @@ benchmarks! {
     }
 
     get_entry {
-        let b = MAX_TOKENS;
-
         let initial_data_block: T::BlockNumber = 5u32.into();
         let oracle_age: T::BlockNumber = 999_999u32.into();
         let block_num = initial_data_block.saturating_add(oracle_age.saturating_add(One::one()));

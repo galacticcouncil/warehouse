@@ -45,7 +45,10 @@ pub mod weights;
 use weights::WeightInfo;
 
 mod benchmarking;
-use benchmarking::MAX_TOKENS;
+
+/// Maximum number of trades expected in one block. Empirically determined by running
+/// `trades_estimation.py` and rounding up from 212 to 300.
+pub const MAX_TRADES: u32 = 300;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -269,10 +272,10 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
     }
 
     fn on_trade_weight() -> Weight {
-        T::WeightInfo::on_trade_multiple_tokens(MAX_TOKENS).saturating_add(
-            T::WeightInfo::on_finalize_multiple_tokens(MAX_TOKENS)
+        T::WeightInfo::on_trade_multiple_tokens(MAX_TRADES).saturating_add(
+            T::WeightInfo::on_finalize_multiple_tokens(MAX_TRADES)
                 .saturating_sub(T::WeightInfo::on_finalize_no_entry())
-                / Weight::from(MAX_TOKENS),
+                / Weight::from(MAX_TRADES),
         )
     }
 }
@@ -308,10 +311,10 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
     }
 
     fn on_liquidity_changed_weight() -> Weight {
-        T::WeightInfo::on_liquidity_changed_multiple_tokens(MAX_TOKENS).saturating_add(
-            T::WeightInfo::on_finalize_multiple_tokens(MAX_TOKENS)
+        T::WeightInfo::on_liquidity_changed_multiple_tokens(MAX_TRADES).saturating_add(
+            T::WeightInfo::on_finalize_multiple_tokens(MAX_TRADES)
                 .saturating_sub(T::WeightInfo::on_finalize_no_entry())
-                / Weight::from(MAX_TOKENS),
+                / Weight::from(MAX_TRADES),
         )
     }
 }

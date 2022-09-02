@@ -20,7 +20,9 @@
 
 use frame_support::ensure;
 use frame_support::traits::fungibles::Inspect;
+use frame_support::traits::Get;
 use frame_system::ensure_signed;
+use sp_runtime::DispatchError;
 use hydradx_traits::router::Executor;
 use sp_std::vec::Vec;
 
@@ -34,6 +36,7 @@ use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
+use crate::types::Trade;
 
 //TODO: Dani
 //- benchmarking
@@ -60,6 +63,10 @@ pub mod pallet {
 
         /// Balance type
         type Balance: Parameter + Member + Copy + PartialOrd + MaybeSerializeDeserialize + Zero;
+
+        /// Max limit for the number of trades within a route
+        #[pallet::constant]
+        type MaxNumberOfTradesLimitReached: Get<u32>;
 
         /// Currency for checking balances
         type Currency: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
@@ -95,6 +102,8 @@ pub mod pallet {
         MinLimitToReceiveNotReached,
         ///The maximum limit to spend on a buy is reached
         MaxLimitToSpendReached,
+        ///The the max number of trades limit is reached
+        MaxNumberOfTradesLimitReached,
         ///The AMM pool is not supported for executing trades
         PoolNotSupported,
         /// Route has not trades to be executed
@@ -128,7 +137,7 @@ pub mod pallet {
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(route.len() > 0, Error::<T>::RouteHasNoTrades);
+            Self::validate_route_size(route.len())?;
 
             ensure!(
                 T::Currency::reducible_balance(asset_in, &who, false) >= amount_in,
@@ -198,7 +207,7 @@ pub mod pallet {
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(route.len() > 0, Error::<T>::RouteHasNoTrades);
+            Self::validate_route_size(route.len())?;
 
             ensure!(
                 T::Currency::reducible_balance(asset_out, &who, false) >= amount_out,
@@ -247,5 +256,14 @@ pub mod pallet {
 
             Ok(())
         }
+    }
+}
+
+impl<T: Config> Pallet<T>{
+    fn validate_route_size(route_length: usize) -> Result<(), DispatchError> {
+        ensure!(route_length > 0, Error::<T>::RouteHasNoTrades);
+        ensure!((route_length as u32) < T::MaxNumberOfTradesLimitReached::get(), Error::<T>::MaxNumberOfTradesLimitReached);
+
+        Ok(())
     }
 }

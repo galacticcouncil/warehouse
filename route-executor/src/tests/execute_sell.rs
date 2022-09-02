@@ -261,6 +261,47 @@ fn execute_sell_should_work_when_first_trade_is_not_supported_in_the_first_pool(
         ]);
     });
 }
+#[test]
+fn execute_sell_should_fail_when_max_limit_for_trade_reached() {
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![(ALICE, BSX, 1000)])
+        .build()
+        .execute_with(|| {
+            //Arrange
+            let trade1 = Trade {
+                pool: PoolType::XYK,
+                asset_in: BSX,
+                asset_out: AUSD,
+            };
+            let trade2 = Trade {
+                pool: PoolType::XYK,
+                asset_in: AUSD,
+                asset_out: MOVR,
+            };
+            let trade3 = Trade {
+                pool: PoolType::XYK,
+                asset_in: MOVR,
+                asset_out: KSM,
+            };
+            let trade4 = Trade {
+                pool: PoolType::XYK,
+                asset_in: KSM,
+                asset_out: RMRK,
+            };
+            let trade5 = Trade {
+                pool: PoolType::XYK,
+                asset_in: RMRK,
+                asset_out: SDN,
+            };
+            let trades = vec![trade1, trade2, trade3, trade4, trade5];
+
+            //Act and Assert
+            assert_noop!(
+                Router::execute_sell(Origin::signed(ALICE), BSX, SDN, 10, 5, trades),
+                Error::<Test>::MaxNumberOfTradesLimitReached
+            );
+        });
+}
 
 #[test]
 fn execute_sell_should_fail_when_called_with_non_signed_origin() {

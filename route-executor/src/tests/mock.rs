@@ -128,12 +128,14 @@ type Pools = (XYK, StableSwap, OmniPool);
 
 parameter_types! {
     pub NativeCurrencyId: AssetId = 1000;
+    pub MaxNumberOfTradeLimitReached: u32 = MAX_LIMIT_FOR_TRADES;
 }
 
 impl Config for Test {
     type Event = Event;
     type AssetId = AssetId;
     type Balance = Balance;
+    type MaxNumberOfTradesLimitReached = MaxNumberOfTradeLimitReached;
     type Currency = Tokens;
     type AMM = Pools;
     type WeightInfo = ();
@@ -147,6 +149,8 @@ pub const BSX: AssetId = 1000;
 pub const AUSD: AssetId = 1001;
 pub const MOVR: AssetId = 1002;
 pub const KSM: AssetId = 1003;
+pub const RMRK: AssetId = 1004;
+pub const SDN: AssetId = 1005;
 
 pub const ALICE_INITIAL_NATIVE_BALANCE: u128 = 1000;
 
@@ -164,6 +168,8 @@ pub const BSX_AUSD_TRADE_IN_XYK: Trade<AssetId> = Trade {
     asset_in: BSX,
     asset_out: AUSD,
 };
+
+pub const MAX_LIMIT_FOR_TRADES: u32 = 4;
 
 pub struct ExtBuilder {
     endowed_accounts: Vec<(AccountId, AssetId, Balance)>,

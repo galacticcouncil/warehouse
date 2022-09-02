@@ -22,8 +22,8 @@ use frame_support::ensure;
 use frame_support::traits::fungibles::Inspect;
 use frame_support::traits::Get;
 use frame_system::ensure_signed;
-use sp_runtime::DispatchError;
 use hydradx_traits::router::TradeExecution;
+use sp_runtime::DispatchError;
 use sp_std::vec::Vec;
 
 pub mod types;
@@ -73,7 +73,7 @@ pub mod pallet {
             Self::AssetId,
             Self::Balance,
             TradeCalculationResult = AmountWithFee<Self::Balance>,
-            Error = DispatchError
+            Error = DispatchError,
         >;
 
         /// Weight information for the extrinsics.
@@ -164,9 +164,11 @@ pub mod pallet {
 
                 match execution_result {
                     Ok(_) => continue,
-                    Err(err) => return match err {
-                        ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
-                        ExecutorError::Error(dispatch_error) => Err(dispatch_error)
+                    Err(err) => {
+                        return match err {
+                            ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
+                            ExecutorError::Error(dispatch_error) => Err(dispatch_error),
+                        }
                     }
                 }
             }
@@ -234,9 +236,11 @@ pub mod pallet {
                 let execution_result = T::AMM::execute_buy(trade.pool, &who, trade.asset_in, trade.asset_out, *amount);
                 match execution_result {
                     Ok(_) => continue,
-                    Err(err) => return match err {
-                        ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
-                        ExecutorError::Error(dispatch_error) => Err(dispatch_error)
+                    Err(err) => {
+                        return match err {
+                            ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
+                            ExecutorError::Error(dispatch_error) => Err(dispatch_error),
+                        }
                     }
                 }
             }
@@ -255,10 +259,13 @@ pub mod pallet {
     }
 }
 
-impl<T: Config> Pallet<T>{
+impl<T: Config> Pallet<T> {
     fn validate_route_size(route_length: usize) -> Result<(), DispatchError> {
         ensure!(route_length > 0, Error::<T>::RouteHasNoTrades);
-        ensure!((route_length as u32) <= T::MaxNumberOfTradesLimitReached::get(), Error::<T>::MaxNumberOfTradesLimitReached);
+        ensure!(
+            (route_length as u32) <= T::MaxNumberOfTradesLimitReached::get(),
+            Error::<T>::MaxNumberOfTradesLimitReached
+        );
 
         Ok(())
     }

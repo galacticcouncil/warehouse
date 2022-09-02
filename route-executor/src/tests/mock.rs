@@ -21,14 +21,14 @@ use crate::Config;
 use frame_support::parameter_types;
 use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
-use hydradx_traits::router::{AmountWithFee, TradeExecution, ExecutorError, PoolType};
+use hydradx_traits::router::{AmountWithFee, ExecutorError, PoolType, TradeExecution};
 use orml_traits::parameter_type_with_key;
 use pretty_assertions::assert_eq;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup, One},
-    DispatchError
+    DispatchError,
 };
 use std::borrow::Borrow;
 use std::cell::RefCell;
@@ -194,9 +194,7 @@ impl ExtBuilder {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
         pallet_balances::GenesisConfig::<Test> {
-            balances: vec![
-                (AccountId::from(ALICE), ALICE_INITIAL_NATIVE_BALANCE),
-            ],
+            balances: vec![(AccountId::from(ALICE), ALICE_INITIAL_NATIVE_BALANCE)],
         }
         .assimilate_storage(&mut t)
         .unwrap();

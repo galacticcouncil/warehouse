@@ -133,10 +133,8 @@ fn execute_buy_should_fail_when_max_limit_for_trade_reached() {
                 Router::execute_buy(Origin::signed(ALICE), BSX, RMRK, 10, 5, trades),
                 Error::<Test>::MaxNumberOfTradesLimitReached
             );
-
         });
 }
-
 
 #[test]
 fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_error() {

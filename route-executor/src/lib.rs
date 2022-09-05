@@ -179,7 +179,6 @@ pub mod pallet {
                 amount_in,
                 amount_out: last_amount.amount,
             });
-            // check asset out balance to verify that who receives at least last_amount
 
             Ok(())
         }
@@ -251,8 +250,6 @@ pub mod pallet {
                 amount_in: last_amount.amount,
                 amount_out,
             });
-
-            // check asset out balance to verify that who receives at least last_amount
 
             Ok(())
         }

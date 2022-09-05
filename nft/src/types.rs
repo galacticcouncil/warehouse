@@ -28,7 +28,7 @@ pub type ClassId = u128;
 /// NFT Instance ID
 pub type InstanceId = u128;
 
-#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct ClassInfo<ClassType, BoundedVec> {
     /// A class type that implies permissions, e.g. for transfer and other operations
@@ -37,13 +37,13 @@ pub struct ClassInfo<ClassType, BoundedVec> {
     pub metadata: BoundedVec,
 }
 
-#[derive(Encode, Decode, Eq, Copy, PartialEq, Clone, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Eq, Copy, PartialEq, Clone, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct InstanceInfo<BoundedVec> {
     pub metadata: BoundedVec,
 }
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum ClassType {
     Marketplace = 0_isize,

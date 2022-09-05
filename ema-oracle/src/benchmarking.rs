@@ -221,7 +221,7 @@ benchmarks! {
             liquidity,
             timestamp: block_num,
         };
-        entries.push((derive_name(asset_a, asset_b), liquidity_entry.clone()));
+        entries.push((derive_name(asset_a, asset_b), liquidity_entry));
 
         assert_eq!(Accumulator::<T>::get(), entries.into_iter().collect());
     }

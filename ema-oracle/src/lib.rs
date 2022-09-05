@@ -150,7 +150,7 @@ impl<T: Config> Pallet<T> {
             accumulator
                 .entry(pair_id)
                 .and_modify(|entry| {
-                    *entry = oracle_entry.accumulate_volume(&entry);
+                    *entry = oracle_entry.accumulate_volume(entry);
                 })
                 .or_insert(oracle_entry);
         });
@@ -181,7 +181,7 @@ impl<T: Config> Pallet<T> {
                     (
                         oracle_entry
                             .calculate_new_ema_entry(period, prev_entry)
-                            .unwrap_or(prev_entry.clone()),
+                            .unwrap_or_else(|| prev_entry.clone()),
                         *init,
                     )
                 })
@@ -232,7 +232,7 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
             return;
         }
         // We don't want to throw an error here because this method is used in different extrinsics.
-        let price = determine_normalized_price(asset_in, asset_out, amount_in, amount_out).unwrap_or(Zero::zero());
+        let price = determine_normalized_price(asset_in, asset_out, amount_in, amount_out).unwrap_or_else(Zero::zero);
         // We assume that zero values are not valid and are ignored.
         if price.is_zero() || amount_in.is_zero() || amount_out.is_zero() {
             return;
@@ -272,7 +272,7 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
             return;
         }
         // We don't want to throw an error here because this method is used in different extrinsics.
-        let price = determine_normalized_price(asset_a, asset_b, amount_a, amount_b).unwrap_or(Zero::zero());
+        let price = determine_normalized_price(asset_a, asset_b, amount_a, amount_b).unwrap_or_else(Zero::zero);
         // We assume that zero values are not valid and are ignored.
         if price.is_zero() {
             return;

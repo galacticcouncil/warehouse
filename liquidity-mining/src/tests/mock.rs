@@ -34,6 +34,9 @@ use sp_runtime::{
     traits::{BlakeTwo256, BlockNumberProvider, IdentityLookup},
 };
 
+pub use frame_support::storage::with_transaction;
+pub use sp_runtime::TransactionOutcome;
+
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord, MaxEncodedLen, RuntimeDebug, TypeInfo)]
 #[repr(u8)]
 pub enum ReserveIdentifier {
@@ -283,7 +286,7 @@ parameter_types! {
 
 impl Config<Instance1> for Test {
     type Event = Event;
-    type CurrencyId = AssetId;
+    type AssetId = AssetId;
     type MultiCurrency = Tokens;
     type PalletId = LMPalletId;
     type MinPlannedYieldingPeriods = MinPlannedYieldingPeriods;
@@ -304,7 +307,7 @@ parameter_types! {
 
 impl Config<Instance2> for Test {
     type Event = Event;
-    type CurrencyId = AssetId;
+    type AssetId = AssetId;
     type MultiCurrency = Tokens;
     type PalletId = LMPalletId2;
     type MinPlannedYieldingPeriods = MinPlannedYieldingPeriods2;

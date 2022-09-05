@@ -28,30 +28,30 @@ pub type DepositId = u128;
 /// `GlobalFarm` based on their stake in `GlobalFarm`. `YieldFarm` stake in `GlobalFarm` is derived from
 /// users stake in `YieldFarm`.
 /// Yield farm is considered live from global farm view if yield farm is `active` or `stopped`.
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 #[scale_info(skip_type_params(I))]
 pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
-    pub id: GlobalFarmId,
-    pub owner: T::AccountId,
-    pub updated_at: PeriodOf<T>,
-    pub total_shares_z: Balance,
-    pub accumulated_rpz: FixedU128,
-    pub reward_currency: AssetIdOf<T, I>,
-    pub accumulated_rewards: Balance,
-    pub paid_accumulated_rewards: Balance,
-    pub yield_per_period: Perquintill,
-    pub planned_yielding_periods: PeriodOf<T>,
-    pub blocks_per_period: BlockNumberFor<T>,
-    pub incentivized_asset: AssetIdOf<T, I>,
-    pub max_reward_per_period: Balance,
-    // min. LP shares user must deposit to star yield farming.
-    pub min_deposit: Balance,
+    pub(super) id: GlobalFarmId,
+    pub(super) owner: T::AccountId,
+    pub(super) updated_at: PeriodOf<T>,
+    pub(super) total_shares_z: Balance,
+    pub(super) accumulated_rpz: FixedU128,
+    pub(super) reward_currency: T::AssetId,
+    pub(super) accumulated_rewards: Balance,
+    pub(super) paid_accumulated_rewards: Balance,
+    pub(super) yield_per_period: Perquintill,
+    pub(super) planned_yielding_periods: PeriodOf<T>,
+    pub(super) blocks_per_period: BlockNumberFor<T>,
+    pub(super) incentivized_asset: T::AssetId,
+    pub(super) max_reward_per_period: Balance,
+    // min. LP shares user must deposit to start yield farming.
+    pub(super) min_deposit: Balance,
     //live counts includes `active` and `stopped` yield farms.
     //total count includes `active`, `stopped`, `deleted` - this count is decreased only if yield
     //farm is flushed from storage.
-    pub yield_farms_count: (u32, u32), //`(live farms count, total farms count)`
-    pub price_adjustment: FixedU128,
-    pub state: FarmState,
+    pub(super) yield_farms_count: (u32, u32), //`(live farms count, total farms count)`
+    pub(super) price_adjustment: FixedU128,
+    pub(super) state: FarmState,
 }
 
 impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
@@ -59,12 +59,12 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     pub fn new(
         id: GlobalFarmId,
         updated_at: PeriodOf<T>,
-        reward_currency: T::CurrencyId,
+        reward_currency: T::AssetId,
         yield_per_period: Perquintill,
         planned_yielding_periods: PeriodOf<T>,
         blocks_per_period: T::BlockNumber,
         owner: T::AccountId,
-        incentivized_asset: T::CurrencyId,
+        incentivized_asset: T::AssetId,
         max_reward_per_period: Balance,
         min_deposit: Balance,
         price_adjustment: FixedU128,
@@ -90,17 +90,23 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         }
     }
 
+    pub fn live_farms_count(&self) -> u32 {
+        self.yield_farms_count.0
+    }
+
+    pub fn total_farms_count(&self) -> u32 {
+        self.yield_farms_count.1
+    }
+
     /// This function updates yields_farm_count when new yield farm is added into the global farm.
     /// This function should be called only when new yield farm is created/added into the global
     /// farm.
     pub fn increase_yield_farm_counts(&mut self) -> Result<(), ArithmeticError> {
         self.yield_farms_count = (
-            self.yield_farms_count
-                .0
+            self.live_farms_count()
                 .checked_add(1)
                 .ok_or(ArithmeticError::Overflow)?,
-            self.yield_farms_count
-                .1
+            self.total_farms_count()
                 .checked_add(1)
                 .ok_or(ArithmeticError::Overflow)?,
         );
@@ -113,8 +119,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), ArithmeticError> {
         //Note: only live count should change
         self.yield_farms_count.0 = self
-            .yield_farms_count
-            .0
+            .live_farms_count()
             .checked_sub(1)
             .ok_or(ArithmeticError::Underflow)?;
 
@@ -126,8 +131,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     /// !!! DON'T call this function if yield farm is in stopped or deleted.
     pub fn decrease_total_yield_farm_count(&mut self) -> Result<(), DispatchError> {
         self.yield_farms_count.1 = self
-            .yield_farms_count
-            .1
+            .total_farms_count()
             .checked_sub(1)
             .ok_or(ArithmeticError::Underflow)?;
 
@@ -136,13 +140,13 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
 
     /// Function returns `true` if global farm has live yield farms.
     pub fn has_live_farms(&self) -> bool {
-        !self.yield_farms_count.0.is_zero()
+        !self.live_farms_count().is_zero()
     }
 
     /// Function return `true` if global farm can be flushed(removed) from storage.
     pub fn can_be_flushed(&self) -> bool {
         //farm can be flushed only if all yield farms are flushed.
-        self.state == FarmState::Deleted && self.yield_farms_count.1.is_zero()
+        self.state == FarmState::Deleted && self.total_farms_count().is_zero()
     }
 
     /// Function return `true` if global farm is in active state.
@@ -153,29 +157,29 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     /// This function returns `true` if farm has no capacity for next yield farm(yield farm can't
     /// be added into global farm until some yield farm is not removed from storage).
     pub fn is_full(&self) -> bool {
-        self.yield_farms_count.1.ge(&<T>::MaxYieldFarmsPerGlobalFarm::get())
+        self.total_farms_count().ge(&<T>::MaxYieldFarmsPerGlobalFarm::get())
     }
 }
 
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 #[scale_info(skip_type_params(I))]
 pub struct YieldFarmData<T: Config<I>, I: 'static = ()> {
-    pub id: FarmId,
-    pub updated_at: PeriodOf<T>,
-    pub total_shares: Balance,
-    pub total_valued_shares: Balance,
-    pub accumulated_rpvs: FixedU128,
-    pub accumulated_rpz: FixedU128,
-    pub loyalty_curve: Option<LoyaltyCurve>,
-    pub multiplier: FarmMultiplier,
-    pub state: FarmState,
-    pub entries_count: u64,
-    pub _phantom: PhantomData<I>, //pub because of tests
+    pub(super) id: FarmId,
+    pub(super) updated_at: PeriodOf<T>,
+    pub(super) total_shares: Balance,
+    pub(super) total_valued_shares: Balance,
+    pub(super) accumulated_rpvs: FixedU128,
+    pub(super) accumulated_rpz: FixedU128,
+    pub(super) loyalty_curve: Option<LoyaltyCurve>,
+    pub(super) multiplier: FarmMultiplier,
+    pub(super) state: FarmState,
+    pub(super) entries_count: u64,
+    pub(super) _phantom: PhantomData<I>, //pub because of tests
 }
 
 impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
     #[allow(clippy::too_many_arguments)]
-    pub(super) fn new(
+    pub fn new(
         id: FarmId,
         updated_at: PeriodOf<T>,
         loyalty_curve: Option<LoyaltyCurve>,
@@ -254,13 +258,13 @@ impl Default for LoyaltyCurve {
     }
 }
 
-#[derive(Clone, Encode, Decode, RuntimeDebugNoBound, TypeInfo, PartialEq)]
+#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo, PartialEq)]
 #[scale_info(skip_type_params(I))]
 pub struct DepositData<T: Config<I>, I: 'static = ()> {
-    pub shares: Balance,
-    pub amm_pool_id: T::AmmPoolId,
+    pub(super) shares: Balance,
+    pub(super) amm_pool_id: T::AmmPoolId,
     //NOTE: Capacity of this vector MUST BE at least 1.
-    pub yield_farm_entries: BoundedVec<YieldFarmEntry<T, I>, T::MaxFarmEntriesPerDeposit>,
+    pub(super) yield_farm_entries: BoundedVec<YieldFarmEntry<T, I>, T::MaxFarmEntriesPerDeposit>,
 }
 
 impl<T: Config<I>, I: 'static> DepositData<T, I> {
@@ -322,17 +326,17 @@ impl<T: Config<I>, I: 'static> DepositData<T, I> {
     }
 }
 
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(I))]
 pub struct YieldFarmEntry<T: Config<I>, I: 'static = ()> {
-    pub global_farm_id: GlobalFarmId,
-    pub yield_farm_id: YieldFarmId,
-    pub valued_shares: Balance,
-    pub accumulated_rpvs: FixedU128,
-    pub accumulated_claimed_rewards: Balance,
-    pub entered_at: PeriodOf<T>,
-    pub updated_at: PeriodOf<T>,
-    pub _phantom: PhantomData<I>, //pub because of tests
+    pub(super) global_farm_id: GlobalFarmId,
+    pub(super) yield_farm_id: YieldFarmId,
+    pub(super) valued_shares: Balance,
+    pub(super) accumulated_rpvs: FixedU128,
+    pub(super) accumulated_claimed_rewards: Balance,
+    pub(super) entered_at: PeriodOf<T>,
+    pub(super) updated_at: PeriodOf<T>,
+    pub(super) _phantom: PhantomData<I>, //pub because of tests
 }
 
 impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
@@ -356,7 +360,7 @@ impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
     }
 }
 
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebugNoBound, TypeInfo)]
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum FarmState {
     Active,
     Stopped,

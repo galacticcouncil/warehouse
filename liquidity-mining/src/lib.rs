@@ -101,6 +101,7 @@ pub use crate::types::{
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
     pallet_prelude::*,
+    require_transactional,
     sp_runtime::{
         traits::{AccountIdConversion, BlockNumberProvider, MaybeSerializeDeserialize, One, Zero},
         RuntimeDebug,
@@ -120,7 +121,6 @@ use sp_arithmetic::{
 };
 use sp_std::convert::{From, Into, TryInto};
 
-type AssetIdOf<T, I = ()> = <T as pallet::Config<I>>::CurrencyId;
 type PeriodOf<T> = <T as frame_system::Config>::BlockNumber;
 
 #[frame_support::pallet]
@@ -139,10 +139,10 @@ pub mod pallet {
         type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// Asset type.
-        type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize + Ord + From<u32>;
+        type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
         /// Currency for transfers.
-        type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = Self::CurrencyId, Balance = Balance>;
+        type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Balance>;
 
         /// Pallet id.
         #[pallet::constant]
@@ -160,7 +160,7 @@ pub mod pallet {
         type BlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
 
         /// Id used to identify amm pool in liquidity mining pallet.
-        type AmmPoolId: Parameter + Member + Clone + FullCodec;
+        type AmmPoolId: Parameter + Member + Copy + FullCodec;
 
         /// Maximum number of yield farms same LP shares can be re/deposited into. This value always
         /// MUST BE >= 1.         
@@ -345,12 +345,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `price_adjustment`: price adjustment between `incentivized_asset` and `reward_currency`.
     /// This value should be `1` if `incentivized_asset` and `reward_currency` are the same.
     #[allow(clippy::too_many_arguments)]
+    #[require_transactional]
     fn create_global_farm(
         total_rewards: Balance,
         planned_yielding_periods: PeriodOf<T>,
         blocks_per_period: BlockNumberFor<T>,
-        incentivized_asset: AssetIdOf<T, I>,
-        reward_currency: AssetIdOf<T, I>,
+        incentivized_asset: T::AssetId,
+        reward_currency: T::AssetId,
         owner: T::AccountId,
         yield_per_period: Perquintill,
         min_deposit: Balance,
@@ -456,7 +457,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     fn destroy_global_farm(
         who: T::AccountId,
         farm_id: GlobalFarmId,
-    ) -> Result<(T::CurrencyId, Balance, T::AccountId), DispatchError> {
+    ) -> Result<(T::AssetId, Balance, T::AccountId), DispatchError> {
         <GlobalFarm<T, I>>::try_mutate_exists(farm_id, |maybe_global_farm| {
             let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
 
@@ -508,7 +509,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         multiplier: FarmMultiplier,
         loyalty_curve: Option<LoyaltyCurve>,
         amm_pool_id: T::AmmPoolId,
-        assets: Vec<T::CurrencyId>,
+        assets: Vec<T::AssetId>,
     ) -> Result<YieldFarmId, DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
 
@@ -536,7 +537,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     Error::<T, I>::MissingIncentivizedAsset
                 );
 
-                <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id.clone(), &global_farm_id, |maybe_active_yield_farm| {
+                <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id, &global_farm_id, |maybe_active_yield_farm| {
                     ensure!(maybe_active_yield_farm.is_none(), Error::<T, I>::YieldFarmAlreadyExists);
 
                     // update global farm accumulated RPZ
@@ -589,7 +590,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
 
         let yield_farm_id =
-            Self::active_yield_farm(amm_pool_id.clone(), global_farm_id).ok_or(Error::<T, I>::YieldFarmNotFound)?;
+            Self::active_yield_farm(amm_pool_id, global_farm_id).ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
         <YieldFarm<T, I>>::try_mutate((amm_pool_id, global_farm_id, yield_farm_id), |maybe_yield_farm| {
             let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
@@ -645,7 +646,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
     ) -> Result<YieldFarmId, DispatchError> {
         <ActiveYieldFarm<T, I>>::try_mutate_exists(
-            amm_pool_id.clone(),
+            amm_pool_id,
             global_farm_id,
             |maybe_active_yield_farm_id| -> Result<YieldFarmId, DispatchError> {
                 let yield_farm_id = maybe_active_yield_farm_id
@@ -719,7 +720,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     ) -> Result<(), DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
 
-        <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id.clone(), global_farm_id, |maybe_active_yield_farm_id| {
+        <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id, global_farm_id, |maybe_active_yield_farm_id| {
             ensure!(
                 maybe_active_yield_farm_id.is_none(),
                 Error::<T, I>::YieldFarmAlreadyExists
@@ -797,7 +798,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
     ) -> Result<(), DispatchError> {
         ensure!(
-            !<ActiveYieldFarm<T, I>>::contains_key(amm_pool_id.clone(), global_farm_id),
+            !<ActiveYieldFarm<T, I>>::contains_key(amm_pool_id, global_farm_id),
             Error::<T, I>::LiquidityMiningIsActive
         );
 
@@ -862,7 +863,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         yield_farm_id: YieldFarmId,
         amm_pool_id: T::AmmPoolId,
         shares_amount: Balance,
-        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Result<Balance, DispatchError>,
+        get_balance_in_amm: fn(T::AssetId, T::AmmPoolId) -> Result<Balance, DispatchError>,
     ) -> Result<DepositId, DispatchError> {
         let mut deposit = DepositData::new(shares_amount, amm_pool_id);
 
@@ -892,7 +893,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
-        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Result<Balance, DispatchError>,
+        get_balance_in_amm: fn(T::AssetId, T::AmmPoolId) -> Result<Balance, DispatchError>,
     ) -> Result<Balance, DispatchError> {
         <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T, I>::DepositNotFound)?;
@@ -924,11 +925,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         deposit_id: DepositId,
         yield_farm_id: YieldFarmId,
         fail_on_doubleclaim: bool,
-    ) -> Result<(GlobalFarmId, T::CurrencyId, Balance, Balance), DispatchError> {
+    ) -> Result<(GlobalFarmId, T::AssetId, Balance, Balance), DispatchError> {
         <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T, I>::DepositNotFound)?;
 
-            let amm_pool_id = deposit.amm_pool_id.clone();
+            let amm_pool_id = deposit.amm_pool_id;
             let farm_entry = deposit
                 .get_yield_farm_entry(yield_farm_id)
                 .ok_or(Error::<T, I>::YieldFarmEntryNotFound)?;
@@ -1026,7 +1027,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T, I>::DepositNotFound)?;
 
             let farm_entry = deposit.remove_yield_farm_entry(yield_farm_id)?;
-            let amm_pool_id = deposit.amm_pool_id.clone();
+            let amm_pool_id = deposit.amm_pool_id;
 
             <GlobalFarm<T, I>>::try_mutate_exists(
                 farm_entry.global_farm_id,
@@ -1109,7 +1110,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         deposit: &mut DepositData<T, I>,
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
-        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Result<Balance, DispatchError>,
+        get_balance_in_amm: fn(T::AssetId, T::AmmPoolId) -> Result<Balance, DispatchError>,
     ) -> Result<(), DispatchError> {
         //LP shares can be locked only once in the same yield farm.
         ensure!(
@@ -1118,7 +1119,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         );
 
         <YieldFarm<T, I>>::try_mutate(
-            (deposit.amm_pool_id.clone(), global_farm_id, yield_farm_id),
+            (deposit.amm_pool_id, global_farm_id, yield_farm_id),
             |maybe_yield_farm| {
                 let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
@@ -1142,7 +1143,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                     let valued_shares = Self::get_valued_shares(
                         deposit.shares,
-                        deposit.amm_pool_id.clone(),
+                        deposit.amm_pool_id,
                         global_farm.incentivized_asset,
                         get_balance_in_amm,
                     )?;
@@ -1352,7 +1353,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         yield_farm_rewards: Balance,
         current_period: BlockNumberFor<T>,
         global_farm_id: FarmId,
-        reward_currency: T::CurrencyId,
+        reward_currency: T::AssetId,
     ) -> DispatchResult {
         if yield_farm.updated_at == current_period {
             return Ok(());
@@ -1430,8 +1431,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     fn get_valued_shares(
         shares: Balance,
         amm: T::AmmPoolId,
-        incentivized_asset: T::CurrencyId,
-        get_balance_in_amm: fn(T::CurrencyId, T::AmmPoolId) -> Result<Balance, DispatchError>,
+        incentivized_asset: T::AssetId,
+        get_balance_in_amm: fn(T::AssetId, T::AmmPoolId) -> Result<Balance, DispatchError>,
     ) -> Result<Balance, DispatchError> {
         let incentivized_asset_balance = get_balance_in_amm(incentivized_asset, amm)?;
 
@@ -1508,7 +1509,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     }
 }
 
-impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::AccountId, T::CurrencyId, BlockNumberFor<T>>
+impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::AccountId, T::AssetId, BlockNumberFor<T>>
     for Pallet<T, I>
 {
     type Error = DispatchError;
@@ -1522,8 +1523,8 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         total_rewards: Self::Balance,
         planned_yielding_periods: Self::Period,
         blocks_per_period: BlockNumberFor<T>,
-        incentivized_asset: T::CurrencyId,
-        reward_currency: T::CurrencyId,
+        incentivized_asset: T::AssetId,
+        reward_currency: T::AssetId,
         owner: T::AccountId,
         yield_per_period: Perquintill,
         min_deposit: Self::Balance,
@@ -1553,7 +1554,7 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
     fn destroy_global_farm(
         who: T::AccountId,
         global_farm_id: u32,
-    ) -> Result<(T::CurrencyId, Self::Balance, T::AccountId), Self::Error> {
+    ) -> Result<(T::AssetId, Self::Balance, T::AccountId), Self::Error> {
         Self::destroy_global_farm(who, global_farm_id)
     }
 
@@ -1563,7 +1564,7 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         multiplier: FixedU128,
         loyalty_curve: Option<Self::LoyaltyCurve>,
         amm_pool_id: Self::AmmPoolId,
-        assets: Vec<T::CurrencyId>,
+        assets: Vec<T::AssetId>,
     ) -> Result<u32, Self::Error> {
         Self::create_yield_farm(who, global_farm_id, multiplier, loyalty_curve, amm_pool_id, assets)
     }
@@ -1609,7 +1610,7 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         yield_farm_id: u32,
         amm_pool_id: Self::AmmPoolId,
         shares_amount: Self::Balance,
-        get_balance_in_amm: fn(T::CurrencyId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
+        get_balance_in_amm: fn(T::AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
     ) -> Result<u128, Self::Error> {
         Self::deposit_lp_shares(
             global_farm_id,
@@ -1624,7 +1625,7 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         global_farm_id: u32,
         yield_farm_id: u32,
         deposit_id: u128,
-        get_balance_in_amm: fn(T::CurrencyId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
+        get_balance_in_amm: fn(T::AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
     ) -> Result<Self::Balance, Self::Error> {
         Self::redeposit_lp_shares(global_farm_id, yield_farm_id, deposit_id, get_balance_in_amm)
     }
@@ -1634,7 +1635,7 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         deposit_id: u128,
         yield_farm_id: u32,
         fail_on_doubleclaim: bool,
-    ) -> Result<(u32, T::CurrencyId, Self::Balance, Self::Balance), Self::Error> {
+    ) -> Result<(u32, T::AssetId, Self::Balance, Self::Balance), Self::Error> {
         Self::claim_rewards(who, deposit_id, yield_farm_id, fail_on_doubleclaim)
     }
 

@@ -25,82 +25,94 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
     let mut ext = new_test_ext();
     ext.execute_with(|| {
         let expected_farm = get_predefined_global_farm_ins1(0);
-        assert_ok!(LiquidityMining::create_global_farm(
-            100_000_000_000,
-            expected_farm.planned_yielding_periods,
-            expected_farm.blocks_per_period,
-            expected_farm.incentivized_asset,
-            expected_farm.reward_currency,
-            ALICE,
-            expected_farm.yield_per_period,
-            expected_farm.min_deposit,
-            expected_farm.price_adjustment,
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+            LiquidityMining::create_global_farm(
+                100_000_000_000,
+                expected_farm.planned_yielding_periods,
+                expected_farm.blocks_per_period,
+                expected_farm.incentivized_asset,
+                expected_farm.reward_currency,
+                ALICE,
+                expected_farm.yield_per_period,
+                expected_farm.min_deposit,
+                expected_farm.price_adjustment,
+            )
+        })));
 
         let expected_farm = get_predefined_global_farm_ins1(1);
-        assert_ok!(LiquidityMining::create_global_farm(
-            1_000_000_000,
-            expected_farm.planned_yielding_periods,
-            expected_farm.blocks_per_period,
-            expected_farm.incentivized_asset,
-            expected_farm.reward_currency,
-            BOB,
-            expected_farm.yield_per_period,
-            expected_farm.min_deposit,
-            expected_farm.price_adjustment,
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+            LiquidityMining::create_global_farm(
+                1_000_000_000,
+                expected_farm.planned_yielding_periods,
+                expected_farm.blocks_per_period,
+                expected_farm.incentivized_asset,
+                expected_farm.reward_currency,
+                BOB,
+                expected_farm.yield_per_period,
+                expected_farm.min_deposit,
+                expected_farm.price_adjustment,
+            )
+        })));
 
         let expected_farm = get_predefined_global_farm_ins1(2);
-        assert_ok!(LiquidityMining::create_global_farm(
-            30_000_000_000,
-            expected_farm.planned_yielding_periods,
-            expected_farm.blocks_per_period,
-            expected_farm.incentivized_asset,
-            expected_farm.reward_currency,
-            GC,
-            expected_farm.yield_per_period,
-            expected_farm.min_deposit,
-            expected_farm.price_adjustment,
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+            LiquidityMining::create_global_farm(
+                30_000_000_000,
+                expected_farm.planned_yielding_periods,
+                expected_farm.blocks_per_period,
+                expected_farm.incentivized_asset,
+                expected_farm.reward_currency,
+                GC,
+                expected_farm.yield_per_period,
+                expected_farm.min_deposit,
+                expected_farm.price_adjustment,
+            )
+        })));
 
         let expected_farm = get_predefined_global_farm_ins1(3);
-        assert_ok!(LiquidityMining::create_global_farm(
-            30_000_000_000,
-            expected_farm.planned_yielding_periods,
-            expected_farm.blocks_per_period,
-            expected_farm.incentivized_asset,
-            expected_farm.reward_currency,
-            CHARLIE,
-            expected_farm.yield_per_period,
-            expected_farm.min_deposit,
-            expected_farm.price_adjustment,
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+            LiquidityMining::create_global_farm(
+                30_000_000_000,
+                expected_farm.planned_yielding_periods,
+                expected_farm.blocks_per_period,
+                expected_farm.incentivized_asset,
+                expected_farm.reward_currency,
+                CHARLIE,
+                expected_farm.yield_per_period,
+                expected_farm.min_deposit,
+                expected_farm.price_adjustment,
+            )
+        })));
 
         let expected_farm = get_predefined_global_farm_ins1(4);
-        assert_ok!(LiquidityMining::create_global_farm(
-            30_000_000_000,
-            expected_farm.planned_yielding_periods,
-            expected_farm.blocks_per_period,
-            expected_farm.incentivized_asset,
-            expected_farm.reward_currency,
-            DAVE,
-            expected_farm.yield_per_period,
-            expected_farm.min_deposit,
-            expected_farm.price_adjustment,
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+            LiquidityMining::create_global_farm(
+                30_000_000_000,
+                expected_farm.planned_yielding_periods,
+                expected_farm.blocks_per_period,
+                expected_farm.incentivized_asset,
+                expected_farm.reward_currency,
+                DAVE,
+                expected_farm.yield_per_period,
+                expected_farm.min_deposit,
+                expected_farm.price_adjustment,
+            )
+        })));
 
         let expected_farm = get_predefined_global_farm_ins1(5);
-        assert_ok!(LiquidityMining::create_global_farm(
-            30_000_000_000,
-            expected_farm.planned_yielding_periods,
-            expected_farm.blocks_per_period,
-            expected_farm.incentivized_asset,
-            expected_farm.reward_currency,
-            EVE,
-            expected_farm.yield_per_period,
-            expected_farm.min_deposit,
-            expected_farm.price_adjustment,
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+            LiquidityMining::create_global_farm(
+                30_000_000_000,
+                expected_farm.planned_yielding_periods,
+                expected_farm.blocks_per_period,
+                expected_farm.incentivized_asset,
+                expected_farm.reward_currency,
+                EVE,
+                expected_farm.yield_per_period,
+                expected_farm.min_deposit,
+                expected_farm.price_adjustment,
+            )
+        })));
 
         let amm_mock_data = vec![
             (

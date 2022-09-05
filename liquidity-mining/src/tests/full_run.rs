@@ -38,17 +38,19 @@ fn non_full_farm_running_longer_than_expected() {
 
         //initialize farms
         set_block_number(100);
-        assert_ok!(LiquidityMining2::create_global_farm(
-            200_000 * ONE,
-            20,
-            10,
-            BSX,
-            BSX,
-            GC,
-            Perquintill::from_float(0.5),
-            1_000,
-            One::one()
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+            LiquidityMining2::create_global_farm(
+                200_000 * ONE,
+                20,
+                10,
+                BSX,
+                BSX,
+                GC,
+                Perquintill::from_float(0.5),
+                1_000,
+                One::one(),
+            )
+        })));
 
         assert_ok!(LiquidityMining2::create_yield_farm(
             GC,
@@ -166,17 +168,19 @@ fn non_full_farm_distribute_everything_and_update_farms() {
 
         //initialize farms
         set_block_number(100);
-        assert_ok!(LiquidityMining2::create_global_farm(
-            200_000 * ONE,
-            20,
-            10,
-            BSX,
-            BSX,
-            GC,
-            Perquintill::from_float(0.5),
-            1_000,
-            One::one()
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+            LiquidityMining2::create_global_farm(
+                200_000 * ONE,
+                20,
+                10,
+                BSX,
+                BSX,
+                GC,
+                Perquintill::from_float(0.5),
+                1_000,
+                One::one(),
+            )
+        })));
 
         assert_ok!(LiquidityMining2::create_yield_farm(
             GC,
@@ -284,17 +288,19 @@ fn overcrowded_farm_running_longer_than_expected() {
 
         //initialize farms
         set_block_number(100);
-        assert_ok!(LiquidityMining2::create_global_farm(
-            200_000 * ONE,
-            20,
-            10,
-            BSX,
-            BSX,
-            GC,
-            Perquintill::from_float(0.5),
-            1_000,
-            One::one()
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+            LiquidityMining2::create_global_farm(
+                200_000 * ONE,
+                20,
+                10,
+                BSX,
+                BSX,
+                GC,
+                Perquintill::from_float(0.5),
+                1_000,
+                One::one(),
+            )
+        })));
 
         assert_ok!(LiquidityMining2::create_yield_farm(
             GC,
@@ -445,17 +451,19 @@ fn full_farm_running_planned_time() {
         set_block_number(100);
         //NOTE: This farm is distributing 10BSX per period(10block) for 1 year on chain with 6s
         //blocktime if it's full. This farm is full when Z(locked bsx value) = 20_000.
-        assert_ok!(LiquidityMining2::create_global_farm(
-            TOTAL_REWARDS_TO_DISTRIBUTE,
-            PLANNED_PERIODS, //1 year, 6s blocktime
-            BLOCKS_PER_PERIOD,
-            BSX,
-            BSX,
-            GC,
-            Perquintill::from_float(0.000_5),
-            1_000,
-            One::one()
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+            LiquidityMining2::create_global_farm(
+                TOTAL_REWARDS_TO_DISTRIBUTE,
+                PLANNED_PERIODS, //1 year, 6s blocktime
+                BLOCKS_PER_PERIOD,
+                BSX,
+                BSX,
+                GC,
+                Perquintill::from_float(0.000_5),
+                1_000,
+                One::one(),
+            )
+        })));
 
         assert_ok!(LiquidityMining2::create_yield_farm(
             GC,

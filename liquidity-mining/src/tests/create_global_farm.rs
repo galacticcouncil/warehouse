@@ -40,17 +40,19 @@ fn create_global_farm_should_work() {
         pretty_assertions::assert_eq!(Tokens::free_balance(reward_currency, &global_farm_account), 0);
 
         pretty_assertions::assert_eq!(
-            LiquidityMining::create_global_farm(
-                total_rewards,
-                planned_yielding_periods,
-                blocks_per_period,
-                incentivized_token,
-                reward_currency,
-                owner,
-                yield_per_period,
-                10,
-                One::one(),
-            )
+            with_transaction(|| TransactionOutcome::Commit({
+                LiquidityMining::create_global_farm(
+                    total_rewards,
+                    planned_yielding_periods,
+                    blocks_per_period,
+                    incentivized_token,
+                    reward_currency,
+                    owner,
+                    yield_per_period,
+                    10,
+                    One::one(),
+                )
+            }))
             .unwrap(),
             (global_farm_id, max_reward_per_period)
         );
@@ -94,97 +96,109 @@ fn create_global_farm_invalid_data_should_not_work() {
 
         //total_rewards bellow mini. limit.
         assert_noop!(
-            LiquidityMining::create_global_farm(
-                100,
-                1_000,
-                300,
-                BSX,
-                BSX,
-                ALICE,
-                Perquintill::from_percent(20),
-                10,
-                One::one()
-            ),
+            with_transaction(|| TransactionOutcome::Commit({
+                LiquidityMining::create_global_farm(
+                    100,
+                    1_000,
+                    300,
+                    BSX,
+                    BSX,
+                    ALICE,
+                    Perquintill::from_percent(20),
+                    10,
+                    One::one(),
+                )
+            })),
             Error::<Test, Instance1>::InvalidTotalRewards
         );
 
         //planned_yielding_periods bellow min. limit.
         assert_noop!(
-            LiquidityMining::create_global_farm(
-                1_000_000,
-                10,
-                300,
-                BSX,
-                BSX,
-                ALICE,
-                Perquintill::from_percent(20),
-                10,
-                One::one()
-            ),
+            with_transaction(|| TransactionOutcome::Commit({
+                LiquidityMining::create_global_farm(
+                    1_000_000,
+                    10,
+                    300,
+                    BSX,
+                    BSX,
+                    ALICE,
+                    Perquintill::from_percent(20),
+                    10,
+                    One::one(),
+                )
+            })),
             Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
         );
 
         //blocks_per_period is 0.
         assert_noop!(
-            LiquidityMining::create_global_farm(
-                1_000_000,
-                1_000,
-                0,
-                BSX,
-                BSX,
-                ALICE,
-                Perquintill::from_percent(20),
-                10,
-                One::one()
-            ),
+            with_transaction(|| TransactionOutcome::Commit({
+                LiquidityMining::create_global_farm(
+                    1_000_000,
+                    1_000,
+                    0,
+                    BSX,
+                    BSX,
+                    ALICE,
+                    Perquintill::from_percent(20),
+                    10,
+                    One::one(),
+                )
+            })),
             Error::<Test, Instance1>::InvalidBlocksPerPeriod
         );
 
         //yield_per_period is 0.
         assert_noop!(
-            LiquidityMining::create_global_farm(
-                1_000_000,
-                1_000,
-                1,
-                BSX,
-                BSX,
-                ALICE,
-                Perquintill::from_percent(0),
-                10,
-                One::one()
-            ),
+            with_transaction(|| TransactionOutcome::Commit({
+                LiquidityMining::create_global_farm(
+                    1_000_000,
+                    1_000,
+                    1,
+                    BSX,
+                    BSX,
+                    ALICE,
+                    Perquintill::from_percent(0),
+                    10,
+                    One::one(),
+                )
+            })),
             Error::<Test, Instance1>::InvalidYieldPerPeriod
         );
 
         //min. deposit is 0.
         assert_noop!(
-            LiquidityMining::create_global_farm(
-                1_000_000,
-                1_000,
-                1,
-                BSX,
-                BSX,
-                ALICE,
-                Perquintill::from_percent(10),
-                0,
-                One::one()
-            ),
+            with_transaction(|| TransactionOutcome::Commit({
+                LiquidityMining::create_global_farm(
+                    1_000_000,
+                    1_000,
+                    1,
+                    BSX,
+                    BSX,
+                    ALICE,
+                    Perquintill::from_percent(10),
+                    0,
+                    One::one(),
+                )
+            })),
             Error::<Test, Instance1>::InvalidMinDeposit
         );
 
         //price adjustment is 0.
         assert_noop!(
-            LiquidityMining::create_global_farm(
-                1_000_000,
-                1_000,
-                1,
-                BSX,
-                BSX,
-                ALICE,
-                Perquintill::from_percent(10),
-                10,
-                FixedU128::from(0_u128)
-            ),
+            with_transaction(|| TransactionOutcome::Commit({
+                LiquidityMining::create_global_farm(
+                    1_000_000,
+                    1_000,
+                    1,
+                    BSX,
+                    BSX,
+                    ALICE,
+                    Perquintill::from_percent(10),
+                    10,
+                    FixedU128::from(0_u128),
+                )
+            })),
             Error::<Test, Instance1>::InvalidPriceAdjustment
         );
     });
@@ -195,17 +209,19 @@ fn create_global_farm_with_inssufficient_balance_should_not_work() {
     //Owner's account balance is 1M BSX.
     new_test_ext().execute_with(|| {
         assert_noop!(
-            LiquidityMining::create_global_farm(
-                1_000_001,
-                1_000,
-                1,
-                BSX,
-                BSX,
-                ACCOUNT_WITH_1M,
-                Perquintill::from_percent(20),
-                10,
-                One::one(),
-            ),
+            with_transaction(|| TransactionOutcome::Commit({
+                LiquidityMining::create_global_farm(
+                    1_000_001,
+                    1_000,
+                    1,
+                    BSX,
+                    BSX,
+                    ACCOUNT_WITH_1M,
+                    Perquintill::from_percent(20),
+                    10,
+                    One::one(),
+                )
+            })),
             Error::<Test, Instance1>::InsufficientRewardCurrencyBalance
         );
     });

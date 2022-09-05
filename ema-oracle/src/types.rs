@@ -60,6 +60,19 @@ where
         }
     }
 
+    /// Return an inverted version of the entry where the meaning of assets a and b are inverted.
+    /// So the price of a/b become the price b/a and the volume switches correspondingly.
+    pub fn inverted(&self) -> Option<Self> {
+        let price = self.price.reciprocal()?;
+        let volume = self.volume.inverted();
+        Some(Self {
+            price,
+            volume,
+            liquidity: self.liquidity,
+            timestamp: self.timestamp,
+        })
+    }
+
     /// Determine a new entry based on `self` and a previous entry. Adds the volumes together and
     /// takes the values of `self` for the rest.
     pub fn accumulate_volume(&self, previous_entry: &Self) -> Self {

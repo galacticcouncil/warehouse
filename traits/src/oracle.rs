@@ -139,6 +139,22 @@ where
             (self.b_out).saturating_add(self.b_in),
         )
     }
+
+    /// Switch assets a and b, so the new `a_in` refers to old `b_in` etc.
+    pub fn inverted(&self) -> Self {
+        let Self {
+            a_in,
+            b_out,
+            a_out,
+            b_in,
+        } = self;
+        Self {
+            a_in: *b_in,
+            b_out: *a_out,
+            a_out: *b_out,
+            b_in: *a_in,
+        }
+    }
 }
 
 /// An oracle returning an entry of oracle data aggregated over `period`.

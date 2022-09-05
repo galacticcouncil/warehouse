@@ -395,13 +395,17 @@ pub enum OracleError {
     NotPresent,
     /// The oracle is not defined if the asset ids are the same.
     SameAsset,
+    CannotInvert,
 }
 
 impl<T: Config> AggregatedOracle<AssetId, Balance, T::BlockNumber, Price> for Pallet<T> {
     type Error = OracleError;
 
-    // TODO: What to do about switched order of assets? Adjust price and volume? Return predictable
-    // normalized version?
+    /// Returns the entry corresponding to the given assets and period.
+    /// The entry is updated to the state of the parent block (but not trading data in the current
+    /// block). It is also adjusted to make sense for the asset order given as parameters. So
+    /// calling `get_entry(HDX, DOT, LastBlock)` will return the price `HDX/DOT`, while
+    /// `get_entry(DOT HDX, LastBlock)` will return `DOT/HDX`.
     fn get_entry(
         asset_a: AssetId,
         asset_b: AssetId,
@@ -413,7 +417,14 @@ impl<T: Config> AggregatedOracle<AssetId, Balance, T::BlockNumber, Price> for Pa
         let pair_id = derive_name(asset_a, asset_b);
         Self::get_updated_entry(&pair_id, period)
             .ok_or(OracleError::NotPresent)
-            .map(|(entry, initialized)| entry.into_aggegrated(initialized))
+            .and_then(|(entry, initialized)| {
+                let entry = if (asset_a, asset_b) != ordered_pair(asset_a, asset_b) {
+                    entry.inverted().ok_or(OracleError::CannotInvert)?
+                } else {
+                    entry
+                };
+                Ok(entry.into_aggegrated(initialized))
+            })
     }
 
     fn get_entry_weight() -> Weight {

@@ -128,7 +128,7 @@ pub mod pallet {
     use super::*;
 
     #[pallet::pallet]
-    #[pallet::without_storage_info]
+    #[pallet::generate_store(pub(crate) trait Store)]
     pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
     #[pallet::hooks]
@@ -139,7 +139,7 @@ pub mod pallet {
         type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// Asset type.
-        type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
+        type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaxEncodedLen;
 
         /// Currency for transfers.
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Balance>;
@@ -160,7 +160,7 @@ pub mod pallet {
         type BlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
 
         /// Id used to identify amm pool in liquidity mining pallet.
-        type AmmPoolId: Parameter + Member + Copy + FullCodec;
+        type AmmPoolId: Parameter + Member + Copy + FullCodec + MaxEncodedLen;
 
         /// Maximum number of yield farms same LP shares can be re/deposited into. This value always
         /// MUST BE >= 1.         

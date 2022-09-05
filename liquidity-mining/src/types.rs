@@ -28,8 +28,9 @@ pub type DepositId = u128;
 /// `GlobalFarm` based on their stake in `GlobalFarm`. `YieldFarm` stake in `GlobalFarm` is derived from
 /// users stake in `YieldFarm`.
 /// Yield farm is considered live from global farm view if yield farm is `active` or `stopped`.
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-#[scale_info(skip_type_params(I))]
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[codec(mel_bound())]
+#[scale_info(skip_type_params(T, I))]
 pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) id: GlobalFarmId,
     pub(super) owner: T::AccountId,
@@ -161,8 +162,9 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     }
 }
 
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-#[scale_info(skip_type_params(I))]
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[codec(mel_bound())]
+#[scale_info(skip_type_params(T, I))]
 pub struct YieldFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) id: FarmId,
     pub(super) updated_at: PeriodOf<T>,
@@ -242,8 +244,8 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
     }
 }
 
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-#[scale_info(skip_type_params(I))]
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T, I))]
 pub struct LoyaltyCurve {
     pub initial_reward_percentage: FixedU128,
     pub scale_coef: u32,
@@ -258,8 +260,9 @@ impl Default for LoyaltyCurve {
     }
 }
 
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo, PartialEq)]
-#[scale_info(skip_type_params(I))]
+#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo, PartialEq, MaxEncodedLen)]
+#[codec(mel_bound())]
+#[scale_info(skip_type_params(T, I))]
 pub struct DepositData<T: Config<I>, I: 'static = ()> {
     pub(super) shares: Balance,
     pub(super) amm_pool_id: T::AmmPoolId,
@@ -327,7 +330,8 @@ impl<T: Config<I>, I: 'static> DepositData<T, I> {
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-#[scale_info(skip_type_params(I))]
+#[codec(mel_bound())]
+#[scale_info(skip_type_params(T, I))]
 pub struct YieldFarmEntry<T: Config<I>, I: 'static = ()> {
     pub(super) global_farm_id: GlobalFarmId,
     pub(super) yield_farm_id: YieldFarmId,
@@ -360,7 +364,7 @@ impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
     }
 }
 
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum FarmState {
     Active,
     Stopped,

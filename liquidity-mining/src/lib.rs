@@ -495,6 +495,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// One of the AMM assets has to be `incentivized_token`. Same AMM can be
     /// in the same farm only once.
     ///
+    /// Returns: `(YieldFarmId)`
+    ///
     /// Parameters:
     /// - `who`: farm's owner
     /// - `global_farm_id`: farm id to which a yield farm will be added.
@@ -576,6 +578,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     ///  
     /// Only farm's owner can perform this action.
     ///
+    /// Returns: `(YieldFarmId)`
+    ///
     /// Parameters:
     /// - `who`: farm's owner
     /// - `global_farm_id`: global farm id in which yield farm will be updated.
@@ -633,6 +637,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// incentivization from a `GlobalFarm`. Users will be able to only claim and withdraw LP
     /// shares after calling this function.
     /// `deposit_lp_shares()` is not allowed on stopped yield farm.
+    ///
+    /// Returns: `(YieldFarmId)`
     ///  
     /// Only farm owner can perform this action.
     ///
@@ -849,6 +855,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// Deposit LP shares to a yield farm.
     ///
     /// This function creates new deposit farm entry in the yield farm.
+    ///
+    /// Returns: `(DepositId)`
     ///
     /// Parameters:
     /// - `global_farm_id`: global farm identifier.

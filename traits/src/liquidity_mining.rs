@@ -10,6 +10,8 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     type LoyaltyCurve;
 
     /// Create new global farm.
+    ///
+    /// Returns: `(GlobalFarmId, max reward per period)`
     #[allow(clippy::too_many_arguments)]
     fn create_global_farm(
         total_rewards: Self::Balance,
@@ -31,12 +33,16 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     ) -> Result<(), Self::Error>;
 
     /// Destroy existing global farm.
+    ///
+    /// Returns: `(reward currency, undistributed rewards, destination account)`
     fn destroy_global_farm(
         who: AccountId,
         global_farm_id: u32,
     ) -> Result<(AssetId, Self::Balance, AccountId), Self::Error>;
 
     /// Crate new yield farm in the global farm.
+    ///
+    /// Returns: `(YieldFarmId)`
     fn create_yield_farm(
         who: AccountId,
         global_farm_id: u32,
@@ -47,6 +53,8 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     ) -> Result<u32, Self::Error>;
 
     /// Update multiplier of the existing yield farm.
+    ///
+    /// Returns: `(YieldFarmId)`
     fn update_yield_farm_multiplier(
         who: AccountId,
         global_farm_id: u32,
@@ -55,6 +63,8 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     ) -> Result<u32, Self::Error>;
 
     /// Stop yield farming for amm pool in the global farm.
+    ///
+    /// Returns: `(YieldFarmId)`
     fn stop_yield_farm(who: AccountId, global_farm_id: u32, amm_pool_id: Self::AmmPoolId) -> Result<u32, Self::Error>;
 
     /// Resume yield farming for amm pool in the global farm.
@@ -75,6 +85,8 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     ) -> Result<(), Self::Error>;
 
     /// Deposit new LP shares.
+    ///
+    /// Returns: `(DepositId)`
     #[allow(clippy::type_complexity)]
     fn deposit_lp_shares(
         global_farm_id: u32,
@@ -85,6 +97,8 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     ) -> Result<u128, Self::Error>;
 
     /// Redeposit already locked LP shares to another yield farm.
+    ///
+    /// Returns: `(redeposited LP shares amount)`
     #[allow(clippy::type_complexity)]
     fn redeposit_lp_shares(
         global_farm_id: u32,
@@ -94,6 +108,8 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     ) -> Result<Self::Balance, Self::Error>;
 
     /// Claim rewards for given deposit.
+    ///
+    /// Returns: `(GlobalFarmId, reward currency, claimed amount, unclaimable amount)`
     #[allow(clippy::type_complexity)]
     fn claim_rewards(
         who: AccountId,
@@ -103,6 +119,8 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     ) -> Result<(u32, AssetId, Self::Balance, Self::Balance), Self::Error>;
 
     /// Withdraw LP shares from yield farm.
+    ///
+    /// Returns: `(GlobalFarmId, withdrawn amount, true if deposit was destroyed)`
     fn withdraw_lp_shares(
         deposit_id: u128,
         yield_farm_id: u32,

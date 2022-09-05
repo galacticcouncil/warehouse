@@ -134,7 +134,7 @@ pub mod pallet {
 
         fn on_finalize(_n: T::BlockNumber) {
             // update oracles based on data accumulated during the block
-            Self::update_data();
+            Self::update_oracles_from_accumulator();
         }
     }
 
@@ -164,7 +164,7 @@ impl<T: Config> Pallet<T> {
         Self::on_entry(pair_id, oracle_entry)
     }
 
-    fn update_data() {
+    fn update_oracles_from_accumulator() {
         // update oracles based on data accumulated during the block
         for (pair_id, oracle_entry) in Accumulator::<T>::take().into_iter() {
             for period in OraclePeriod::all_periods() {
@@ -194,45 +194,24 @@ impl<T: Config> Pallet<T> {
         pair_id: &AssetPairId,
         period: OraclePeriod,
     ) -> Option<(OracleEntry<T::BlockNumber>, T::BlockNumber)> {
-        let current_block = T::BlockNumberProvider::current_block_number();
-        let parent = current_block.saturating_sub(One::one());
+        let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
+        // First get the `LastBlock` oracle as we will use it to calculate the updated values for
+        // the others.
+        let (mut last_block, init) = Self::oracle(pair_id, into_blocks::<T>(&LastBlock))?;
+        last_block.timestamp = parent;
 
-        // First update the `LastBlock` oracle as we will use it to calculate the updates for the
-        // others.
-        let (mut immediate, init) = Self::oracle(pair_id, into_blocks::<T>(&LastBlock))?;
-        if immediate.timestamp < parent {
-            immediate.timestamp = parent;
-            Oracles::<T>::insert(pair_id, into_blocks::<T>(&LastBlock), &(immediate.clone(), init));
-        }
-
-        let immediate = immediate;
-        let mut r = None;
-        OraclePeriod::non_immediate_periods()
-            .iter()
-            .map(|p| {
-                let (entry, init) = Self::oracle(pair_id, into_blocks::<T>(p))?;
-                let return_entry = if entry.timestamp < parent {
-                    immediate
-                        .calculate_new_ema_entry(into_blocks::<T>(p), &entry)
-                        .map(|new_entry| {
-                            Oracles::<T>::insert(pair_id, into_blocks::<T>(&period), &(new_entry.clone(), init));
-                            new_entry
-                        })
-                        .unwrap_or(entry)
-                } else {
-                    entry
-                };
-                if p == &period {
-                    r = Some((return_entry, init));
-                }
-                Some(())
-            })
-            .for_each(|_| {});
         if period == LastBlock {
-            Some((immediate, init))
-        } else {
-            r
+            return Some((last_block, init));
         }
+        let last_block = last_block;
+
+        let (entry, init) = Self::oracle(pair_id, into_blocks::<T>(&period))?;
+        if entry.timestamp < parent {
+            last_block.calculate_new_ema_entry(into_blocks::<T>(&period), &entry)
+        } else {
+            Some(entry)
+        }
+        .map(|return_entry| (return_entry, init))
     }
 }
 
@@ -423,7 +402,7 @@ impl<T: Config> AggregatedOracle<AssetId, Balance, T::BlockNumber, Price> for Pa
                 } else {
                     entry
                 };
-                Ok(entry.into_aggegrated(initialized))
+                Ok(entry.into_aggregated(initialized))
             })
     }
 

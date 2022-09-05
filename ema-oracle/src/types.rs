@@ -51,7 +51,7 @@ where
 {
     /// Convert the `OracleEntry` into an `AggregatedEntry` for consumption. Determines the age by
     /// subtracting `initialized` from the timestamp.
-    pub fn into_aggegrated(self, initialized: BlockNumber) -> AggregatedEntry<Balance, BlockNumber, Price> {
+    pub fn into_aggregated(self, initialized: BlockNumber) -> AggregatedEntry<Balance, BlockNumber, Price> {
         AggregatedEntry {
             price: self.price,
             volume: self.volume,

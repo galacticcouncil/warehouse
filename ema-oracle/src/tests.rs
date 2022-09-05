@@ -409,7 +409,7 @@ fn get_entry_works() {
 }
 
 #[test]
-fn get_price_returns_updated_price_or_not_ready() {
+fn get_price_returns_updated_price() {
     ExtBuilder::default()
         .with_price_data(vec![((HDX, DOT), Price::from(1_000_000), 2_000_000)])
         .build()
@@ -424,12 +424,20 @@ fn get_price_returns_updated_price_or_not_ready() {
             EmaOracle::on_trade(derive_name(HDX, DOT), on_trade_entry);
             EmaOracle::on_finalize(10_000);
 
-            let e = Price::from_float(0.01);
+            System::set_block_number(10_001);
+
             assert_eq!(
                 EmaOracle::get_price(HDX, DOT, LastBlock).unwrap().1,
                 10_000,
                 "Oracle should be 10_000 blocks old."
             );
+            assert_eq!(
+                EmaOracle::get_price(HDX, DOT, Day).unwrap().1,
+                10_000,
+                "Oracle should be 10_000 blocks old."
+            );
+
+            let e = Price::from_float(0.01);
             assert_eq_approx!(
                 EmaOracle::get_price(HDX, DOT, LastBlock).unwrap().0,
                 Price::from(500_000),
@@ -449,8 +457,8 @@ fn get_price_returns_updated_price_or_not_ready() {
                 "Day Oracle should converge somewhat."
             );
             assert_eq_approx!(
-                EmaOracle::get_price(HDX, DOT, Day).unwrap().0,
-                Price::from_float(531088.261455783831),
+                EmaOracle::get_price(HDX, DOT, Week).unwrap().0,
+                Price::from_float(836225.713750992856),
                 e,
                 "Week Oracle should converge somewhat."
             );

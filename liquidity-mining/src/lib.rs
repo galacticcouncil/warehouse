@@ -258,7 +258,7 @@ pub mod pallet {
 
     /// Id sequencer for `GlobalFarm` and `YieldFarm`.
     #[pallet::storage]
-    #[pallet::getter(fn farm_id)]
+    #[pallet::getter(fn last_farm_id)]
     pub type FarmSequencer<T: Config<I>, I: 'static = ()> = StorageValue<_, FarmId, ValueQuery>;
 
     #[pallet::storage]

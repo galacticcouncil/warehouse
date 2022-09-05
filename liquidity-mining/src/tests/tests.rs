@@ -1587,16 +1587,16 @@ fn get_next_farm_id_should_work() {
 
     ext.execute_with(|| {
         pretty_assertions::assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 1);
-        pretty_assertions::assert_eq!(LiquidityMining::farm_id(), 1);
+        pretty_assertions::assert_eq!(LiquidityMining::last_farm_id(), 1);
 
         pretty_assertions::assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 2);
-        pretty_assertions::assert_eq!(LiquidityMining::farm_id(), 2);
+        pretty_assertions::assert_eq!(LiquidityMining::last_farm_id(), 2);
 
         pretty_assertions::assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 3);
-        pretty_assertions::assert_eq!(LiquidityMining::farm_id(), 3);
+        pretty_assertions::assert_eq!(LiquidityMining::last_farm_id(), 3);
 
         pretty_assertions::assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 4);
-        pretty_assertions::assert_eq!(LiquidityMining::farm_id(), 4);
+        pretty_assertions::assert_eq!(LiquidityMining::last_farm_id(), 4);
     });
 }
 

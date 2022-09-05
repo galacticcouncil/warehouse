@@ -28,7 +28,7 @@ use frame_support::traits::Hooks;
 use crate::Pallet as EmaOracle;
 
 /// Maximum number of tokens to run the benchmark for.
-pub const MAX_TOKENS: u32 = 700;
+pub const MAX_TOKEN_PAIRS: u32 = 600;
 
 benchmarks! {
     on_finalize_no_entry {
@@ -98,7 +98,7 @@ benchmarks! {
     }
 
     on_finalize_multiple_tokens {
-        let b in 1 .. MAX_TOKENS;
+        let b in 1 .. MAX_TOKEN_PAIRS;
 
         let initial_data_block: T::BlockNumber = 5u32.into();
         let block_num = initial_data_block.saturating_add(1_000_000u32.into());
@@ -137,7 +137,7 @@ benchmarks! {
     }
 
     on_trade_multiple_tokens {
-        let b in 1 .. MAX_TOKENS;
+        let b in 1 .. MAX_TOKEN_PAIRS;
 
         let initial_data_block: T::BlockNumber = 5u32.into();
         let block_num = initial_data_block.saturating_add(1_000_000u32.into());
@@ -178,7 +178,7 @@ benchmarks! {
     }
 
     on_liquidity_changed_multiple_tokens {
-        let b in 1 .. MAX_TOKENS;
+        let b in 1 .. MAX_TOKEN_PAIRS;
 
         let initial_data_block: T::BlockNumber = 5u32.into();
         let block_num = initial_data_block.saturating_add(1_000_000u32.into());

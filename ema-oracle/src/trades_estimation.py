@@ -15,17 +15,16 @@ MAX_NORMAL_WEIGHT = MAX_BLOCK_WEIGHT * 0.75
 BASE_EXTRINSIC_WEIGHT = 86_298_000
 
 def on_finalize_no_entry():
-    # We'll assume that Alex' machine is about half as fast as the benchmarking machine
-    return 6_402_000 / 2 + ROCKS_DB_READ
+    return 2_373_000 + ROCKS_DB_READ
 
 def on_finalize_multiple_tokens(b):
-    return 826_827_000 / 2 + 92_477_000 / 2 * b + ROCKS_DB_READ + ROCKS_DB_READ * 4 * b + ROCKS_DB_WRITE + ROCKS_DB_WRITE * 4 * b
+    return 48_128_000 * b + ROCKS_DB_READ + ROCKS_DB_READ * 4 * b + ROCKS_DB_WRITE + ROCKS_DB_WRITE * 4 * b
 
 def on_trade_multiple_tokens(b):
-    return 66_977_000 / 2 + 824_000 / 2 * b + ROCKS_DB_READ + ROCKS_DB_WRITE
+    return 20_775_000 + 465_000 * b + ROCKS_DB_READ + ROCKS_DB_WRITE
 
 def on_liquidity_changed_multiple_tokens(b):
-    return 60_087_000 / 2 + 839_000 / 2 * b + ROCKS_DB_READ + ROCKS_DB_WRITE
+    return 20_467_000 + 467_000 * b + ROCKS_DB_READ + ROCKS_DB_WRITE
 
 def xyk_buy():
 	return 111_306_000 + ROCKS_DB_READ * 11 + ROCKS_DB_WRITE * 5

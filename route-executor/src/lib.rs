@@ -124,6 +124,7 @@ pub mod pallet {
         ///
         /// Emits `RouteIsExecuted` when successful.
         #[pallet::weight(<T as Config>::WeightInfo::execute_sell(route.len() as u32))]
+        #[transactional]
         pub fn execute_sell(
             origin: OriginFor<T>,
             asset_in: T::AssetId,
@@ -195,6 +196,7 @@ pub mod pallet {
         ///
         /// Emits `RouteIsExecuted` when successful.
         #[pallet::weight(<T as Config>::WeightInfo::execute_buy(route.len() as u32))]
+        #[transactional]
         pub fn execute_buy(
             origin: OriginFor<T>,
             asset_in: T::AssetId,

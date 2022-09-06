@@ -53,7 +53,7 @@ fn execute_buy_should_work_when_route_has_single_trade() {
                 BSX,
                 AUSD,
             )]);
-            expect_events(vec![Event::RouteIsExecuted {
+            expect_events(vec![Event::RouteExecuted {
                 asset_in: BSX,
                 asset_out: AUSD,
                 amount_in: XYK_BUY_CALCULATION_RESULT.amount,
@@ -205,7 +205,7 @@ fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
                 (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), MOVR, KSM),
             ]);
 
-            expect_events(vec![Event::RouteIsExecuted {
+            expect_events(vec![Event::RouteExecuted {
                 asset_in: BSX,
                 asset_out: KSM,
                 amount_in: XYK_BUY_CALCULATION_RESULT.amount,
@@ -263,7 +263,7 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
                 ),
             ]);
 
-            expect_events(vec![Event::RouteIsExecuted {
+            expect_events(vec![Event::RouteExecuted {
                 asset_in: BSX,
                 asset_out: KSM,
                 amount_in: XYK_BUY_CALCULATION_RESULT.amount,

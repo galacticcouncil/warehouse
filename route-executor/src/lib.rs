@@ -154,6 +154,7 @@ pub mod pallet {
                 }
             }
 
+            //We pop the last calculation amount as we use it only for verification and not for executing further trades
             let last_amount = amounts_to_sell.pop().ok_or(Error::<T>::UnexpectedError)?;
             ensure!(last_amount.amount >= limit, Error::<T>::MinLimitToReceiveNotReached);
 
@@ -227,6 +228,7 @@ pub mod pallet {
                 }
             }
 
+            //We pop the last calculation amount as we use it only for verification and not for executing further trades
             let last_amount = amounts_to_buy.pop().ok_or(Error::<T>::UnexpectedError)?;
             ensure!(last_amount.amount <= limit, Error::<T>::MaxLimitToSpendReached);
 

@@ -59,7 +59,7 @@ pub mod pallet {
 
         /// Max limit for the number of trades within a route
         #[pallet::constant]
-        type MaxNumberOfTradesLimitReached: Get<u32>;
+        type MaxNumberOfTradesLimitReached: Get<u8>;
 
         /// Currency for checking balances
         type Currency: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
@@ -259,7 +259,7 @@ impl<T: Config> Pallet<T> {
     fn validate_route_size(route_length: usize) -> Result<(), DispatchError> {
         ensure!(route_length > 0, Error::<T>::RouteHasNoTrades);
         ensure!(
-            (route_length as u32) <= T::MaxNumberOfTradesLimitReached::get(),
+            (route_length as u8) <= T::MaxNumberOfTradesLimitReached::get(),
             Error::<T>::MaxNumberOfTradesLimitReached
         );
 

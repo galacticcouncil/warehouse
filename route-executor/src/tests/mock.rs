@@ -127,7 +127,7 @@ type Pools = (XYK, StableSwap, OmniPool);
 
 parameter_types! {
     pub NativeCurrencyId: AssetId = 1000;
-    pub MaxNumberOfTradeLimitReached: u32 = MAX_LIMIT_FOR_TRADES;
+    pub MaxNumberOfTradeLimitReached: u8 = MAX_LIMIT_FOR_TRADES;
 }
 
 impl Config for Test {
@@ -168,7 +168,7 @@ pub const BSX_AUSD_TRADE_IN_XYK: Trade<AssetId> = Trade {
     asset_out: AUSD,
 };
 
-pub const MAX_LIMIT_FOR_TRADES: u32 = 3;
+pub const MAX_LIMIT_FOR_TRADES: u8 = 3;
 
 pub struct ExtBuilder {
     endowed_accounts: Vec<(AccountId, AssetId, Balance)>,

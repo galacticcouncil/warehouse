@@ -131,7 +131,7 @@ pub mod pallet {
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Self::validate_route_size(route.len())?;
+            Self::ensure_route_size(route.len())?;
 
             ensure!(
                 T::Currency::reducible_balance(asset_in, &who, false) >= amount_in,
@@ -201,7 +201,7 @@ pub mod pallet {
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Self::validate_route_size(route.len())?;
+            Self::ensure_route_size(route.len())?;
 
             ensure!(
                 T::Currency::reducible_balance(asset_out, &who, false) >= amount_out,
@@ -253,7 +253,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn validate_route_size(route_length: usize) -> Result<(), DispatchError> {
+    fn ensure_route_size(route_length: usize) -> Result<(), DispatchError> {
         ensure!(route_length > 0, Error::<T>::RouteHasNoTrades);
         ensure!(
             (route_length as u8) <= T::MaxNumberOfTradesLimitReached::get(),

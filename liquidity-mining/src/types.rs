@@ -118,7 +118,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     /// This function updates `yield_farms_count` when yield farm is removed from global farm.
     /// This function should be called only when yield farm is removed from global farm.
     pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), ArithmeticError> {
-        //Note: only live count should change
+        // Note: only live count should change
         self.yield_farms_count.0 = self
             .live_farms_count()
             .checked_sub(1)
@@ -266,7 +266,7 @@ impl Default for LoyaltyCurve {
 pub struct DepositData<T: Config<I>, I: 'static = ()> {
     pub(super) shares: Balance,
     pub(super) amm_pool_id: T::AmmPoolId,
-    //NOTE: Capacity of this vector MUST BE at least 1.
+    // NOTE: Capacity of this vector MUST BE at least 1.
     pub(super) yield_farm_entries: BoundedVec<YieldFarmEntry<T, I>, T::MaxFarmEntriesPerDeposit>,
 }
 

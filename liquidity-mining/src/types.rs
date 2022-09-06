@@ -47,9 +47,9 @@ pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) max_reward_per_period: Balance,
     // min. LP shares user must deposit to start yield farming.
     pub(super) min_deposit: Balance,
-    //live counts includes `active` and `stopped` yield farms.
-    //total count includes `active`, `stopped`, `deleted` - this count is decreased only if yield
-    //farm is flushed from storage.
+    // live counts includes `active` and `stopped` yield farms.
+    // total count includes `active`, `stopped`, `deleted` - this count is decreased only if yield
+    // farm is flushed from storage.
     pub(super) yield_farms_count: (u32, u32), //`(live farms count, total farms count)`
     pub(super) price_adjustment: FixedU128,
     pub(super) state: FarmState,

@@ -42,7 +42,6 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
     use hydradx_traits::router::{AmountWithFee, ExecutorError};
-    use sp_runtime::traits::Zero;
     use types::Trade;
 
     #[pallet::pallet]
@@ -56,7 +55,7 @@ pub mod pallet {
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
         /// Balance type
-        type Balance: Parameter + Member + Copy + PartialOrd + MaybeSerializeDeserialize + Zero;
+        type Balance: Parameter + Member + Copy + PartialOrd + MaybeSerializeDeserialize + Default;
 
         /// Max limit for the number of trades within a route
         #[pallet::constant]

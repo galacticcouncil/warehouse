@@ -1,5 +1,4 @@
 use codec::{Decode, Encode};
-use frame_support::sp_runtime::traits::Zero;
 use scale_info::TypeInfo;
 
 #[derive(Encode, Decode, Clone, Copy, Debug, Eq, PartialEq, TypeInfo)]
@@ -21,7 +20,7 @@ pub struct AmountWithFee<Balance> {
     pub fee: Balance,
 }
 
-impl<Balance: Zero> AmountWithFee<Balance> {
+impl<Balance: Default> AmountWithFee<Balance> {
     pub fn new(amount: Balance, fee: Balance) -> Self {
         AmountWithFee { amount, fee }
     }
@@ -29,7 +28,7 @@ impl<Balance: Zero> AmountWithFee<Balance> {
     pub fn new_without_fee(amount: Balance) -> Self {
         AmountWithFee {
             amount,
-            fee: Balance::zero(),
+            fee: Balance::default(),
         }
     }
 }

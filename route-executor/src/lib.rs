@@ -161,13 +161,10 @@ pub mod pallet {
             for (amount, trade) in amounts_to_sell.iter().zip(route) {
                 let execution_result = T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount);
 
-                match execution_result {
-                    Ok(_) => continue,
-                    Err(err) => {
-                        return match err {
-                            ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
-                            ExecutorError::Error(dispatch_error) => Err(dispatch_error),
-                        }
+                if let Err(error) = execution_result {
+                    return match error {
+                        ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
+                        ExecutorError::Error(dispatch_error) => Err(dispatch_error),
                     }
                 }
             }
@@ -234,13 +231,11 @@ pub mod pallet {
 
             for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {
                 let execution_result = T::AMM::execute_buy(trade.pool, &who, trade.asset_in, trade.asset_out, *amount);
-                match execution_result {
-                    Ok(_) => continue,
-                    Err(err) => {
-                        return match err {
-                            ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
-                            ExecutorError::Error(dispatch_error) => Err(dispatch_error),
-                        }
+
+                if let Err(error) = execution_result {
+                    return match error {
+                        ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
+                        ExecutorError::Error(dispatch_error) => Err(dispatch_error),
                     }
                 }
             }

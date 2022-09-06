@@ -16,7 +16,6 @@
 // limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::unused_unit)]
 
 use frame_support::ensure;
 use frame_support::traits::fungibles::Inspect;
@@ -47,7 +46,6 @@ pub mod pallet {
     use types::Trade;
 
     #[pallet::pallet]
-    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::config]

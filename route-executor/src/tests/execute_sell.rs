@@ -19,7 +19,7 @@ use crate::tests::mock::*;
 use crate::types::Trade;
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use hydradx_traits::router::{AmountWithFee, PoolType};
+use hydradx_traits::router::PoolType;
 use pretty_assertions::assert_eq;
 use sp_runtime::DispatchError;
 use sp_runtime::DispatchError::BadOrigin;
@@ -46,7 +46,7 @@ fn execute_sell_should_work_when_route_has_single_trade() {
         //Assert
         assert_executed_sell_trades(vec![(
             PoolType::XYK,
-            AmountWithFee::new_without_fee(amount_to_sell),
+            amount_to_sell,
             BSX,
             AUSD,
         )]);
@@ -54,7 +54,7 @@ fn execute_sell_should_work_when_route_has_single_trade() {
             asset_in: BSX,
             asset_out: AUSD,
             amount_in: amount_to_sell,
-            amount_out: XYK_SELL_CALCULATION_RESULT.amount,
+            amount_out: XYK_SELL_CALCULATION_RESULT,
         }
         .into()]);
     });
@@ -89,7 +89,7 @@ fn execute_sell_should_work_when_route_has_single_trade_without_native_balance()
             //Assert
             assert_executed_sell_trades(vec![(
                 PoolType::XYK,
-                AmountWithFee::new_without_fee(amount_to_sell),
+                amount_to_sell,
                 KSM,
                 AUSD,
             )]);
@@ -99,7 +99,7 @@ fn execute_sell_should_work_when_route_has_single_trade_without_native_balance()
 #[test]
 fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_error() {
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, BSX, INVALID_CALCULATION_AMOUNT.amount)])
+        .with_endowed_accounts(vec![(ALICE, BSX, INVALID_CALCULATION_AMOUNT)])
         .build()
         .execute_with(|| {
             //Arrange
@@ -113,7 +113,7 @@ fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_er
                     Origin::signed(ALICE),
                     BSX,
                     AUSD,
-                    INVALID_CALCULATION_AMOUNT.amount,
+                    INVALID_CALCULATION_AMOUNT,
                     limit,
                     trades
                 ),
@@ -157,7 +157,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_same_pooltype() 
 
         //Assert
         assert_executed_sell_trades(vec![
-            (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_sell), BSX, AUSD),
+            (PoolType::XYK, amount_to_sell, BSX, AUSD),
             (PoolType::XYK, XYK_SELL_CALCULATION_RESULT, AUSD, MOVR),
             (PoolType::XYK, XYK_SELL_CALCULATION_RESULT, MOVR, KSM),
         ]);
@@ -165,7 +165,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_same_pooltype() 
             asset_in: BSX,
             asset_out: KSM,
             amount_in: amount_to_sell,
-            amount_out: XYK_SELL_CALCULATION_RESULT.amount,
+            amount_out: XYK_SELL_CALCULATION_RESULT,
         }
         .into()]);
     });
@@ -206,7 +206,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_different_pool_t
 
         //Assert
         assert_executed_sell_trades(vec![
-            (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_sell), BSX, MOVR),
+            (PoolType::XYK, amount_to_sell, BSX, MOVR),
             (PoolType::Stableswap(AUSD), XYK_SELL_CALCULATION_RESULT, MOVR, AUSD),
             (PoolType::Omnipool, STABLESWAP_SELL_CALCULATION_RESULT, AUSD, KSM),
         ]);
@@ -215,7 +215,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_different_pool_t
             asset_in: BSX,
             asset_out: KSM,
             amount_in: amount_to_sell,
-            amount_out: OMNIPOOL_SELL_CALCULATION_RESULT.amount,
+            amount_out: OMNIPOOL_SELL_CALCULATION_RESULT,
         }
         .into()]);
     });
@@ -253,7 +253,7 @@ fn execute_sell_should_work_when_first_trade_is_not_supported_in_the_first_pool(
         assert_executed_sell_trades(vec![
             (
                 PoolType::Stableswap(AUSD),
-                AmountWithFee::new_without_fee(amount_to_sell),
+                amount_to_sell,
                 BSX,
                 AUSD,
             ),
@@ -349,7 +349,7 @@ fn execute_sell_should_fail_when_min_limit_to_receive_is_not_reached() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount_to_sell = 10;
-        let limit = XYK_SELL_CALCULATION_RESULT.amount + 1;
+        let limit = XYK_SELL_CALCULATION_RESULT + 1;
 
         let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 

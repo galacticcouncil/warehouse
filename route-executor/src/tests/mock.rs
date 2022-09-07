@@ -20,7 +20,7 @@ use crate::Config;
 use frame_support::parameter_types;
 use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
-use hydradx_traits::router::{AmountWithFee, ExecutorError, PoolType, TradeExecution};
+use hydradx_traits::router::{ExecutorError, PoolType, TradeExecution};
 use orml_traits::parameter_type_with_key;
 use pretty_assertions::assert_eq;
 use sp_core::H256;
@@ -153,14 +153,14 @@ pub const SDN: AssetId = 1005;
 
 pub const ALICE_INITIAL_NATIVE_BALANCE: u128 = 1000;
 
-pub const XYK_SELL_CALCULATION_RESULT: AmountWithFee<Balance> = AmountWithFee { amount: 6, fee: 0 };
+pub const XYK_SELL_CALCULATION_RESULT: Balance = 6;
 
-pub const XYK_BUY_CALCULATION_RESULT: AmountWithFee<Balance> = AmountWithFee { amount: 5, fee: 0 };
-pub const STABLESWAP_SELL_CALCULATION_RESULT: AmountWithFee<Balance> = AmountWithFee { amount: 4, fee: 0 };
-pub const STABLESWAP_BUY_CALCULATION_RESULT: AmountWithFee<Balance> = AmountWithFee { amount: 3, fee: 0 };
-pub const OMNIPOOL_SELL_CALCULATION_RESULT: AmountWithFee<Balance> = AmountWithFee { amount: 2, fee: 0 };
-pub const OMNIPOOL_BUY_CALCULATION_RESULT: AmountWithFee<Balance> = AmountWithFee { amount: 1, fee: 0 };
-pub const INVALID_CALCULATION_AMOUNT: AmountWithFee<Balance> = AmountWithFee { amount: 999, fee: 0 };
+pub const XYK_BUY_CALCULATION_RESULT: Balance = 5;
+pub const STABLESWAP_SELL_CALCULATION_RESULT: Balance = 4;
+pub const STABLESWAP_BUY_CALCULATION_RESULT: Balance = 3;
+pub const OMNIPOOL_SELL_CALCULATION_RESULT: Balance = 2;
+pub const OMNIPOOL_BUY_CALCULATION_RESULT: Balance = 1;
+pub const INVALID_CALCULATION_AMOUNT: Balance = 999;
 
 pub const BSX_AUSD_TRADE_IN_XYK: Trade<AssetId> = Trade {
     pool: PoolType::XYK,
@@ -210,7 +210,7 @@ impl ExtBuilder {
     }
 }
 
-type ExecutedTradeInfo = (PoolType<AssetId>, AmountWithFee<Balance>, AssetId, AssetId);
+type ExecutedTradeInfo = (PoolType<AssetId>, Balance, AssetId, AssetId);
 thread_local! {
     pub static EXECUTED_SELLS: RefCell<Vec<ExecutedTradeInfo>> = RefCell::new(Vec::default());
     pub static EXECUTED_BUYS: RefCell<Vec<ExecutedTradeInfo>> = RefCell::new(Vec::default());
@@ -219,15 +219,14 @@ thread_local! {
 macro_rules! impl_fake_executor {
     ($pool_struct:ident, $pool_type: pat, $sell_calculation_result: expr, $buy_calculation_result: expr) => {
         impl TradeExecution<AccountId, AssetId, Balance> for $pool_struct {
-            type TradeCalculationResult = AmountWithFee<Balance>;
             type Error = DispatchError;
 
             fn calculate_sell(
                 pool_type: PoolType<AssetId>,
                 _asset_in: AssetId,
                 _asset_out: AssetId,
-                amount_in: Self::TradeCalculationResult,
-            ) -> Result<Self::TradeCalculationResult, ExecutorError<Self::Error>> {
+                amount_in: Balance,
+            ) -> Result<Balance, ExecutorError<Self::Error>> {
                 if !matches!(pool_type, $pool_type) {
                     return Err(ExecutorError::NotSupported);
                 }
@@ -243,8 +242,8 @@ macro_rules! impl_fake_executor {
                 pool_type: PoolType<AssetId>,
                 _asset_in: AssetId,
                 _asset_out: AssetId,
-                amount_out: Self::TradeCalculationResult,
-            ) -> Result<Self::TradeCalculationResult, ExecutorError<Self::Error>> {
+                amount_out: Balance,
+            ) -> Result<Balance, ExecutorError<Self::Error>> {
                 if !matches!(pool_type, $pool_type) {
                     return Err(ExecutorError::NotSupported);
                 }
@@ -261,7 +260,7 @@ macro_rules! impl_fake_executor {
                 _who: &AccountId,
                 asset_in: AssetId,
                 asset_out: AssetId,
-                amount_in: Self::TradeCalculationResult,
+                amount_in: Balance,
             ) -> Result<(), ExecutorError<Self::Error>> {
                 EXECUTED_SELLS.with(|v| {
                     let mut m = v.borrow_mut();
@@ -276,7 +275,7 @@ macro_rules! impl_fake_executor {
                 _who: &AccountId,
                 asset_in: AssetId,
                 asset_out: AssetId,
-                amount_out: Self::TradeCalculationResult,
+                amount_out: Balance,
             ) -> Result<(), ExecutorError<Self::Error>> {
                 EXECUTED_BUYS.with(|v| {
                     let mut m = v.borrow_mut();
@@ -314,7 +313,7 @@ impl_fake_executor!(
 );
 
 pub fn assert_executed_sell_trades(
-    expected_trades: Vec<(PoolType<AssetId>, AmountWithFee<Balance>, AssetId, AssetId)>,
+    expected_trades: Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>,
 ) {
     EXECUTED_SELLS.borrow().with(|v| {
         let trades = v.borrow().deref().clone();
@@ -322,7 +321,7 @@ pub fn assert_executed_sell_trades(
     });
 }
 
-pub fn assert_executed_buy_trades(expected_trades: Vec<(PoolType<AssetId>, AmountWithFee<Balance>, AssetId, AssetId)>) {
+pub fn assert_executed_buy_trades(expected_trades: Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>) {
     EXECUTED_BUYS.borrow().with(|v| {
         let trades = v.borrow().deref().clone();
         assert_eq!(trades, expected_trades);

@@ -41,7 +41,7 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
-    use hydradx_traits::router::{AmountWithFee, ExecutorError};
+    use hydradx_traits::router::{ExecutorError};
     use types::Trade;
 
     #[pallet::pallet]
@@ -69,7 +69,6 @@ pub mod pallet {
             Self::AccountId,
             Self::AssetId,
             Self::Balance,
-            TradeCalculationResult = AmountWithFee<Self::Balance>,
             Error = DispatchError,
         >;
 
@@ -138,8 +137,8 @@ pub mod pallet {
                 Error::<T>::InsufficientBalance
             );
 
-            let mut amounts_to_sell = Vec::<AmountWithFee<T::Balance>>::with_capacity(route.len() + 1);
-            let mut amount = AmountWithFee::new_without_fee(amount_in);
+            let mut amounts_to_sell = Vec::<T::Balance>::with_capacity(route.len() + 1);
+            let mut amount = amount_in;
             amounts_to_sell.push(amount);
 
             for trade in route.iter() {
@@ -156,7 +155,7 @@ pub mod pallet {
 
             //We pop the last calculation amount as we use it only for verification and not for executing further trades
             let last_amount = amounts_to_sell.pop().ok_or(Error::<T>::UnexpectedError)?;
-            ensure!(last_amount.amount >= limit, Error::<T>::MinLimitToReceiveNotReached);
+            ensure!(last_amount >= limit, Error::<T>::MinLimitToReceiveNotReached);
 
             for (amount, trade) in amounts_to_sell.iter().zip(route) {
                 let execution_result = T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount);
@@ -173,7 +172,7 @@ pub mod pallet {
                 asset_in,
                 asset_out,
                 amount_in,
-                amount_out: last_amount.amount,
+                amount_out: last_amount,
             });
 
             Ok(())
@@ -208,8 +207,8 @@ pub mod pallet {
                 Error::<T>::InsufficientBalance
             );
 
-            let mut amounts_to_buy = Vec::<AmountWithFee<T::Balance>>::with_capacity(route.len() + 1);
-            let mut amount = AmountWithFee::new_without_fee(amount_out);
+            let mut amounts_to_buy = Vec::<T::Balance>::with_capacity(route.len() + 1);
+            let mut amount = amount_out;
             amounts_to_buy.push(amount);
 
             for trade in route.iter().rev() {
@@ -227,7 +226,7 @@ pub mod pallet {
 
             //We pop the last calculation amount as we use it only for verification and not for executing further trades
             let last_amount = amounts_to_buy.pop().ok_or(Error::<T>::UnexpectedError)?;
-            ensure!(last_amount.amount <= limit, Error::<T>::MaxLimitToSpendReached);
+            ensure!(last_amount <= limit, Error::<T>::MaxLimitToSpendReached);
 
             for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {
                 let execution_result = T::AMM::execute_buy(trade.pool, &who, trade.asset_in, trade.asset_out, *amount);
@@ -243,7 +242,7 @@ pub mod pallet {
             Self::deposit_event(Event::RouteExecuted {
                 asset_in,
                 asset_out,
-                amount_in: last_amount.amount,
+                amount_in: last_amount,
                 amount_out,
             });
 

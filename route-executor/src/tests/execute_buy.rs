@@ -19,7 +19,7 @@ use crate::tests::mock::*;
 use crate::types::Trade;
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use hydradx_traits::router::{AmountWithFee, PoolType};
+use hydradx_traits::router::{PoolType};
 use pretty_assertions::assert_eq;
 use sp_runtime::DispatchError;
 use sp_runtime::DispatchError::BadOrigin;
@@ -49,14 +49,14 @@ fn execute_buy_should_work_when_route_has_single_trade() {
             //Assert
             assert_executed_buy_trades(vec![(
                 PoolType::XYK,
-                AmountWithFee::new_without_fee(amount_to_buy),
+                amount_to_buy,
                 BSX,
                 AUSD,
             )]);
             expect_events(vec![Event::RouteExecuted {
                 asset_in: BSX,
                 asset_out: AUSD,
-                amount_in: XYK_BUY_CALCULATION_RESULT.amount,
+                amount_in: XYK_BUY_CALCULATION_RESULT,
                 amount_out: amount_to_buy,
             }
             .into()]);
@@ -92,7 +92,7 @@ fn execute_buy_should_work_when_route_has_single_trade_without_native_balance() 
             //Assert
             assert_executed_buy_trades(vec![(
                 PoolType::XYK,
-                AmountWithFee::new_without_fee(amount_to_buy),
+                amount_to_buy,
                 AUSD,
                 KSM,
             )]);
@@ -139,7 +139,7 @@ fn execute_buy_should_fail_when_max_limit_for_trade_reached() {
 #[test]
 fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_error() {
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, AUSD, INVALID_CALCULATION_AMOUNT.amount)])
+        .with_endowed_accounts(vec![(ALICE, AUSD, INVALID_CALCULATION_AMOUNT)])
         .build()
         .execute_with(|| {
             //Arrange
@@ -153,7 +153,7 @@ fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_err
                     Origin::signed(ALICE),
                     BSX,
                     AUSD,
-                    INVALID_CALCULATION_AMOUNT.amount,
+                    INVALID_CALCULATION_AMOUNT,
                     limit,
                     trades
                 ),
@@ -202,13 +202,13 @@ fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
             assert_executed_buy_trades(vec![
                 (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, BSX, AUSD),
                 (PoolType::XYK, XYK_BUY_CALCULATION_RESULT, AUSD, MOVR),
-                (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), MOVR, KSM),
+                (PoolType::XYK, amount_to_buy, MOVR, KSM),
             ]);
 
             expect_events(vec![Event::RouteExecuted {
                 asset_in: BSX,
                 asset_out: KSM,
-                amount_in: XYK_BUY_CALCULATION_RESULT.amount,
+                amount_in: XYK_BUY_CALCULATION_RESULT,
                 amount_out: amount_to_buy,
             }
             .into()]);
@@ -257,7 +257,7 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
                 (PoolType::Stableswap(AUSD), OMNIPOOL_BUY_CALCULATION_RESULT, MOVR, AUSD),
                 (
                     PoolType::Omnipool,
-                    AmountWithFee::new_without_fee(amount_to_buy),
+                    amount_to_buy,
                     AUSD,
                     KSM,
                 ),
@@ -266,7 +266,7 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
             expect_events(vec![Event::RouteExecuted {
                 asset_in: BSX,
                 asset_out: KSM,
-                amount_in: XYK_BUY_CALCULATION_RESULT.amount,
+                amount_in: XYK_BUY_CALCULATION_RESULT,
                 amount_out: amount_to_buy,
             }
             .into()]);
@@ -307,7 +307,7 @@ fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool()
             //Assert
             assert_executed_buy_trades(vec![
                 (PoolType::Stableswap(AUSD), XYK_BUY_CALCULATION_RESULT, BSX, AUSD),
-                (PoolType::XYK, AmountWithFee::new_without_fee(amount_to_buy), AUSD, KSM),
+                (PoolType::XYK, amount_to_buy, AUSD, KSM),
             ]);
         });
 }
@@ -376,7 +376,7 @@ fn execute_buy_should_fail_when_max_limit_to_spend_is_reached() {
         .execute_with(|| {
             //Arrange
             let amount_to_buy = 10;
-            let limit = XYK_BUY_CALCULATION_RESULT.amount - 1;
+            let limit = XYK_BUY_CALCULATION_RESULT - 1;
 
             let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 

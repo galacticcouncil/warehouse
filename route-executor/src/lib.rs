@@ -199,11 +199,6 @@ pub mod pallet {
             let who = ensure_signed(origin.clone())?;
             Self::ensure_route_size(route.len())?;
 
-            ensure!(
-                T::Currency::reducible_balance(asset_out, &who, false) >= amount_out,
-                Error::<T>::InsufficientBalance
-            );
-
             let mut amounts_to_buy = Vec::<T::Balance>::with_capacity(route.len() + 1);
             let mut amount = amount_out;
             amounts_to_buy.push(amount);

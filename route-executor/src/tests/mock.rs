@@ -128,14 +128,14 @@ type Pools = (XYK, StableSwap, OmniPool);
 
 parameter_types! {
     pub NativeCurrencyId: AssetId = 1000;
-    pub MaxNumberOfTradeLimitReached: u8 = MAX_LIMIT_FOR_TRADES;
+    pub MaxNumberOfTradeLimit: u8 = MAX_LIMIT_FOR_TRADES;
 }
 
 impl Config for Test {
     type Event = Event;
     type AssetId = AssetId;
     type Balance = Balance;
-    type MaxNumberOfTradesLimitReached = MaxNumberOfTradeLimitReached;
+    type MaxNumberOfTradesLimit = MaxNumberOfTradeLimit;
     type Currency = Tokens;
     type AMM = Pools;
     type WeightInfo = ();

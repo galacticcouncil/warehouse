@@ -44,12 +44,7 @@ fn execute_sell_should_work_when_route_has_single_trade() {
         ));
 
         //Assert
-        assert_executed_sell_trades(vec![(
-            PoolType::XYK,
-            amount_to_sell,
-            BSX,
-            AUSD,
-        )]);
+        assert_executed_sell_trades(vec![(PoolType::XYK, amount_to_sell, BSX, AUSD)]);
         expect_events(vec![Event::RouteExecuted {
             asset_in: BSX,
             asset_out: AUSD,
@@ -87,12 +82,7 @@ fn execute_sell_should_work_when_route_has_single_trade_without_native_balance()
             ));
 
             //Assert
-            assert_executed_sell_trades(vec![(
-                PoolType::XYK,
-                amount_to_sell,
-                KSM,
-                AUSD,
-            )]);
+            assert_executed_sell_trades(vec![(PoolType::XYK, amount_to_sell, KSM, AUSD)]);
         });
 }
 
@@ -251,12 +241,7 @@ fn execute_sell_should_work_when_first_trade_is_not_supported_in_the_first_pool(
 
         //Assert
         assert_executed_sell_trades(vec![
-            (
-                PoolType::Stableswap(AUSD),
-                amount_to_sell,
-                BSX,
-                AUSD,
-            ),
+            (PoolType::Stableswap(AUSD), amount_to_sell, BSX, AUSD),
             (PoolType::XYK, STABLESWAP_SELL_CALCULATION_RESULT, AUSD, KSM),
         ]);
     });

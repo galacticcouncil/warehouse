@@ -20,6 +20,7 @@ use crate::Config;
 use frame_support::parameter_types;
 use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
+use frame_system::pallet_prelude::OriginFor;
 use hydradx_traits::router::{ExecutorError, PoolType, TradeExecution};
 use orml_traits::parameter_type_with_key;
 use pretty_assertions::assert_eq;
@@ -32,7 +33,6 @@ use sp_runtime::{
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::ops::Deref;
-use frame_system::pallet_prelude::OriginFor;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -221,7 +221,7 @@ type OriginForRuntime = OriginFor<Test>;
 
 macro_rules! impl_fake_executor {
     ($pool_struct:ident, $pool_type: pat, $sell_calculation_result: expr, $buy_calculation_result: expr) => {
-        impl TradeExecution<OriginForRuntime,AccountId, AssetId, Balance> for $pool_struct {
+        impl TradeExecution<OriginForRuntime, AccountId, AssetId, Balance> for $pool_struct {
             type Error = DispatchError;
 
             fn calculate_sell(
@@ -315,9 +315,7 @@ impl_fake_executor!(
     OMNIPOOL_BUY_CALCULATION_RESULT
 );
 
-pub fn assert_executed_sell_trades(
-    expected_trades: Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>,
-) {
+pub fn assert_executed_sell_trades(expected_trades: Vec<(PoolType<AssetId>, Balance, AssetId, AssetId)>) {
     EXECUTED_SELLS.borrow().with(|v| {
         let trades = v.borrow().deref().clone();
         assert_eq!(trades, expected_trades);

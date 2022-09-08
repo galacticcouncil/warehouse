@@ -20,11 +20,11 @@
 use frame_support::ensure;
 use frame_support::traits::fungibles::Inspect;
 use frame_support::traits::Get;
+use frame_support::transactional;
 use frame_system::ensure_signed;
 use hydradx_traits::router::TradeExecution;
 use sp_runtime::DispatchError;
 use sp_std::vec::Vec;
-use  frame_support::transactional;
 pub mod types;
 
 #[cfg(test)]
@@ -41,7 +41,7 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
-    use hydradx_traits::router::{ExecutorError};
+    use hydradx_traits::router::ExecutorError;
     use types::Trade;
 
     #[pallet::pallet]
@@ -159,13 +159,14 @@ pub mod pallet {
             ensure!(last_amount >= limit, Error::<T>::MinLimitToReceiveNotReached);
 
             for (amount, trade) in amounts_to_sell.iter().zip(route) {
-                let execution_result = T::AMM::execute_sell(trade.pool, &origin, trade.asset_in, trade.asset_out, *amount);
+                let execution_result =
+                    T::AMM::execute_sell(trade.pool, &origin, trade.asset_in, trade.asset_out, *amount);
 
                 if let Err(error) = execution_result {
                     return match error {
                         ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
                         ExecutorError::Error(dispatch_error) => Err(dispatch_error),
-                    }
+                    };
                 }
             }
 
@@ -230,13 +231,14 @@ pub mod pallet {
             ensure!(last_amount <= limit, Error::<T>::MaxLimitToSpendReached);
 
             for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {
-                let execution_result = T::AMM::execute_buy(trade.pool, &origin, trade.asset_in, trade.asset_out, *amount);
+                let execution_result =
+                    T::AMM::execute_buy(trade.pool, &origin, trade.asset_in, trade.asset_out, *amount);
 
                 if let Err(error) = execution_result {
                     return match error {
                         ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
                         ExecutorError::Error(dispatch_error) => Err(dispatch_error),
-                    }
+                    };
                 }
             }
 

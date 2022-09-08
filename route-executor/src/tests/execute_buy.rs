@@ -19,7 +19,7 @@ use crate::tests::mock::*;
 use crate::types::Trade;
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use hydradx_traits::router::{PoolType};
+use hydradx_traits::router::PoolType;
 use pretty_assertions::assert_eq;
 use sp_runtime::DispatchError;
 use sp_runtime::DispatchError::BadOrigin;
@@ -47,12 +47,7 @@ fn execute_buy_should_work_when_route_has_single_trade() {
             ));
 
             //Assert
-            assert_executed_buy_trades(vec![(
-                PoolType::XYK,
-                amount_to_buy,
-                BSX,
-                AUSD,
-            )]);
+            assert_executed_buy_trades(vec![(PoolType::XYK, amount_to_buy, BSX, AUSD)]);
             expect_events(vec![Event::RouteExecuted {
                 asset_in: BSX,
                 asset_out: AUSD,
@@ -90,12 +85,7 @@ fn execute_buy_should_work_when_route_has_single_trade_without_native_balance() 
             ));
 
             //Assert
-            assert_executed_buy_trades(vec![(
-                PoolType::XYK,
-                amount_to_buy,
-                AUSD,
-                KSM,
-            )]);
+            assert_executed_buy_trades(vec![(PoolType::XYK, amount_to_buy, AUSD, KSM)]);
         });
 }
 
@@ -255,12 +245,7 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
             assert_executed_buy_trades(vec![
                 (PoolType::XYK, STABLESWAP_BUY_CALCULATION_RESULT, BSX, MOVR),
                 (PoolType::Stableswap(AUSD), OMNIPOOL_BUY_CALCULATION_RESULT, MOVR, AUSD),
-                (
-                    PoolType::Omnipool,
-                    amount_to_buy,
-                    AUSD,
-                    KSM,
-                ),
+                (PoolType::Omnipool, amount_to_buy, AUSD, KSM),
             ]);
 
             expect_events(vec![Event::RouteExecuted {

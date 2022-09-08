@@ -14,8 +14,7 @@ pub enum ExecutorError<E> {
     Error(E),
 }
 
-
-pub trait TradeExecution<Origin,AccountId, AssetId, Balance> {
+pub trait TradeExecution<Origin, AccountId, AssetId, Balance> {
     type Error;
 
     fn calculate_sell(
@@ -50,7 +49,7 @@ pub trait TradeExecution<Origin,AccountId, AssetId, Balance> {
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(1, 5)]
-impl<E: PartialEq, Origin, AccountId, AssetId: Copy, Balance: Copy> TradeExecution<Origin,AccountId, AssetId, Balance>
+impl<E: PartialEq, Origin, AccountId, AssetId: Copy, Balance: Copy> TradeExecution<Origin, AccountId, AssetId, Balance>
     for Tuple
 {
     for_tuples!( where #(Tuple: TradeExecution<Origin,AccountId, AssetId, Balance, Error=E>)*);

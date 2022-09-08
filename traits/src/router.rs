@@ -15,7 +15,7 @@ pub enum ExecutorError<E> {
 }
 
 
-pub trait TradeExecution<AccountId, AssetId, Balance> {
+pub trait TradeExecution<Origin,AccountId, AssetId, Balance> {
     type Error;
 
     fn calculate_sell(
@@ -34,7 +34,7 @@ pub trait TradeExecution<AccountId, AssetId, Balance> {
 
     fn execute_sell(
         pool_type: PoolType<AssetId>,
-        who: &AccountId,
+        who: &Origin,
         asset_in: AssetId,
         asset_out: AssetId,
         amount_in: Balance,
@@ -42,7 +42,7 @@ pub trait TradeExecution<AccountId, AssetId, Balance> {
 
     fn execute_buy(
         pool_type: PoolType<AssetId>,
-        who: &AccountId,
+        who: &Origin,
         asset_in: AssetId,
         asset_out: AssetId,
         amount_out: Balance,
@@ -50,10 +50,10 @@ pub trait TradeExecution<AccountId, AssetId, Balance> {
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(1, 5)]
-impl<E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> TradeExecution<AccountId, AssetId, Balance>
+impl<E: PartialEq, Origin, AccountId, AssetId: Copy, Balance: Copy> TradeExecution<Origin,AccountId, AssetId, Balance>
     for Tuple
 {
-    for_tuples!( where #(Tuple: TradeExecution<AccountId, AssetId, Balance, Error=E>)*);
+    for_tuples!( where #(Tuple: TradeExecution<Origin,AccountId, AssetId, Balance, Error=E>)*);
     type Error = E;
 
     fn calculate_sell(
@@ -94,7 +94,7 @@ impl<E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> TradeExecution<Accou
 
     fn execute_sell(
         pool_type: PoolType<AssetId>,
-        who: &AccountId,
+        who: &Origin,
         asset_in: AssetId,
         asset_out: AssetId,
         amount_in: Balance,
@@ -113,7 +113,7 @@ impl<E: PartialEq, AccountId, AssetId: Copy, Balance: Copy> TradeExecution<Accou
 
     fn execute_buy(
         pool_type: PoolType<AssetId>,
-        who: &AccountId,
+        who: &Origin,
         asset_in: AssetId,
         asset_out: AssetId,
         amount_out: Balance,

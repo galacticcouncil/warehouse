@@ -66,6 +66,7 @@ pub mod pallet {
 
         /// Handlers for AMM pools to calculate and execute trades
         type AMM: TradeExecution<
+            <Self as frame_system::Config>::Origin,
             Self::AccountId,
             Self::AssetId,
             Self::Balance,
@@ -129,7 +130,7 @@ pub mod pallet {
             limit: T::Balance,
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
+            let who = ensure_signed(origin.clone())?;
             Self::ensure_route_size(route.len())?;
 
             ensure!(
@@ -158,7 +159,7 @@ pub mod pallet {
             ensure!(last_amount >= limit, Error::<T>::MinLimitToReceiveNotReached);
 
             for (amount, trade) in amounts_to_sell.iter().zip(route) {
-                let execution_result = T::AMM::execute_sell(trade.pool, &who, trade.asset_in, trade.asset_out, *amount);
+                let execution_result = T::AMM::execute_sell(trade.pool, &origin, trade.asset_in, trade.asset_out, *amount);
 
                 if let Err(error) = execution_result {
                     return match error {
@@ -199,7 +200,7 @@ pub mod pallet {
             limit: T::Balance,
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
+            let who = ensure_signed(origin.clone())?;
             Self::ensure_route_size(route.len())?;
 
             ensure!(
@@ -229,7 +230,7 @@ pub mod pallet {
             ensure!(last_amount <= limit, Error::<T>::MaxLimitToSpendReached);
 
             for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {
-                let execution_result = T::AMM::execute_buy(trade.pool, &who, trade.asset_in, trade.asset_out, *amount);
+                let execution_result = T::AMM::execute_buy(trade.pool, &origin, trade.asset_in, trade.asset_out, *amount);
 
                 if let Err(error) = execution_result {
                     return match error {

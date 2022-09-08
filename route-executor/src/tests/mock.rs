@@ -32,6 +32,7 @@ use sp_runtime::{
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::ops::Deref;
+use frame_system::pallet_prelude::OriginFor;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -216,9 +217,11 @@ thread_local! {
     pub static EXECUTED_BUYS: RefCell<Vec<ExecutedTradeInfo>> = RefCell::new(Vec::default());
 }
 
+type OriginForRuntime = OriginFor<Test>;
+
 macro_rules! impl_fake_executor {
     ($pool_struct:ident, $pool_type: pat, $sell_calculation_result: expr, $buy_calculation_result: expr) => {
-        impl TradeExecution<AccountId, AssetId, Balance> for $pool_struct {
+        impl TradeExecution<OriginForRuntime,AccountId, AssetId, Balance> for $pool_struct {
             type Error = DispatchError;
 
             fn calculate_sell(
@@ -257,7 +260,7 @@ macro_rules! impl_fake_executor {
 
             fn execute_sell(
                 pool_type: PoolType<AssetId>,
-                _who: &AccountId,
+                _who: &OriginForRuntime,
                 asset_in: AssetId,
                 asset_out: AssetId,
                 amount_in: Balance,
@@ -272,7 +275,7 @@ macro_rules! impl_fake_executor {
 
             fn execute_buy(
                 pool_type: PoolType<AssetId>,
-                _who: &AccountId,
+                _who: &OriginForRuntime,
                 asset_in: AssetId,
                 asset_out: AssetId,
                 amount_out: Balance,

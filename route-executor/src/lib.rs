@@ -162,12 +162,7 @@ pub mod pallet {
                 let execution_result =
                     T::AMM::execute_sell(trade.pool, &origin, trade.asset_in, trade.asset_out, *amount);
 
-                if let Err(error) = execution_result {
-                    return match error {
-                        ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
-                        ExecutorError::Error(dispatch_error) => Err(dispatch_error),
-                    };
-                }
+                handle_execution_error!(execution_result);
             }
 
             Self::deposit_event(Event::RouteExecuted {
@@ -234,12 +229,7 @@ pub mod pallet {
                 let execution_result =
                     T::AMM::execute_buy(trade.pool, &origin, trade.asset_in, trade.asset_out, *amount);
 
-                if let Err(error) = execution_result {
-                    return match error {
-                        ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
-                        ExecutorError::Error(dispatch_error) => Err(dispatch_error),
-                    };
-                }
+                handle_execution_error!(execution_result);
             }
 
             Self::deposit_event(Event::RouteExecuted {
@@ -264,4 +254,16 @@ impl<T: Config> Pallet<T> {
 
         Ok(())
     }
+}
+
+#[macro_export]
+macro_rules! handle_execution_error {
+    ($execution_result:expr) => {{
+        if let Err(error) = $execution_result {
+            return match error {
+                ExecutorError::NotSupported => Err(Error::<T>::PoolNotSupported.into()),
+                ExecutorError::Error(dispatch_error) => Err(dispatch_error),
+            };
+        }
+    }};
 }

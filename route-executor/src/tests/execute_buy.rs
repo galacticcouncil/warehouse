@@ -335,25 +335,6 @@ fn execute_buy_should_fail_when_route_has_no_trades() {
 }
 
 #[test]
-fn execute_buy_should_fail_when_caller_has_not_enough_balance() {
-    //Arrange
-    let amount_to_buy = 10;
-    let limit = 5;
-    let trades = vec![BSX_AUSD_TRADE_IN_XYK];
-
-    ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, AUSD, amount_to_buy - 1)])
-        .build()
-        .execute_with(|| {
-            //Act and Assert
-            assert_noop!(
-                Router::execute_buy(Origin::signed(ALICE), BSX, AUSD, amount_to_buy, limit, trades),
-                Error::<Test>::InsufficientBalance
-            );
-        });
-}
-
-#[test]
 fn execute_buy_should_fail_when_max_limit_to_spend_is_reached() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])

@@ -120,7 +120,7 @@ pub mod pallet {
         /// - `route`: Series of trades containing AMM and asset pair information
         ///
         /// Emits `RouteIsExecuted` when successful.
-        #[pallet::weight(<T as Config>::WeightInfo::execute_sell(route.len() as u32))]
+        #[pallet::weight(<T as Config>::WeightInfo::sell(route.len() as u32))]
         #[transactional]
         pub fn sell(
             origin: OriginFor<T>,
@@ -186,7 +186,7 @@ pub mod pallet {
         /// - `route`: Series of trades containing AMM and asset pair info
         ///
         /// Emits `RouteIsExecuted` when successful.
-        #[pallet::weight(<T as Config>::WeightInfo::execute_buy(route.len() as u32))]
+        #[pallet::weight(<T as Config>::WeightInfo::buy(route.len() as u32))]
         #[transactional]
         pub fn buy(
             origin: OriginFor<T>,

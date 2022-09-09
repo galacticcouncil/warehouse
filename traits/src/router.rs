@@ -8,7 +8,7 @@ pub enum PoolType<AssetId> {
     Omnipool,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ExecutorError<E> {
     NotSupported,
     Error(E),

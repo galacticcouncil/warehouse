@@ -25,7 +25,7 @@ use sp_runtime::DispatchError;
 use sp_runtime::DispatchError::BadOrigin;
 
 #[test]
-fn execute_buy_should_work_when_route_has_single_trade() {
+fn buy_should_work_when_route_has_single_trade() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
         .build()
@@ -37,7 +37,7 @@ fn execute_buy_should_work_when_route_has_single_trade() {
             let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
             //Act
-            assert_ok!(Router::execute_buy(
+            assert_ok!(Router::buy(
                 Origin::signed(ALICE),
                 BSX,
                 AUSD,
@@ -59,7 +59,7 @@ fn execute_buy_should_work_when_route_has_single_trade() {
 }
 
 #[test]
-fn execute_buy_should_work_when_route_has_single_trade_without_native_balance() {
+fn buy_should_work_when_route_has_single_trade_without_native_balance() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
         .build()
@@ -75,7 +75,7 @@ fn execute_buy_should_work_when_route_has_single_trade_without_native_balance() 
             }];
 
             //Act
-            assert_ok!(Router::execute_buy(
+            assert_ok!(Router::buy(
                 Origin::signed(ALICE),
                 AUSD,
                 KSM,
@@ -90,7 +90,7 @@ fn execute_buy_should_work_when_route_has_single_trade_without_native_balance() 
 }
 
 #[test]
-fn execute_buy_should_fail_when_max_limit_for_trade_reached() {
+fn buy_should_fail_when_max_limit_for_trade_reached() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, RMRK, 1000)])
         .build()
@@ -120,14 +120,14 @@ fn execute_buy_should_fail_when_max_limit_for_trade_reached() {
 
             //Act and Assert
             assert_noop!(
-                Router::execute_buy(Origin::signed(ALICE), BSX, RMRK, 10, 5, trades),
+                Router::buy(Origin::signed(ALICE), BSX, RMRK, 10, 5, trades),
                 Error::<Test>::MaxNumberOfTradesLimitReached
             );
         });
 }
 
 #[test]
-fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_error() {
+fn buy_should_fail_when_route_has_single_trade_producing_calculation_error() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, AUSD, INVALID_CALCULATION_AMOUNT)])
         .build()
@@ -139,7 +139,7 @@ fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_err
 
             //Act and Assert
             assert_noop!(
-                Router::execute_buy(
+                Router::buy(
                     Origin::signed(ALICE),
                     BSX,
                     AUSD,
@@ -153,7 +153,7 @@ fn execute_buy_should_fail_when_route_has_single_trade_producing_calculation_err
 }
 
 #[test]
-fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
+fn buy_should_when_route_has_multiple_trades_with_same_pool_type() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
         .build()
@@ -179,7 +179,7 @@ fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
             let trades = vec![trade1, trade2, trade3];
 
             //Act
-            assert_ok!(Router::execute_buy(
+            assert_ok!(Router::buy(
                 Origin::signed(ALICE),
                 BSX,
                 KSM,
@@ -206,7 +206,7 @@ fn execute_buy_should_when_route_has_multiple_trades_with_same_pool_type() {
 }
 
 #[test]
-fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_type() {
+fn buy_should_work_when_route_has_multiple_trades_with_different_pool_type() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
         .build()
@@ -232,7 +232,7 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
             let trades = vec![trade1, trade2, trade3];
 
             //Act
-            assert_ok!(Router::execute_buy(
+            assert_ok!(Router::buy(
                 Origin::signed(ALICE),
                 BSX,
                 KSM,
@@ -259,7 +259,7 @@ fn execute_buy_should_work_when_route_has_multiple_trades_with_different_pool_ty
 }
 
 #[test]
-fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool() {
+fn buy_should_work_when_first_trade_is_not_supported_in_the_first_pool() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
         .build()
@@ -280,7 +280,7 @@ fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool()
             let trades = vec![trade1, trade2];
 
             //Act
-            assert_ok!(Router::execute_buy(
+            assert_ok!(Router::buy(
                 Origin::signed(ALICE),
                 BSX,
                 KSM,
@@ -298,7 +298,7 @@ fn execute_buy_should_work_when_first_trade_is_not_supported_in_the_first_pool()
 }
 
 #[test]
-fn execute_buy_should_fail_when_called_with_non_signed_origin() {
+fn buy_should_fail_when_called_with_non_signed_origin() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
         .build()
@@ -311,14 +311,14 @@ fn execute_buy_should_fail_when_called_with_non_signed_origin() {
 
             //Act and Assert
             assert_noop!(
-                Router::execute_buy(Origin::none(), BSX, AUSD, amount_to_buy, limit, trades),
+                Router::buy(Origin::none(), BSX, AUSD, amount_to_buy, limit, trades),
                 BadOrigin
             );
         });
 }
 
 #[test]
-fn execute_buy_should_fail_when_route_has_no_trades() {
+fn buy_should_fail_when_route_has_no_trades() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
         .build()
@@ -328,14 +328,14 @@ fn execute_buy_should_fail_when_route_has_no_trades() {
 
             //Act and Assert
             assert_noop!(
-                Router::execute_buy(Origin::signed(ALICE), BSX, AUSD, 10, 5, trades),
+                Router::buy(Origin::signed(ALICE), BSX, AUSD, 10, 5, trades),
                 Error::<Test>::RouteHasNoTrades
             );
         });
 }
 
 #[test]
-fn execute_buy_should_fail_when_max_limit_to_spend_is_reached() {
+fn buy_should_fail_when_max_limit_to_spend_is_reached() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
         .build()
@@ -348,7 +348,7 @@ fn execute_buy_should_fail_when_max_limit_to_spend_is_reached() {
 
             //Act and Assert
             assert_noop!(
-                Router::execute_buy(Origin::signed(ALICE), BSX, AUSD, amount_to_buy, limit, trades),
+                Router::buy(Origin::signed(ALICE), BSX, AUSD, amount_to_buy, limit, trades),
                 Error::<Test>::MaxLimitToSpendReached
             );
         });

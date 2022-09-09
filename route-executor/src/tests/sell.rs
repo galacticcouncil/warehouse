@@ -25,7 +25,7 @@ use sp_runtime::DispatchError;
 use sp_runtime::DispatchError::BadOrigin;
 
 #[test]
-fn execute_sell_should_work_when_route_has_single_trade() {
+fn sell_should_work_when_route_has_single_trade() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount_to_sell = 10;
@@ -34,7 +34,7 @@ fn execute_sell_should_work_when_route_has_single_trade() {
         let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
         //Act
-        assert_ok!(Router::execute_sell(
+        assert_ok!(Router::sell(
             Origin::signed(ALICE),
             BSX,
             AUSD,
@@ -56,7 +56,7 @@ fn execute_sell_should_work_when_route_has_single_trade() {
 }
 
 #[test]
-fn execute_sell_should_work_when_route_has_single_trade_without_native_balance() {
+fn sell_should_work_when_route_has_single_trade_without_native_balance() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
         .build()
@@ -72,7 +72,7 @@ fn execute_sell_should_work_when_route_has_single_trade_without_native_balance()
             }];
 
             //Act
-            assert_ok!(Router::execute_sell(
+            assert_ok!(Router::sell(
                 Origin::signed(ALICE),
                 KSM,
                 AUSD,
@@ -87,7 +87,7 @@ fn execute_sell_should_work_when_route_has_single_trade_without_native_balance()
 }
 
 #[test]
-fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_error() {
+fn sell_should_fail_when_route_has_single_trade_producing_calculation_error() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, BSX, INVALID_CALCULATION_AMOUNT)])
         .build()
@@ -99,7 +99,7 @@ fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_er
 
             //Act and Assert
             assert_noop!(
-                Router::execute_sell(
+                Router::sell(
                     Origin::signed(ALICE),
                     BSX,
                     AUSD,
@@ -113,7 +113,7 @@ fn execute_sell_should_fail_when_route_has_single_trade_producing_calculation_er
 }
 
 #[test]
-fn execute_sell_should_work_when_route_has_multiple_trades_with_same_pooltype() {
+fn sell_should_work_when_route_has_multiple_trades_with_same_pooltype() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount_to_sell = 10;
@@ -136,7 +136,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_same_pooltype() 
         let trades = vec![trade1, trade2, trade3];
 
         //Act
-        assert_ok!(Router::execute_sell(
+        assert_ok!(Router::sell(
             Origin::signed(ALICE),
             BSX,
             KSM,
@@ -162,7 +162,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_same_pooltype() 
 }
 
 #[test]
-fn execute_sell_should_work_when_route_has_multiple_trades_with_different_pool_type() {
+fn sell_should_work_when_route_has_multiple_trades_with_different_pool_type() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount_to_sell = 10;
@@ -185,7 +185,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_different_pool_t
         let trades = vec![trade1, trade2, trade3];
 
         //Act
-        assert_ok!(Router::execute_sell(
+        assert_ok!(Router::sell(
             Origin::signed(ALICE),
             BSX,
             KSM,
@@ -212,7 +212,7 @@ fn execute_sell_should_work_when_route_has_multiple_trades_with_different_pool_t
 }
 
 #[test]
-fn execute_sell_should_work_when_first_trade_is_not_supported_in_the_first_pool() {
+fn sell_should_work_when_first_trade_is_not_supported_in_the_first_pool() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount_to_sell = 10;
@@ -230,7 +230,7 @@ fn execute_sell_should_work_when_first_trade_is_not_supported_in_the_first_pool(
         let trades = vec![trade1, trade2];
 
         //Act
-        assert_ok!(Router::execute_sell(
+        assert_ok!(Router::sell(
             Origin::signed(ALICE),
             BSX,
             KSM,
@@ -247,7 +247,7 @@ fn execute_sell_should_work_when_first_trade_is_not_supported_in_the_first_pool(
     });
 }
 #[test]
-fn execute_sell_should_fail_when_max_limit_for_trade_reached() {
+fn sell_should_fail_when_max_limit_for_trade_reached() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, BSX, 1000)])
         .build()
@@ -277,14 +277,14 @@ fn execute_sell_should_fail_when_max_limit_for_trade_reached() {
 
             //Act and Assert
             assert_noop!(
-                Router::execute_sell(Origin::signed(ALICE), BSX, SDN, 10, 5, trades),
+                Router::sell(Origin::signed(ALICE), BSX, SDN, 10, 5, trades),
                 Error::<Test>::MaxNumberOfTradesLimitReached
             );
         });
 }
 
 #[test]
-fn execute_sell_should_fail_when_called_with_non_signed_origin() {
+fn sell_should_fail_when_called_with_non_signed_origin() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount_to_sell = 10;
@@ -293,28 +293,28 @@ fn execute_sell_should_fail_when_called_with_non_signed_origin() {
 
         //Act and Assert
         assert_noop!(
-            Router::execute_sell(Origin::none(), BSX, AUSD, amount_to_sell, limit, trades),
+            Router::sell(Origin::none(), BSX, AUSD, amount_to_sell, limit, trades),
             BadOrigin
         );
     });
 }
 
 #[test]
-fn execute_sell_should_fail_when_route_has_no_trades() {
+fn sell_should_fail_when_route_has_no_trades() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let trades = vec![];
 
         //Act and Assert
         assert_noop!(
-            Router::execute_sell(Origin::signed(ALICE), BSX, AUSD, 10, 5, trades),
+            Router::sell(Origin::signed(ALICE), BSX, AUSD, 10, 5, trades),
             Error::<Test>::RouteHasNoTrades
         );
     });
 }
 
 #[test]
-fn execute_sell_should_fail_when_caller_has_not_enough_balance() {
+fn sell_should_fail_when_caller_has_not_enough_balance() {
     //Arrange
     let amount_to_sell = ALICE_INITIAL_NATIVE_BALANCE + 1;
     let limit = 5;
@@ -323,14 +323,14 @@ fn execute_sell_should_fail_when_caller_has_not_enough_balance() {
     ExtBuilder::default().build().execute_with(|| {
         //Act and Assert
         assert_noop!(
-            Router::execute_sell(Origin::signed(ALICE), BSX, AUSD, amount_to_sell, limit, trades),
+            Router::sell(Origin::signed(ALICE), BSX, AUSD, amount_to_sell, limit, trades),
             Error::<Test>::InsufficientBalance
         );
     });
 }
 
 #[test]
-fn execute_sell_should_fail_when_min_limit_to_receive_is_not_reached() {
+fn sell_should_fail_when_min_limit_to_receive_is_not_reached() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let amount_to_sell = 10;
@@ -340,7 +340,7 @@ fn execute_sell_should_fail_when_min_limit_to_receive_is_not_reached() {
 
         //Act and Assert
         assert_noop!(
-            Router::execute_sell(Origin::signed(ALICE), BSX, AUSD, amount_to_sell, limit, trades),
+            Router::sell(Origin::signed(ALICE), BSX, AUSD, amount_to_sell, limit, trades),
             Error::<Test>::MinLimitToReceiveNotReached
         );
     });

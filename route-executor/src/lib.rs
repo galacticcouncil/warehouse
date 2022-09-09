@@ -122,12 +122,12 @@ pub mod pallet {
         /// Emits `RouteIsExecuted` when successful.
         #[pallet::weight(<T as Config>::WeightInfo::execute_sell(route.len() as u32))]
         #[transactional]
-        pub fn execute_sell(
+        pub fn sell(
             origin: OriginFor<T>,
             asset_in: T::AssetId,
             asset_out: T::AssetId,
             amount_in: T::Balance,
-            limit: T::Balance,
+            min_amount_out: T::Balance,
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin.clone())?;
@@ -156,7 +156,7 @@ pub mod pallet {
 
             //We pop the last calculation amount as we use it only for verification and not for executing further trades
             let last_amount = amounts_to_sell.pop().ok_or(Error::<T>::UnexpectedError)?;
-            ensure!(last_amount >= limit, Error::<T>::MinLimitToReceiveNotReached);
+            ensure!(last_amount >= min_amount_out, Error::<T>::MinLimitToReceiveNotReached);
 
             for (amount, trade) in amounts_to_sell.iter().zip(route) {
                 let execution_result =
@@ -188,14 +188,16 @@ pub mod pallet {
         /// Emits `RouteIsExecuted` when successful.
         #[pallet::weight(<T as Config>::WeightInfo::execute_buy(route.len() as u32))]
         #[transactional]
-        pub fn execute_buy(
+        pub fn buy(
             origin: OriginFor<T>,
             asset_in: T::AssetId,
             asset_out: T::AssetId,
             amount_out: T::Balance,
-            limit: T::Balance,
+            max_amount_in: T::Balance,
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
+            ensure_signed(origin.clone())?;
+
             Self::ensure_route_size(route.len())?;
 
             let mut amounts_to_buy = Vec::<T::Balance>::with_capacity(route.len() + 1);
@@ -217,7 +219,7 @@ pub mod pallet {
 
             //We pop the last calculation amount as we use it only for verification and not for executing further trades
             let last_amount = amounts_to_buy.pop().ok_or(Error::<T>::UnexpectedError)?;
-            ensure!(last_amount <= limit, Error::<T>::MaxLimitToSpendReached);
+            ensure!(last_amount <= max_amount_in, Error::<T>::MaxLimitToSpendReached);
 
             for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {
                 let execution_result =

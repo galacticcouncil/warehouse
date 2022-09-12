@@ -349,7 +349,7 @@ fn buy_should_fail_when_max_limit_to_spend_is_reached() {
             //Act and Assert
             assert_noop!(
                 Router::buy(Origin::signed(ALICE), BSX, AUSD, amount_to_buy, limit, trades),
-                Error::<Test>::MaxLimitToSpendReached
+                Error::<Test>::TradingLimitReached
             );
         });
 }

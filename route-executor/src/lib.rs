@@ -91,10 +91,8 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        ///The minimum limit to receive after a sell is not reached
-        MinLimitToReceiveNotReached,
-        ///The maximum limit to spend on a buy is reached
-        MaxLimitToSpendReached,
+        ///The trading limit has been reached
+        TradingLimitReached,
         ///The the max number of trades limit is reached
         MaxTradesExceeded,
         ///The AMM pool is not supported for executing trades
@@ -156,7 +154,7 @@ pub mod pallet {
 
             //We pop the last calculation amount as we use it only for verification and not for executing further trades
             let last_amount = amounts_to_sell.pop().ok_or(Error::<T>::UnexpectedError)?;
-            ensure!(last_amount >= min_amount_out, Error::<T>::MinLimitToReceiveNotReached);
+            ensure!(last_amount >= min_amount_out, Error::<T>::TradingLimitReached);
 
             for (amount, trade) in amounts_to_sell.iter().zip(route) {
                 let execution_result =
@@ -218,7 +216,7 @@ pub mod pallet {
 
             //We pop the last calculation amount as we use it only for verification and not for executing further trades
             let last_amount = amounts_to_buy.pop().ok_or(Error::<T>::UnexpectedError)?;
-            ensure!(last_amount <= max_amount_in, Error::<T>::MaxLimitToSpendReached);
+            ensure!(last_amount <= max_amount_in, Error::<T>::TradingLimitReached);
 
             for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {
                 let execution_result =

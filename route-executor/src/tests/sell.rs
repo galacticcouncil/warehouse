@@ -341,7 +341,7 @@ fn sell_should_fail_when_min_limit_to_receive_is_not_reached() {
         //Act and Assert
         assert_noop!(
             Router::sell(Origin::signed(ALICE), BSX, AUSD, amount_to_sell, limit, trades),
-            Error::<Test>::MinLimitToReceiveNotReached
+            Error::<Test>::TradingLimitReached
         );
     });
 }

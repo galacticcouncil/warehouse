@@ -116,7 +116,7 @@ pub mod pallet {
         /// - `asset_in`: The identifier of the asset to sell
         /// - `asset_out`: The identifier of the asset to receive
         /// - `amount_in`: The amount of `asset_in` to sell
-        /// - `limit`: The minimum amount of `asset_out` to receive.
+        /// - `min_amount_out`: The minimum amount of `asset_out` to receive.
         /// - `route`: Series of trades containing AMM and asset pair information
         ///
         /// Emits `RouteIsExecuted` when successful.
@@ -182,7 +182,7 @@ pub mod pallet {
         /// - `asset_in`: The identifier of the asset to be swapped to buy `asset_out`
         /// - `asset_out`: The identifier of the asset to buy
         /// - `amount_out`: The amount of `asset_out` to buy
-        /// - `limit`: The max amount of `asset_in` to spend on the buy.
+        /// - `max_amount_in`: The max amount of `asset_in` to spend on the buy.
         /// - `route`: Series of trades containing AMM and asset pair info
         ///
         /// Emits `RouteIsExecuted` when successful.

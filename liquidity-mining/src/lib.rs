@@ -119,7 +119,10 @@ use sp_arithmetic::{
     traits::{CheckedDiv, CheckedSub},
     FixedPointNumber, FixedU128, Perquintill,
 };
-use sp_std::convert::{From, Into, TryInto};
+use sp_std::{
+    convert::{From, Into, TryInto},
+    vec::Vec,
+};
 
 type PeriodOf<T> = <T as frame_system::Config>::BlockNumber;
 
@@ -160,7 +163,7 @@ pub mod pallet {
         type BlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
 
         /// Id used to identify amm pool in liquidity mining pallet.
-        type AmmPoolId: Parameter + Member + Copy + FullCodec + MaxEncodedLen;
+        type AmmPoolId: Parameter + Member + Clone + FullCodec + MaxEncodedLen;
 
         /// Maximum number of yield farms same LP shares can be re/deposited into. This value always
         /// MUST BE >= 1.         
@@ -539,7 +542,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     Error::<T, I>::MissingIncentivizedAsset
                 );
 
-                <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id, &global_farm_id, |maybe_active_yield_farm| {
+                <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id.clone(), &global_farm_id, |maybe_active_yield_farm| {
                     ensure!(maybe_active_yield_farm.is_none(), Error::<T, I>::YieldFarmAlreadyExists);
 
                     // update global farm accumulated RPZ
@@ -594,7 +597,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
 
         let yield_farm_id =
-            Self::active_yield_farm(amm_pool_id, global_farm_id).ok_or(Error::<T, I>::YieldFarmNotFound)?;
+            Self::active_yield_farm(amm_pool_id.clone(), global_farm_id).ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
         <YieldFarm<T, I>>::try_mutate((amm_pool_id, global_farm_id, yield_farm_id), |maybe_yield_farm| {
             let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
@@ -652,7 +655,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
     ) -> Result<YieldFarmId, DispatchError> {
         <ActiveYieldFarm<T, I>>::try_mutate_exists(
-            amm_pool_id,
+            amm_pool_id.clone(),
             global_farm_id,
             |maybe_active_yield_farm_id| -> Result<YieldFarmId, DispatchError> {
                 let yield_farm_id = maybe_active_yield_farm_id
@@ -726,7 +729,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     ) -> Result<(), DispatchError> {
         ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
 
-        <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id, global_farm_id, |maybe_active_yield_farm_id| {
+        <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id.clone(), global_farm_id, |maybe_active_yield_farm_id| {
             ensure!(
                 maybe_active_yield_farm_id.is_none(),
                 Error::<T, I>::YieldFarmAlreadyExists
@@ -804,7 +807,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
     ) -> Result<(), DispatchError> {
         ensure!(
-            !<ActiveYieldFarm<T, I>>::contains_key(amm_pool_id, global_farm_id),
+            !<ActiveYieldFarm<T, I>>::contains_key(amm_pool_id.clone(), global_farm_id),
             Error::<T, I>::LiquidityMiningIsActive
         );
 
@@ -937,7 +940,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T, I>::DepositNotFound)?;
 
-            let amm_pool_id = deposit.amm_pool_id;
+            let amm_pool_id = deposit.amm_pool_id.clone();
             let farm_entry = deposit
                 .get_yield_farm_entry(yield_farm_id)
                 .ok_or(Error::<T, I>::YieldFarmEntryNotFound)?;
@@ -1035,7 +1038,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T, I>::DepositNotFound)?;
 
             let farm_entry = deposit.remove_yield_farm_entry(yield_farm_id)?;
-            let amm_pool_id = deposit.amm_pool_id;
+            let amm_pool_id = deposit.amm_pool_id.clone();
 
             <GlobalFarm<T, I>>::try_mutate_exists(
                 farm_entry.global_farm_id,
@@ -1127,7 +1130,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         );
 
         <YieldFarm<T, I>>::try_mutate(
-            (deposit.amm_pool_id, global_farm_id, yield_farm_id),
+            (deposit.amm_pool_id.clone(), global_farm_id, yield_farm_id),
             |maybe_yield_farm| {
                 let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
@@ -1151,7 +1154,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                     let valued_shares = Self::get_valued_shares(
                         deposit.shares,
-                        deposit.amm_pool_id,
+                        deposit.amm_pool_id.clone(),
                         global_farm.incentivized_asset,
                         get_balance_in_amm,
                     )?;

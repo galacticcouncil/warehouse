@@ -259,8 +259,8 @@ macro_rules! impl_fake_executor {
             }
 
             fn execute_sell(
-                pool_type: PoolType<AssetId>,
                 _who: &OriginForRuntime,
+                pool_type: PoolType<AssetId>,
                 asset_in: AssetId,
                 asset_out: AssetId,
                 amount_in: Balance,
@@ -274,8 +274,8 @@ macro_rules! impl_fake_executor {
             }
 
             fn execute_buy(
-                pool_type: PoolType<AssetId>,
                 _who: &OriginForRuntime,
+                pool_type: PoolType<AssetId>,
                 asset_in: AssetId,
                 asset_out: AssetId,
                 amount_out: Balance,

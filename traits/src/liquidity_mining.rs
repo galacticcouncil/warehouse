@@ -1,4 +1,5 @@
 use sp_arithmetic::{FixedU128, Perquintill};
+use sp_std::vec::Vec;
 
 /// Trait for providing interface for liquidity mining.
 pub trait Mutate<AccountId, AssetId, BlockNumber> {

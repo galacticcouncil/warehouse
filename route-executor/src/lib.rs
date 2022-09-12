@@ -197,7 +197,6 @@ pub mod pallet {
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
             ensure_signed(origin.clone())?;
-
             Self::ensure_route_size(route.len())?;
 
             let mut amounts_to_buy = Vec::<T::Balance>::with_capacity(route.len() + 1);

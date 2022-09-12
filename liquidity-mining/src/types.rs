@@ -266,7 +266,8 @@ impl Default for LoyaltyCurve {
 pub struct DepositData<T: Config<I>, I: 'static = ()> {
     pub(super) shares: Balance,
     pub(super) amm_pool_id: T::AmmPoolId,
-    // NOTE: Capacity of this vector MUST BE at least 1.
+    // NOTE: `MaxFarmEntriesPerDeposit` of this vector MUST BE at least 1 for the configuration to
+    // be sensible.
     pub(super) yield_farm_entries: BoundedVec<YieldFarmEntry<T, I>, T::MaxFarmEntriesPerDeposit>,
 }
 
@@ -275,7 +276,6 @@ impl<T: Config<I>, I: 'static> DepositData<T, I> {
         Self {
             shares,
             amm_pool_id,
-            //NOTE: Capacity of this vector MUST BE at least 1.
             yield_farm_entries: BoundedVec::default(),
         }
     }

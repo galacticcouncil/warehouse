@@ -1160,6 +1160,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         math::calculate_global_farm_shares(valued_shares, yield_farm.multiplier)
                             .map_err(|_| ArithmeticError::Overflow)?;
 
+                    // The deposit is the first one for this farm. We pretend that an update already
+                    // happened so the user is not rewarded for the time between creation and this
+                    // first deposit.
+                    // This also avoids the first user getting more rewards than the second because
+                    // of an imbalance in the share accumulation.
                     if yield_farm.total_shares.is_zero() {
                         yield_farm.updated_at = current_period;
                     }
@@ -1174,6 +1179,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         .checked_add(valued_shares)
                         .ok_or(ArithmeticError::Overflow)?;
 
+                    // The deposit is the first one for this farm. We pretend that an update already
+                    // happened so the user is not rewarded for the time between creation and this
+                    // first deposit.
+                    // This also avoids the first user getting more rewards than the second because
+                    // of an imbalance in the share accumulation.
                     if global_farm.total_shares_z.is_zero() {
                         global_farm.updated_at = current_period;
                     }

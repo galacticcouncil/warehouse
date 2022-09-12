@@ -43,8 +43,8 @@
 //!
 //! Multiple Incentives
 //!
-//! This feature allow users to redeposit already deposited LP shares to multiple yield farms and
-//! receive incentives from this farms.
+//! This feature allows users to redeposit already deposited LP shares to multiple yield farms and
+//! receive incentives from these farms.
 //! Deposit in yield farm is called "farm entry".
 //! Maximal number of redepositing same LP shares is configured by variable: `MaxFarmEntriesPerDeposit`.
 //! Set `MaxFarmEntriesPerDeposit` to `1` to disable multiple incentives scheme. !!!NEVER set this
@@ -58,7 +58,7 @@
 //! resetting loyalty factor for yield farm user is withdrawing from(other farm entries in the
 //! deposit are not affected). If deposit has no more farm entries, deposit is destroyed and LP
 //! shares are returned back to user.
-//! * `YieldFarm` -  can be in the 3 states: [`Active`, `Stopped`, `Canceled`]
+//! * `YieldFarm` -  can be in the 3 states: [`Active`, `Stopped`, `Deleted`]
 //!     * `Active` - liquidity mining is running, users are able to deposit, claim and withdraw LP
 //!     shares. `YieldFarm` is rewarded from `GlobalFarm` in this state.
 //!     * `Stopped` - liquidity mining is stopped. Users can claim and withdraw LP shares from the
@@ -76,7 +76,7 @@
 //!     global farm.
 //!     * `Deleted` - liquidity mining program is ended. Yield farms can't be added to the global
 //!     farm. Global farm MUST be empty(all yield farms in the global farm must be destroyed)
-//!     before it can be destroyed. Destroying global farm transfer undistributed rewards to fram's
+//!     before it can be destroyed. Destroying global farm transfer undistributed rewards to farm's
 //!     owner. Deleted global farm stay in the storage until all yield farms are removed from
 //!     the storage. Last yield farm removal from storage triggers global farm removal from
 //!     storage.
@@ -323,20 +323,20 @@ pub mod pallet {
 }
 
 impl<T: Config<I>, I: 'static> Pallet<T, I> {
-    /// Create new liquidity mining program with provided parameters.
+    /// Create a new liquidity mining program with provided parameters.
     ///
-    /// `owner` account have to have at least `total_rewards` balance. This funds will be
+    /// `owner` account has to have at least `total_rewards` balance. These funds will be
     /// transferred from `owner` to farm account.
     ///
     /// Returns: `(GlobalFarmId, max reward per period)`
     ///
     /// Parameters:
-    /// - `total_rewards`: total rewards planned to distribute. This rewards will be
+    /// - `total_rewards`: total rewards planned to distribute. These rewards will be
     /// distributed between all yield farms in the global farm.
     /// - `planned_yielding_periods`: planned number of periods to distribute `total_rewards`.
     /// WARN: THIS IS NOT HARD DEADLINE. Not all rewards have to be distributed in
     /// `planned_yielding_periods`. Rewards are distributed based on the situation in the yield
-    /// farm and can be distributed in a longer never in the shorter time frame.
+    /// farm and can be distributed in a longer, though never in a shorter, time frame.
     /// - `blocks_per_period`:  number of blocks in a single period. Min. number of blocks per
     /// period is 1.
     /// - `incentivized_asset`: asset to be incentivized in AMM pools. All yield farms added into

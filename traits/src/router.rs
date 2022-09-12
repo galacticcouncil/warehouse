@@ -49,8 +49,8 @@ pub trait TradeExecution<Origin, AccountId, AssetId, Balance> {
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(1, 5)]
-impl<E: PartialEq, Origin: Clone, AccountId, AssetId: Copy, Balance: Copy> TradeExecution<Origin, AccountId, AssetId, Balance>
-    for Tuple
+impl<E: PartialEq, Origin: Clone, AccountId, AssetId: Copy, Balance: Copy>
+    TradeExecution<Origin, AccountId, AssetId, Balance> for Tuple
 {
     for_tuples!( where #(Tuple: TradeExecution<Origin,AccountId, AssetId, Balance, Error=E>)*);
     type Error = E;

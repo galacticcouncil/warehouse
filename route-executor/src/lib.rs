@@ -96,7 +96,7 @@ pub mod pallet {
         ///The maximum limit to spend on a buy is reached
         MaxLimitToSpendReached,
         ///The the max number of trades limit is reached
-        MaxNumberOfTradesLimitReached,
+        MaxTradesExceeded,
         ///The AMM pool is not supported for executing trades
         PoolNotSupported,
         /// Route has not trades to be executed
@@ -119,7 +119,7 @@ pub mod pallet {
         /// - `min_amount_out`: The minimum amount of `asset_out` to receive.
         /// - `route`: Series of trades containing AMM and asset pair information
         ///
-        /// Emits `RouteIsExecuted` when successful.
+        /// Emits `RouteExecuted` when successful.
         #[pallet::weight(<T as Config>::WeightInfo::sell(route.len() as u32))]
         #[transactional]
         pub fn sell(
@@ -185,7 +185,7 @@ pub mod pallet {
         /// - `max_amount_in`: The max amount of `asset_in` to spend on the buy.
         /// - `route`: Series of trades containing AMM and asset pair info
         ///
-        /// Emits `RouteIsExecuted` when successful.
+        /// Emits `RouteExecuted` when successful.
         #[pallet::weight(<T as Config>::WeightInfo::buy(route.len() as u32))]
         #[transactional]
         pub fn buy(
@@ -244,7 +244,7 @@ impl<T: Config> Pallet<T> {
         ensure!(route_length > 0, Error::<T>::RouteHasNoTrades);
         ensure!(
             (route_length as u8) <= T::MaxNumberOfTrades::get(),
-            Error::<T>::MaxNumberOfTradesLimitReached
+            Error::<T>::MaxTradesExceeded
         );
 
         Ok(())

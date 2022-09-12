@@ -278,7 +278,7 @@ fn sell_should_fail_when_max_limit_for_trade_reached() {
             //Act and Assert
             assert_noop!(
                 Router::sell(Origin::signed(ALICE), BSX, SDN, 10, 5, trades),
-                Error::<Test>::MaxNumberOfTradesLimitReached
+                Error::<Test>::MaxTradesExceeded
             );
         });
 }

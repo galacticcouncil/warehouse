@@ -158,7 +158,7 @@ pub mod pallet {
 
             for (amount, trade) in amounts_to_sell.iter().zip(route) {
                 let execution_result =
-                    T::AMM::execute_sell(&origin, trade.pool, trade.asset_in, trade.asset_out, *amount);
+                    T::AMM::execute_sell(origin.clone(), trade.pool, trade.asset_in, trade.asset_out, *amount);
 
                 handle_execution_error!(execution_result);
             }
@@ -220,7 +220,7 @@ pub mod pallet {
 
             for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {
                 let execution_result =
-                    T::AMM::execute_buy(&origin, trade.pool, trade.asset_in, trade.asset_out, *amount);
+                    T::AMM::execute_buy(origin.clone(), trade.pool, trade.asset_in, trade.asset_out, *amount);
 
                 handle_execution_error!(execution_result);
             }

@@ -32,7 +32,7 @@ pub trait TradeExecution<Origin, AccountId, AssetId, Balance> {
     ) -> Result<Balance, ExecutorError<Self::Error>>;
 
     fn execute_sell(
-        who: &Origin,
+        who: Origin,
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
@@ -40,7 +40,7 @@ pub trait TradeExecution<Origin, AccountId, AssetId, Balance> {
     ) -> Result<(), ExecutorError<Self::Error>>;
 
     fn execute_buy(
-        who: &Origin,
+        who: Origin,
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
@@ -49,7 +49,7 @@ pub trait TradeExecution<Origin, AccountId, AssetId, Balance> {
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(1, 5)]
-impl<E: PartialEq, Origin, AccountId, AssetId: Copy, Balance: Copy> TradeExecution<Origin, AccountId, AssetId, Balance>
+impl<E: PartialEq, Origin: Clone, AccountId, AssetId: Copy, Balance: Copy> TradeExecution<Origin, AccountId, AssetId, Balance>
     for Tuple
 {
     for_tuples!( where #(Tuple: TradeExecution<Origin,AccountId, AssetId, Balance, Error=E>)*);
@@ -92,7 +92,7 @@ impl<E: PartialEq, Origin, AccountId, AssetId: Copy, Balance: Copy> TradeExecuti
     }
 
     fn execute_sell(
-        who: &Origin,
+        who: Origin,
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
@@ -100,7 +100,7 @@ impl<E: PartialEq, Origin, AccountId, AssetId: Copy, Balance: Copy> TradeExecuti
     ) -> Result<(), ExecutorError<Self::Error>> {
         for_tuples!(
             #(
-                let value = match Tuple::execute_sell(who,pool_type, asset_in, asset_out, amount_in) {
+                let value = match Tuple::execute_sell(who.clone(),pool_type, asset_in, asset_out, amount_in) {
                     Ok(result) => return Ok(result),
                     Err(v) if v == ExecutorError::NotSupported => v,
                     Err(v) => return Err(v),
@@ -111,7 +111,7 @@ impl<E: PartialEq, Origin, AccountId, AssetId: Copy, Balance: Copy> TradeExecuti
     }
 
     fn execute_buy(
-        who: &Origin,
+        who: Origin,
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
@@ -119,7 +119,7 @@ impl<E: PartialEq, Origin, AccountId, AssetId: Copy, Balance: Copy> TradeExecuti
     ) -> Result<(), ExecutorError<Self::Error>> {
         for_tuples!(
             #(
-                let value = match Tuple::execute_buy(who, pool_type,asset_in, asset_out, amount_out) {
+                let value = match Tuple::execute_buy(who.clone(), pool_type,asset_in, asset_out, amount_out) {
                     Ok(result) => return Ok(result),
                     Err(v) if v == ExecutorError::NotSupported => v,
                     Err(v) => return Err(v),

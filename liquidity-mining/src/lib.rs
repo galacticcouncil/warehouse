@@ -1338,7 +1338,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         Ok(reward)
     }
 
-    /// This function calculate and returns yield farm's reward from `GlobalFarm`.
+    /// This function calculates and returns yield farm's reward from `GlobalFarm`.
     fn claim_from_global_farm(
         global_farm: &mut GlobalFarmData<T, I>,
         yield_farm: &mut YieldFarmData<T, I>,
@@ -1365,10 +1365,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         Ok(reward)
     }
 
-    /// This function calculate and update `accumulated_rpvz` and all associated properties of `YieldFarm` if
-    /// conditions are met. Function also transfer `yield_farm_rewards` from `GlobalFarm` account to
-    /// `YieldFarm`
-    /// account.
+    /// This function calculates and updates `accumulated_rpvz` and all associated properties of
+    /// `YieldFarm` if conditions are met. It also transfers `yield_farm_rewards` from `GlobalFarm`
+    /// account to `YieldFarm` account.
     fn update_yield_farm(
         yield_farm: &mut YieldFarmData<T, I>,
         yield_farm_rewards: Balance,
@@ -1409,7 +1408,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         T::MultiCurrency::transfer(reward_currency, &pot, &yield_farm_account, yield_farm_rewards)
     }
 
-    /// This function return error if `farm_id` is not valid.
+    /// This function returns an error if `farm_id` is not valid.
     fn validate_farm_id(farm_id: FarmId) -> Result<(), Error<T, I>> {
         if farm_id.is_zero() {
             return Err(Error::<T, I>::InvalidFarmId);

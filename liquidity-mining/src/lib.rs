@@ -1517,7 +1517,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         false
     }
 
-    // This function resturs `GlobalFarmId` from deposit's farm entry or `None` if deposit or farm
+    // This function returns `GlobalFarmId` from deposit's farm entry or `None` if deposit or farm
     // entry doesn't exists.
     fn get_global_farm_id(id: DepositId, yield_farm_id: YieldFarmId) -> Option<GlobalFarmId> {
         if let Some(mut deposit) = Self::deposit(id) {

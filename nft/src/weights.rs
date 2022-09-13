@@ -47,17 +47,17 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_nft.
 pub trait WeightInfo {
-    fn create_class() -> Weight;
+    fn create_collection() -> Weight;
     fn mint() -> Weight;
     fn transfer() -> Weight;
-    fn destroy_class() -> Weight;
+    fn destroy_collection() -> Weight;
     fn burn() -> Weight;
 }
 
 pub struct BasiliskWeight<T>(PhantomData<T>);
 
 impl<T: frame_system::Config> WeightInfo for BasiliskWeight<T> {
-    fn create_class() -> Weight {
+    fn create_collection() -> Weight {
         (26_000_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
@@ -72,7 +72,7 @@ impl<T: frame_system::Config> WeightInfo for BasiliskWeight<T> {
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
-    fn destroy_class() -> Weight {
+    fn destroy_collection() -> Weight {
         (40_000_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))

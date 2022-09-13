@@ -53,55 +53,61 @@ frame_support::construct_runtime!(
 );
 
 parameter_types! {
-    pub ReserveClassIdUpTo: u128 = 999;
+    pub ReserveCollectionIdUpTo: u128 = 999;
 }
 
 #[derive(Eq, Copy, PartialEq, Clone)]
 pub struct NftTestPermissions;
 
-impl NftPermission<ClassType> for NftTestPermissions {
-    fn can_create(class_type: &ClassType) -> bool {
+impl NftPermission<CollectionType> for NftTestPermissions {
+    fn can_create(collection_type: &CollectionType) -> bool {
         matches!(
-            *class_type,
-            ClassType::Marketplace | ClassType::LiquidityMining | ClassType::Redeemable
+            *collection_type,
+            CollectionType::Marketplace | CollectionType::LiquidityMining | CollectionType::Redeemable
         )
     }
 
-    fn can_mint(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace | ClassType::LiquidityMining)
+    fn can_mint(collection_type: &CollectionType) -> bool {
+        matches!(
+            *collection_type,
+            CollectionType::Marketplace | CollectionType::LiquidityMining
+        )
     }
 
-    fn can_transfer(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace)
+    fn can_transfer(collection_type: &CollectionType) -> bool {
+        matches!(*collection_type, CollectionType::Marketplace)
     }
 
-    fn can_burn(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace)
+    fn can_burn(collection_type: &CollectionType) -> bool {
+        matches!(*collection_type, CollectionType::Marketplace)
     }
 
-    fn can_destroy(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace | ClassType::LiquidityMining)
+    fn can_destroy(collection_type: &CollectionType) -> bool {
+        matches!(
+            *collection_type,
+            CollectionType::Marketplace | CollectionType::LiquidityMining
+        )
     }
 
-    fn has_deposit(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace)
+    fn has_deposit(collection_type: &CollectionType) -> bool {
+        matches!(*collection_type, CollectionType::Marketplace)
     }
 }
 
 impl Config for Test {
     type Event = Event;
     type WeightInfo = pallet_nft::weights::BasiliskWeight<Test>;
-    type NftClassId = ClassId;
-    type NftInstanceId = InstanceId;
+    type NftCollectionId = CollectionId;
+    type NftItemId = ItemId;
     type ProtocolOrigin = EnsureRoot<AccountId>;
-    type ClassType = ClassType;
+    type CollectionType = CollectionType;
     type Permissions = NftTestPermissions;
-    type ReserveClassIdUpTo = ReserveClassIdUpTo;
+    type ReserveCollectionIdUpTo = ReserveCollectionIdUpTo;
 }
 
 parameter_types! {
-    pub const ClassDeposit: Balance = 10_000 * BSX; // 1 UNIT deposit to create asset class
-    pub const InstanceDeposit: Balance = 100 * BSX; // 1/100 UNIT deposit to create asset instance
+    pub const CollectionDeposit: Balance = 10_000 * BSX; // 1 UNIT deposit to create asset collection
+    pub const ItemDeposit: Balance = 100 * BSX; // 1/100 UNIT deposit to create asset item
     pub const KeyLimit: u32 = 32;	// Max 32 bytes per key
     pub const ValueLimit: u32 = 64;	// Max 64 bytes per value
     pub const UniquesMetadataDepositBase: Balance = 1000 * BSX;
@@ -112,14 +118,14 @@ parameter_types! {
 
 impl pallet_uniques::Config for Test {
     type Event = Event;
-    type CollectionId = ClassId;
-    type ItemId = InstanceId;
+    type CollectionId = CollectionId;
+    type ItemId = ItemId;
     type Currency = Balances;
     type ForceOrigin = EnsureRoot<AccountId>;
     type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
     type Locker = ();
-    type CollectionDeposit = ClassDeposit;
-    type ItemDeposit = InstanceDeposit;
+    type CollectionDeposit = CollectionDeposit;
+    type ItemDeposit = ItemDeposit;
     type MetadataDepositBase = UniquesMetadataDepositBase;
     type AttributeDepositBase = AttributeDepositBase;
     type DepositPerByte = DepositPerByte;
@@ -184,14 +190,13 @@ pub const BOB: AccountId = AccountId::new([2u8; 32]);
 pub const CHARLIE: AccountId = AccountId::new([3u8; 32]);
 pub const ACCOUNT_WITH_NO_BALANCE: AccountId = AccountId::new([4u8; 32]);
 pub const BSX: Balance = 100_000_000_000;
-pub const CLASS_ID_0: <Test as pallet_uniques::Config>::CollectionId = 1000;
-pub const CLASS_ID_1: <Test as pallet_uniques::Config>::CollectionId = 1001;
-pub const CLASS_ID_2: <Test as pallet_uniques::Config>::CollectionId = 1002;
-pub const CLASS_ID_RESERVED: <Test as pallet_uniques::Config>::CollectionId = 42;
-pub const INSTANCE_ID_0: <Test as pallet_uniques::Config>::ItemId = 0;
-pub const INSTANCE_ID_1: <Test as pallet_uniques::Config>::ItemId = 1;
-pub const INSTANCE_ID_2: <Test as pallet_uniques::Config>::ItemId = 2;
-pub const NON_EXISTING_CLASS_ID: <Test as pallet_uniques::Config>::CollectionId = 999;
+pub const COLLECTION_ID_0: <Test as pallet_uniques::Config>::CollectionId = 1000;
+pub const COLLECTION_ID_1: <Test as pallet_uniques::Config>::CollectionId = 1001;
+pub const COLLECTION_ID_2: <Test as pallet_uniques::Config>::CollectionId = 1002;
+pub const COLLECTION_ID_RESERVED: <Test as pallet_uniques::Config>::CollectionId = 42;
+pub const ITEM_ID_0: <Test as pallet_uniques::Config>::ItemId = 0;
+pub const ITEM_ID_1: <Test as pallet_uniques::Config>::ItemId = 1;
+pub const NON_EXISTING_COLLECTION_ID: <Test as pallet_uniques::Config>::CollectionId = 999;
 
 pub struct ExtBuilder;
 impl Default for ExtBuilder {

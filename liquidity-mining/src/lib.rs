@@ -1278,8 +1278,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             .map_err(|_| ArithmeticError::Overflow)
     }
 
-    /// This function calculate and update `accumulated_rpz` and all associated properties of `GlobalFar` if
-    /// conditions are met.
+    /// This function calculates and updates `accumulated_rpz` and all associated properties of
+    /// `global_farm` if conditions are met.
+    /// Returns the reward transfered to the pot.
     fn update_global_farm(
         global_farm: &mut GlobalFarmData<T, I>,
         current_period: PeriodOf<T>,

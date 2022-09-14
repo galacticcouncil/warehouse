@@ -73,7 +73,8 @@ prop_compose! {
             incentivized_asset: REWARD_CURRENCY,
             max_reward_per_period: reward_per_period,
             min_deposit: 1,
-            yield_farms_count: (0,0),
+            live_yield_farms_count: Zero::zero(),
+            total_yield_farms_count: Zero::zero(),
             price_adjustment: FixedU128::one(),
             state: FarmState::Active,
         }
@@ -167,31 +168,35 @@ proptest! {
         left_to_distribute in left_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
-            let farm_account = LiquidityMining::farm_account_id(farm.id).unwrap();
-            Tokens::set_balance(Origin::root(), farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
+            with_transaction(|| {
+                let farm_account = LiquidityMining::farm_account_id(farm.id).unwrap();
+                Tokens::set_balance(Origin::root(), farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
-            //NOTE: _0 - before action, _1 - after action
-            let accumulated_rewards_0 = farm.accumulated_rewards;
-            let accumulated_rpz_0 = farm.accumulated_rpz;
-            let reward_per_period = farm.max_reward_per_period;
-            let reward = LiquidityMining::update_global_farm(&mut farm, current_period, reward_per_period).unwrap();
+                //NOTE: _0 - before action, _1 - after action
+                let accumulated_rewards_0 = farm.accumulated_rewards;
+                let accumulated_rpz_0 = farm.accumulated_rpz;
+                let reward_per_period = farm.max_reward_per_period;
+                let reward = LiquidityMining::update_global_farm(&mut farm, current_period, reward_per_period).unwrap();
 
-            let s_0 = accumulated_rpz_0
-                .checked_mul(&FixedU128::from((farm.total_shares_z, ONE))).unwrap()
-                .checked_add(&FixedU128::from((reward, ONE))).unwrap();
-            let s_1 = farm.accumulated_rpz.checked_mul(&FixedU128::from((farm.total_shares_z, ONE))).unwrap();
+                let s_0 = accumulated_rpz_0
+                    .checked_mul(&FixedU128::from((farm.total_shares_z, ONE))).unwrap()
+                    .checked_add(&FixedU128::from((reward, ONE))).unwrap();
+                let s_1 = farm.accumulated_rpz.checked_mul(&FixedU128::from((farm.total_shares_z, ONE))).unwrap();
 
-            assert_eq_approx!(
-                s_0,
-                s_1,
-                FixedU128::from((TOLERANCE, ONE)),
-                "acc_rpz[1] x shares = acc_rpz[0] x shares + reward"
-            );
+                assert_eq_approx!(
+                    s_0,
+                    s_1,
+                    FixedU128::from((TOLERANCE, ONE)),
+                    "acc_rpz[1] x shares = acc_rpz[0] x shares + reward"
+                );
 
-            assert!(
-                farm.accumulated_rewards == accumulated_rewards_0.checked_add(reward).unwrap(),
-                "acc_rewards[1] = acc_rewards[0] + reward"
-            );
+                assert!(
+                    farm.accumulated_rewards == accumulated_rewards_0.checked_add(reward).unwrap(),
+                    "acc_rewards[1] = acc_rewards[0] + reward"
+                );
+
+                TransactionOutcome::Commit(())
+            });
         });
     }
 }
@@ -247,11 +252,10 @@ proptest! {
             let s_0 = pot_balance_0 + yield_farm_balance_0;
             let s_1 = pot_balance_1 + yield_farm_balance_1;
 
-            assert_eq_approx!(
-                FixedU128::from((s_0, ONE)),
-                FixedU128::from((s_1, ONE)),
-                FixedU128::from((TOLERANCE, ONE)),
-                "invariant: global_farm_balance + yield_farm_balance"
+            pretty_assertions::assert_eq!(
+                s_0,
+                s_1,
+                "invariant: `global_farm_balance + yield_farm_balance` is always constant"
             );
 
             //invariant 2
@@ -279,32 +283,39 @@ proptest! {
         (mut global_farm, _, current_period, _, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
-            const GLOBAL_FARM_ID: GlobalFarmId = 1;
-            let global_farm_account = LiquidityMining::farm_account_id(GLOBAL_FARM_ID).unwrap();
-            let pot = LiquidityMining::pot_account_id();
-            Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
+            with_transaction(|| {
+                const GLOBAL_FARM_ID: GlobalFarmId = 1;
+                let global_farm_account = LiquidityMining::farm_account_id(GLOBAL_FARM_ID).unwrap();
+                let pot = LiquidityMining::pot_account_id();
+                Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
-            let left_to_distribute_0 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
-            let reward_per_period = global_farm.max_reward_per_period;
-            let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
+                let left_to_distribute_0 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
+                let reward_per_period = global_farm.max_reward_per_period;
+                let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
 
-            let reward =
-                LiquidityMining::update_global_farm(&mut global_farm, current_period, reward_per_period).unwrap();
+                let reward =
+                    LiquidityMining::update_global_farm(&mut global_farm, current_period, reward_per_period).unwrap();
 
-            let s_0 = (left_to_distribute_0 - reward).max(0);
-            let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
+                let s_0 = (left_to_distribute_0 - reward).max(0);
+                let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
 
-            assert_eq_approx!(
-                FixedU128::from((s_0, ONE)),
-                FixedU128::from((s_1, ONE)),
-                FixedU128::from((TOLERANCE, ONE)),
-                "left_to_distribute[1] = max(0, left_to_distribute[0] - reward)"
-            );
+                pretty_assertions::assert_eq!(
+                    s_0,
+                    s_1,
+                    "left_to_distribute[1] = max(0, left_to_distribute[0] - reward)"
+                );
 
-            let s_0 = left_to_distribute_0 + pot_balance_0;
-            let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account) + Tokens::free_balance(REWARD_CURRENCY, &pot);
+                let s_0 = left_to_distribute_0 + pot_balance_0;
+                let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account) + Tokens::free_balance(REWARD_CURRENCY, &pot);
 
-            assert_eq_approx!(s_0, s_1, TOLERANCE, "global_farm_account[0] + pot[0] = global_farm_account[1] + pot[1]");
+                pretty_assertions::assert_eq!(
+                    s_0,
+                    s_1,
+                    "global_farm_account[0] + pot[0] = global_farm_account[1] + pot[1]"
+                );
+
+                TransactionOutcome::Commit(())
+            });
         });
     }
 }

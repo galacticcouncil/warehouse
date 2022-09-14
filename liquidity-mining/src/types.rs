@@ -47,10 +47,11 @@ pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) max_reward_per_period: Balance,
     // min. LP shares user must deposit to start yield farming.
     pub(super) min_deposit: Balance,
-    // live counts includes `active` and `stopped` yield farms.
-    // total count includes `active`, `stopped`, `deleted` - this count is decreased only if yield
-    // farm is flushed from storage.
-    pub(super) yield_farms_count: (u32, u32), //`(live farms count, total farms count)`
+    // This include `active` and `stopped` yield farms.
+    pub(super) live_yield_farms_count: u32,
+    // This include `active`, `stopped`, `deleted` - this count is decreased only if yield
+    // farm is removed from storage.
+    pub(super) total_yield_farms_count: u32,
     pub(super) price_adjustment: FixedU128,
     pub(super) state: FarmState,
 }
@@ -75,7 +76,8 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
             accumulated_rpz: Zero::zero(),
             paid_accumulated_rewards: Zero::zero(),
             total_shares_z: Zero::zero(),
-            yield_farms_count: (Zero::zero(), Zero::zero()),
+            live_yield_farms_count: Zero::zero(),
+            total_yield_farms_count: Zero::zero(),
             id,
             updated_at,
             reward_currency,
@@ -91,26 +93,19 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         }
     }
 
-    pub fn live_farms_count(&self) -> u32 {
-        self.yield_farms_count.0
-    }
-
-    pub fn total_farms_count(&self) -> u32 {
-        self.yield_farms_count.1
-    }
-
     /// This function updates yields_farm_count when new yield farm is added into the global farm.
     /// This function should be called only when new yield farm is created/added into the global
     /// farm.
     pub fn increase_yield_farm_counts(&mut self) -> Result<(), ArithmeticError> {
-        self.yield_farms_count = (
-            self.live_farms_count()
-                .checked_add(1)
-                .ok_or(ArithmeticError::Overflow)?,
-            self.total_farms_count()
-                .checked_add(1)
-                .ok_or(ArithmeticError::Overflow)?,
-        );
+        self.live_yield_farms_count = self
+            .live_yield_farms_count
+            .checked_add(1)
+            .ok_or(ArithmeticError::Overflow)?;
+
+        self.total_yield_farms_count = self
+            .total_yield_farms_count
+            .checked_add(1)
+            .ok_or(ArithmeticError::Overflow)?;
 
         Ok(())
     }
@@ -119,20 +114,20 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     /// This function should be called only when yield farm is removed from global farm.
     pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), ArithmeticError> {
         // Note: only live count should change
-        self.yield_farms_count.0 = self
-            .live_farms_count()
+        self.live_yield_farms_count = self
+            .live_yield_farms_count
             .checked_sub(1)
             .ok_or(ArithmeticError::Underflow)?;
 
         Ok(())
     }
 
-    /// This function updates `yield_farms_count` when yield farm is flushed from storage.
-    /// This function should be called only if yield farm is flushed.
+    /// This function updates `yield_farms_count` when yield farm is removed from storage.
+    /// This function should be called only if yield farm was removed from storage.
     /// !!! DON'T call this function if yield farm is in stopped or deleted.
     pub fn decrease_total_yield_farm_count(&mut self) -> Result<(), DispatchError> {
-        self.yield_farms_count.1 = self
-            .total_farms_count()
+        self.total_yield_farms_count = self
+            .total_yield_farms_count
             .checked_sub(1)
             .ok_or(ArithmeticError::Underflow)?;
 
@@ -141,24 +136,19 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
 
     /// Function returns `true` if global farm has live yield farms.
     pub fn has_live_farms(&self) -> bool {
-        !self.live_farms_count().is_zero()
+        !self.live_yield_farms_count.is_zero()
     }
 
-    /// Function return `true` if global farm can be flushed(removed) from storage.
-    pub fn can_be_flushed(&self) -> bool {
-        //farm can be flushed only if all yield farms are flushed.
-        self.state == FarmState::Deleted && self.total_farms_count().is_zero()
-    }
-
-    /// Function return `true` if global farm is in active state.
-    pub fn is_active(&self) -> bool {
-        self.state == FarmState::Active
+    /// Function return `true` if global farm can be removed from storage.
+    pub fn can_be_removed(&self) -> bool {
+        //farm can be removed from storage only if all yield farms was removed from storage.
+        self.state == FarmState::Deleted && self.total_yield_farms_count.is_zero()
     }
 
     /// This function returns `true` if farm has no capacity for next yield farm(yield farm can't
     /// be added into global farm until some yield farm is not removed from storage).
     pub fn is_full(&self) -> bool {
-        self.total_farms_count().ge(&<T>::MaxYieldFarmsPerGlobalFarm::get())
+        self.total_yield_farms_count.ge(&<T>::MaxYieldFarmsPerGlobalFarm::get())
     }
 }
 
@@ -202,11 +192,6 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
         }
     }
 
-    /// Function returns `true` if yield farm is in active state.
-    pub fn is_active(&self) -> bool {
-        self.state == FarmState::Active
-    }
-
     /// Function returns `true` if yield farm is in stopped state.
     pub fn is_stopped(&self) -> bool {
         self.state == FarmState::Stopped
@@ -218,7 +203,7 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
     }
 
     /// Returns `true` if yield farm can be removed from storage, `false` otherwise.
-    pub fn can_be_flushed(&self) -> bool {
+    pub fn can_be_removed(&self) -> bool {
         self.state == FarmState::Deleted && self.entries_count.is_zero()
     }
 
@@ -238,12 +223,20 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
         Ok(())
     }
 
-    /// This function return `true` if yield farm is empty.
+    /// This function return `true` if deposit exists in the yield farm.
     pub fn has_entries(&self) -> bool {
         !self.entries_count.is_zero()
     }
 }
 
+/// Loyaty curve to calculate loyalty multiplier.
+///
+/// `t = t_now - t_added`
+/// `𝞣 = t/[(initial_reward_percentage + 1) * scale_coef]`
+/// `num = [𝞣 + (𝞣 * initial_reward_percentage) + initial_reward_percentage]`
+/// `denom = [𝞣 + (𝞣 * initial_reward_percentage) + 1]`
+///
+/// `loyalty_multiplier = num/denom`
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T, I))]
 pub struct LoyaltyCurve {
@@ -260,6 +253,14 @@ impl Default for LoyaltyCurve {
     }
 }
 
+/// Deposit represents a group of locked LP shares in the liquidity mining program("Position").
+/// LP shares in the deposit can be locked in one or more yield farms based on pallet's
+/// configuration(`MaxEntriesPerDeposit`).
+/// The LP token's lock in the deposit is called "farm entry". Farm entry entitles deposit
+/// owner to accumulate rewards from the yield farm.
+/// Every deposit should have at least one farm entry and deposit without farm entries
+/// should be removed from storage and LP shares should be unlocked.
+/// `redeposit_lp_shares()` is used to add a new farm entry into the deposit("re-lock" LP shares").
 #[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo, PartialEq, MaxEncodedLen)]
 #[codec(mel_bound())]
 #[scale_info(skip_type_params(T, I))]
@@ -322,9 +323,9 @@ impl<T: Config<I>, I: 'static> DepositData<T, I> {
             .position(|e| e.yield_farm_id == yield_farm_id)
     }
 
-    /// This function returns `true` if deposit can be flushed from storage.
-    pub fn can_be_flushed(&self) -> bool {
-        //NOTE: deposit with no entries should/must be flushed
+    /// This function returns `true` if deposit can be removed from storage.
+    pub fn can_be_removed(&self) -> bool {
+        //NOTE: deposit with no entries should/must be removed from storage
         self.yield_farm_entries.is_empty()
     }
 }
@@ -369,4 +370,10 @@ pub enum FarmState {
     Active,
     Stopped,
     Deleted,
+}
+
+impl FarmState {
+    pub fn is_active(&self) -> bool {
+        *self == FarmState::Active
+    }
 }

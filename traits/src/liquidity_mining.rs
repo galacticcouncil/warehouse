@@ -1,6 +1,8 @@
 use sp_arithmetic::{FixedU128, Perquintill};
 use sp_std::vec::Vec;
 
+type YieldFarmId = u32;
+
 /// Trait for providing interface for liquidity mining.
 pub trait Mutate<AccountId, AssetId, BlockNumber> {
     type Error;
@@ -24,7 +26,7 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         yield_per_period: Perquintill,
         min_deposit: Self::Balance,
         price_adjustment: FixedU128,
-    ) -> Result<(u32, Self::Balance), Self::Error>;
+    ) -> Result<(YieldFarmId, Self::Balance), Self::Error>;
 
     /// Update price adjustment of the existing global farm.
     fn update_global_farm_price_adjustment(

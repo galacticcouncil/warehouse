@@ -55,14 +55,14 @@ pub type Amount = i128;
 pub type AccountId = u128;
 pub type FarmId = crate::FarmId;
 pub type BlockNumber = u64;
-pub const ALICE: AccountId = 1;
-pub const BOB: AccountId = 2;
-pub const CHARLIE: AccountId = 3;
-pub const DAVE: AccountId = 4;
-pub const EVE: AccountId = 5;
-pub const TREASURY: AccountId = 6;
-pub const ACCOUNT_WITH_1M: AccountId = 7;
-pub const GC: AccountId = 8;
+pub const ALICE: AccountId = 10;
+pub const BOB: AccountId = 11;
+pub const CHARLIE: AccountId = 12;
+pub const DAVE: AccountId = 13;
+pub const EVE: AccountId = 14;
+pub const TREASURY: AccountId = 15;
+pub const ACCOUNT_WITH_1M: AccountId = 16;
+pub const GC: AccountId = 17;
 
 pub const INITIAL_BALANCE: u128 = 1_000_000_000_000;
 

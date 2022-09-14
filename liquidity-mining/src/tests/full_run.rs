@@ -28,18 +28,18 @@ use rand::Rng;
 #[test]
 fn non_full_farm_running_longer_than_expected() {
     new_test_ext().execute_with(|| {
-        const GLOBAL_FARM: GlobalFarmId = 1;
-        const YIELD_FARM_A: YieldFarmId = 2;
-        const YIELD_FARM_B: YieldFarmId = 3;
+        with_transaction(|| {
+            const GLOBAL_FARM: GlobalFarmId = 1;
+            const YIELD_FARM_A: YieldFarmId = 2;
+            const YIELD_FARM_B: YieldFarmId = 3;
 
-        const ALICE_DEPOSIT: DepositId = 1;
-        const BOB_DEPOSIT: DepositId = 2;
-        const CHARLIE_DEPOSIT: DepositId = 3;
+            const ALICE_DEPOSIT: DepositId = 1;
+            const BOB_DEPOSIT: DepositId = 2;
+            const CHARLIE_DEPOSIT: DepositId = 3;
 
-        //initialize farms
-        set_block_number(100);
-        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
-            LiquidityMining2::create_global_farm(
+            //initialize farms
+            set_block_number(100);
+            assert_ok!(LiquidityMining2::create_global_farm(
                 200_000 * ONE,
                 20,
                 10,
@@ -49,107 +49,114 @@ fn non_full_farm_running_longer_than_expected() {
                 Perquintill::from_float(0.5),
                 1_000,
                 One::one(),
-            )
-        })));
+            ));
 
-        assert_ok!(LiquidityMining2::create_yield_farm(
-            GC,
-            GLOBAL_FARM,
-            FixedU128::from(2_u128),
-            None,
-            BSX_TKN1_AMM,
-            vec![BSX, TKN1]
-        ));
+            assert_ok!(LiquidityMining2::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                FixedU128::from(2_u128),
+                None,
+                BSX_TKN1_AMM,
+                vec![BSX, TKN1],
+            ));
 
-        assert_ok!(LiquidityMining2::create_yield_farm(
-            GC,
-            GLOBAL_FARM,
-            FixedU128::from(1_u128),
-            None,
-            BSX_TKN2_AMM,
-            vec![BSX, TKN2]
-        ));
+            assert_ok!(LiquidityMining2::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                FixedU128::from(1_u128),
+                None,
+                BSX_TKN2_AMM,
+                vec![BSX, TKN2],
+            ));
 
-        set_block_number(120);
-        //alice
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_A,
-            BSX_TKN1_AMM,
-            5_000 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
+            set_block_number(120);
+            //alice
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_A,
+                BSX_TKN1_AMM,
+                5_000 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
-        set_block_number(140);
-        //bob
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_B,
-            BSX_TKN2_AMM,
-            2_500 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
+            set_block_number(140);
+            //bob
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_B,
+                BSX_TKN2_AMM,
+                2_500 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
-        //charlie
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_B,
-            BSX_TKN2_AMM,
-            2_500 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
+            //charlie
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_B,
+                BSX_TKN2_AMM,
+                2_500 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
-        set_block_number(401);
+            set_block_number(401);
 
-        let alice_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
-        let bob_bsx_balance_0 = Tokens::free_balance(BSX, &BOB);
-        let charlie_bsx_balance_0 = Tokens::free_balance(BSX, &CHARLIE);
+            let alice_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
+            let bob_bsx_balance_0 = Tokens::free_balance(BSX, &BOB);
+            let charlie_bsx_balance_0 = Tokens::free_balance(BSX, &CHARLIE);
 
-        let (_, _, _, unclaimable) =
-            LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
-        assert_eq!(unclaimable, 0);
-        assert_ok!(LiquidityMining2::withdraw_lp_shares(
-            ALICE_DEPOSIT,
-            YIELD_FARM_A,
-            unclaimable
-        ));
+            let (_, _, _, unclaimable) =
+                LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
+            assert_eq!(unclaimable, 0);
+            assert_ok!(LiquidityMining2::withdraw_lp_shares(
+                ALICE_DEPOSIT,
+                YIELD_FARM_A,
+                unclaimable
+            ));
 
-        let (_, _, _, unclaimable) = LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
-        assert_eq!(unclaimable, 0);
-        assert_ok!(LiquidityMining2::withdraw_lp_shares(
-            BOB_DEPOSIT,
-            YIELD_FARM_B,
-            unclaimable
-        ));
+            let (_, _, _, unclaimable) =
+                LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
+            assert_eq!(unclaimable, 0);
+            assert_ok!(LiquidityMining2::withdraw_lp_shares(
+                BOB_DEPOSIT,
+                YIELD_FARM_B,
+                unclaimable
+            ));
 
-        let (_, _, _, unclaimable) =
-            LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
-        assert_eq!(unclaimable, 0);
-        assert_ok!(LiquidityMining2::withdraw_lp_shares(CHARLIE, YIELD_FARM_B, unclaimable));
+            let (_, _, _, unclaimable) =
+                LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
+            assert_eq!(unclaimable, 0);
+            assert_ok!(LiquidityMining2::withdraw_lp_shares(
+                CHARLIE_DEPOSIT,
+                YIELD_FARM_B,
+                unclaimable
+            ));
 
-        let alice_claimed = Tokens::free_balance(BSX, &ALICE) - alice_bsx_balance_0;
-        let bob_claimed = Tokens::free_balance(BSX, &BOB) - bob_bsx_balance_0;
-        let charlie_claimed = Tokens::free_balance(BSX, &CHARLIE) - charlie_bsx_balance_0;
+            let alice_claimed = Tokens::free_balance(BSX, &ALICE) - alice_bsx_balance_0;
+            let bob_claimed = Tokens::free_balance(BSX, &BOB) - bob_bsx_balance_0;
+            let charlie_claimed = Tokens::free_balance(BSX, &CHARLIE) - charlie_bsx_balance_0;
 
-        let claimed_total = alice_claimed + bob_claimed + charlie_claimed;
+            let claimed_total = alice_claimed + bob_claimed + charlie_claimed;
 
-        assert_eq!(claimed_total.abs_diff(200_000 * ONE), 1);
+            assert_eq!(claimed_total.abs_diff(200_000 * ONE), 1);
 
-        let yield_farm_a_claimed = alice_claimed;
-        let yield_farm_b_claimed = bob_claimed + charlie_claimed;
+            let yield_farm_a_claimed = alice_claimed;
+            let yield_farm_b_claimed = bob_claimed + charlie_claimed;
 
-        const TOLERANCE: u128 = 1;
-        assert!(
-            yield_farm_a_claimed.abs_diff(2 * yield_farm_b_claimed).le(&TOLERANCE),
-            "yield_farm_a_claimed == 2 * yield_farm_b_claimed"
-        );
+            const TOLERANCE: u128 = 1;
+            assert!(
+                yield_farm_a_claimed.abs_diff(2 * yield_farm_b_claimed).le(&TOLERANCE),
+                "yield_farm_a_claimed == 2 * yield_farm_b_claimed"
+            );
 
-        assert!(
-            alice_claimed.abs_diff(4 * bob_claimed).le(&TOLERANCE),
-            "alice_claimed == 4 * bob_claimed"
-        );
+            assert!(
+                alice_claimed.abs_diff(4 * bob_claimed).le(&TOLERANCE),
+                "alice_claimed == 4 * bob_claimed"
+            );
 
-        assert_eq!(bob_claimed, charlie_claimed, "bob_claimed == charlie_claimed");
+            assert_eq!(bob_claimed, charlie_claimed, "bob_claimed == charlie_claimed");
+
+            TransactionOutcome::Commit(())
+        });
     });
 }
 
@@ -158,18 +165,18 @@ fn non_full_farm_running_longer_than_expected() {
 #[test]
 fn non_full_farm_distribute_everything_and_update_farms() {
     new_test_ext().execute_with(|| {
-        const GLOBAL_FARM: GlobalFarmId = 1;
-        const YIELD_FARM_A: YieldFarmId = 2;
-        const YIELD_FARM_B: YieldFarmId = 3;
+        with_transaction(|| {
+            const GLOBAL_FARM: GlobalFarmId = 1;
+            const YIELD_FARM_A: YieldFarmId = 2;
+            const YIELD_FARM_B: YieldFarmId = 3;
 
-        const ALICE_DEPOSIT: DepositId = 1;
-        const BOB_DEPOSIT: DepositId = 2;
-        const CHARLIE_DEPOSIT: DepositId = 3;
+            const ALICE_DEPOSIT: DepositId = 1;
+            const BOB_DEPOSIT: DepositId = 2;
+            const CHARLIE_DEPOSIT: DepositId = 3;
 
-        //initialize farms
-        set_block_number(100);
-        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
-            LiquidityMining2::create_global_farm(
+            //initialize farms
+            set_block_number(100);
+            assert_ok!(LiquidityMining2::create_global_farm(
                 200_000 * ONE,
                 20,
                 10,
@@ -179,97 +186,99 @@ fn non_full_farm_distribute_everything_and_update_farms() {
                 Perquintill::from_float(0.5),
                 1_000,
                 One::one(),
-            )
-        })));
+            ));
 
-        assert_ok!(LiquidityMining2::create_yield_farm(
-            GC,
-            GLOBAL_FARM,
-            FixedU128::from(2_u128),
-            None,
-            BSX_TKN1_AMM,
-            vec![BSX, TKN1]
-        ));
+            assert_ok!(LiquidityMining2::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                FixedU128::from(2_u128),
+                None,
+                BSX_TKN1_AMM,
+                vec![BSX, TKN1],
+            ));
 
-        assert_ok!(LiquidityMining2::create_yield_farm(
-            GC,
-            GLOBAL_FARM,
-            FixedU128::from(1_u128),
-            None,
-            BSX_TKN2_AMM,
-            vec![BSX, TKN2]
-        ));
+            assert_ok!(LiquidityMining2::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                FixedU128::from(1_u128),
+                None,
+                BSX_TKN2_AMM,
+                vec![BSX, TKN2],
+            ));
 
-        set_block_number(120);
-        //alice
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_A,
-            BSX_TKN1_AMM,
-            5_000 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
+            set_block_number(120);
+            //alice
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_A,
+                BSX_TKN1_AMM,
+                5_000 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
-        set_block_number(140);
-        //bob
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_B,
-            BSX_TKN2_AMM,
-            2_500 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
+            set_block_number(140);
+            //bob
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_B,
+                BSX_TKN2_AMM,
+                2_500 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
-        //charlie
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_B,
-            BSX_TKN2_AMM,
-            2_500 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
+            //charlie
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_B,
+                BSX_TKN2_AMM,
+                2_500 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
-        set_block_number(401);
+            set_block_number(401);
 
-        //last farms update and claim everything
-        let _ = LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
+            //last farms update and claim everything
+            let _ = LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
 
-        let _ = LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
+            let _ = LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
 
-        let _ = LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
+            let _ = LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
 
-        assert_eq!(
-            Tokens::free_balance(BSX, &LiquidityMining2::farm_account_id(GLOBAL_FARM).unwrap()),
-            0
-        );
+            assert_eq!(
+                Tokens::free_balance(BSX, &LiquidityMining2::farm_account_id(GLOBAL_FARM).unwrap()),
+                0
+            );
 
-        //NOTE: 1 because we are not able to claim everything becasue us rounding errors
-        assert_eq!(Tokens::free_balance(BSX, &LiquidityMining2::pot_account_id()), 1);
+            //NOTE: 1 because we are not able to claim everything becasue us rounding errors
+            assert_eq!(Tokens::free_balance(BSX, &LiquidityMining2::pot_account_id()), 1);
 
-        set_block_number(501);
-        let (_, _, claimed, unclaimable) =
-            LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
+            set_block_number(501);
+            let (_, _, claimed, unclaimable) =
+                LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
 
-        assert_eq!(claimed, 0);
-        assert_eq!(unclaimable, 0);
+            assert_eq!(claimed, 0);
+            assert_eq!(unclaimable, 0);
 
-        assert_eq!(LiquidityMining2::global_farm(GLOBAL_FARM).unwrap().updated_at, 50);
-        assert_eq!(
-            LiquidityMining2::yield_farm((BSX_TKN1_AMM, GLOBAL_FARM, YIELD_FARM_A))
-                .unwrap()
-                .updated_at,
-            50
-        );
+            assert_eq!(LiquidityMining2::global_farm(GLOBAL_FARM).unwrap().updated_at, 50);
+            assert_eq!(
+                LiquidityMining2::yield_farm((BSX_TKN1_AMM, GLOBAL_FARM, YIELD_FARM_A))
+                    .unwrap()
+                    .updated_at,
+                50
+            );
 
-        set_block_number(1000);
-        let _ = LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
-        assert_eq!(LiquidityMining2::global_farm(GLOBAL_FARM).unwrap().updated_at, 100);
-        assert_eq!(
-            LiquidityMining2::yield_farm((BSX_TKN2_AMM, GLOBAL_FARM, YIELD_FARM_B))
-                .unwrap()
-                .updated_at,
-            100
-        );
+            set_block_number(1000);
+            let _ = LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
+            assert_eq!(LiquidityMining2::global_farm(GLOBAL_FARM).unwrap().updated_at, 100);
+            assert_eq!(
+                LiquidityMining2::yield_farm((BSX_TKN2_AMM, GLOBAL_FARM, YIELD_FARM_B))
+                    .unwrap()
+                    .updated_at,
+                100
+            );
+
+            TransactionOutcome::Commit(())
+        });
     });
 }
 
@@ -278,18 +287,18 @@ fn non_full_farm_distribute_everything_and_update_farms() {
 #[test]
 fn overcrowded_farm_running_longer_than_expected() {
     new_test_ext().execute_with(|| {
-        const GLOBAL_FARM: GlobalFarmId = 1;
-        const YIELD_FARM_A: YieldFarmId = 2;
-        const YIELD_FARM_B: YieldFarmId = 3;
+        with_transaction(|| {
+            const GLOBAL_FARM: GlobalFarmId = 1;
+            const YIELD_FARM_A: YieldFarmId = 2;
+            const YIELD_FARM_B: YieldFarmId = 3;
 
-        const ALICE_DEPOSIT: DepositId = 1;
-        const BOB_DEPOSIT: DepositId = 2;
-        const CHARLIE_DEPOSIT: DepositId = 3;
+            const ALICE_DEPOSIT: DepositId = 1;
+            const BOB_DEPOSIT: DepositId = 2;
+            const CHARLIE_DEPOSIT: DepositId = 3;
 
-        //initialize farms
-        set_block_number(100);
-        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
-            LiquidityMining2::create_global_farm(
+            //initialize farms
+            set_block_number(100);
+            assert_ok!(LiquidityMining2::create_global_farm(
                 200_000 * ONE,
                 20,
                 10,
@@ -299,134 +308,141 @@ fn overcrowded_farm_running_longer_than_expected() {
                 Perquintill::from_float(0.5),
                 1_000,
                 One::one(),
-            )
-        })));
+            ));
 
-        assert_ok!(LiquidityMining2::create_yield_farm(
-            GC,
-            GLOBAL_FARM,
-            FixedU128::from(2_u128),
-            None,
-            BSX_TKN1_AMM,
-            vec![BSX, TKN1]
-        ));
+            assert_ok!(LiquidityMining2::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                FixedU128::from(2_u128),
+                None,
+                BSX_TKN1_AMM,
+                vec![BSX, TKN1],
+            ));
 
-        assert_ok!(LiquidityMining2::create_yield_farm(
-            GC,
-            GLOBAL_FARM,
-            FixedU128::from(1_u128),
-            None,
-            BSX_TKN2_AMM,
-            vec![BSX, TKN2]
-        ));
+            assert_ok!(LiquidityMining2::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                FixedU128::from(1_u128),
+                None,
+                BSX_TKN2_AMM,
+                vec![BSX, TKN2],
+            ));
 
-        //NOTE: farm is overcrowded when Z > 20_000
-        set_block_number(120);
-        //alice
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_A,
-            BSX_TKN1_AMM,
-            10_000 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
-
-        //bob
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_B,
-            BSX_TKN2_AMM,
-            5_000 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
-
-        //charlie
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_B,
-            BSX_TKN2_AMM,
-            5_000 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
-
-        let mut block_number = 131;
-
-        let alice_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
-        let bob_bsx_balance_0 = Tokens::free_balance(BSX, &BOB);
-        let charlie_bsx_balance_0 = Tokens::free_balance(BSX, &CHARLIE);
-
-        let mut last_alice_balance = alice_bsx_balance_0;
-        let mut last_bob_balance = bob_bsx_balance_0;
-        let mut last_charlie_balance = charlie_bsx_balance_0;
-        //NOTE: we must be able to pay at least for 20 periods (131 + (20 * 10))
-        while block_number < 331 {
-            set_block_number(block_number);
-
+            //NOTE: farm is overcrowded when Z > 20_000
+            set_block_number(120);
             //alice
-            let _ = LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
-            assert!(Tokens::free_balance(BSX, &ALICE).gt(&last_alice_balance));
-            last_alice_balance = Tokens::free_balance(BSX, &ALICE);
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_A,
+                BSX_TKN1_AMM,
+                10_000 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
             //bob
-            let _ = LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
-            assert!(Tokens::free_balance(BSX, &BOB).gt(&last_bob_balance));
-            last_bob_balance = Tokens::free_balance(BSX, &BOB);
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_B,
+                BSX_TKN2_AMM,
+                5_000 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
             //charlie
-            let _ = LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
-            assert!(Tokens::free_balance(BSX, &CHARLIE).gt(&last_charlie_balance));
-            last_charlie_balance = Tokens::free_balance(BSX, &CHARLIE);
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_B,
+                BSX_TKN2_AMM,
+                5_000 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
-            block_number += 10;
-        }
+            let mut block_number = 131;
 
-        set_block_number(401);
+            let alice_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
+            let bob_bsx_balance_0 = Tokens::free_balance(BSX, &BOB);
+            let charlie_bsx_balance_0 = Tokens::free_balance(BSX, &CHARLIE);
 
-        let (_, _, _, unclaimable) =
-            LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
-        assert_eq!(unclaimable, 0);
-        assert_ok!(LiquidityMining2::withdraw_lp_shares(
-            ALICE_DEPOSIT,
-            YIELD_FARM_A,
-            unclaimable
-        ));
+            let mut last_alice_balance = alice_bsx_balance_0;
+            let mut last_bob_balance = bob_bsx_balance_0;
+            let mut last_charlie_balance = charlie_bsx_balance_0;
+            //NOTE: we must be able to pay at least for 20 periods (131 + (20 * 10))
+            while block_number < 331 {
+                set_block_number(block_number);
 
-        let (_, _, _, unclaimable) = LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
-        assert_eq!(unclaimable, 0);
-        assert_ok!(LiquidityMining2::withdraw_lp_shares(
-            BOB_DEPOSIT,
-            YIELD_FARM_B,
-            unclaimable
-        ));
+                //alice
+                let _ = LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
+                assert!(Tokens::free_balance(BSX, &ALICE).gt(&last_alice_balance));
+                last_alice_balance = Tokens::free_balance(BSX, &ALICE);
 
-        let (_, _, _, unclaimable) =
-            LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
-        assert_eq!(unclaimable, 0);
-        assert_ok!(LiquidityMining2::withdraw_lp_shares(CHARLIE, YIELD_FARM_B, unclaimable));
+                //bob
+                let _ = LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
+                assert!(Tokens::free_balance(BSX, &BOB).gt(&last_bob_balance));
+                last_bob_balance = Tokens::free_balance(BSX, &BOB);
 
-        let alice_claimed = Tokens::free_balance(BSX, &ALICE) - alice_bsx_balance_0;
-        let bob_claimed = Tokens::free_balance(BSX, &BOB) - bob_bsx_balance_0;
-        let charlie_claimed = Tokens::free_balance(BSX, &CHARLIE) - charlie_bsx_balance_0;
+                //charlie
+                let _ = LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
+                assert!(Tokens::free_balance(BSX, &CHARLIE).gt(&last_charlie_balance));
+                last_charlie_balance = Tokens::free_balance(BSX, &CHARLIE);
 
-        let claimed_total = alice_claimed + bob_claimed + charlie_claimed;
+                block_number += 10;
+            }
 
-        assert_eq!((200_000 * ONE) - claimed_total, 20); //0.000_000_000_02
+            set_block_number(401);
 
-        let yield_farm_a_claimed = alice_claimed;
-        let yield_farm_b_claimed = bob_claimed + charlie_claimed;
+            let (_, _, _, unclaimable) =
+                LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
+            assert_eq!(unclaimable, 0);
+            assert_ok!(LiquidityMining2::withdraw_lp_shares(
+                ALICE_DEPOSIT,
+                YIELD_FARM_A,
+                unclaimable
+            ));
 
-        const TOLERANCE: u128 = 1;
-        assert!(
-            yield_farm_a_claimed.abs_diff(2 * yield_farm_b_claimed).le(&TOLERANCE),
-            "yield_farm_a_claimed == 2 * yield_farm_b_claimed"
-        );
+            let (_, _, _, unclaimable) =
+                LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
+            assert_eq!(unclaimable, 0);
+            assert_ok!(LiquidityMining2::withdraw_lp_shares(
+                BOB_DEPOSIT,
+                YIELD_FARM_B,
+                unclaimable
+            ));
 
-        assert!(
-            alice_claimed.abs_diff(4 * bob_claimed).le(&TOLERANCE),
-            "alice_claimed == 4 * bob_claimed"
-        );
+            let (_, _, _, unclaimable) =
+                LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
+            assert_eq!(unclaimable, 0);
+            assert_ok!(LiquidityMining2::withdraw_lp_shares(
+                CHARLIE_DEPOSIT,
+                YIELD_FARM_B,
+                unclaimable
+            ));
 
-        assert_eq!(bob_claimed, charlie_claimed, "bob_claimed == charlie_claimed");
+            let alice_claimed = Tokens::free_balance(BSX, &ALICE) - alice_bsx_balance_0;
+            let bob_claimed = Tokens::free_balance(BSX, &BOB) - bob_bsx_balance_0;
+            let charlie_claimed = Tokens::free_balance(BSX, &CHARLIE) - charlie_bsx_balance_0;
+
+            let claimed_total = alice_claimed + bob_claimed + charlie_claimed;
+
+            assert_eq!((200_000 * ONE) - claimed_total, 20); //0.000_000_000_02
+
+            let yield_farm_a_claimed = alice_claimed;
+            let yield_farm_b_claimed = bob_claimed + charlie_claimed;
+
+            const TOLERANCE: u128 = 1;
+            assert!(
+                yield_farm_a_claimed.abs_diff(2 * yield_farm_b_claimed).le(&TOLERANCE),
+                "yield_farm_a_claimed == 2 * yield_farm_b_claimed"
+            );
+
+            assert!(
+                alice_claimed.abs_diff(4 * bob_claimed).le(&TOLERANCE),
+                "alice_claimed == 4 * bob_claimed"
+            );
+
+            assert_eq!(bob_claimed, charlie_claimed, "bob_claimed == charlie_claimed");
+
+            TransactionOutcome::Commit(())
+        });
     });
 }
 
@@ -435,24 +451,24 @@ fn overcrowded_farm_running_longer_than_expected() {
 #[test]
 fn full_farm_running_planned_time() {
     new_test_ext().execute_with(|| {
-        const GLOBAL_FARM: GlobalFarmId = 1;
-        const YIELD_FARM_A: YieldFarmId = 2;
-        const YIELD_FARM_B: YieldFarmId = 3;
+        with_transaction(|| {
+            const GLOBAL_FARM: GlobalFarmId = 1;
+            const YIELD_FARM_A: YieldFarmId = 2;
+            const YIELD_FARM_B: YieldFarmId = 3;
 
-        const ALICE_DEPOSIT: DepositId = 1;
-        const BOB_DEPOSIT: DepositId = 2;
-        const CHARLIE_DEPOSIT: DepositId = 3;
+            const ALICE_DEPOSIT: DepositId = 1;
+            const BOB_DEPOSIT: DepositId = 2;
+            const CHARLIE_DEPOSIT: DepositId = 3;
 
-        const PLANNED_PERIODS: u64 = 525_600; //1 year with 10 blocks per period and 6s blocktime.
-        const BLOCKS_PER_PERIOD: u64 = 10;
-        const TOTAL_REWARDS_TO_DISTRIBUTE: u128 = 5_256_000 * ONE;
+            const PLANNED_PERIODS: u64 = 525_600; //1 year with 10 blocks per period and 6s blocktime.
+            const BLOCKS_PER_PERIOD: u64 = 10;
+            const TOTAL_REWARDS_TO_DISTRIBUTE: u128 = 5_256_000 * ONE;
 
-        //initialize farms
-        set_block_number(100);
-        //NOTE: This farm is distributing 10BSX per period(10block) for 1 year on chain with 6s
-        //blocktime if it's full. This farm is full when Z(locked bsx value) = 20_000.
-        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
-            LiquidityMining2::create_global_farm(
+            //initialize farms
+            set_block_number(100);
+            //NOTE: This farm is distributing 10BSX per period(10block) for 1 year on chain with 6s
+            //blocktime if it's full. This farm is full when Z(locked bsx value) = 20_000.
+            assert_ok!(LiquidityMining2::create_global_farm(
                 TOTAL_REWARDS_TO_DISTRIBUTE,
                 PLANNED_PERIODS, //1 year, 6s blocktime
                 BLOCKS_PER_PERIOD,
@@ -462,145 +478,152 @@ fn full_farm_running_planned_time() {
                 Perquintill::from_float(0.000_5),
                 1_000,
                 One::one(),
-            )
-        })));
+            ));
 
-        assert_ok!(LiquidityMining2::create_yield_farm(
-            GC,
-            GLOBAL_FARM,
-            FixedU128::from(2_u128),
-            None,
-            BSX_TKN1_AMM,
-            vec![BSX, TKN1]
-        ));
+            assert_ok!(LiquidityMining2::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                FixedU128::from(2_u128),
+                None,
+                BSX_TKN1_AMM,
+                vec![BSX, TKN1]
+            ));
 
-        assert_ok!(LiquidityMining2::create_yield_farm(
-            GC,
-            GLOBAL_FARM,
-            FixedU128::from(1_u128),
-            None,
-            BSX_TKN2_AMM,
-            vec![BSX, TKN2]
-        ));
+            assert_ok!(LiquidityMining2::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                FixedU128::from(1_u128),
+                None,
+                BSX_TKN2_AMM,
+                vec![BSX, TKN2]
+            ));
 
-        set_block_number(120);
-        //alice
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_A,
-            BSX_TKN1_AMM,
-            5_000 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
+            set_block_number(120);
+            //alice
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_A,
+                BSX_TKN1_AMM,
+                5_000 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
-        //bob
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_B,
-            BSX_TKN2_AMM,
-            5_000 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
+            //bob
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_B,
+                BSX_TKN2_AMM,
+                5_000 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
-        //charlie
-        assert_ok!(LiquidityMining2::deposit_lp_shares(
-            GLOBAL_FARM,
-            YIELD_FARM_B,
-            BSX_TKN2_AMM,
-            5_000 * ONE,
-            |_, _| { Ok(1_u128) }
-        ));
+            //charlie
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_B,
+                BSX_TKN2_AMM,
+                5_000 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
 
-        let alice_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
-        let bob_bsx_balance_0 = Tokens::free_balance(BSX, &BOB);
-        let charlie_bsx_balance_0 = Tokens::free_balance(BSX, &CHARLIE);
+            let alice_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
+            let bob_bsx_balance_0 = Tokens::free_balance(BSX, &BOB);
+            let charlie_bsx_balance_0 = Tokens::free_balance(BSX, &CHARLIE);
 
-        let mut last_alice_balance = alice_bsx_balance_0;
-        let mut last_bob_balance = bob_bsx_balance_0;
-        let mut last_charlie_balance = charlie_bsx_balance_0;
+            let mut last_alice_balance = alice_bsx_balance_0;
+            let mut last_bob_balance = bob_bsx_balance_0;
+            let mut last_charlie_balance = charlie_bsx_balance_0;
 
-        //NOTE: This farm should distribute rewards for at leas 525_600 periods
-        let mut current_block = 121;
-        let last_rewarded_period = current_block + PLANNED_PERIODS * BLOCKS_PER_PERIOD - BLOCKS_PER_PERIOD;
-        let mut rng = rand::thread_rng();
-        let mut i: u32 = 0;
-        while current_block <= last_rewarded_period {
-            current_block += BLOCKS_PER_PERIOD;
-            set_block_number(current_block);
+            //NOTE: This farm should distribute rewards for at leas 525_600 periods
+            let mut current_block = 121;
+            let last_rewarded_period = current_block + PLANNED_PERIODS * BLOCKS_PER_PERIOD - BLOCKS_PER_PERIOD;
+            let mut rng = rand::thread_rng();
+            let mut i: u32 = 0;
+            while current_block <= last_rewarded_period {
+                current_block += BLOCKS_PER_PERIOD;
+                set_block_number(current_block);
 
-            match rng.gen_range(1..=3) {
-                1 => {
-                    //alice
-                    let _ = LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
-                    assert!(Tokens::free_balance(BSX, &ALICE).gt(&last_alice_balance));
-                    last_alice_balance = Tokens::free_balance(BSX, &ALICE);
+                match rng.gen_range(1..=3) {
+                    1 => {
+                        //alice
+                        let _ = LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
+                        assert!(Tokens::free_balance(BSX, &ALICE).gt(&last_alice_balance));
+                        last_alice_balance = Tokens::free_balance(BSX, &ALICE);
+                    }
+                    2 => {
+                        //Bob
+                        let _ = LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
+                        assert!(Tokens::free_balance(BSX, &BOB).gt(&last_bob_balance));
+                        last_bob_balance = Tokens::free_balance(BSX, &BOB);
+                    }
+                    x => {
+                        //charlie
+                        let _ = LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
+                        assert!(Tokens::free_balance(BSX, &CHARLIE).gt(&last_charlie_balance));
+                        last_charlie_balance = Tokens::free_balance(BSX, &CHARLIE);
+                        assert!(x == 3);
+                    }
                 }
-                2 => {
-                    //Bob
-                    let _ = LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
-                    assert!(Tokens::free_balance(BSX, &BOB).gt(&last_bob_balance));
-                    last_bob_balance = Tokens::free_balance(BSX, &BOB);
-                }
-                x => {
-                    //charlie
-                    let _ = LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
-                    assert!(Tokens::free_balance(BSX, &CHARLIE).gt(&last_charlie_balance));
-                    last_charlie_balance = Tokens::free_balance(BSX, &CHARLIE);
-                    assert!(x == 3);
+
+                i += 1;
+                if i % 50_000 == 0 {
+                    println!("periods: {}", i);
                 }
             }
 
-            i += 1;
-            if i % 50_000 == 0 {
-                println!("periods: {}", i);
-            }
-        }
+            set_block_number(last_rewarded_period + 100);
+            let (_, _, _, unclaimable) =
+                LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
+            assert_eq!(unclaimable, 0);
+            assert_ok!(LiquidityMining2::withdraw_lp_shares(
+                ALICE_DEPOSIT,
+                YIELD_FARM_A,
+                unclaimable
+            ));
 
-        set_block_number(last_rewarded_period + 100);
-        let (_, _, _, unclaimable) =
-            LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
-        assert_eq!(unclaimable, 0);
-        assert_ok!(LiquidityMining2::withdraw_lp_shares(
-            ALICE_DEPOSIT,
-            YIELD_FARM_A,
-            unclaimable
-        ));
+            let (_, _, _, unclaimable) =
+                LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
+            assert_eq!(unclaimable, 0);
+            assert_ok!(LiquidityMining2::withdraw_lp_shares(
+                BOB_DEPOSIT,
+                YIELD_FARM_B,
+                unclaimable
+            ));
 
-        let (_, _, _, unclaimable) = LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
-        assert_eq!(unclaimable, 0);
-        assert_ok!(LiquidityMining2::withdraw_lp_shares(
-            BOB_DEPOSIT,
-            YIELD_FARM_B,
-            unclaimable
-        ));
+            let (_, _, _, unclaimable) =
+                LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
+            assert_eq!(unclaimable, 0);
+            assert_ok!(LiquidityMining2::withdraw_lp_shares(
+                CHARLIE_DEPOSIT,
+                YIELD_FARM_B,
+                unclaimable
+            ));
 
-        let (_, _, _, unclaimable) =
-            LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
-        assert_eq!(unclaimable, 0);
-        assert_ok!(LiquidityMining2::withdraw_lp_shares(CHARLIE, YIELD_FARM_B, unclaimable));
+            let alice_claimed = Tokens::free_balance(BSX, &ALICE) - alice_bsx_balance_0;
+            let bob_claimed = Tokens::free_balance(BSX, &BOB) - bob_bsx_balance_0;
+            let charlie_claimed = Tokens::free_balance(BSX, &CHARLIE) - charlie_bsx_balance_0;
 
-        let alice_claimed = Tokens::free_balance(BSX, &ALICE) - alice_bsx_balance_0;
-        let bob_claimed = Tokens::free_balance(BSX, &BOB) - bob_bsx_balance_0;
-        let charlie_claimed = Tokens::free_balance(BSX, &CHARLIE) - charlie_bsx_balance_0;
+            let claimed_total = alice_claimed + bob_claimed + charlie_claimed;
 
-        let claimed_total = alice_claimed + bob_claimed + charlie_claimed;
+            assert_eq!(TOTAL_REWARDS_TO_DISTRIBUTE - claimed_total, 0);
 
-        assert_eq!(TOTAL_REWARDS_TO_DISTRIBUTE - claimed_total, 0);
+            let yield_farm_a_claimed = alice_claimed;
+            let yield_farm_b_claimed = bob_claimed + charlie_claimed;
 
-        let yield_farm_a_claimed = alice_claimed;
-        let yield_farm_b_claimed = bob_claimed + charlie_claimed;
+            const TOLERANCE: u128 = 1;
+            assert!(
+                yield_farm_a_claimed.abs_diff(yield_farm_b_claimed).le(&TOLERANCE),
+                "yield_farm_a_claimed == yield_farm_b_claimed"
+            );
 
-        const TOLERANCE: u128 = 1;
-        assert!(
-            yield_farm_a_claimed.abs_diff(yield_farm_b_claimed).le(&TOLERANCE),
-            "yield_farm_a_claimed == yield_farm_b_claimed"
-        );
+            assert!(
+                alice_claimed.abs_diff(2 * bob_claimed).le(&TOLERANCE),
+                "alice_claimed == 2 * bob_claimed"
+            );
 
-        assert!(
-            alice_claimed.abs_diff(2 * bob_claimed).le(&TOLERANCE),
-            "alice_claimed == 2 * bob_claimed"
-        );
+            assert_eq!(bob_claimed, charlie_claimed, "bob_claimed == charlie_claimed");
 
-        assert_eq!(bob_claimed, charlie_claimed, "bob_claimed == charlie_claimed");
+            TransactionOutcome::Commit(())
+        });
     });
 }

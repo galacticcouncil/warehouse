@@ -25,7 +25,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
     let mut ext = new_test_ext();
     ext.execute_with(|| {
         let expected_farm = get_predefined_global_farm_ins1(0);
-        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
             LiquidityMining::create_global_farm(
                 100_000_000_000,
                 expected_farm.planned_yielding_periods,
@@ -37,10 +37,10 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
                 expected_farm.min_deposit,
                 expected_farm.price_adjustment,
             )
-        })));
+        )));
 
         let expected_farm = get_predefined_global_farm_ins1(1);
-        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
             LiquidityMining::create_global_farm(
                 1_000_000_000,
                 expected_farm.planned_yielding_periods,
@@ -52,10 +52,10 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
                 expected_farm.min_deposit,
                 expected_farm.price_adjustment,
             )
-        })));
+        )));
 
         let expected_farm = get_predefined_global_farm_ins1(2);
-        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
             LiquidityMining::create_global_farm(
                 30_000_000_000,
                 expected_farm.planned_yielding_periods,
@@ -67,10 +67,10 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
                 expected_farm.min_deposit,
                 expected_farm.price_adjustment,
             )
-        })));
+        )));
 
         let expected_farm = get_predefined_global_farm_ins1(3);
-        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
             LiquidityMining::create_global_farm(
                 30_000_000_000,
                 expected_farm.planned_yielding_periods,
@@ -82,10 +82,10 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
                 expected_farm.min_deposit,
                 expected_farm.price_adjustment,
             )
-        })));
+        )));
 
         let expected_farm = get_predefined_global_farm_ins1(4);
-        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
             LiquidityMining::create_global_farm(
                 30_000_000_000,
                 expected_farm.planned_yielding_periods,
@@ -97,10 +97,10 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
                 expected_farm.min_deposit,
                 expected_farm.price_adjustment,
             )
-        })));
+        )));
 
         let expected_farm = get_predefined_global_farm_ins1(5);
-        assert_ok!(with_transaction(|| TransactionOutcome::Commit({
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
             LiquidityMining::create_global_farm(
                 30_000_000_000,
                 expected_farm.planned_yielding_periods,
@@ -112,7 +112,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
                 expected_farm.min_deposit,
                 expected_farm.price_adjustment,
             )
-        })));
+        )));
 
         let amm_mock_data = vec![
             (
@@ -217,14 +217,16 @@ fn init_yield_farm_ins1(
     asset_b: AssetId,
     yield_farm: YieldFarmData<Test, Instance1>,
 ) {
-    assert_ok!(LiquidityMining::create_yield_farm(
-        owner,
-        farm_id,
-        yield_farm.multiplier,
-        yield_farm.loyalty_curve.clone(),
-        amm_id,
-        vec![asset_a, asset_b]
-    ));
+    assert_ok!(with_transaction(|| TransactionOutcome::Commit(
+        LiquidityMining::create_yield_farm(
+            owner,
+            farm_id,
+            yield_farm.multiplier,
+            yield_farm.loyalty_curve.clone(),
+            amm_id,
+            vec![asset_a, asset_b],
+        )
+    )));
 
     pretty_assertions::assert_eq!(
         LiquidityMining::yield_farm((amm_id, farm_id, yield_farm.id)).unwrap(),
@@ -247,26 +249,28 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         set_block_number(1_800); //18-th period
 
         let deposited_amount = 50;
-        assert_ok!(LiquidityMining::deposit_lp_shares(
-            farm_id,
-            GC_BSX_TKN1_YIELD_FARM_ID,
-            BSX_TKN1_AMM,
-            deposited_amount,
-            |_, _| { Ok(50_u128) },
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
+            LiquidityMining::deposit_lp_shares(
+                farm_id,
+                GC_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                deposited_amount,
+                |_, _| { Ok(50_u128) },
+            )
+        )));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).is_some());
 
         // DEPOSIT 2 (deposit in same period):
         let deposited_amount = 80;
         pretty_assertions::assert_eq!(
-            LiquidityMining::deposit_lp_shares(
+            with_transaction(|| TransactionOutcome::Commit(LiquidityMining::deposit_lp_shares(
                 farm_id,
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 BSX_TKN1_AMM,
                 deposited_amount,
                 |_, _| { Ok(52_u128) },
-            )
+            )))
             .unwrap(),
             PREDEFINED_DEPOSIT_IDS[1]
         );
@@ -275,13 +279,15 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
 
         // DEPOSIT 3 (same period, second yield farm):
         let deposited_amount = 25;
-        assert_ok!(LiquidityMining::deposit_lp_shares(
-            farm_id,
-            GC_BSX_TKN2_YIELD_FARM_ID,
-            BSX_TKN2_AMM,
-            deposited_amount,
-            |_, _| { Ok(8_u128) },
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
+            LiquidityMining::deposit_lp_shares(
+                farm_id,
+                GC_BSX_TKN2_YIELD_FARM_ID,
+                BSX_TKN2_AMM,
+                deposited_amount,
+                |_, _| { Ok(8_u128) },
+            )
+        )));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]).is_some());
 
@@ -289,13 +295,15 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         set_block_number(2051); //period 20
 
         let deposited_amount = 800;
-        assert_ok!(LiquidityMining::deposit_lp_shares(
-            farm_id,
-            GC_BSX_TKN2_YIELD_FARM_ID,
-            BSX_TKN2_AMM,
-            deposited_amount,
-            |_, _| { Ok(58_u128) },
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
+            LiquidityMining::deposit_lp_shares(
+                farm_id,
+                GC_BSX_TKN2_YIELD_FARM_ID,
+                BSX_TKN2_AMM,
+                deposited_amount,
+                |_, _| { Ok(58_u128) },
+            )
+        )));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[3]).is_some());
 
@@ -303,13 +311,15 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         set_block_number(2_586); //period 25
 
         let deposited_amount = 87;
-        assert_ok!(LiquidityMining::deposit_lp_shares(
-            farm_id,
-            GC_BSX_TKN2_YIELD_FARM_ID,
-            BSX_TKN2_AMM,
-            deposited_amount,
-            |_, _| { Ok(3_u128) },
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
+            LiquidityMining::deposit_lp_shares(
+                farm_id,
+                GC_BSX_TKN2_YIELD_FARM_ID,
+                BSX_TKN2_AMM,
+                deposited_amount,
+                |_, _| { Ok(3_u128) },
+            )
+        )));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[4]).is_some());
 
@@ -317,13 +327,15 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         set_block_number(2_596); //period 25
 
         let deposited_amount = 48;
-        assert_ok!(LiquidityMining::deposit_lp_shares(
-            farm_id,
-            GC_BSX_TKN2_YIELD_FARM_ID,
-            BSX_TKN2_AMM,
-            deposited_amount,
-            |_, _| { Ok(16_u128) },
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
+            LiquidityMining::deposit_lp_shares(
+                farm_id,
+                GC_BSX_TKN2_YIELD_FARM_ID,
+                BSX_TKN2_AMM,
+                deposited_amount,
+                |_, _| { Ok(16_u128) },
+            )
+        )));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[5]).is_some());
 
@@ -331,13 +343,15 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
         set_block_number(2_596); //period 25
 
         let deposited_amount = 486;
-        assert_ok!(LiquidityMining::deposit_lp_shares(
-            farm_id,
-            GC_BSX_TKN1_YIELD_FARM_ID,
-            BSX_TKN1_AMM,
-            deposited_amount,
-            |_, _| { Ok(80_u128) },
-        ));
+        assert_ok!(with_transaction(|| TransactionOutcome::Commit(
+            LiquidityMining::deposit_lp_shares(
+                farm_id,
+                GC_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                deposited_amount,
+                |_, _| { Ok(80_u128) },
+            )
+        )));
 
         assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[6]).is_some());
 
@@ -354,7 +368,8 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 incentivized_asset: BSX,
                 max_reward_per_period: 60_000_000,
                 accumulated_rpz: FixedU128::from_float(3.5_f64),
-                yield_farms_count: (2, 2),
+                live_yield_farms_count: 2,
+                total_yield_farms_count: 2,
                 total_shares_z: 703_990,
                 accumulated_rewards: 0,
                 paid_accumulated_rewards: 1_283_550,

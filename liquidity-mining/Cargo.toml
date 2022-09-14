@@ -24,11 +24,10 @@ hydradx-traits = { path = "../traits", version="0.7.0", default-features = false
 hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev="9b4c1d3b8369d779ba935762c0dace506fd597fc", default-features = false }
 
 # Substrate dependencies
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
-
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
@@ -52,4 +51,7 @@ std = [
     "orml-traits/std",
     "hydradx-traits/std",
     "sp-arithmetic/std",
+    "sp-runtime/std",
+    "scale-info/std",
+    "hydra-dx-math/std",
 ]

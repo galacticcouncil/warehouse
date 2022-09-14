@@ -707,7 +707,14 @@ fn update_global_farm_should_work() {
                 *rewards_left_to_distribute
             );
 
-            LiquidityMining::update_global_farm(&mut global_farm, *current_period, *reward_per_period).unwrap();
+            with_transaction(|| {
+                TransactionOutcome::Commit(LiquidityMining::update_global_farm(
+                    &mut global_farm,
+                    *current_period,
+                    *reward_per_period,
+                ))
+            })
+            .unwrap();
 
             //            println!("{}", global_farm.accumulated_rpz);
 
@@ -1644,7 +1651,8 @@ fn maybe_update_farms_should_work() {
     let expected_global_farm = GlobalFarmData {
         updated_at: 20,
         accumulated_rpz: FixedU128::from(20),
-        yield_farms_count: (1, 1),
+        live_yield_farms_count: 1,
+        total_yield_farms_count: 1,
         paid_accumulated_rewards: 1_000_000,
         total_shares_z: 1_000_000,
         accumulated_rewards: 20_000,
@@ -1661,100 +1669,104 @@ fn maybe_update_farms_should_work() {
     };
 
     ext.execute_with(|| {
-        let farm_account_id = LiquidityMining::farm_account_id(get_predefined_global_farm_ins1(0).id).unwrap();
-        let _ = Tokens::transfer(
-            Origin::signed(TREASURY),
-            farm_account_id,
-            reward_currency,
-            LEFT_TO_DISTRIBUTE,
-        )
-        .unwrap();
+        with_transaction(|| {
+            let farm_account_id = LiquidityMining::farm_account_id(get_predefined_global_farm_ins1(0).id).unwrap();
+            let _ = Tokens::transfer(
+                Origin::signed(TREASURY),
+                farm_account_id,
+                reward_currency,
+                LEFT_TO_DISTRIBUTE,
+            )
+            .unwrap();
 
-        pretty_assertions::assert_eq!(
-            Tokens::free_balance(reward_currency, &farm_account_id),
-            LEFT_TO_DISTRIBUTE
-        );
+            pretty_assertions::assert_eq!(
+                Tokens::free_balance(reward_currency, &farm_account_id),
+                LEFT_TO_DISTRIBUTE
+            );
 
-        let mut global_farm = GlobalFarmData {
-            ..expected_global_farm.clone()
-        };
+            let mut global_farm = GlobalFarmData {
+                ..expected_global_farm.clone()
+            };
 
-        let mut yield_farm = YieldFarmData {
-            state: FarmState::Stopped,
-            ..expected_yield_farm.clone()
-        };
-
-        let current_period = 30;
-
-        //I. - yield farming is stopped. Nothing should be updated if yield farm is stopped.
-        assert_ok!(LiquidityMining::maybe_update_farms(
-            &mut global_farm,
-            &mut yield_farm,
-            current_period
-        ));
-
-        pretty_assertions::assert_eq!(global_farm, expected_global_farm);
-        pretty_assertions::assert_eq!(
-            yield_farm,
-            YieldFarmData {
+            let mut yield_farm = YieldFarmData {
                 state: FarmState::Stopped,
                 ..expected_yield_farm.clone()
-            }
-        );
+            };
 
-        //II. - yield farm has 0 shares and was updated in this period.
-        let current_period = 20;
-        let mut yield_farm = YieldFarmData {
-            ..expected_yield_farm.clone()
-        };
-        assert_ok!(LiquidityMining::maybe_update_farms(
-            &mut global_farm,
-            &mut yield_farm,
-            current_period
-        ));
+            let current_period = 30;
 
-        pretty_assertions::assert_eq!(global_farm, expected_global_farm);
-        pretty_assertions::assert_eq!(yield_farm, expected_yield_farm);
+            //I. - yield farming is stopped. Nothing should be updated if yield farm is stopped.
+            assert_ok!(LiquidityMining::maybe_update_farms(
+                &mut global_farm,
+                &mut yield_farm,
+                current_period
+            ));
 
-        //III. - global farm has 0 shares and was updated in this period - only yield farm should
-        //be updated.
-        let current_period = 30;
-        let mut global_farm = GlobalFarmData {
-            total_shares_z: 0,
-            updated_at: 30,
-            ..expected_global_farm.clone()
-        };
+            pretty_assertions::assert_eq!(global_farm, expected_global_farm);
+            pretty_assertions::assert_eq!(
+                yield_farm,
+                YieldFarmData {
+                    state: FarmState::Stopped,
+                    ..expected_yield_farm.clone()
+                }
+            );
 
-        assert_ok!(LiquidityMining::maybe_update_farms(
-            &mut global_farm,
-            &mut yield_farm,
-            current_period
-        ));
+            //II. - yield farm has 0 shares and was updated in this period.
+            let current_period = 20;
+            let mut yield_farm = YieldFarmData {
+                ..expected_yield_farm.clone()
+            };
+            assert_ok!(LiquidityMining::maybe_update_farms(
+                &mut global_farm,
+                &mut yield_farm,
+                current_period
+            ));
 
-        pretty_assertions::assert_eq!(
-            global_farm,
-            GlobalFarmData {
+            pretty_assertions::assert_eq!(global_farm, expected_global_farm);
+            pretty_assertions::assert_eq!(yield_farm, expected_yield_farm);
+
+            //III. - global farm has 0 shares and was updated in this period - only yield farm should
+            //be updated.
+            let current_period = 30;
+            let mut global_farm = GlobalFarmData {
                 total_shares_z: 0,
                 updated_at: 30,
                 ..expected_global_farm.clone()
-            }
-        );
-        assert_ne!(yield_farm, expected_yield_farm);
-        pretty_assertions::assert_eq!(yield_farm.updated_at, current_period);
+            };
 
-        //IV. - booth farms met conditions for update
-        let current_period = 30;
-        assert_ok!(LiquidityMining::maybe_update_farms(
-            &mut global_farm,
-            &mut yield_farm,
-            current_period
-        ));
+            assert_ok!(LiquidityMining::maybe_update_farms(
+                &mut global_farm,
+                &mut yield_farm,
+                current_period
+            ));
 
-        assert_ne!(global_farm, expected_global_farm);
-        assert_ne!(yield_farm, expected_yield_farm);
+            pretty_assertions::assert_eq!(
+                global_farm,
+                GlobalFarmData {
+                    total_shares_z: 0,
+                    updated_at: 30,
+                    ..expected_global_farm.clone()
+                }
+            );
+            assert_ne!(yield_farm, expected_yield_farm);
+            pretty_assertions::assert_eq!(yield_farm.updated_at, current_period);
 
-        pretty_assertions::assert_eq!(global_farm.updated_at, current_period);
-        pretty_assertions::assert_eq!(yield_farm.updated_at, current_period);
+            //IV. - booth farms met conditions for update
+            let current_period = 30;
+            assert_ok!(LiquidityMining::maybe_update_farms(
+                &mut global_farm,
+                &mut yield_farm,
+                current_period
+            ));
+
+            assert_ne!(global_farm, expected_global_farm);
+            assert_ne!(yield_farm, expected_yield_farm);
+
+            pretty_assertions::assert_eq!(global_farm.updated_at, current_period);
+            pretty_assertions::assert_eq!(yield_farm.updated_at, current_period);
+
+            TransactionOutcome::Commit(())
+        });
     });
 }
 
@@ -1928,7 +1940,7 @@ fn deposit_can_be_flushed_should_work() {
         .unwrap(),
     };
 
-    assert!(!deposit.can_be_flushed());
+    assert!(!deposit.can_be_removed());
 
     let deposit = DepositData::<Test, Instance1> {
         shares: 10,
@@ -1944,7 +1956,7 @@ fn deposit_can_be_flushed_should_work() {
         .unwrap(),
     };
 
-    assert!(!deposit.can_be_flushed());
+    assert!(!deposit.can_be_removed());
 
     //deposit with no entries can be flushed
     let deposit = DepositData::<Test, Instance1> {
@@ -1953,7 +1965,7 @@ fn deposit_can_be_flushed_should_work() {
         yield_farm_entries: vec![].try_into().unwrap(),
     };
 
-    assert!(deposit.can_be_flushed());
+    assert!(deposit.can_be_removed());
 }
 
 #[test]
@@ -1962,17 +1974,17 @@ fn yield_farm_data_should_work() {
         YieldFarmData::<Test, Instance1>::new(1, 10, Some(LoyaltyCurve::default()), FixedU128::from(10_000));
 
     //new farm should be created active
-    assert!(yield_farm.is_active());
+    assert!(yield_farm.state.is_active());
     assert!(!yield_farm.is_stopped());
     assert!(!yield_farm.is_deleted());
 
     yield_farm.state = FarmState::Stopped;
-    assert!(!yield_farm.is_active());
+    assert!(!yield_farm.state.is_active());
     assert!(yield_farm.is_stopped());
     assert!(!yield_farm.is_deleted());
 
     yield_farm.state = FarmState::Deleted;
-    assert!(!yield_farm.is_active());
+    assert!(!yield_farm.state.is_active());
     assert!(!yield_farm.is_stopped());
     assert!(yield_farm.is_deleted());
 
@@ -2000,20 +2012,20 @@ fn yield_farm_data_should_work() {
     yield_farm.state = FarmState::Active;
     yield_farm.entries_count = 0;
     //active farm can't be flushed
-    assert!(!yield_farm.can_be_flushed());
+    assert!(!yield_farm.can_be_removed());
 
     //stopped farm can't be flushed
     yield_farm.state = FarmState::Stopped;
-    assert!(!yield_farm.can_be_flushed());
+    assert!(!yield_farm.can_be_removed());
 
     //deleted farm with entries can't be flushed
     yield_farm.state = FarmState::Deleted;
     yield_farm.entries_count = 1;
-    assert!(!yield_farm.can_be_flushed());
+    assert!(!yield_farm.can_be_removed());
 
     //deleted farm with no entries can be flushed
     yield_farm.entries_count = 0;
-    assert!(yield_farm.can_be_flushed());
+    assert!(yield_farm.can_be_removed());
 }
 
 #[test]
@@ -2033,112 +2045,142 @@ fn global_farm_should_work() {
     );
 
     //new farm should be created active
-    assert!(global_farm.is_active());
+    assert!(global_farm.state.is_active());
     global_farm.state = FarmState::Deleted;
-    assert!(!global_farm.is_active());
+    assert!(!global_farm.state.is_active());
 
     global_farm.state = FarmState::Active;
 
     assert_ok!(global_farm.increase_yield_farm_counts());
     assert_ok!(global_farm.increase_yield_farm_counts());
-    pretty_assertions::assert_eq!(global_farm.yield_farms_count, (2, 2));
+    pretty_assertions::assert_eq!(global_farm.live_yield_farms_count, 2);
+    pretty_assertions::assert_eq!(global_farm.total_yield_farms_count, 2);
     assert_ok!(global_farm.increase_yield_farm_counts());
     assert_ok!(global_farm.increase_yield_farm_counts());
-    pretty_assertions::assert_eq!(global_farm.yield_farms_count, (4, 4));
+    pretty_assertions::assert_eq!(global_farm.live_yield_farms_count, 4);
+    pretty_assertions::assert_eq!(global_farm.total_yield_farms_count, 4);
     assert_ok!(global_farm.decrease_live_yield_farm_count());
     assert_ok!(global_farm.decrease_live_yield_farm_count());
     //removing farm changes only live farms, total count is not changed
-    pretty_assertions::assert_eq!(global_farm.yield_farms_count, (2, 4));
+    pretty_assertions::assert_eq!(global_farm.live_yield_farms_count, 2);
+    pretty_assertions::assert_eq!(global_farm.total_yield_farms_count, 4);
     assert_ok!(global_farm.increase_yield_farm_counts());
-    pretty_assertions::assert_eq!(global_farm.yield_farms_count, (3, 5));
+    pretty_assertions::assert_eq!(global_farm.live_yield_farms_count, 3);
+    pretty_assertions::assert_eq!(global_farm.total_yield_farms_count, 5);
     assert_ok!(global_farm.decrease_total_yield_farm_count());
     assert_ok!(global_farm.decrease_total_yield_farm_count());
     //removing farm changes only total count(farm has to removed and deleted before it can be
     //flushed)
-    pretty_assertions::assert_eq!(global_farm.yield_farms_count, (3, 3));
+    pretty_assertions::assert_eq!(global_farm.live_yield_farms_count, 3);
+    pretty_assertions::assert_eq!(global_farm.total_yield_farms_count, 3);
 
     assert!(global_farm.has_live_farms());
-    global_farm.yield_farms_count = (0, 3);
+    global_farm.live_yield_farms_count = 0;
+    global_farm.total_yield_farms_count = 3;
     assert!(!global_farm.has_live_farms());
 
     //active farm can't be flushed
-    assert!(!global_farm.can_be_flushed());
+    assert!(!global_farm.can_be_removed());
     global_farm.state = FarmState::Deleted;
     //deleted farm with yield farm can't be flushed
-    assert!(!global_farm.can_be_flushed());
+    assert!(!global_farm.can_be_removed());
     //deleted farm with no yield farms can be flushed
-    global_farm.yield_farms_count = (0, 0);
-    assert!(global_farm.can_be_flushed());
+    global_farm.live_yield_farms_count = 0;
+    global_farm.total_yield_farms_count = 0;
+    assert!(global_farm.can_be_removed());
 }
 
 #[test]
 fn is_yield_farm_clamable_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        //active farm
-        assert!(LiquidityMining::is_yield_farm_claimable(
-            GC_FARM,
-            GC_BSX_TKN1_YIELD_FARM_ID,
-            BSX_TKN1_AMM
-        ));
+        with_transaction(|| {
+            //active farm
+            assert!(LiquidityMining::is_yield_farm_claimable(
+                GC_FARM,
+                GC_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM
+            ));
 
-        //invalid amm_pool_id
-        assert!(!LiquidityMining::is_yield_farm_claimable(
-            GC_FARM,
-            GC_BSX_TKN1_YIELD_FARM_ID,
-            BSX_TKN2_AMM
-        ));
+            //invalid amm_pool_id
+            assert!(!LiquidityMining::is_yield_farm_claimable(
+                GC_FARM,
+                GC_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN2_AMM
+            ));
 
-        //farm withouth deposits
-        assert!(!LiquidityMining::is_yield_farm_claimable(
-            EVE_FARM,
-            EVE_BSX_TKN1_YIELD_FARM_ID,
-            BSX_TKN1_AMM
-        ));
+            //farm withouth deposits
+            assert!(!LiquidityMining::is_yield_farm_claimable(
+                EVE_FARM,
+                EVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM
+            ));
 
-        //deleted yield farm
-        assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
-        assert_ok!(LiquidityMining::destroy_yield_farm(
-            GC,
-            GC_FARM,
-            GC_BSX_TKN1_YIELD_FARM_ID,
-            BSX_TKN1_AMM
-        ));
+            //deleted yield farm
+            assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+            assert_ok!(LiquidityMining::destroy_yield_farm(
+                GC,
+                GC_FARM,
+                GC_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM
+            ));
 
-        assert!(!LiquidityMining::is_yield_farm_claimable(
-            GC_FARM,
-            GC_BSX_TKN1_YIELD_FARM_ID,
-            BSX_TKN1_AMM
-        ));
+            assert!(!LiquidityMining::is_yield_farm_claimable(
+                GC_FARM,
+                GC_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM
+            ));
+
+            TransactionOutcome::Commit(())
+        });
     });
 }
 
 #[test]
 fn get_global_farm_id_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        //happy path
-        pretty_assertions::assert_eq!(
-            LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], GC_BSX_TKN1_YIELD_FARM_ID),
-            Some(GC_FARM)
-        );
+        with_transaction(|| {
+            //happy path
+            pretty_assertions::assert_eq!(
+                LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], GC_BSX_TKN1_YIELD_FARM_ID),
+                Some(GC_FARM)
+            );
 
-        //happy path deposit with multiple farm entries
-        //create second farm entry
-        assert_ok!(LiquidityMining::redeposit_lp_shares(
-            EVE_FARM,
-            EVE_BSX_TKN1_YIELD_FARM_ID,
-            PREDEFINED_DEPOSIT_IDS[0],
-            |_, _| { Ok(10_u128) }
-        ));
+            //happy path deposit with multiple farm entries
+            //create second farm entry
+            assert_ok!(LiquidityMining::redeposit_lp_shares(
+                EVE_FARM,
+                EVE_BSX_TKN1_YIELD_FARM_ID,
+                PREDEFINED_DEPOSIT_IDS[0],
+                |_, _| { Ok(10_u128) }
+            ));
 
-        pretty_assertions::assert_eq!(
-            LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], EVE_BSX_TKN1_YIELD_FARM_ID),
-            Some(EVE_FARM)
-        );
+            pretty_assertions::assert_eq!(
+                LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], EVE_BSX_TKN1_YIELD_FARM_ID),
+                Some(EVE_FARM)
+            );
 
-        //deposit doesn't exists
-        assert!(LiquidityMining::get_global_farm_id(999_9999, GC_BSX_TKN1_YIELD_FARM_ID).is_none());
+            //deposit doesn't exists
+            assert!(LiquidityMining::get_global_farm_id(999_9999, GC_BSX_TKN1_YIELD_FARM_ID).is_none());
 
-        //farm's entry doesn't exists in the deposit
-        assert!(LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], DAVE_BSX_TKN1_YIELD_FARM_ID).is_none());
+            //farm's entry doesn't exists in the deposit
+            assert!(
+                LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], DAVE_BSX_TKN1_YIELD_FARM_ID).is_none()
+            );
+
+            TransactionOutcome::Commit(())
+        });
     });
+}
+
+#[test]
+fn farm_state_is_active_should_work() {
+    let active = FarmState::Active;
+    let deleted = FarmState::Deleted;
+    let stopped = FarmState::Stopped;
+
+    pretty_assertions::assert_eq!(active.is_active(), true);
+
+    pretty_assertions::assert_eq!(deleted.is_active(), false);
+
+    pretty_assertions::assert_eq!(stopped.is_active(), false);
 }

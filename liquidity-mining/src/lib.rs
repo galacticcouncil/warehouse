@@ -1249,8 +1249,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             .map_err(|_| ArithmeticError::Overflow)
     }
 
-    /// This function calculate and update `accumulated_rpz` and all associated properties of `GlobalFar` if
-    /// conditions are met.
+    /// This function calculates and updates `accumulated_rpz` and all associated properties of
+    /// `global_farm` if conditions are met.
+    /// Returns the reward transfered to the pot.
     #[require_transactional]
     fn update_global_farm(
         global_farm: &mut GlobalFarmData<T, I>,
@@ -1447,7 +1448,20 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         }
 
         if !yield_farm.total_shares.is_zero() && yield_farm.updated_at != current_period {
-            Self::maybe_update_global_farm_rpz(global_farm, current_period)?;
+            if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
+                let total_shares_z_adjusted =
+                    math::calculate_adjusted_shares(global_farm.total_shares_z, global_farm.price_adjustment)
+                        .map_err(|_| ArithmeticError::Overflow)?;
+
+                let rewards = math::calculate_global_farm_reward_per_period(
+                    global_farm.yield_per_period.into(),
+                    total_shares_z_adjusted,
+                    global_farm.max_reward_per_period,
+                )
+                .map_err(|_| ArithmeticError::Overflow)?;
+
+                Self::update_global_farm(global_farm, current_period, rewards)?;
+            }
 
             let stake_in_global_pool =
                 math::calculate_global_farm_shares(yield_farm.total_valued_shares, yield_farm.multiplier)
@@ -1478,7 +1492,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         false
     }
 
-    // This function resturs `GlobalFarmId` from deposit's farm entry or `None` if deposit or farm
+    // This function returns `GlobalFarmId` from deposit's farm entry or `None` if deposit or farm
     // entry doesn't exists.
     fn get_global_farm_id(id: DepositId, yield_farm_id: YieldFarmId) -> Option<GlobalFarmId> {
         if let Some(mut deposit) = Self::deposit(id) {

@@ -12,7 +12,8 @@ repository = "https://github.com/galacticcouncil/warehouse"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { default-features = false, features = ["derive"], package = "parity-scale-codec", version = "3.0.0" }
+#TODO: unpin the specific version when new version is released https://github.com/paritytech/parity-scale-codec/issues/377
+codec = { default-features = false, features = ["derive"], package = "parity-scale-codec", version = "=3.1.5" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }

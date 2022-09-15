@@ -17,12 +17,11 @@
 
 use super::*;
 
-pub type Balance = u128;
+pub use hydradx_traits::liquidity_mining::{DepositId, GlobalFarmId, YieldFarmId};
+
 pub type FarmId = u32;
-pub type GlobalFarmId = FarmId;
-pub type YieldFarmId = FarmId;
+pub type Balance = u128;
 pub type FarmMultiplier = FixedU128;
-pub type DepositId = u128;
 
 /// This struct represents the state a of single liquidity mining program. `YieldFarm`s are rewarded from
 /// `GlobalFarm` based on their stake in `GlobalFarm`. `YieldFarm` stake in `GlobalFarm` is derived from

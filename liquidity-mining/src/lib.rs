@@ -1548,7 +1548,7 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         yield_per_period: Perquintill,
         min_deposit: Self::Balance,
         price_adjustment: FixedU128,
-    ) -> Result<(u32, Self::Balance), Self::Error> {
+    ) -> Result<(GlobalFarmId, Self::Balance), Self::Error> {
         Self::create_global_farm(
             total_rewards,
             planned_yielding_periods,
@@ -1564,7 +1564,7 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
 
     fn update_global_farm_price_adjustment(
         who: T::AccountId,
-        global_farm_id: u32,
+        global_farm_id: GlobalFarmId,
         price_adjustment: FixedU128,
     ) -> Result<(), Self::Error> {
         Self::update_global_farm_price_adjustment(who, global_farm_id, price_adjustment)
@@ -1579,27 +1579,27 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
 
     fn create_yield_farm(
         who: T::AccountId,
-        global_farm_id: u32,
+        global_farm_id: GlobalFarmId,
         multiplier: FixedU128,
         loyalty_curve: Option<Self::LoyaltyCurve>,
         amm_pool_id: Self::AmmPoolId,
         assets: Vec<T::AssetId>,
-    ) -> Result<u32, Self::Error> {
+    ) -> Result<YieldFarmId, Self::Error> {
         Self::create_yield_farm(who, global_farm_id, multiplier, loyalty_curve, amm_pool_id, assets)
     }
 
     fn update_yield_farm_multiplier(
         who: T::AccountId,
-        global_farm_id: u32,
+        global_farm_id: GlobalFarmId,
         amm_pool_id: Self::AmmPoolId,
         multiplier: FixedU128,
-    ) -> Result<u32, Self::Error> {
+    ) -> Result<YieldFarmId, Self::Error> {
         Self::update_yield_farm_multiplier(who, global_farm_id, amm_pool_id, multiplier)
     }
 
     fn stop_yield_farm(
         who: T::AccountId,
-        global_farm_id: u32,
+        global_farm_id: GlobalFarmId,
         amm_pool_id: Self::AmmPoolId,
     ) -> Result<u32, Self::Error> {
         Self::stop_yield_farm(who, global_farm_id, amm_pool_id)
@@ -1607,8 +1607,8 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
 
     fn resume_yield_farm(
         who: T::AccountId,
-        global_farm_id: u32,
-        yield_farm_id: u32,
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
         amm_pool_id: Self::AmmPoolId,
         multiplier: FixedU128,
     ) -> Result<(), Self::Error> {
@@ -1617,20 +1617,20 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
 
     fn destroy_yield_farm(
         who: T::AccountId,
-        global_farm_id: u32,
-        yield_farm_id: u32,
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
         amm_pool_id: Self::AmmPoolId,
     ) -> Result<(), Self::Error> {
         Self::destroy_yield_farm(who, global_farm_id, yield_farm_id, amm_pool_id)
     }
 
     fn deposit_lp_shares(
-        global_farm_id: u32,
-        yield_farm_id: u32,
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
         amm_pool_id: Self::AmmPoolId,
         shares_amount: Self::Balance,
         get_balance_in_amm: fn(T::AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
-    ) -> Result<u128, Self::Error> {
+    ) -> Result<DepositId, Self::Error> {
         Self::deposit_lp_shares(
             global_farm_id,
             yield_farm_id,
@@ -1641,9 +1641,9 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
     }
 
     fn redeposit_lp_shares(
-        global_farm_id: u32,
-        yield_farm_id: u32,
-        deposit_id: u128,
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
+        deposit_id: DepositId,
         get_balance_in_amm: fn(T::AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
     ) -> Result<Self::Balance, Self::Error> {
         Self::redeposit_lp_shares(global_farm_id, yield_farm_id, deposit_id, get_balance_in_amm)
@@ -1651,26 +1651,30 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
 
     fn claim_rewards(
         who: T::AccountId,
-        deposit_id: u128,
-        yield_farm_id: u32,
+        deposit_id: DepositId,
+        yield_farm_id: YieldFarmId,
         fail_on_doubleclaim: bool,
-    ) -> Result<(u32, T::AssetId, Self::Balance, Self::Balance), Self::Error> {
+    ) -> Result<(GlobalFarmId, T::AssetId, Self::Balance, Self::Balance), Self::Error> {
         Self::claim_rewards(who, deposit_id, yield_farm_id, fail_on_doubleclaim)
     }
 
     fn withdraw_lp_shares(
-        deposit_id: u128,
-        yield_farm_id: u32,
+        deposit_id: DepositId,
+        yield_farm_id: YieldFarmId,
         unclaimable_rewards: Self::Balance,
-    ) -> Result<(u32, Self::Balance, bool), Self::Error> {
+    ) -> Result<(GlobalFarmId, Self::Balance, bool), Self::Error> {
         Self::withdraw_lp_shares(deposit_id, yield_farm_id, unclaimable_rewards)
     }
 
-    fn is_yield_farm_claimable(global_farm_id: u32, yield_farm_id: u32, amm_pool_id: Self::AmmPoolId) -> bool {
+    fn is_yield_farm_claimable(
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
+        amm_pool_id: Self::AmmPoolId,
+    ) -> bool {
         Self::is_yield_farm_claimable(global_farm_id, yield_farm_id, amm_pool_id)
     }
 
-    fn get_global_farm_id(deposit_id: u128, yield_farm_id: u32) -> Option<u32> {
+    fn get_global_farm_id(deposit_id: DepositId, yield_farm_id: YieldFarmId) -> Option<u32> {
         Self::get_global_farm_id(deposit_id, yield_farm_id)
     }
 }

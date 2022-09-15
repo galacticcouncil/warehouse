@@ -1141,6 +1141,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     // of an imbalance in the share accumulation.
                     if yield_farm.total_shares.is_zero() {
                         yield_farm.updated_at = current_period;
+                        //This prevents yield farm claiming for periods when it was empty.
+                        yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
                     }
 
                     yield_farm.total_shares = yield_farm
@@ -1463,10 +1465,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                 Self::update_global_farm(global_farm, current_period, rewards)?;
             }
 
-            let stake_in_global_pool =
+            let stake_in_global_farm =
                 math::calculate_global_farm_shares(yield_farm.total_valued_shares, yield_farm.multiplier)
                     .map_err(|_| ArithmeticError::Overflow)?;
-            let rewards = Self::claim_from_global_farm(global_farm, yield_farm, stake_in_global_pool)?;
+            let rewards = Self::claim_from_global_farm(global_farm, yield_farm, stake_in_global_farm)?;
+
             Self::update_yield_farm(
                 yield_farm,
                 rewards,

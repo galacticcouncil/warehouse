@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use crate::tests::mock::LiquidityMining2;
 use test_ext::*;
 
 #[test]
@@ -722,6 +723,102 @@ fn claim_rewards_doubleclaim_should_work() {
                 ),
                 Error::<Test, Instance1>::DoubleClaimInPeriod
             );
+
+            TransactionOutcome::Commit(())
+        });
+    });
+}
+
+//NOTE: farms are initialize like this intentionally. Bug may not appear with only 1 yield farm.
+#[test]
+fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
+    new_test_ext().execute_with(|| {
+        with_transaction(|| {
+            const GLOBAL_FARM: GlobalFarmId = 1;
+            const YIELD_FARM_A: YieldFarmId = 2;
+            const YIELD_FARM_B: YieldFarmId = 3;
+
+            const BOB_DEPOSIT: DepositId = 2;
+            const CHARLIE_DEPOSIT: DepositId = 3;
+
+            const PLANNED_PERIODS: u64 = 10_000;
+            const BLOCKS_PER_PERIOD: u64 = 10;
+            const TOTAL_REWARDS_TO_DISTRIBUTE: u128 = 1_000_000 * ONE;
+
+            //initialize farms
+            set_block_number(1000);
+            assert_ok!(LiquidityMining2::create_global_farm(
+                TOTAL_REWARDS_TO_DISTRIBUTE,
+                PLANNED_PERIODS,
+                BLOCKS_PER_PERIOD,
+                BSX,
+                BSX,
+                GC,
+                Perquintill::from_float(0.005),
+                1_000,
+                One::one(),
+            ));
+
+            assert_ok!(LiquidityMining2::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                One::one(),
+                None,
+                BSX_TKN1_AMM,
+                vec![BSX, TKN1]
+            ));
+
+            //alice
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_A,
+                BSX_TKN1_AMM,
+                100 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
+
+            set_block_number(1_500);
+
+            assert_ok!(LiquidityMining2::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                One::one(),
+                None,
+                BSX_TKN2_AMM,
+                vec![BSX, TKN2]
+            ));
+
+            set_block_number(2_000);
+            //bob
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_B,
+                BSX_TKN2_AMM,
+                100 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
+
+            //charlie
+            assert_ok!(LiquidityMining2::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_B,
+                BSX_TKN2_AMM,
+                100 * ONE,
+                |_, _| { Ok(1_u128) }
+            ));
+
+            let bob_bsx_balance_0 = Tokens::free_balance(BSX, &BOB);
+            let charlie_bsx_balance_0 = Tokens::free_balance(BSX, &CHARLIE);
+
+            set_block_number(2_500);
+            let _ = LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
+
+            let _ = LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
+
+            let bob_rewards = Tokens::free_balance(BSX, &BOB) - bob_bsx_balance_0;
+            let charlie_rewards = Tokens::free_balance(BSX, &CHARLIE) - charlie_bsx_balance_0;
+
+            pretty_assertions::assert_eq!(bob_rewards, charlie_rewards);
 
             TransactionOutcome::Commit(())
         });

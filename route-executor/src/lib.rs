@@ -25,8 +25,10 @@ use frame_system::ensure_signed;
 use hydradx_traits::router::TradeExecution;
 use sp_runtime::DispatchError;
 use sp_std::vec::Vec;
-pub mod types;
 use orml_traits::arithmetic::{CheckedSub, CheckedAdd};
+use codec::{Decode, Encode};
+use hydradx_traits::router::PoolType;
+use scale_info::TypeInfo;
 
 #[cfg(test)]
 mod tests;
@@ -39,13 +41,20 @@ use weights::WeightInfo;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
+///A single trade for buy/sell, describing the asset pair and the pool type in which the trade is executed
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Copy, Clone, TypeInfo)]
+pub struct Trade<AssetId> {
+    pub pool: PoolType<AssetId>,
+    pub asset_in: AssetId,
+    pub asset_out: AssetId,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
     use hydradx_traits::router::ExecutorError;
-    use types::Trade;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);

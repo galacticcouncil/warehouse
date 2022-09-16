@@ -16,8 +16,7 @@
 // limitations under the License.
 use crate as router;
 use crate::inspect::MultiInspectAdapter;
-use crate::types::Trade;
-use crate::Config;
+use crate::{Config, Trade};
 use frame_support::parameter_types;
 use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;

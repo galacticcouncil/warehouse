@@ -178,10 +178,19 @@ pub mod pallet {
             ensure!(last_amount >= min_amount_out, Error::<T>::TradingLimitReached);
 
             for (amount, trade) in amounts_to_sell.iter().zip(route) {
+                let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(trade.asset_in, &who, false);
+
                 let execution_result =
                     T::AMM::execute_sell(origin.clone(), trade.pool, trade.asset_in, trade.asset_out, *amount);
 
                 handle_execution_error!(execution_result);
+
+                Self::ensure_that_user_spent_asset_in(
+                    who.clone(),
+                    trade.asset_in,
+                    user_balance_of_asset_in_before_trade,
+                    *amount,
+                )?;
             }
 
             Self::ensure_that_user_received_asset_out(
@@ -190,6 +199,7 @@ pub mod pallet {
                 user_balance_of_asset_out_before_trade,
                 last_amount,
             )?;
+
             Self::ensure_that_user_spent_asset_in(
                 who.clone(),
                 asset_in,
@@ -256,10 +266,20 @@ pub mod pallet {
             ensure!(last_amount <= max_amount_in, Error::<T>::TradingLimitReached);
 
             for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {
+                let user_balance_of_asset_out_before_trade =
+                    T::Currency::reducible_balance(trade.asset_out, &who, false);
+
                 let execution_result =
                     T::AMM::execute_buy(origin.clone(), trade.pool, trade.asset_in, trade.asset_out, *amount);
 
                 handle_execution_error!(execution_result);
+
+                Self::ensure_that_user_received_asset_out(
+                    who.clone(),
+                    trade.asset_out,
+                    user_balance_of_asset_out_before_trade,
+                    *amount,
+                )?;
             }
 
             Self::ensure_that_user_spent_asset_in(

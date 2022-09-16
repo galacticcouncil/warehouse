@@ -167,8 +167,7 @@ pub mod pallet {
                 handle_execution_error!(execution_result);
             }
 
-            Self::ensure_that_user_receives_asset_out(who, asset_out, user_balance_of_asset_out_before_trade,last_amount)?;
-
+            Self::ensure_that_user_received_asset_out(who, asset_out, user_balance_of_asset_out_before_trade, last_amount)?;
 
             Self::deposit_event(Event::RouteExecuted {
                 asset_in,
@@ -201,8 +200,10 @@ pub mod pallet {
             max_amount_in: T::Balance,
             route: Vec<Trade<T::AssetId>>,
         ) -> DispatchResult {
-            ensure_signed(origin.clone())?;
+            let who = ensure_signed(origin.clone())?;
             Self::ensure_route_size(route.len())?;
+
+            let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(asset_in, &who, false);
 
             let mut amounts_to_buy = Vec::<T::Balance>::with_capacity(route.len() + 1);
             let mut amount = amount_out;
@@ -232,6 +233,8 @@ pub mod pallet {
                 handle_execution_error!(execution_result);
             }
 
+            Self::ensure_that_user_spent_asset_in(who, asset_in, user_balance_of_asset_in_before_trade, last_amount)?;
+
             Self::deposit_event(Event::RouteExecuted {
                 asset_in,
                 asset_out,
@@ -255,7 +258,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    fn ensure_that_user_receives_asset_out(who: T::AccountId, asset_out: T::AssetId, user_balance_of_asset_out_before_trade : T::Balance, last_amount: T::Balance) -> Result<(), DispatchError> {
+    fn ensure_that_user_received_asset_out(who: T::AccountId, asset_out: T::AssetId, user_balance_of_asset_out_before_trade : T::Balance, last_amount: T::Balance) -> Result<(), DispatchError> {
         let user_balance_of_asset_out_after_trade = T::Currency::reducible_balance(asset_out, &who, false);
         let user_expected_balance_of_asset_out_after_trade = user_balance_of_asset_out_before_trade
             .checked_add(&last_amount)
@@ -263,6 +266,20 @@ impl<T: Config> Pallet<T> {
 
         ensure!(
                 user_balance_of_asset_out_after_trade == user_expected_balance_of_asset_out_after_trade,
+                Error::<T>::UnexpectedError
+            );
+
+        Ok(())
+    }
+
+    fn ensure_that_user_spent_asset_in(who: T::AccountId, asset_in: T::AssetId, user_balance_of_asset_in_before_trade : T::Balance, last_amount: T::Balance) -> Result<(), DispatchError> {
+        let user_balance_of_asset_in_after_trade = T::Currency::reducible_balance(asset_in, &who, false);
+        let user_expected_balance_of_asset_in_after_trade = user_balance_of_asset_in_before_trade
+            .checked_sub(&last_amount)
+            .ok_or(Error::<T>::UnexpectedError)?;
+
+        ensure!(
+                user_expected_balance_of_asset_in_after_trade == user_balance_of_asset_in_after_trade,
                 Error::<T>::UnexpectedError
             );
 

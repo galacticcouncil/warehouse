@@ -300,6 +300,7 @@ macro_rules! impl_fake_executor {
                 });
 
                 let amount_out = $sell_calculation_result;
+
                 Currencies::transfer(Origin::signed(ASSET_PAIR_ACCOUNT), ALICE, asset_out, amount_out)
                     .map_err(|e| ExecutorError::Error(e))?;
                 Currencies::transfer(Origin::signed(ALICE), ASSET_PAIR_ACCOUNT, asset_in, amount_in)
@@ -315,10 +316,23 @@ macro_rules! impl_fake_executor {
                 asset_out: AssetId,
                 amount_out: Balance,
             ) -> Result<(), ExecutorError<Self::Error>> {
+                if !matches!(pool_type, $pool_type) {
+                    return Err(ExecutorError::NotSupported);
+                }
                 EXECUTED_BUYS.with(|v| {
                     let mut m = v.borrow_mut();
                     m.push((pool_type, amount_out, asset_in, asset_out));
                 });
+
+                let amount_in = $buy_calculation_result;
+
+                //T::Currency::transfer(asset_out, &pair_account, who, amount_out).map_err(|_| ExecutorError::Error(()))?;
+		        // T::Currency::transfer(asset_in, who, &pair_account, amount_in).map_err(|_| ExecutorError::Error(()))?;
+
+                Currencies::transfer(Origin::signed(ASSET_PAIR_ACCOUNT), ALICE, asset_out, amount_out)
+                    .map_err(|e| ExecutorError::Error(e))?;
+                Currencies::transfer(Origin::signed(ALICE), ASSET_PAIR_ACCOUNT, asset_in, amount_in)
+                    .map_err(|e| ExecutorError::Error(e))?;
 
                 Ok(())
             }

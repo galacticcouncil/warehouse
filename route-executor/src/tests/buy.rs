@@ -27,7 +27,6 @@ use sp_runtime::DispatchError::BadOrigin;
 #[test]
 fn buy_should_work_when_route_has_single_trade() {
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
         .build()
         .execute_with(|| {
             //Arrange
@@ -61,7 +60,7 @@ fn buy_should_work_when_route_has_single_trade() {
 #[test]
 fn buy_should_work_when_route_has_single_trade_without_native_balance() {
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, KSM, 1000)])
+        .with_endowed_accounts(vec![(ALICE, AUSD, 1000)])
         .build()
         .execute_with(|| {
             //Arrange

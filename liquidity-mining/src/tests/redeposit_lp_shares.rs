@@ -178,6 +178,7 @@ fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
 
             assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, EVE_FARM, yield_farm_id))
                 .unwrap()
+                .state
                 .is_stopped());
 
             assert_noop!(
@@ -197,6 +198,7 @@ fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
 
             assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, EVE_FARM, yield_farm_id))
                 .unwrap()
+                .state
                 .is_deleted());
 
             assert_noop!(

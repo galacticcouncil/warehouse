@@ -30,7 +30,7 @@ fn resume_yield_farm_should_work() {
 
             let new_multiplier = FixedU128::from(7_490_000);
 
-            assert!(yield_farm.is_stopped());
+            assert!(yield_farm.state.is_stopped());
             assert!(yield_farm.multiplier.is_zero());
             assert!(LiquidityMining::active_yield_farm(BSX_TKN1_AMM, GC_FARM).is_none());
 

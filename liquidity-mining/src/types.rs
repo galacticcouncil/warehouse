@@ -191,16 +191,6 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
         }
     }
 
-    /// Function returns `true` if yield farm is in stopped state.
-    pub fn is_stopped(&self) -> bool {
-        self.state == FarmState::Stopped
-    }
-
-    /// Function returns `true` if yield farm is in deleted state.
-    pub fn is_deleted(&self) -> bool {
-        self.state == FarmState::Deleted
-    }
-
     /// Returns `true` if yield farm can be removed from storage, `false` otherwise.
     pub fn can_be_removed(&self) -> bool {
         self.state == FarmState::Deleted && self.entries_count.is_zero()
@@ -364,6 +354,12 @@ impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
     }
 }
 
+/// An enum whose variants represent the state of the yield or global farm.
+/// - `Active` - farm has full functionality. This state may be used for both farm types.
+/// - `Stopped` - only partial functionality of the farm is available to users. Farm can became
+/// `Active` again or can be `Deleted`. This state can be used only for yield farms.
+/// - `Deleted` - farm is destroyed and it's waiting to be removed from the storage. This state can't be
+/// reverted and is available for both farm types.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum FarmState {
     Active,
@@ -374,5 +370,11 @@ pub enum FarmState {
 impl FarmState {
     pub fn is_active(&self) -> bool {
         *self == FarmState::Active
+    }
+    pub fn is_stopped(&self) -> bool {
+        *self == FarmState::Stopped
+    }
+    pub fn is_deleted(&self) -> bool {
+        *self == FarmState::Deleted
     }
 }

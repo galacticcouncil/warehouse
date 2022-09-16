@@ -718,7 +718,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                 let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
                 //Active or deleted yield farms can't be resumed.
-                ensure!(yield_farm.is_stopped(), Error::<T, I>::LiquidityMiningIsActive);
+                ensure!(yield_farm.state.is_stopped(), Error::<T, I>::LiquidityMiningIsActive);
 
                 <GlobalFarm<T, I>>::try_mutate(global_farm_id, |maybe_global_farm| {
                     let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
@@ -788,7 +788,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                 |maybe_yield_farm| -> Result<(), DispatchError> {
                     let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
-                    ensure!(yield_farm.is_stopped(), Error::<T, I>::LiquidityMiningIsActive);
+                    ensure!(yield_farm.state.is_stopped(), Error::<T, I>::LiquidityMiningIsActive);
 
                     //Transfer unpaid rewards back to global farm.
                     let global_farm_account = Self::farm_account_id(global_farm.id)?;
@@ -921,7 +921,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                     //NOTE: claiming from removed yield farm should NOT work. This is same as yield
                     //farm doesn't exist.
-                    ensure!(!yield_farm.is_deleted(), Error::<T, I>::YieldFarmNotFound);
+                    ensure!(!yield_farm.state.is_deleted(), Error::<T, I>::YieldFarmNotFound);
 
                     <GlobalFarm<T, I>>::try_mutate(farm_entry.global_farm_id, |maybe_global_farm| {
                         let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
@@ -1489,7 +1489,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
     ) -> bool {
         if let Some(yield_farm) = Self::yield_farm((amm_pool_id, global_farm_id, yield_farm_id)) {
-            return !yield_farm.is_deleted() && yield_farm.has_entries();
+            return !yield_farm.state.is_deleted() && yield_farm.has_entries();
         }
 
         false

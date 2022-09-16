@@ -678,11 +678,13 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
             assert!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
                     .unwrap()
+                    .state
                     .is_deleted()
             );
             assert!(
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, GC_BSX_TKN2_YIELD_FARM_ID))
                     .unwrap()
+                    .state
                     .is_deleted()
             );
             pretty_assertions::assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap().state, FarmState::Deleted);
@@ -944,6 +946,7 @@ fn withdraw_shares_from_removed_pool_should_work() {
             assert!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
                     .unwrap()
+                    .state
                     .is_deleted(),
             );
 

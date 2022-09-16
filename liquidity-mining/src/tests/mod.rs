@@ -26,7 +26,7 @@ use mock::{
     INITIAL_BALANCE, KSM, KSM_DOT_AMM, KSM_DOT_SHARE_ID, KSM_FARM, ONE, TKN1, TKN2, TREASURY,
 };
 
-use frame_support::{assert_err, assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok};
 
 use sp_arithmetic::traits::CheckedSub;
 use std::cmp::Ordering;

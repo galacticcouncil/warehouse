@@ -44,7 +44,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
     use hydradx_traits::router::ExecutorError;
-    use orml_traits::arithmetic::CheckedSub;
+    use orml_traits::arithmetic::{CheckedSub, CheckedAdd};
     use types::Trade;
 
     #[pallet::pallet]
@@ -58,7 +58,7 @@ pub mod pallet {
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
         /// Balance type
-        type Balance: Parameter + Member + Copy + PartialOrd + MaybeSerializeDeserialize + Default + CheckedSub;
+        type Balance: Parameter + Member + Copy + PartialOrd + MaybeSerializeDeserialize + Default + CheckedSub + CheckedAdd;
 
         /// Max limit for the number of trades within a route
         #[pallet::constant]
@@ -134,6 +134,7 @@ pub mod pallet {
             let who = ensure_signed(origin.clone())?;
             Self::ensure_route_size(route.len())?;
 
+            let user_balance_of_asset_out_before_trade = T::Currency::reducible_balance(asset_out, &who, false);
             let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(asset_in, &who, false);
             ensure!(
                 user_balance_of_asset_in_before_trade >= amount_in,
@@ -173,6 +174,16 @@ pub mod pallet {
                 .ok_or(Error::<T>::UnexpectedError)?;
             ensure!(
                 user_balance_of_asset_in_after_trade == user_expected_balance_of_asset_in_after_trade,
+                Error::<T>::UnexpectedError
+            );
+
+            let user_balance_of_asset_out_after_trade = T::Currency::reducible_balance(asset_out, &who, false);
+            let user_expected_balance_of_asset_out_after_trade = user_balance_of_asset_out_before_trade
+                .checked_add(&last_amount)
+                .ok_or(Error::<T>::UnexpectedError)?;
+
+            ensure!(
+                user_balance_of_asset_out_after_trade == user_expected_balance_of_asset_out_after_trade,
                 Error::<T>::UnexpectedError
             );
 

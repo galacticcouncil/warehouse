@@ -15,6 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate as router;
+use crate::inspect::MultiInspectAdapter;
 use crate::types::Trade;
 use crate::Config;
 use frame_support::parameter_types;
@@ -22,6 +23,7 @@ use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
 use frame_system::pallet_prelude::OriginFor;
 use hydradx_traits::router::{ExecutorError, PoolType, TradeExecution};
+use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use pretty_assertions::assert_eq;
 use sp_core::H256;
@@ -50,6 +52,7 @@ frame_support::construct_runtime!(
          Router: router::{Pallet, Call,Event<T>},
          Tokens: orml_tokens::{Pallet, Event<T>},
          Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+         Currencies: orml_currencies::{Pallet, Event<T>},
      }
 );
 
@@ -124,6 +127,14 @@ impl pallet_balances::Config for Test {
     type ReserveIdentifier = ();
 }
 
+impl orml_currencies::Config for Test {
+    type Event = Event;
+    type MultiCurrency = Tokens;
+    type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, u32>;
+    type GetNativeCurrencyId = NativeCurrencyId;
+    type WeightInfo = ();
+}
+
 type Pools = (XYK, StableSwap, OmniPool);
 
 parameter_types! {
@@ -136,7 +147,7 @@ impl Config for Test {
     type AssetId = AssetId;
     type Balance = Balance;
     type MaxNumberOfTrades = MaxNumberOfTrades;
-    type Currency = Tokens;
+    type Currency = MultiInspectAdapter<AccountId, AssetId, Balance, Balances, Tokens, NativeCurrencyId>;
     type AMM = Pools;
     type WeightInfo = ();
 }
@@ -144,6 +155,7 @@ impl Config for Test {
 pub type AccountId = u64;
 
 pub const ALICE: AccountId = 1;
+pub const ASSET_PAIR_ACCOUNT: AccountId = 2;
 
 pub const BSX: AssetId = 1000;
 pub const AUSD: AssetId = 1001;
@@ -194,13 +206,26 @@ impl ExtBuilder {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
         pallet_balances::GenesisConfig::<Test> {
-            balances: vec![(ALICE, ALICE_INITIAL_NATIVE_BALANCE)],
+            balances: vec![
+                (ALICE, ALICE_INITIAL_NATIVE_BALANCE),
+                (ASSET_PAIR_ACCOUNT, ALICE_INITIAL_NATIVE_BALANCE),
+            ],
         }
         .assimilate_storage(&mut t)
         .unwrap();
 
+        let mut initial_accounts = vec![
+            (ASSET_PAIR_ACCOUNT, AUSD, 1000u128),
+            (ASSET_PAIR_ACCOUNT, MOVR, 1000u128),
+            (ASSET_PAIR_ACCOUNT, KSM, 1000u128),
+            (ASSET_PAIR_ACCOUNT, RMRK, 1000u128),
+            (ASSET_PAIR_ACCOUNT, SDN, 1000u128),
+        ];
+
+        initial_accounts.extend(self.endowed_accounts);
+
         orml_tokens::GenesisConfig::<Test> {
-            balances: self.endowed_accounts,
+            balances: initial_accounts,
         }
         .assimilate_storage(&mut t)
         .unwrap();
@@ -269,6 +294,12 @@ macro_rules! impl_fake_executor {
                     let mut m = v.borrow_mut();
                     m.push((pool_type, amount_in, asset_in, asset_out));
                 });
+
+                let amount_out = $sell_calculation_result;
+                Currencies::transfer(Origin::signed(ASSET_PAIR_ACCOUNT), ALICE, asset_out, amount_out)
+                    .map_err(|e| ExecutorError::Error(e))?;
+                Currencies::transfer(Origin::signed(ALICE), ASSET_PAIR_ACCOUNT, asset_in, amount_in)
+                    .map_err(|e| ExecutorError::Error(e))?;
 
                 Ok(())
             }

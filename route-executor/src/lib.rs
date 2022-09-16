@@ -274,12 +274,7 @@ pub mod pallet {
                 )?;
             }
 
-            Self::ensure_that_user_spent_asset_in(
-                who,
-                asset_in,
-                user_balance_of_asset_in_before_trade,
-                last_amount,
-            )?;
+            Self::ensure_that_user_spent_asset_in(who, asset_in, user_balance_of_asset_in_before_trade, last_amount)?;
 
             Self::deposit_event(Event::RouteExecuted {
                 asset_in,

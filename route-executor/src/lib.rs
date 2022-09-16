@@ -127,7 +127,7 @@ pub mod pallet {
         /// - `asset_out`: The identifier of the asset to receive
         /// - `amount_in`: The amount of `asset_in` to sell
         /// - `min_amount_out`: The minimum amount of `asset_out` to receive.
-        /// - `route`: Series of [`types::Trade<AssetId>`] containing AMM and asset pair information.
+        /// - `route`: Series of [`Trade<AssetId>`] to be executed. A [`Trade<AssetId>`] specifies the asset pair and the AMM in which the trade is executed.
         ///
         /// Emits `RouteExecuted` when successful.
         #[pallet::weight(<T as Config>::WeightInfo::sell(route.len() as u32))]
@@ -196,7 +196,7 @@ pub mod pallet {
         /// - `asset_out`: The identifier of the asset to buy
         /// - `amount_out`: The amount of `asset_out` to buy
         /// - `max_amount_in`: The max amount of `asset_in` to spend on the buy.
-        /// - `route`: Series of [`types::Trade<AssetId>`] containing AMM and asset pair information.
+        /// - `route`: Series of [`Trade<AssetId>`] to be executed. A [`Trade<AssetId>`] specifies the asset pair and the AMM in which the trade is executed.
         ///
         /// Emits `RouteExecuted` when successful.
         #[pallet::weight(<T as Config>::WeightInfo::buy(route.len() as u32))]

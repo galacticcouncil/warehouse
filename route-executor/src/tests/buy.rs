@@ -25,35 +25,33 @@ use sp_runtime::DispatchError::BadOrigin;
 
 #[test]
 fn buy_should_work_when_route_has_single_trade() {
-    ExtBuilder::default()
-        .build()
-        .execute_with(|| {
-            //Arrange
-            let amount_to_buy = 10;
-            let limit = 5;
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let amount_to_buy = 10;
+        let limit = 5;
 
-            let trades = vec![BSX_AUSD_TRADE_IN_XYK];
+        let trades = vec![BSX_AUSD_TRADE_IN_XYK];
 
-            //Act
-            assert_ok!(Router::buy(
-                Origin::signed(ALICE),
-                BSX,
-                AUSD,
-                amount_to_buy,
-                limit,
-                trades
-            ));
+        //Act
+        assert_ok!(Router::buy(
+            Origin::signed(ALICE),
+            BSX,
+            AUSD,
+            amount_to_buy,
+            limit,
+            trades
+        ));
 
-            //Assert
-            assert_executed_buy_trades(vec![(PoolType::XYK, amount_to_buy, BSX, AUSD)]);
-            expect_events(vec![Event::RouteExecuted {
-                asset_in: BSX,
-                asset_out: AUSD,
-                amount_in: XYK_BUY_CALCULATION_RESULT,
-                amount_out: amount_to_buy,
-            }
-            .into()]);
-        });
+        //Assert
+        assert_executed_buy_trades(vec![(PoolType::XYK, amount_to_buy, BSX, AUSD)]);
+        expect_events(vec![Event::RouteExecuted {
+            asset_in: BSX,
+            asset_out: AUSD,
+            amount_in: XYK_BUY_CALCULATION_RESULT,
+            amount_out: amount_to_buy,
+        }
+        .into()]);
+    });
 }
 
 #[test]

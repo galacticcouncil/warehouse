@@ -17,18 +17,18 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode};
 use frame_support::ensure;
 use frame_support::traits::fungibles::Inspect;
 use frame_support::traits::Get;
 use frame_support::transactional;
 use frame_system::ensure_signed;
+use hydradx_traits::router::PoolType;
 use hydradx_traits::router::TradeExecution;
+use orml_traits::arithmetic::{CheckedAdd, CheckedSub};
+use scale_info::TypeInfo;
 use sp_runtime::DispatchError;
 use sp_std::vec::Vec;
-use orml_traits::arithmetic::{CheckedSub, CheckedAdd};
-use codec::{Decode, Encode};
-use hydradx_traits::router::PoolType;
-use scale_info::TypeInfo;
 
 #[cfg(test)]
 mod tests;
@@ -67,7 +67,14 @@ pub mod pallet {
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
         /// Balance type
-        type Balance: Parameter + Member + Copy + PartialOrd + MaybeSerializeDeserialize + Default + CheckedSub + CheckedAdd;
+        type Balance: Parameter
+            + Member
+            + Copy
+            + PartialOrd
+            + MaybeSerializeDeserialize
+            + Default
+            + CheckedSub
+            + CheckedAdd;
 
         /// Max limit for the number of trades within a route
         #[pallet::constant]
@@ -143,6 +150,7 @@ pub mod pallet {
             let who = ensure_signed(origin.clone())?;
             Self::ensure_route_size(route.len())?;
 
+            let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(asset_in, &who, false);
             let user_balance_of_asset_out_before_trade = T::Currency::reducible_balance(asset_out, &who, false);
             ensure!(
                 T::Currency::reducible_balance(asset_in, &who, false) >= amount_in,
@@ -176,7 +184,18 @@ pub mod pallet {
                 handle_execution_error!(execution_result);
             }
 
-            Self::ensure_that_user_received_asset_out(who, asset_out, user_balance_of_asset_out_before_trade, last_amount)?;
+            Self::ensure_that_user_received_asset_out(
+                who.clone(),
+                asset_out,
+                user_balance_of_asset_out_before_trade,
+                last_amount,
+            )?;
+            Self::ensure_that_user_spent_asset_in(
+                who.clone(),
+                asset_in,
+                user_balance_of_asset_in_before_trade,
+                amount_in,
+            )?;
 
             Self::deposit_event(Event::RouteExecuted {
                 asset_in,
@@ -213,6 +232,7 @@ pub mod pallet {
             Self::ensure_route_size(route.len())?;
 
             let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(asset_in, &who, false);
+            let user_balance_of_asset_out_before_trade = T::Currency::reducible_balance(asset_out, &who, false);
 
             let mut amounts_to_buy = Vec::<T::Balance>::with_capacity(route.len() + 1);
             let mut amount = amount_out;
@@ -242,7 +262,18 @@ pub mod pallet {
                 handle_execution_error!(execution_result);
             }
 
-            Self::ensure_that_user_spent_asset_in(who, asset_in, user_balance_of_asset_in_before_trade, last_amount)?;
+            Self::ensure_that_user_spent_asset_in(
+                who.clone(),
+                asset_in,
+                user_balance_of_asset_in_before_trade,
+                last_amount,
+            )?;
+            Self::ensure_that_user_received_asset_out(
+                who.clone(),
+                asset_out,
+                user_balance_of_asset_out_before_trade,
+                amount_out,
+            )?;
 
             Self::deposit_event(Event::RouteExecuted {
                 asset_in,
@@ -267,30 +298,40 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    fn ensure_that_user_received_asset_out(who: T::AccountId, asset_out: T::AssetId, user_balance_of_asset_out_before_trade : T::Balance, last_amount: T::Balance) -> Result<(), DispatchError> {
+    fn ensure_that_user_received_asset_out(
+        who: T::AccountId,
+        asset_out: T::AssetId,
+        user_balance_of_asset_out_before_trade: T::Balance,
+        received_amount: T::Balance,
+    ) -> Result<(), DispatchError> {
         let user_balance_of_asset_out_after_trade = T::Currency::reducible_balance(asset_out, &who, false);
         let user_expected_balance_of_asset_out_after_trade = user_balance_of_asset_out_before_trade
-            .checked_add(&last_amount)
+            .checked_add(&received_amount)
             .ok_or(Error::<T>::UnexpectedError)?;
 
         ensure!(
-                user_balance_of_asset_out_after_trade == user_expected_balance_of_asset_out_after_trade,
-                Error::<T>::UnexpectedError
-            );
+            user_balance_of_asset_out_after_trade == user_expected_balance_of_asset_out_after_trade,
+            Error::<T>::UnexpectedError
+        );
 
         Ok(())
     }
 
-    fn ensure_that_user_spent_asset_in(who: T::AccountId, asset_in: T::AssetId, user_balance_of_asset_in_before_trade : T::Balance, last_amount: T::Balance) -> Result<(), DispatchError> {
+    fn ensure_that_user_spent_asset_in(
+        who: T::AccountId,
+        asset_in: T::AssetId,
+        user_balance_of_asset_in_before_trade: T::Balance,
+        spent_amount: T::Balance,
+    ) -> Result<(), DispatchError> {
         let user_balance_of_asset_in_after_trade = T::Currency::reducible_balance(asset_in, &who, false);
         let user_expected_balance_of_asset_in_after_trade = user_balance_of_asset_in_before_trade
-            .checked_sub(&last_amount)
+            .checked_sub(&spent_amount)
             .ok_or(Error::<T>::UnexpectedError)?;
 
         ensure!(
-                user_expected_balance_of_asset_in_after_trade == user_balance_of_asset_in_after_trade,
-                Error::<T>::UnexpectedError
-            );
+            user_expected_balance_of_asset_in_after_trade == user_balance_of_asset_in_after_trade,
+            Error::<T>::UnexpectedError
+        );
 
         Ok(())
     }

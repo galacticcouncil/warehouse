@@ -326,7 +326,7 @@ macro_rules! impl_fake_executor {
                 let amount_in = $buy_calculation_result;
 
                 //T::Currency::transfer(asset_out, &pair_account, who, amount_out).map_err(|_| ExecutorError::Error(()))?;
-		        // T::Currency::transfer(asset_in, who, &pair_account, amount_in).map_err(|_| ExecutorError::Error(()))?;
+                // T::Currency::transfer(asset_in, who, &pair_account, amount_in).map_err(|_| ExecutorError::Error(()))?;
 
                 Currencies::transfer(Origin::signed(ASSET_PAIR_ACCOUNT), ALICE, asset_out, amount_out)
                     .map_err(|e| ExecutorError::Error(e))?;

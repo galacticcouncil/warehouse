@@ -26,6 +26,7 @@ use hydradx_traits::router::TradeExecution;
 use sp_runtime::DispatchError;
 use sp_std::vec::Vec;
 pub mod types;
+use orml_traits::arithmetic::{CheckedSub, CheckedAdd};
 
 #[cfg(test)]
 mod tests;
@@ -44,7 +45,6 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
     use hydradx_traits::router::ExecutorError;
-    use orml_traits::arithmetic::{CheckedSub, CheckedAdd};
     use types::Trade;
 
     #[pallet::pallet]
@@ -135,9 +135,8 @@ pub mod pallet {
             Self::ensure_route_size(route.len())?;
 
             let user_balance_of_asset_out_before_trade = T::Currency::reducible_balance(asset_out, &who, false);
-            let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(asset_in, &who, false);
             ensure!(
-                user_balance_of_asset_in_before_trade >= amount_in,
+                T::Currency::reducible_balance(asset_in, &who, false) >= amount_in,
                 Error::<T>::InsufficientBalance
             );
 
@@ -168,24 +167,8 @@ pub mod pallet {
                 handle_execution_error!(execution_result);
             }
 
-            let user_balance_of_asset_in_after_trade = T::Currency::reducible_balance(asset_in, &who, false);
-            let user_expected_balance_of_asset_in_after_trade = user_balance_of_asset_in_before_trade
-                .checked_sub(&amount_in)
-                .ok_or(Error::<T>::UnexpectedError)?;
-            ensure!(
-                user_balance_of_asset_in_after_trade == user_expected_balance_of_asset_in_after_trade,
-                Error::<T>::UnexpectedError
-            );
+            Self::ensure_that_user_receives_asset_out(who, asset_out, user_balance_of_asset_out_before_trade,last_amount)?;
 
-            let user_balance_of_asset_out_after_trade = T::Currency::reducible_balance(asset_out, &who, false);
-            let user_expected_balance_of_asset_out_after_trade = user_balance_of_asset_out_before_trade
-                .checked_add(&last_amount)
-                .ok_or(Error::<T>::UnexpectedError)?;
-
-            ensure!(
-                user_balance_of_asset_out_after_trade == user_expected_balance_of_asset_out_after_trade,
-                Error::<T>::UnexpectedError
-            );
 
             Self::deposit_event(Event::RouteExecuted {
                 asset_in,
@@ -268,6 +251,20 @@ impl<T: Config> Pallet<T> {
             (route_length as u8) <= T::MaxNumberOfTrades::get(),
             Error::<T>::MaxTradesExceeded
         );
+
+        Ok(())
+    }
+
+    fn ensure_that_user_receives_asset_out(who: T::AccountId, asset_out: T::AssetId, user_balance_of_asset_out_before_trade : T::Balance, last_amount: T::Balance) -> Result<(), DispatchError> {
+        let user_balance_of_asset_out_after_trade = T::Currency::reducible_balance(asset_out, &who, false);
+        let user_expected_balance_of_asset_out_after_trade = user_balance_of_asset_out_before_trade
+            .checked_add(&last_amount)
+            .ok_or(Error::<T>::UnexpectedError)?;
+
+        ensure!(
+                user_balance_of_asset_out_after_trade == user_expected_balance_of_asset_out_after_trade,
+                Error::<T>::UnexpectedError
+            );
 
         Ok(())
     }

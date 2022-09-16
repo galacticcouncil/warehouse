@@ -290,6 +290,10 @@ macro_rules! impl_fake_executor {
                 asset_out: AssetId,
                 amount_in: Balance,
             ) -> Result<(), ExecutorError<Self::Error>> {
+                if !matches!(pool_type, $pool_type) {
+                    return Err(ExecutorError::NotSupported);
+                }
+
                 EXECUTED_SELLS.with(|v| {
                     let mut m = v.borrow_mut();
                     m.push((pool_type, amount_in, asset_in, asset_out));

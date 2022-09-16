@@ -194,7 +194,7 @@ pub mod pallet {
             }
 
             Self::ensure_that_user_received_asset_out(
-                who.clone(),
+                who,
                 asset_out,
                 user_balance_of_asset_out_before_trade,
                 last_amount,
@@ -275,7 +275,7 @@ pub mod pallet {
             }
 
             Self::ensure_that_user_spent_asset_in(
-                who.clone(),
+                who,
                 asset_in,
                 user_balance_of_asset_in_before_trade,
                 last_amount,

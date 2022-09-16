@@ -153,7 +153,7 @@ pub mod pallet {
             let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(asset_in, &who, false);
             let user_balance_of_asset_out_before_trade = T::Currency::reducible_balance(asset_out, &who, false);
             ensure!(
-                T::Currency::reducible_balance(asset_in, &who, false) >= amount_in,
+                user_balance_of_asset_in_before_trade >= amount_in,
                 Error::<T>::InsufficientBalance
             );
 

@@ -200,13 +200,6 @@ pub mod pallet {
                 last_amount,
             )?;
 
-            Self::ensure_that_user_spent_asset_in(
-                who.clone(),
-                asset_in,
-                user_balance_of_asset_in_before_trade,
-                amount_in,
-            )?;
-
             Self::deposit_event(Event::RouteExecuted {
                 asset_in,
                 asset_out,
@@ -242,7 +235,6 @@ pub mod pallet {
             Self::ensure_route_size(route.len())?;
 
             let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(asset_in, &who, false);
-            let user_balance_of_asset_out_before_trade = T::Currency::reducible_balance(asset_out, &who, false);
 
             let mut amounts_to_buy = Vec::<T::Balance>::with_capacity(route.len() + 1);
             let mut amount = amount_out;
@@ -287,12 +279,6 @@ pub mod pallet {
                 asset_in,
                 user_balance_of_asset_in_before_trade,
                 last_amount,
-            )?;
-            Self::ensure_that_user_received_asset_out(
-                who.clone(),
-                asset_out,
-                user_balance_of_asset_out_before_trade,
-                amount_out,
             )?;
 
             Self::deposit_event(Event::RouteExecuted {

@@ -75,7 +75,7 @@ pub mod v1 {
 
         // move Instances to Items
         let new_storage_prefix = storage_prefix(pallet_name, Items::<T>::storage_prefix());
-        let old_storage_prefix = storage_prefix(pallet_name, b"Instances");
+        let old_storage_prefix = storage_prefix(pallet_name, Instances::<T>::storage_prefix());
 
         move_prefix(&old_storage_prefix, &new_storage_prefix);
         if let Some(value) = unhashed::get_raw(&old_storage_prefix) {

@@ -65,7 +65,7 @@ pub mod v1 {
 
         // move Classes to Collections
         let new_storage_prefix = storage_prefix(pallet_name, Collections::<T>::storage_prefix());
-        let old_storage_prefix = storage_prefix(pallet_name, b"Classes");
+        let old_storage_prefix = storage_prefix(pallet_name, Classes::<T>::storage_prefix());
 
         move_prefix(&old_storage_prefix, &new_storage_prefix);
         if let Some(value) = unhashed::get_raw(&old_storage_prefix) {

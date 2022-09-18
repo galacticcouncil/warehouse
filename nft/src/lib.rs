@@ -41,6 +41,7 @@ use weights::WeightInfo;
 mod benchmarking;
 pub mod types;
 pub mod weights;
+pub mod migration;
 
 #[cfg(test)]
 pub mod mock;

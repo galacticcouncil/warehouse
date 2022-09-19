@@ -157,6 +157,9 @@ where
     }
 }
 
+/// Identifier for oracle data sources.
+pub type Source = [u8; 8];
+
 /// An oracle returning an entry of oracle data aggregated over `period`.
 pub trait AggregatedOracle<AssetId, Balance, BlockNumber, Price> {
     type Error;
@@ -164,6 +167,7 @@ pub trait AggregatedOracle<AssetId, Balance, BlockNumber, Price> {
         asset_a: AssetId,
         asset_b: AssetId,
         period: OraclePeriod,
+        source: Source,
     ) -> Result<AggregatedEntry<Balance, BlockNumber, Price>, Self::Error>;
 
     fn get_entry_weight() -> Weight;
@@ -177,6 +181,7 @@ impl<AssetId, Balance, BlockNumber, Price> AggregatedOracle<AssetId, Balance, Bl
         _asset_a: AssetId,
         _asset_b: AssetId,
         _period: OraclePeriod,
+        _source: Source,
     ) -> Result<AggregatedEntry<Balance, BlockNumber, Price>, Self::Error> {
         Err(())
     }
@@ -190,8 +195,12 @@ impl<AssetId, Balance, BlockNumber, Price> AggregatedOracle<AssetId, Balance, Bl
 /// judging whether the oracle had a chance to settle yet).
 pub trait AggregatedPriceOracle<AssetId, BlockNumber, Price> {
     type Error;
-    fn get_price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod)
-        -> Result<(Price, BlockNumber), Self::Error>;
+    fn get_price(
+        asset_a: AssetId,
+        asset_b: AssetId,
+        period: OraclePeriod,
+        source: Source,
+    ) -> Result<(Price, BlockNumber), Self::Error>;
 
     fn get_price_weight() -> Weight;
 }
@@ -204,6 +213,7 @@ impl<AssetId, BlockNumber, Price> AggregatedPriceOracle<AssetId, BlockNumber, Pr
         _asset_a: AssetId,
         _asset_b: AssetId,
         _period: OraclePeriod,
+        _source: Source,
     ) -> Result<(Price, BlockNumber), Self::Error> {
         Err(())
     }
@@ -226,6 +236,7 @@ where
         _asset_a: AssetId,
         _asset_b: AssetId,
         _period: OraclePeriod,
+        _source: Source,
     ) -> Result<(Price, BlockNumber), Self::Error> {
         Ok((Price::one(), BlockNumber::one()))
     }

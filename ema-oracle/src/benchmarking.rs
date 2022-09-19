@@ -30,6 +30,9 @@ use crate::Pallet as EmaOracle;
 /// Maximum number of tokens to run the benchmark for.
 pub const MAX_TOKEN_PAIRS: u32 = 600;
 
+/// Default oracle source.
+const SOURCE: Source = *b"dummysrc";
+
 benchmarks! {
     on_finalize_no_entry {
         let block_num: u32 = 5;
@@ -50,7 +53,7 @@ benchmarks! {
         EmaOracle::<T>::on_initialize(block_num);
 
         let (amount_in, amount_out, liquidity) = (1_000_000_000_000, 2_000_000_000_000, 500_000_000_000);
-        OnActivityHandler::<T>::on_trade(HDX, DOT, amount_in, amount_out, liquidity);
+        OnActivityHandler::<T>::on_trade(SOURCE, HDX, DOT, amount_in, amount_out, liquidity);
         let entry = OracleEntry {
             price: Price::from((amount_in, amount_out)),
             volume: Volume::from_a_in_b_out(amount_in, amount_out),
@@ -58,12 +61,12 @@ benchmarks! {
             timestamp: block_num,
         };
 
-        assert_eq!(Accumulator::<T>::get(), [(derive_name(HDX, DOT), entry.clone())].into_iter().collect());
+        assert_eq!(Accumulator::<T>::get(), [((SOURCE, ordered_pair(HDX, DOT)), entry.clone())].into_iter().collect());
 
     }: { EmaOracle::<T>::on_finalize(block_num); }
     verify {
         assert!(Accumulator::<T>::get().is_empty());
-        assert_eq!(Oracles::<T>::get(derive_name(HDX, DOT), into_blocks::<T>(&LastBlock)).unwrap(), (entry, block_num));
+        assert_eq!(Oracles::<T>::get((SOURCE, ordered_pair(HDX, DOT), into_blocks::<T>(&LastBlock))).unwrap(), (entry, block_num));
     }
 
     #[extra]
@@ -75,13 +78,13 @@ benchmarks! {
         frame_system::Pallet::<T>::set_block_number(initial_data_block);
         EmaOracle::<T>::on_initialize(initial_data_block);
         let (amount_in, amount_out, liquidity) = (1_000_000_000_000, 2_000_000_000_000, 500_000_000_000);
-        OnActivityHandler::<T>::on_trade(HDX, DOT, amount_in, amount_out, liquidity);
+        OnActivityHandler::<T>::on_trade(SOURCE, HDX, DOT, amount_in, amount_out, liquidity);
         EmaOracle::<T>::on_finalize(initial_data_block);
 
         frame_system::Pallet::<T>::set_block_number(block_num);
         EmaOracle::<T>::on_initialize(block_num);
 
-        OnActivityHandler::<T>::on_trade(HDX, DOT, amount_in, amount_out, liquidity);
+        OnActivityHandler::<T>::on_trade(SOURCE, HDX, DOT, amount_in, amount_out, liquidity);
         let entry = OracleEntry {
             price: Price::from((amount_in, amount_out)),
             volume: Volume::from_a_in_b_out(amount_in, amount_out),
@@ -89,12 +92,12 @@ benchmarks! {
             timestamp: block_num,
         };
 
-        assert_eq!(Accumulator::<T>::get(), [(derive_name(HDX, DOT), entry.clone())].into_iter().collect());
+        assert_eq!(Accumulator::<T>::get(), [((SOURCE, ordered_pair(HDX, DOT)), entry.clone())].into_iter().collect());
 
     }: { EmaOracle::<T>::on_finalize(block_num); }
     verify {
         assert!(Accumulator::<T>::get().is_empty());
-        assert_eq!(Oracles::<T>::get(derive_name(HDX, DOT), into_blocks::<T>(&LastBlock)).unwrap(), (entry, initial_data_block));
+        assert_eq!(Oracles::<T>::get((SOURCE, ordered_pair(HDX, DOT), into_blocks::<T>(&LastBlock))).unwrap(), (entry, initial_data_block));
     }
 
     on_finalize_multiple_tokens {
@@ -109,7 +112,7 @@ benchmarks! {
         for i in 0 .. b {
             let asset_a = i * 1_000;
             let asset_b = asset_a + 500;
-            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
+            OnActivityHandler::<T>::on_trade(SOURCE, asset_a, asset_b, amount_in, amount_out, liquidity);
         }
         EmaOracle::<T>::on_finalize(initial_data_block);
 
@@ -118,7 +121,7 @@ benchmarks! {
         for i in 0 .. b {
             let asset_a = i * 1_000;
             let asset_b = asset_a + 500;
-            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
+            OnActivityHandler::<T>::on_trade(SOURCE, asset_a, asset_b, amount_in, amount_out, liquidity);
         }
     }: { EmaOracle::<T>::on_finalize(block_num); }
     verify {
@@ -132,7 +135,7 @@ benchmarks! {
         for i in 0 .. b {
             let asset_a = i * 1_000;
             let asset_b = asset_a + 500;
-            assert_eq!(Oracles::<T>::get(derive_name(asset_a, asset_b), into_blocks::<T>(&LastBlock)).unwrap(), (entry.clone(), initial_data_block));
+            assert_eq!(Oracles::<T>::get((SOURCE, ordered_pair(asset_a, asset_b), into_blocks::<T>(&LastBlock))).unwrap(), (entry.clone(), initial_data_block));
         }
     }
 
@@ -150,7 +153,7 @@ benchmarks! {
         for i in 0 .. b {
             let asset_a = i * 1_000;
             let asset_b = asset_a + 500;
-            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
+            OnActivityHandler::<T>::on_trade(SOURCE, asset_a, asset_b, amount_in, amount_out, liquidity);
         }
         EmaOracle::<T>::on_finalize(initial_data_block);
 
@@ -165,14 +168,14 @@ benchmarks! {
         for i in 0 .. b {
             let asset_a = i * 1_000;
             let asset_b = asset_a + 500;
-            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
-            entries.push((derive_name(asset_a, asset_b), entry.clone()));
+            OnActivityHandler::<T>::on_trade(SOURCE, asset_a, asset_b, amount_in, amount_out, liquidity);
+            entries.push(((SOURCE, ordered_pair(asset_a, asset_b)), entry.clone()));
         }
         let asset_a = b * 1_000;
         let asset_b = asset_a + 500;
-    }: { OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity); }
+    }: { OnActivityHandler::<T>::on_trade(SOURCE, asset_a, asset_b, amount_in, amount_out, liquidity); }
     verify {
-        entries.push((derive_name(asset_a, asset_b), entry.clone()));
+        entries.push(((SOURCE, ordered_pair(asset_a, asset_b)), entry.clone()));
 
         assert_eq!(Accumulator::<T>::get(), entries.into_iter().collect());
     }
@@ -191,7 +194,7 @@ benchmarks! {
         for i in 0 .. b {
             let asset_a = i * 1_000;
             let asset_b = asset_a + 500;
-            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
+            OnActivityHandler::<T>::on_trade(SOURCE, asset_a, asset_b, amount_in, amount_out, liquidity);
         }
         EmaOracle::<T>::on_finalize(initial_data_block);
 
@@ -206,14 +209,14 @@ benchmarks! {
         for i in 0 .. b {
             let asset_a = i * 1_000;
             let asset_b = asset_a + 500;
-            OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
-            entries.push((derive_name(asset_a, asset_b), entry.clone()));
+            OnActivityHandler::<T>::on_trade(SOURCE, asset_a, asset_b, amount_in, amount_out, liquidity);
+            entries.push(((SOURCE, ordered_pair(asset_a, asset_b)), entry.clone()));
         }
         let asset_a = b * 1_000;
         let asset_b = asset_a + 500;
         let amount_a = amount_in;
         let amount_b = amount_out;
-    }: { OnActivityHandler::<T>::on_liquidity_changed(asset_a, asset_b, amount_a, amount_b, liquidity); }
+    }: { OnActivityHandler::<T>::on_liquidity_changed(SOURCE, asset_a, asset_b, amount_a, amount_b, liquidity); }
     verify {
         let liquidity_entry = OracleEntry {
             price: Price::from((amount_a, amount_b)),
@@ -221,7 +224,7 @@ benchmarks! {
             liquidity,
             timestamp: block_num,
         };
-        entries.push((derive_name(asset_a, asset_b), liquidity_entry));
+        entries.push(((SOURCE, ordered_pair(asset_a, asset_b)), liquidity_entry));
 
         assert_eq!(Accumulator::<T>::get(), entries.into_iter().collect());
     }
@@ -236,7 +239,7 @@ benchmarks! {
         let (amount_in, amount_out, liquidity) = (1_000_000_000_000, 2_000_000_000_000, 500_000_000_000);
         let asset_a = 1_000;
         let asset_b = asset_a + 500;
-        OnActivityHandler::<T>::on_trade(asset_a, asset_b, amount_in, amount_out, liquidity);
+        OnActivityHandler::<T>::on_trade(SOURCE, asset_a, asset_b, amount_in, amount_out, liquidity);
         EmaOracle::<T>::on_finalize(initial_data_block);
 
         frame_system::Pallet::<T>::set_block_number(block_num);
@@ -244,7 +247,7 @@ benchmarks! {
 
         let res = core::cell::RefCell::new(Err(OracleError::NotPresent));
 
-    }: { let _ = res.replace(EmaOracle::<T>::get_entry(asset_a, asset_b, TenMinutes)); }
+    }: { let _ = res.replace(EmaOracle::<T>::get_entry(asset_a, asset_b, TenMinutes, SOURCE)); }
     verify {
         assert_eq!(*res.borrow(), Ok(AggregatedEntry {
             price: Price::from((amount_in, amount_out)),

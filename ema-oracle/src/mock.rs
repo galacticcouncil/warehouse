@@ -28,6 +28,8 @@ use frame_support::traits::{Everything, GenesisBuild};
 use hydradx_traits::{AssetPairAccountIdFor, Volume};
 use sp_core::H256;
 
+pub use hydradx_traits::Source;
+
 pub type AssetId = u32;
 pub type Balance = u128;
 pub type Price = FixedU128;
@@ -135,11 +137,11 @@ impl Config for Test {
 
 #[derive(Default)]
 pub struct ExtBuilder {
-    pub price_data: Vec<((AssetId, AssetId), Price, Balance)>,
+    pub price_data: Vec<(Source, (AssetId, AssetId), Price, Balance)>,
 }
 
 impl ExtBuilder {
-    pub fn with_price_data(mut self, data: Vec<((AssetId, AssetId), Price, Balance)>) -> Self {
+    pub fn with_price_data(mut self, data: Vec<(Source, (AssetId, AssetId), Price, Balance)>) -> Self {
         self.price_data = data;
         self
     }

@@ -156,7 +156,14 @@ impl<AssetId> OnCreatePoolHandler<AssetId> for () {
 /// Handler used by AMM pools to perform some tasks when a trade is executed.
 pub trait OnTradeHandler<AssetId, Balance> {
     /// Include a trade in the average price calculation of the price-oracle pallet.
-    fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liq_amount: Balance);
+    fn on_trade(
+        source: Source,
+        asset_a: AssetId,
+        asset_b: AssetId,
+        amount_in: Balance,
+        amount_out: Balance,
+        liq_amount: Balance,
+    );
     /// Known overhead for a trade in `on_initialize/on_finalize`.
     /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
     /// Add this weight to an extrinsic from which you call `on_trade`.
@@ -164,7 +171,14 @@ pub trait OnTradeHandler<AssetId, Balance> {
 }
 
 impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {
-    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {
+    fn on_trade(
+        _source: Source,
+        _asset_a: AssetId,
+        _asset_b: AssetId,
+        _amount_in: Balance,
+        _amount_out: Balance,
+        _liq_amount: Balance,
+    ) {
     }
     fn on_trade_weight() -> Weight {
         Weight::zero()
@@ -183,6 +197,7 @@ pub trait LockedBalance<AssetId, AccountId, Balance> {
 pub trait OnLiquidityChangedHandler<AssetId, Balance> {
     /// Notify that the liquidity for a pair of assets has changed.
     fn on_liquidity_changed(
+        source: Source,
         asset_a: AssetId,
         asset_b: AssetId,
         amount_in: Balance,
@@ -196,7 +211,15 @@ pub trait OnLiquidityChangedHandler<AssetId, Balance> {
 }
 
 impl<AssetId, Balance> OnLiquidityChangedHandler<AssetId, Balance> for () {
-    fn on_liquidity_changed(_a: AssetId, _b: AssetId, _amount_a: Balance, _amount_b: Balance, _liq: Balance) {}
+    fn on_liquidity_changed(
+        _source: Source,
+        _a: AssetId,
+        _b: AssetId,
+        _amount_a: Balance,
+        _amount_b: Balance,
+        _liq: Balance,
+    ) {
+    }
 
     fn on_liquidity_changed_weight() -> Weight {
         Weight::zero()

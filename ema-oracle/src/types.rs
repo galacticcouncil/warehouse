@@ -21,9 +21,11 @@ use frame_support::sp_runtime::{FixedU128, RuntimeDebug};
 use hydradx_traits::{AggregatedEntry, Volume};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
-    traits::{AtLeast32BitUnsigned, One, SaturatedConversion, Saturating, UniqueSaturatedInto},
+    traits::{AtLeast32BitUnsigned, One, SaturatedConversion, Saturating, UniqueSaturatedInto, Zero},
     FixedPointNumber,
 };
+
+pub use hydradx_traits::Source;
 
 use sp_std::prelude::*;
 
@@ -62,15 +64,16 @@ where
 
     /// Return an inverted version of the entry where the meaning of assets a and b are inverted.
     /// So the price of a/b become the price b/a and the volume switches correspondingly.
-    pub fn inverted(&self) -> Option<Self> {
-        let price = self.price.reciprocal()?;
+    pub fn inverted(&self) -> Self {
+        // It makes sense for the reciprocal of zero to be zero here.
+        let price = self.price.reciprocal().unwrap_or_else(Zero::zero);
         let volume = self.volume.inverted();
-        Some(Self {
+        Self {
             price,
             volume,
             liquidity: self.liquidity,
             timestamp: self.timestamp,
-        })
+        }
     }
 
     /// Determine a new entry based on `self` and a previous entry. Adds the volumes together and

@@ -25,6 +25,9 @@ use frame_support::assert_storage_noop;
 use proptest::prelude::*;
 use sp_arithmetic::{traits::One, FixedPointNumber};
 
+/// Default oracle source for tests.
+const SOURCE: Source = *b"dummysrc";
+
 #[macro_export]
 macro_rules! assert_eq_approx {
     ( $x:expr, $y:expr, $z:expr, $r:expr) => {{
@@ -40,21 +43,21 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 /// Return the entry of an asset pair in the accumulator.
-fn get_accumulator_entry(pair_id: &AssetPairId) -> Option<OracleEntry<BlockNumber>> {
-    let a = Accumulator::<Test>::get();
-    a.get(pair_id).cloned()
+fn get_accumulator_entry(src: Source, (a, b): (AssetId, AssetId)) -> Option<OracleEntry<BlockNumber>> {
+    let acc = Accumulator::<Test>::get();
+    acc.get(&(src, ordered_pair(a, b))).cloned()
 }
 
-fn get_oracle_entry(asset_a: AssetId, asset_b: AssetId, period: &OraclePeriod) -> Option<OracleEntry<BlockNumber>> {
-    Oracles::<Test>::get(derive_name(asset_a, asset_b), into_blocks::<Test>(period)).map(|(e, _)| e)
+fn get_oracle_entry(a: AssetId, b: AssetId, period: &OraclePeriod) -> Option<OracleEntry<BlockNumber>> {
+    Oracles::<Test>::get((SOURCE, ordered_pair(a, b), into_blocks::<Test>(period))).map(|(e, _)| e)
 }
 
 #[test]
 fn genesis_config_works() {
     ExtBuilder::default()
         .with_price_data(vec![
-            ((HDX, DOT), Price::from(1_000_000), 2_000_000),
-            ((HDX, ACA), Price::from(3_000_000), 4_000_000),
+            (SOURCE, (HDX, DOT), Price::from(1_000_000), 2_000_000),
+            (SOURCE, (HDX, ACA), Price::from(3_000_000), 4_000_000),
         ])
         .build()
         .execute_with(|| {
@@ -85,11 +88,11 @@ fn genesis_config_works() {
 #[test]
 fn on_trade_should_work() {
     new_test_ext().execute_with(|| {
-        assert_eq!(get_accumulator_entry(&derive_name(HDX, DOT)), None);
-        EmaOracle::on_trade(derive_name(HDX, DOT), PRICE_ENTRY_1);
-        EmaOracle::on_trade(derive_name(HDX, DOT), PRICE_ENTRY_2);
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
+        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1);
+        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_2);
         let price_entry = PRICE_ENTRY_2.accumulate_volume(&PRICE_ENTRY_1);
-        assert_eq!(get_accumulator_entry(&derive_name(HDX, DOT)).unwrap(), price_entry);
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap(), price_entry);
     });
 }
 
@@ -97,9 +100,9 @@ fn on_trade_should_work() {
 fn on_trade_handler_should_work() {
     new_test_ext().execute_with(|| {
         System::set_block_number(PRICE_ENTRY_1.timestamp);
-        assert_eq!(get_accumulator_entry(&derive_name(HDX, DOT)), None);
-        OnActivityHandler::<Test>::on_trade(HDX, DOT, 1_000, 500, 2_000);
-        assert_eq!(get_accumulator_entry(&derive_name(HDX, DOT)), Some(PRICE_ENTRY_1));
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
+        OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 500, 2_000);
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(PRICE_ENTRY_1));
     });
 }
 
@@ -114,20 +117,35 @@ fn on_liquidity_changed_handler_should_work() {
             liquidity: 2_000,
             timestamp,
         };
-        assert_eq!(get_accumulator_entry(&derive_name(HDX, DOT)), None);
-        OnActivityHandler::<Test>::on_liquidity_changed(HDX, DOT, 1_000, 500, 2_000);
-        assert_eq!(get_accumulator_entry(&derive_name(HDX, DOT)), Some(no_volume_entry));
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
+        OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, HDX, DOT, 1_000, 500, 2_000);
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(no_volume_entry));
     });
 }
 
 #[test]
 fn price_normalization_should_exclude_extreme_values() {
     new_test_ext().execute_with(|| {
-        assert_storage_noop!(OnActivityHandler::<Test>::on_trade(HDX, DOT, Balance::MAX, 1, 2_000));
-
-        assert_storage_noop!(OnActivityHandler::<Test>::on_trade(HDX, DOT, 1, Balance::MAX, 2_000));
+        assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
+            SOURCE,
+            HDX,
+            DOT,
+            Balance::MAX,
+            1,
+            2_000
+        ));
 
         assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
+            SOURCE,
+            HDX,
+            DOT,
+            1,
+            Balance::MAX,
+            2_000
+        ));
+
+        assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
+            SOURCE,
             HDX,
             DOT,
             Balance::zero(),
@@ -136,6 +154,7 @@ fn price_normalization_should_exclude_extreme_values() {
         ));
 
         assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
+            SOURCE,
             HDX,
             DOT,
             1_000,
@@ -156,13 +175,13 @@ fn volume_normalization_should_factor_in_asset_order() {
 #[test]
 fn oracle_volume_should_factor_in_asset_order() {
     new_test_ext().execute_with(|| {
-        assert_eq!(get_accumulator_entry(&derive_name(HDX, DOT)), None);
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
 
-        OnActivityHandler::<Test>::on_trade(HDX, DOT, 2_000_000, 1_000, 2_000);
+        OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 2_000_000, 1_000, 2_000);
         // we reverse the order of the arguments
-        OnActivityHandler::<Test>::on_trade(DOT, HDX, 1_000, 2_000_000, 2_000);
+        OnActivityHandler::<Test>::on_trade(SOURCE, DOT, HDX, 1_000, 2_000_000, 2_000);
 
-        let price_entry = get_accumulator_entry(&derive_name(HDX, DOT)).unwrap();
+        let price_entry = get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap();
         let first_entry = OracleEntry {
             price: Price::saturating_from_rational(2_000_000, 1_000),
             volume: Volume::from_a_in_b_out(2_000_000, 1_000),
@@ -187,9 +206,9 @@ fn update_data_should_work() {
         System::set_block_number(5);
         EmaOracle::on_initialize(5);
 
-        EmaOracle::on_trade(derive_name(HDX, DOT), PRICE_ENTRY_1);
-        EmaOracle::on_trade(derive_name(HDX, DOT), PRICE_ENTRY_2);
-        EmaOracle::on_trade(derive_name(HDX, ACA), PRICE_ENTRY_1);
+        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1);
+        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_2);
+        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, ACA), PRICE_ENTRY_1);
 
         EmaOracle::on_finalize(5);
         System::set_block_number(6);
@@ -365,26 +384,29 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
 #[test]
 fn get_price_works() {
     ExtBuilder::default()
-        .with_price_data(vec![((HDX, DOT), Price::from(1_000_000), 2_000_000)])
+        .with_price_data(vec![(SOURCE, (HDX, DOT), Price::from(1_000_000), 2_000_000)])
         .build()
         .execute_with(|| {
             System::set_block_number(2);
             let expected = (Price::from(1_000_000), 1);
-            assert_eq!(EmaOracle::get_price(HDX, DOT, LastBlock), Ok(expected));
-            assert_eq!(EmaOracle::get_price(HDX, DOT, TenMinutes), Ok(expected));
-            assert_eq!(EmaOracle::get_price(HDX, DOT, Day), Ok(expected));
-            assert_eq!(EmaOracle::get_price(HDX, DOT, Week), Ok(expected));
+            assert_eq!(EmaOracle::get_price(HDX, DOT, LastBlock, SOURCE), Ok(expected));
+            assert_eq!(EmaOracle::get_price(HDX, DOT, TenMinutes, SOURCE), Ok(expected));
+            assert_eq!(EmaOracle::get_price(HDX, DOT, Day, SOURCE), Ok(expected));
+            assert_eq!(EmaOracle::get_price(HDX, DOT, Week, SOURCE), Ok(expected));
         });
 }
 
 #[test]
 fn trying_to_get_price_for_same_asset_should_error() {
     ExtBuilder::default()
-        .with_price_data(vec![((HDX, DOT), Price::from(1_000_000), 2_000_000)])
+        .with_price_data(vec![(SOURCE, (HDX, DOT), Price::from(1_000_000), 2_000_000)])
         .build()
         .execute_with(|| {
             System::set_block_number(2);
-            assert_eq!(EmaOracle::get_price(HDX, HDX, LastBlock), Err(OracleError::SameAsset),);
+            assert_eq!(
+                EmaOracle::get_price(HDX, HDX, LastBlock, SOURCE),
+                Err(OracleError::SameAsset),
+            );
         });
 }
 
@@ -392,7 +414,7 @@ fn trying_to_get_price_for_same_asset_should_error() {
 fn get_entry_works() {
     ExtBuilder::default().build().execute_with(|| {
         System::set_block_number(1);
-        OnActivityHandler::<Test>::on_trade(HDX, DOT, 1_000, 500, 2_000);
+        OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 500, 2_000);
         EmaOracle::on_finalize(1);
         System::set_block_number(100);
         let expected = AggregatedEntry {
@@ -401,17 +423,17 @@ fn get_entry_works() {
             liquidity: 2_000,
             oracle_age: 98,
         };
-        assert_eq!(EmaOracle::get_entry(HDX, DOT, LastBlock), Ok(expected.clone()));
-        assert_eq!(EmaOracle::get_entry(HDX, DOT, TenMinutes), Ok(expected.clone()));
-        assert_eq!(EmaOracle::get_entry(HDX, DOT, Day), Ok(expected.clone()));
-        assert_eq!(EmaOracle::get_entry(HDX, DOT, Week), Ok(expected));
+        assert_eq!(EmaOracle::get_entry(HDX, DOT, LastBlock, SOURCE), Ok(expected.clone()));
+        assert_eq!(EmaOracle::get_entry(HDX, DOT, TenMinutes, SOURCE), Ok(expected.clone()));
+        assert_eq!(EmaOracle::get_entry(HDX, DOT, Day, SOURCE), Ok(expected.clone()));
+        assert_eq!(EmaOracle::get_entry(HDX, DOT, Week, SOURCE), Ok(expected));
     });
 }
 
 #[test]
 fn get_price_returns_updated_price() {
     ExtBuilder::default()
-        .with_price_data(vec![((HDX, DOT), Price::from(1_000_000), 2_000_000)])
+        .with_price_data(vec![(SOURCE, (HDX, DOT), Price::from(1_000_000), 2_000_000)])
         .build()
         .execute_with(|| {
             let on_trade_entry = OracleEntry {
@@ -421,43 +443,43 @@ fn get_price_returns_updated_price() {
                 timestamp: 10_000,
             };
             System::set_block_number(10_000);
-            EmaOracle::on_trade(derive_name(HDX, DOT), on_trade_entry);
+            EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), on_trade_entry);
             EmaOracle::on_finalize(10_000);
 
             System::set_block_number(10_001);
 
             assert_eq!(
-                EmaOracle::get_price(HDX, DOT, LastBlock).unwrap().1,
+                EmaOracle::get_price(HDX, DOT, LastBlock, SOURCE).unwrap().1,
                 10_000,
                 "Oracle should be 10_000 blocks old."
             );
             assert_eq!(
-                EmaOracle::get_price(HDX, DOT, Day).unwrap().1,
+                EmaOracle::get_price(HDX, DOT, Day, SOURCE).unwrap().1,
                 10_000,
                 "Oracle should be 10_000 blocks old."
             );
 
             let e = Price::from_float(0.01);
             assert_eq_approx!(
-                EmaOracle::get_price(HDX, DOT, LastBlock).unwrap().0,
+                EmaOracle::get_price(HDX, DOT, LastBlock, SOURCE).unwrap().0,
                 Price::from(500_000),
                 e,
                 "LastBlock Oracle should have most recent value."
             );
             assert_eq_approx!(
-                EmaOracle::get_price(HDX, DOT, TenMinutes).unwrap().0,
+                EmaOracle::get_price(HDX, DOT, TenMinutes, SOURCE).unwrap().0,
                 Price::from(500_000),
                 e,
                 "TenMinutes Oracle should converge within 1000 blocks."
             );
             assert_eq_approx!(
-                EmaOracle::get_price(HDX, DOT, Day).unwrap().0,
+                EmaOracle::get_price(HDX, DOT, Day, SOURCE).unwrap().0,
                 Price::from_float(531_088.261_455_784),
                 e,
                 "Day Oracle should converge somewhat."
             );
             assert_eq_approx!(
-                EmaOracle::get_price(HDX, DOT, Week).unwrap().0,
+                EmaOracle::get_price(HDX, DOT, Week, SOURCE).unwrap().0,
                 Price::from_float(836_225.713_750_993),
                 e,
                 "Week Oracle should converge somewhat."
@@ -502,10 +524,10 @@ proptest! {
         new_test_ext().execute_with(|| {
             let timestamp = 5;
             System::set_block_number(timestamp);
-            OnActivityHandler::<Test>::on_trade(asset_a, asset_b, amount_a, amount_b, liquidity);
-            let volume_before = get_accumulator_entry(&derive_name(asset_a, asset_b)).unwrap().volume;
-            OnActivityHandler::<Test>::on_liquidity_changed(asset_a, asset_b, second_amount_a, second_amount_b, second_liquidity);
-            let volume_after = get_accumulator_entry(&derive_name(asset_a, asset_b)).unwrap().volume;
+            OnActivityHandler::<Test>::on_trade(SOURCE, asset_a, asset_b, amount_a, amount_b, liquidity);
+            let volume_before = get_accumulator_entry(SOURCE, (asset_a, asset_b)).unwrap().volume;
+            OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, asset_a, asset_b, second_amount_a, second_amount_b, second_liquidity);
+            let volume_after = get_accumulator_entry(SOURCE, (asset_a, asset_b)).unwrap().volume;
             assert_eq!(volume_before, volume_after);
         });
     }

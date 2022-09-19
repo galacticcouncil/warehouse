@@ -42,7 +42,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 /// Return the entry of an asset pair in the accumulator.
 fn get_accumulator_entry(pair_id: &AssetPairId) -> Option<OracleEntry<BlockNumber>> {
     let a = Accumulator::<Test>::get();
-    a.get(pair_id).map(|e| e.clone())
+    a.get(pair_id).cloned()
 }
 
 fn get_oracle_entry(asset_a: AssetId, asset_b: AssetId, period: &OraclePeriod) -> Option<OracleEntry<BlockNumber>> {
@@ -404,7 +404,7 @@ fn get_entry_works() {
         assert_eq!(EmaOracle::get_entry(HDX, DOT, LastBlock), Ok(expected.clone()));
         assert_eq!(EmaOracle::get_entry(HDX, DOT, TenMinutes), Ok(expected.clone()));
         assert_eq!(EmaOracle::get_entry(HDX, DOT, Day), Ok(expected.clone()));
-        assert_eq!(EmaOracle::get_entry(HDX, DOT, Week), Ok(expected.clone()));
+        assert_eq!(EmaOracle::get_entry(HDX, DOT, Week), Ok(expected));
     });
 }
 
@@ -452,13 +452,13 @@ fn get_price_returns_updated_price() {
             );
             assert_eq_approx!(
                 EmaOracle::get_price(HDX, DOT, Day).unwrap().0,
-                Price::from_float(531088.261455783831),
+                Price::from_float(531_088.261_455_784),
                 e,
                 "Day Oracle should converge somewhat."
             );
             assert_eq_approx!(
                 EmaOracle::get_price(HDX, DOT, Week).unwrap().0,
-                Price::from_float(836225.713750992856),
+                Price::from_float(836_225.713_750_993),
                 e,
                 "Week Oracle should converge somewhat."
             );

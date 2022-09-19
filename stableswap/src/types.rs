@@ -19,55 +19,55 @@ pub(crate) type Balance = u128;
 /// `fee`: trade fee to be withdrawn on sell/buy
 #[derive(Clone, Encode, Decode, MaxEncodedLen, TypeInfo, RuntimeDebug)]
 pub struct PoolInfo<AssetId> {
-	pub assets: BoundedVec<AssetId, ConstU32<MAX_ASSETS_IN_POOL>>,
-	pub amplification: u16,
-	pub trade_fee: Permill,
-	pub withdraw_fee: Permill,
+    pub assets: BoundedVec<AssetId, ConstU32<MAX_ASSETS_IN_POOL>>,
+    pub amplification: u16,
+    pub trade_fee: Permill,
+    pub withdraw_fee: Permill,
 }
 
 fn has_unique_elements<T>(iter: &mut T) -> bool
 where
-	T: Iterator,
-	T::Item: Ord,
+    T: Iterator,
+    T::Item: Ord,
 {
-	let mut uniq = BTreeSet::new();
-	iter.all(move |x| uniq.insert(x))
+    let mut uniq = BTreeSet::new();
+    iter.all(move |x| uniq.insert(x))
 }
 
 impl<AssetId> PoolInfo<AssetId>
 where
-	AssetId: Ord + Copy,
+    AssetId: Ord + Copy,
 {
-	pub(crate) fn find_asset(&self, asset: AssetId) -> Option<usize> {
-		self.assets.iter().position(|v| *v == asset)
-	}
+    pub(crate) fn find_asset(&self, asset: AssetId) -> Option<usize> {
+        self.assets.iter().position(|v| *v == asset)
+    }
 
-	pub(crate) fn is_valid(&self) -> bool {
-		has_unique_elements(&mut self.assets.iter())
-	}
+    pub(crate) fn is_valid(&self) -> bool {
+        has_unique_elements(&mut self.assets.iter())
+    }
 
-	pub(crate) fn pool_account<T: Config>(&self) -> T::AccountId
-	where
-		T::ShareAccountId: ShareAccountIdFor<Vec<AssetId>, AccountId = T::AccountId>,
-	{
-		T::ShareAccountId::from_assets(&self.assets, Some(POOL_IDENTIFIER))
-	}
+    pub(crate) fn pool_account<T: Config>(&self) -> T::AccountId
+    where
+        T::ShareAccountId: ShareAccountIdFor<Vec<AssetId>, AccountId = T::AccountId>,
+    {
+        T::ShareAccountId::from_assets(&self.assets, Some(POOL_IDENTIFIER))
+    }
 
-	pub(crate) fn balances<T: Config>(&self) -> Vec<Balance>
-	where
-		T::ShareAccountId: ShareAccountIdFor<Vec<AssetId>, AccountId = T::AccountId>,
-		T::AssetId: From<AssetId>,
-	{
-		let acc = self.pool_account::<T>();
-		self.assets
-			.iter()
-			.map(|asset| T::Currency::free_balance((*asset).into(), &acc))
-			.collect()
-	}
+    pub(crate) fn balances<T: Config>(&self) -> Vec<Balance>
+    where
+        T::ShareAccountId: ShareAccountIdFor<Vec<AssetId>, AccountId = T::AccountId>,
+        T::AssetId: From<AssetId>,
+    {
+        let acc = self.pool_account::<T>();
+        self.assets
+            .iter()
+            .map(|asset| T::Currency::free_balance((*asset).into(), &acc))
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, Encode, Decode, PartialEq, TypeInfo)]
 pub struct AssetLiquidity<AssetId> {
-	pub asset_id: AssetId,
-	pub amount: Balance,
+    pub asset_id: AssetId,
+    pub amount: Balance,
 }

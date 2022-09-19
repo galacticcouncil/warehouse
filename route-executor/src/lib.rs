@@ -33,7 +33,6 @@ use sp_std::vec::Vec;
 #[cfg(test)]
 mod tests;
 
-pub mod inspect;
 pub mod weights;
 
 use weights::WeightInfo;

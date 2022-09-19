@@ -14,13 +14,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 use crate as router;
-use crate::inspect::MultiInspectAdapter;
 use crate::{Config, Trade};
 use frame_support::parameter_types;
 use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
 use frame_system::pallet_prelude::OriginFor;
+use hydradx_adapters::inspect::MultiInspectAdapter;
 use hydradx_traits::router::{ExecutorError, PoolType, TradeExecution};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;

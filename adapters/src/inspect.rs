@@ -3,6 +3,7 @@ use frame_support::traits::fungible::Inspect as FungibleInspect;
 use frame_support::traits::fungibles::Inspect as FungiblesInspect;
 use frame_support::traits::tokens::{DepositConsequence, WithdrawConsequence};
 
+/// An adapter to use inspect functionality for both native and multi currency
 pub struct MultiInspectAdapter<AccountId, AssetId, Balance, NativeCurrency, MultiCurrency, GetNativeCurrencyId>(
     sp_std::marker::PhantomData<(
         AccountId,

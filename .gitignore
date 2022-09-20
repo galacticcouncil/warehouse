@@ -19,5 +19,3 @@
 *.log
 *.orig
 .env
-
-Cargo.lock

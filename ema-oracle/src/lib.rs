@@ -15,6 +15,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # EMA Oracle Pallet
+//!
+//! ## Overview
+//!
+//! This pallet provides oracles of different periods for a combination of source and asset pair
+//! based on data coming in from `OnActivityHandler`.
+//!
+//! It is meant to be used by other pallets via the `AggregatedOracle` and `AggregatedPriceOracle`
+//! traits.
+//!
+//! When integrating with this pallet take care to use the `on_trade_weight`,
+//! `on_liquidity_changed_weight` and `get_entry_weight` into account when calculating the weight
+//! for your extrinsics.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::pallet_prelude::*;
@@ -183,6 +197,8 @@ impl<T: Config> Pallet<T> {
         }
     }
 
+    /// Update the oracle of the given source, assets and period with `oracle_entry`.
+    ///
     fn update_oracle(
         src: Source,
         assets: (AssetId, AssetId),
@@ -194,6 +210,8 @@ impl<T: Config> Pallet<T> {
                 .as_ref()
                 .map(|(prev_entry, init)| {
                     (
+                        // TODO: this should first update to the state of the parent block and then
+                        // integrate the new value
                         oracle_entry
                             .calculate_new_ema_entry(period, prev_entry)
                             .unwrap_or_else(|| prev_entry.clone()),
@@ -206,6 +224,10 @@ impl<T: Config> Pallet<T> {
         });
     }
 
+    /// Return the updated oracle entry for the given source, assets and period.
+    ///
+    /// The value will be up to date until the parent block, thus excluding trading data from the
+    /// current block. Note: It does not update the values in storage.
     fn get_updated_entry(
         src: Source,
         assets: (AssetId, AssetId),

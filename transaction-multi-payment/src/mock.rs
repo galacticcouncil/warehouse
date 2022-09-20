@@ -30,7 +30,7 @@ use sp_runtime::{
 
 use frame_support::weights::{IdentityFee, Weight};
 use hydradx_traits::AssetPairAccountIdFor;
-use orml_currencies::BasicCurrencyAdapter;
+use pallet_currencies::BasicCurrencyAdapter;
 use std::cell::RefCell;
 
 use frame_support::traits::{Everything, GenesisBuild, Get, Nothing};
@@ -148,7 +148,7 @@ frame_support::construct_runtime!(
          PaymentPallet: multi_payment::{Pallet, Call, Storage, Event<T>},
          TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
          Balances: pallet_balances::{Pallet,Call, Storage,Config<T>, Event<T>},
-         Currencies: orml_currencies::{Pallet},
+         Currencies: pallet_currencies::{Pallet, Event<T>},
          Tokens: orml_tokens::{Pallet, Event<T>},
      }
 
@@ -308,7 +308,8 @@ impl orml_tokens::Config for Test {
     type MaxReserves = MaxReserves;
 }
 
-impl orml_currencies::Config for Test {
+impl pallet_currencies::Config for Test {
+    type Event = Event;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, u32>;
     type GetNativeCurrencyId = HdxAssetId;

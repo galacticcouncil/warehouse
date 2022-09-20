@@ -24,6 +24,9 @@ use frame_support::{
     traits::{OnFinalize, OnInitialize},
 };
 
+/// Default oracle source for tests.
+const SOURCE: Source = *b"dummysrc";
+
 pub fn new_test_ext() -> sp_io::TestExternalities {
     ExtBuilder::default().build()
 }
@@ -222,7 +225,7 @@ fn on_trade_handler_should_work() {
             Err(())
         );
 
-        PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1_000, 500, 2_000);
+        PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 500, 2_000);
         assert_eq!(
             <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name),
             Ok(PRICE_ENTRY_1)
@@ -240,11 +243,26 @@ fn price_normalization_should_work() {
             Err(())
         );
 
-        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, Balance::MAX, 1, 2_000));
-
-        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1, Balance::MAX, 2_000));
+        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(
+            SOURCE,
+            HDX,
+            DOT,
+            Balance::MAX,
+            1,
+            2_000
+        ));
 
         assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(
+            SOURCE,
+            HDX,
+            DOT,
+            1,
+            Balance::MAX,
+            2_000
+        ));
+
+        assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(
+            SOURCE,
             HDX,
             DOT,
             Balance::zero(),
@@ -253,6 +271,7 @@ fn price_normalization_should_work() {
         ));
 
         assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(
+            SOURCE,
             HDX,
             DOT,
             1_000,
@@ -260,9 +279,10 @@ fn price_normalization_should_work() {
             2_000
         ));
 
-        PriceOracleHandler::<Test>::on_trade(HDX, DOT, 340282366920938463463, 1, 2_000);
+        PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, 340282366920938463463, 1, 2_000);
 
         assert_storage_noop!(PriceOracleHandler::<Test>::on_trade(
+            SOURCE,
             HDX,
             DOT,
             1,
@@ -270,9 +290,9 @@ fn price_normalization_should_work() {
             2_000
         ));
 
-        PriceOracleHandler::<Test>::on_trade(HDX, DOT, 2_000_000, 1_000, 2_000);
+        PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, 2_000_000, 1_000, 2_000);
 
-        PriceOracleHandler::<Test>::on_trade(HDX, DOT, 1_000, 2_000_000, 2_000);
+        PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 2_000_000, 2_000);
 
         let price_entry = PriceDataAccumulator::<Test>::get(hdx_dot_pair_name);
         let first_entry = PriceEntry {

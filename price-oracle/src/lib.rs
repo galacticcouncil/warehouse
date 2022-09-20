@@ -21,7 +21,7 @@ use frame_support::ensure;
 use frame_support::pallet_prelude::Weight;
 use frame_support::sp_runtime::traits::{CheckedDiv, Zero};
 use frame_support::sp_runtime::{DispatchResult, FixedPointNumber};
-use hydradx_traits::{OnCreatePoolHandler, OnTradeHandler};
+use hydradx_traits::{OnCreatePoolHandler, OnTradeHandler, Source};
 use sp_std::convert::TryInto;
 use sp_std::marker::PhantomData;
 use sp_std::prelude::*;
@@ -319,7 +319,14 @@ impl<T: Config> OnCreatePoolHandler<AssetId> for PriceOracleHandler<T> {
 }
 
 impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
-    fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liq_amount: Balance) {
+    fn on_trade(
+        _src: Source,
+        asset_a: AssetId,
+        asset_b: AssetId,
+        amount_in: Balance,
+        amount_out: Balance,
+        liq_amount: Balance,
+    ) {
         let (price, amount) =
             if let Some(price_tuple) = Pallet::<T>::normalize_price(asset_a, asset_b, amount_in, amount_out) {
                 price_tuple

@@ -191,7 +191,7 @@ pub mod pallet {
     }
 
     #[pallet::error]
-    #[cfg_attr(test, derive(PartialEq))]
+    #[cfg_attr(test, derive(PartialEq, Eq))]
     pub enum Error<T> {
         /// Creating a pool with same assets is not allowed.
         SameAssets,
@@ -368,7 +368,7 @@ pub mod pallet {
             for pool_asset in pool.assets.iter() {
                 let reserve = T::Currency::free_balance(*pool_asset, &pool_account);
                 initial_reserves.push(reserve);
-                if let Some(liq_added) = added_assets.get(&pool_asset) {
+                if let Some(liq_added) = added_assets.get(pool_asset) {
                     updated_reserves.push(reserve.checked_add(*liq_added).ok_or(ArithmeticError::Overflow)?);
                 } else {
                     ensure!(!reserve.is_zero(), Error::<T>::InvalidInitialLiquidity);

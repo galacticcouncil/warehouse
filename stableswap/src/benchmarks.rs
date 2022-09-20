@@ -144,7 +144,7 @@ benchmarks! {
         let next_asset_id: u32 = (*(asset_ids.last()).unwrap()).into() + 1u32;
         let pool_id: T::AssetId = next_asset_id.into();
 
-        let asset_id_to_withdraw: T::AssetId = asset_ids.last().unwrap().clone();
+        let asset_id_to_withdraw: T::AssetId = *asset_ids.last().unwrap();
 
         let amplification = 100u16;
         let trade_fee = Permill::from_percent(1);
@@ -213,8 +213,8 @@ benchmarks! {
         let trade_fee = Permill::from_percent(1);
         let withdraw_fee = Permill::from_percent(1);
 
-        let asset_in: T::AssetId = asset_ids.last().unwrap().clone();
-        let asset_out: T::AssetId = asset_ids.first().unwrap().clone();
+        let asset_in: T::AssetId = *asset_ids.last().unwrap();
+        let asset_out: T::AssetId = *asset_ids.first().unwrap();
 
         crate::Pallet::<T>::create_pool(RawOrigin::Signed(caller.clone()).into(),
             asset_ids,
@@ -275,8 +275,8 @@ benchmarks! {
         let trade_fee = Permill::from_percent(1);
         let withdraw_fee = Permill::from_percent(1);
 
-        let asset_in: T::AssetId = asset_ids.last().unwrap().clone();
-        let asset_out: T::AssetId = asset_ids.first().unwrap().clone();
+        let asset_in: T::AssetId = *asset_ids.last().unwrap();
+        let asset_out: T::AssetId = *asset_ids.first().unwrap();
 
         crate::Pallet::<T>::create_pool(RawOrigin::Signed(caller.clone()).into(),
             asset_ids,

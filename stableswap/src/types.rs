@@ -66,7 +66,7 @@ where
     }
 }
 
-#[derive(Debug, Clone, Encode, Decode, PartialEq, TypeInfo)]
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq, TypeInfo)]
 pub struct AssetLiquidity<AssetId> {
     pub asset_id: AssetId,
     pub amount: Balance,

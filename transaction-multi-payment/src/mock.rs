@@ -73,7 +73,7 @@ impl Get<u64> for ExtrinsicBaseWeight {
 
 pub struct ChargeAdapter<L, R>(PhantomData<L>, PhantomData<R>);
 
-#[derive(Default, PartialEq, Debug)]
+#[derive(Default, Eq, PartialEq, Debug)]
 pub struct Info<L, R>(pub Option<L>, pub Option<R>);
 
 impl<T, L, R> OnChargeTransaction<T> for ChargeAdapter<L, R>

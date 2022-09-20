@@ -21,6 +21,8 @@
 pub mod nft;
 pub mod pools;
 pub mod registry;
+pub mod router;
+
 pub use registry::*;
 
 use codec::{Decode, Encode};

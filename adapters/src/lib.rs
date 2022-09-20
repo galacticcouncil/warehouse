@@ -29,6 +29,8 @@ use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
 use xcm_builder::TakeRevenue;
 use xcm_executor::{traits::WeightTrader, Assets};
 
+pub mod inspect;
+
 #[cfg(test)]
 mod tests;
 

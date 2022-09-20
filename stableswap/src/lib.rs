@@ -462,6 +462,7 @@ pub mod pallet {
                 share_issuance,
                 pool.amplification.into(),
                 T::Precision::get(),
+                pool.withdraw_fee,
             )
             .ok_or(ArithmeticError::Overflow)?;
 

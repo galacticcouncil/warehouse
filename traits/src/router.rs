@@ -4,6 +4,7 @@ use scale_info::TypeInfo;
 #[derive(Encode, Decode, Clone, Copy, Debug, Eq, PartialEq, TypeInfo)]
 pub enum PoolType<AssetId> {
     XYK,
+    LBP,
     Stableswap(AssetId),
     Omnipool,
 }

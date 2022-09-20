@@ -69,6 +69,7 @@ pub mod pallet {
         /// Weight information for the extrinsics.
         type WeightInfo: WeightInfo;
 
+        /// Provider for the current block number.
         type BlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
 
         /// Number of seconds between blocks, used to convert periods.

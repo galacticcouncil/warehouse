@@ -200,8 +200,8 @@ pub trait OnLiquidityChangedHandler<AssetId, Balance> {
         source: Source,
         asset_a: AssetId,
         asset_b: AssetId,
-        amount_in: Balance,
-        amount_out: Balance,
+        amount_a: Balance,
+        amount_b: Balance,
         liquidity: Balance,
     );
     /// Known overhead for a liquidity change in `on_initialize/on_finalize`.

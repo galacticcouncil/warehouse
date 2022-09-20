@@ -400,13 +400,13 @@ impl<T: Config> AggregatedOracle<AssetId, Balance, T::BlockNumber, Price> for Pa
         };
         Self::get_updated_entry(source, ordered_pair(asset_a, asset_b), period)
             .ok_or(OracleError::NotPresent)
-            .and_then(|(entry, initialized)| {
+            .map(|(entry, initialized)| {
                 let entry = if (asset_a, asset_b) != ordered_pair(asset_a, asset_b) {
                     entry.inverted()
                 } else {
                     entry
                 };
-                Ok(entry.into_aggregated(initialized))
+                entry.into_aggregated(initialized)
             })
     }
 

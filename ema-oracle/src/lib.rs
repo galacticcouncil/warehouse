@@ -53,6 +53,7 @@ pub const MAX_TRADES: u32 = 300;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
+#[allow(clippy::type_complexity)]
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -80,11 +81,15 @@ pub mod pallet {
     #[pallet::event]
     pub enum Event<T: Config> {}
 
+    /// Accumulator for oracle data in current block that will be recorded at the end of the block.
     #[pallet::storage]
     #[pallet::getter(fn accumulator)]
     pub type Accumulator<T: Config> =
         StorageValue<_, BTreeMap<(Source, (AssetId, AssetId)), OracleEntry<T::BlockNumber>>, ValueQuery>;
 
+    /// Orace storage keyed by data source, involved asset ids and the period length of the oracle.
+    ///
+    /// Stores the data entry as well as the block number when the oracle was first initialized.
     #[pallet::storage]
     #[pallet::getter(fn oracle)]
     pub type Oracles<T: Config> = StorageNMap<

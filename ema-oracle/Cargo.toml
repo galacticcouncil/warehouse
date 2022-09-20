@@ -54,6 +54,7 @@ std = [
   'frame-support/std',
   'frame-system/std',
   'frame-benchmarking/std',
+  'log/std',
   'sp-core/std',
   'sp-std/std',
   'hydradx-traits/std',

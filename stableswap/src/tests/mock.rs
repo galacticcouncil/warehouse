@@ -257,9 +257,8 @@ impl ExtBuilder {
     }
 }
 
-use crate::traits::ShareAccountIdFor;
 use crate::types::{AssetLiquidity, PoolInfo};
-use hydradx_traits::{Registry, ShareTokenRegistry};
+use hydradx_traits::{AccountIdFor, Registry, ShareTokenRegistry};
 use sp_runtime::traits::Zero;
 
 pub struct DummyRegistry<T>(sp_std::marker::PhantomData<T>);
@@ -314,7 +313,7 @@ where
 
 pub struct AccountIdConstructor;
 
-impl ShareAccountIdFor<Vec<u32>> for AccountIdConstructor {
+impl AccountIdFor<Vec<u32>> for AccountIdConstructor {
     type AccountId = AccountId;
 
     fn from_assets(assets: &Vec<u32>, _identifier: Option<&[u8]>) -> Self::AccountId {

@@ -3,10 +3,10 @@ use sp_runtime::Permill;
 use sp_std::collections::btree_set::BTreeSet;
 use sp_std::prelude::*;
 
-use crate::traits::ShareAccountIdFor;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::traits::ConstU32;
 use frame_support::BoundedVec;
+use hydradx_traits::AccountIdFor;
 use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
@@ -48,14 +48,14 @@ where
 
     pub(crate) fn pool_account<T: Config>(&self) -> T::AccountId
     where
-        T::ShareAccountId: ShareAccountIdFor<Vec<AssetId>, AccountId = T::AccountId>,
+        T::ShareAccountId: AccountIdFor<Vec<AssetId>, AccountId = T::AccountId>,
     {
         T::ShareAccountId::from_assets(&self.assets, Some(POOL_IDENTIFIER))
     }
 
     pub(crate) fn balances<T: Config>(&self) -> Vec<Balance>
     where
-        T::ShareAccountId: ShareAccountIdFor<Vec<AssetId>, AccountId = T::AccountId>,
+        T::ShareAccountId: AccountIdFor<Vec<AssetId>, AccountId = T::AccountId>,
         T::AssetId: From<AssetId>,
     {
         let acc = self.pool_account::<T>();

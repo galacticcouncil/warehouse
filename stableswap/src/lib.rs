@@ -47,7 +47,6 @@ use sp_std::prelude::*;
 
 pub use pallet::*;
 
-pub mod traits;
 pub mod types;
 pub mod weights;
 
@@ -72,13 +71,12 @@ const Y_ITERATIONS: u8 = 64;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use crate::traits::ShareAccountIdFor;
     use crate::types::{AssetLiquidity, Balance, PoolInfo};
     use codec::HasCompact;
     use core::ops::RangeInclusive;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
-    use hydradx_traits::{Registry, ShareTokenRegistry};
+    use hydradx_traits::{AccountIdFor, Registry, ShareTokenRegistry};
     use orml_traits::MultiCurrency;
     use sp_runtime::traits::Zero;
     use sp_runtime::ArithmeticError;
@@ -109,7 +107,7 @@ pub mod pallet {
         type Currency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Balance>;
 
         /// Account ID constructor
-        type ShareAccountId: ShareAccountIdFor<Vec<Self::AssetId>, AccountId = Self::AccountId>;
+        type ShareAccountId: AccountIdFor<Vec<Self::AssetId>, AccountId = Self::AccountId>;
 
         /// Asset registry mechanism
         type AssetRegistry: ShareTokenRegistry<Self::AssetId, Vec<u8>, Balance, DispatchError>;

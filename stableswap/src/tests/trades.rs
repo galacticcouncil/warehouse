@@ -1,7 +1,7 @@
 use crate::tests::mock::*;
-use crate::traits::ShareAccountIdFor;
 use crate::types::{AssetLiquidity, PoolInfo};
 use crate::{assert_balance, Error};
+use hydradx_traits::AccountIdFor;
 
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::Permill;

@@ -1,7 +1,7 @@
 use crate::tests::mock::*;
-use crate::traits::ShareAccountIdFor;
 use crate::types::{AssetLiquidity, PoolInfo};
 use frame_support::assert_ok;
+use hydradx_traits::AccountIdFor;
 use sp_runtime::{FixedU128, Permill};
 
 use hydra_dx_math::stableswap::calculate_d;

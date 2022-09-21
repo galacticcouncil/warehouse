@@ -41,14 +41,18 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::pallet_prelude::{DispatchResult, Get};
-use frame_support::transactional;
-use sp_runtime::Permill;
+use frame_support::{ensure, transactional};
+use sp_runtime::traits::Zero;
+use sp_runtime::{ArithmeticError, DispatchError, Permill};
 use sp_std::prelude::*;
 
 pub use pallet::*;
 
+mod impls;
 pub mod types;
 pub mod weights;
+
+pub use impls::*;
 
 use crate::types::Balance;
 use weights::WeightInfo;
@@ -514,33 +518,12 @@ pub mod pallet {
                 Error::<T>::InsufficientBalance
             );
 
-            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
-
-            let index_in = pool.find_asset(asset_in).ok_or(Error::<T>::AssetNotInPool)?;
-            let index_out = pool.find_asset(asset_out).ok_or(Error::<T>::AssetNotInPool)?;
-
-            let balances = pool.balances::<T>();
-
-            ensure!(balances[index_in] > Balance::zero(), Error::<T>::InsufficientLiquidity);
-            ensure!(balances[index_out] > Balance::zero(), Error::<T>::InsufficientLiquidity);
-
-            let amount_out = hydra_dx_math::stableswap::calculate_out_given_in::<D_ITERATIONS, Y_ITERATIONS>(
-                &balances,
-                index_in,
-                index_out,
-                amount_in,
-                pool.amplification.into(),
-                T::Precision::get(),
-            )
-            .ok_or(ArithmeticError::Overflow)?;
-
-            let pool_account = pool.pool_account::<T>();
-
-            let fee_amount = Self::calculate_fee_amount(amount_out, pool.trade_fee, Rounding::Down);
-
-            let amount_out = amount_out.checked_sub(fee_amount).ok_or(ArithmeticError::Underflow)?;
+            let (amount_out, fee_amount) = Self::calculate_out_amount(pool_id, asset_in, asset_out, amount_in)?;
 
             ensure!(amount_out >= min_buy_amount, Error::<T>::BuyLimitNotReached);
+
+            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let pool_account = pool.pool_account::<T>();
 
             T::Currency::transfer(asset_in, &who, &pool_account, amount_in)?;
             T::Currency::transfer(asset_out, &pool_account, &who, amount_out)?;
@@ -587,31 +570,10 @@ pub mod pallet {
                 Error::<T>::InsufficientTradingAmount
             );
 
+            let (amount_in, fee_amount) = Self::calculate_in_amount(pool_id, asset_in, asset_out, amount_out)?;
+
             let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
-
-            let index_in = pool.find_asset(asset_in).ok_or(Error::<T>::AssetNotInPool)?;
-            let index_out = pool.find_asset(asset_out).ok_or(Error::<T>::AssetNotInPool)?;
-
             let pool_account = pool.pool_account::<T>();
-
-            let balances = pool.balances::<T>();
-
-            ensure!(balances[index_out] > amount_out, Error::<T>::InsufficientLiquidity);
-            ensure!(balances[index_in] > Balance::zero(), Error::<T>::InsufficientLiquidity);
-
-            let amount_in = hydra_dx_math::stableswap::calculate_in_given_out::<D_ITERATIONS, Y_ITERATIONS>(
-                &balances,
-                index_in,
-                index_out,
-                amount_out,
-                pool.amplification.into(),
-                T::Precision::get(),
-            )
-            .ok_or(ArithmeticError::Overflow)?;
-
-            let fee_amount = Self::calculate_fee_amount(amount_in, pool.trade_fee, Rounding::Up);
-
-            let amount_in = amount_in.checked_add(fee_amount).ok_or(ArithmeticError::Overflow)?;
 
             ensure!(amount_in <= max_sell_amount, Error::<T>::SellLimitExceeded);
 
@@ -653,5 +615,71 @@ impl<T: Config> Pallet<T> {
             Rounding::Down => fee.mul_floor(amount),
             Rounding::Up => fee.mul_ceil(amount),
         }
+    }
+
+    fn calculate_out_amount(
+        pool_id: T::AssetId,
+        asset_out: T::AssetId,
+        asset_in: T::AssetId,
+        amount_in: Balance,
+    ) -> Result<(Balance, Balance), DispatchError> {
+        let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+
+        let index_in = pool.find_asset(asset_in).ok_or(Error::<T>::AssetNotInPool)?;
+        let index_out = pool.find_asset(asset_out).ok_or(Error::<T>::AssetNotInPool)?;
+
+        let balances = pool.balances::<T>();
+
+        ensure!(balances[index_in] > Balance::zero(), Error::<T>::InsufficientLiquidity);
+        ensure!(balances[index_out] > Balance::zero(), Error::<T>::InsufficientLiquidity);
+
+        let amount_out = hydra_dx_math::stableswap::calculate_out_given_in::<D_ITERATIONS, Y_ITERATIONS>(
+            &balances,
+            index_in,
+            index_out,
+            amount_in,
+            pool.amplification.into(),
+            T::Precision::get(),
+        )
+        .ok_or(ArithmeticError::Overflow)?;
+
+        let fee_amount = Self::calculate_fee_amount(amount_out, pool.trade_fee, Rounding::Down);
+
+        let amount_out = amount_out.checked_sub(fee_amount).ok_or(ArithmeticError::Underflow)?;
+
+        Ok((amount_out, fee_amount))
+    }
+
+    fn calculate_in_amount(
+        pool_id: T::AssetId,
+        asset_in: T::AssetId,
+        asset_out: T::AssetId,
+        amount_out: Balance,
+    ) -> Result<(Balance, Balance), DispatchError> {
+        let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+
+        let index_in = pool.find_asset(asset_in).ok_or(Error::<T>::AssetNotInPool)?;
+        let index_out = pool.find_asset(asset_out).ok_or(Error::<T>::AssetNotInPool)?;
+
+        let balances = pool.balances::<T>();
+
+        ensure!(balances[index_out] > amount_out, Error::<T>::InsufficientLiquidity);
+        ensure!(balances[index_in] > Balance::zero(), Error::<T>::InsufficientLiquidity);
+
+        let amount_in = hydra_dx_math::stableswap::calculate_in_given_out::<D_ITERATIONS, Y_ITERATIONS>(
+            &balances,
+            index_in,
+            index_out,
+            amount_out,
+            pool.amplification.into(),
+            T::Precision::get(),
+        )
+        .ok_or(ArithmeticError::Overflow)?;
+
+        let fee_amount = Self::calculate_fee_amount(amount_in, pool.trade_fee, Rounding::Up);
+
+        let amount_in = amount_in.checked_add(fee_amount).ok_or(ArithmeticError::Overflow)?;
+
+        Ok((amount_in, fee_amount))
     }
 }

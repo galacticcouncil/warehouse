@@ -167,8 +167,7 @@ pub mod pallet {
             let _ = <PriceDataAccumulator<T>>::clear(u32::MAX, None);
 
             // add newly registered assets
-            let _ =
-                TrackedAssetsCount::<T>::mutate(|value| *value = value.saturating_add(Self::new_assets().len() as u32));
+            TrackedAssetsCount::<T>::mutate(|value| *value = value.saturating_add(Self::new_assets().len() as u32));
 
             for new_asset in Self::new_assets().iter() {
                 PriceDataTen::<T>::append((new_asset, BucketQueue::default()));
@@ -218,7 +217,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn on_trade(asset_a: AssetId, asset_b: AssetId, price_entry: PriceEntry) {
-        let _ = PriceDataAccumulator::<T>::mutate(Self::get_name(asset_a, asset_b), |previous_price_entry| {
+        PriceDataAccumulator::<T>::mutate(Self::get_name(asset_a, asset_b), |previous_price_entry| {
             let maybe_new_price_entry = previous_price_entry.calculate_new_price_entry(&price_entry);
             // Invalid values are ignored and not added to the queue.
             if let Some(new_price_entry) = maybe_new_price_entry {

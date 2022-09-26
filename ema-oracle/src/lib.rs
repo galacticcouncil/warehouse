@@ -213,18 +213,24 @@ impl<T: Config> Pallet<T> {
                 .map(|(prev_entry, init)| {
                     let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
                     let base = if parent > prev_entry.timestamp {
-                        let (mut last_block, _) = Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))
-                            .expect("last block entry should be there");
-                        last_block.timestamp = parent;
-                        last_block
-                            .calculate_new_ema_entry(period, prev_entry)
-                            .expect("prev and last block should work")
+                        Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))
+                            .and_then(|(mut last_block, _)| {
+                                last_block.timestamp = parent;
+                                last_block
+                                    .calculate_new_ema_entry(period, prev_entry)
+                            }).unwrap_or_else(|| {
+                                log::warning!("Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to parent block failed. Defaulting to previous value.");
+                                prev_entry.clone()
+                            })
                     } else {
                         prev_entry.clone()
                     };
                     let new_entry = oracle_entry
                         .calculate_new_ema_entry(period, &base)
-                        .unwrap_or_else(|| prev_entry.clone());
+                        .unwrap_or_else(|| {
+                            log::warning!("Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to new value failed. Defaulting to previous value.");
+                            prev_entry.clone()
+                    });
 
                     (new_entry, *init)
                 })

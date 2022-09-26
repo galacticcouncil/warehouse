@@ -170,7 +170,7 @@ impl<T: Config> Pallet<T> {
             accumulator
                 .entry((src, assets))
                 .and_modify(|entry| {
-                    *entry = oracle_entry.accumulate_volume(entry);
+                    entry.accumulate_volume_and_update_from(&oracle_entry);
                 })
                 .or_insert(oracle_entry);
         });
@@ -216,10 +216,9 @@ impl<T: Config> Pallet<T> {
                         Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))
                             .and_then(|(mut last_block, _)| {
                                 last_block.timestamp = parent;
-                                last_block
-                                    .calculate_new_ema_entry(period, prev_entry)
+                                last_block.calculate_new_ema_entry(period, prev_entry)
                             }).unwrap_or_else(|| {
-                                log::warning!("Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to parent block failed. Defaulting to previous value.");
+                                log::warn!(target: "runtime::ema-oracle", "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to parent block failed. Defaulting to previous value.");
                                 prev_entry.clone()
                             })
                     } else {
@@ -228,7 +227,7 @@ impl<T: Config> Pallet<T> {
                     let new_entry = oracle_entry
                         .calculate_new_ema_entry(period, &base)
                         .unwrap_or_else(|| {
-                            log::warning!("Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to new value failed. Defaulting to previous value.");
+                            log::warn!(target: "runtime::ema-oracle", "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to new value failed. Defaulting to previous value.");
                             prev_entry.clone()
                     });
 

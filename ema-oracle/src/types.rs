@@ -76,9 +76,18 @@ where
         }
     }
 
+    /// Update the volume in `self` by adding in the volume of `incoming` and taking over the other
+    /// values.
+    pub fn accumulate_volume_and_update_from(&mut self, incoming: &Self) {
+        self.volume = incoming.volume.saturating_add(&self.volume);
+        self.price = incoming.price;
+        self.liquidity = incoming.liquidity;
+        self.timestamp = incoming.timestamp;
+    }
+
     /// Determine a new entry based on `self` and a previous entry. Adds the volumes together and
     /// takes the values of `self` for the rest.
-    pub fn accumulate_volume(&self, previous_entry: &Self) -> Self {
+    pub fn with_added_volume_from(&self, previous_entry: &Self) -> Self {
         let volume = previous_entry.volume.saturating_add(&self.volume);
         Self {
             price: self.price,
@@ -119,6 +128,35 @@ where
             liquidity,
             timestamp: self.timestamp,
         })
+    }
+
+    /// Determine a new price entry based on the previous entry (self) and an incoming entry.
+    ///
+    /// Uses an exponential moving average with a smoothing factor of `alpha = 2 / (N + 1)`.
+    /// `alpha = 2 / (N + 1)` leads to the center of mass of the EMA corresponding to an N-length SMA.
+    ///
+    /// Uses the difference between the `timestamp`s to determine the time to cover and exponentiates
+    /// the complement (`1 - alpha`) with that time difference.
+    pub fn update_via_ema_with(&mut self, period: BlockNumber, incoming: &Self) -> Option<&mut Self> {
+        if period <= One::one() {
+            *self = incoming.clone();
+            return Some(self);
+        }
+        let alpha = alpha_from_period(period);
+        debug_assert!(alpha <= Price::one());
+        let complement = Price::one() - alpha;
+
+        debug_assert!(incoming.timestamp > self.timestamp);
+        let iterations = incoming.timestamp.checked_sub(&self.timestamp)?;
+        let exp_complement = complement.saturating_pow(iterations.saturated_into::<u32>() as usize);
+        debug_assert!(exp_complement <= Price::one());
+        let exp_alpha = Price::one() - exp_complement;
+
+        self.price = price_ema(self.price, exp_complement, incoming.price, exp_alpha)?;
+        self.volume = volume_ema(&self.volume, exp_complement, &incoming.volume, exp_alpha)?;
+        self.liquidity = balance_ema(self.liquidity, exp_complement, incoming.liquidity, exp_alpha)?;
+        self.timestamp = incoming.timestamp;
+        Some(self)
     }
 }
 

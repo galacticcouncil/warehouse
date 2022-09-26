@@ -92,7 +92,7 @@ fn on_trade_should_work() {
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
         EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1);
         EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_2);
-        let price_entry = PRICE_ENTRY_2.accumulate_volume(&PRICE_ENTRY_1);
+        let price_entry = PRICE_ENTRY_2.with_added_volume_from(&PRICE_ENTRY_1);
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap(), price_entry);
     });
 }
@@ -196,7 +196,7 @@ fn oracle_volume_should_factor_in_asset_order() {
             timestamp: 0,
         };
 
-        let result = second_entry.accumulate_volume(&first_entry);
+        let result = second_entry.with_added_volume_from(&first_entry);
         assert_eq!(price_entry, result);
     });
 }
@@ -218,7 +218,7 @@ fn update_data_should_work() {
         for period in OraclePeriod::all_periods() {
             assert_eq!(
                 get_oracle_entry(HDX, DOT, period),
-                Some(PRICE_ENTRY_2.accumulate_volume(&PRICE_ENTRY_1)),
+                Some(PRICE_ENTRY_2.with_added_volume_from(&PRICE_ENTRY_1)),
             );
             assert_eq!(get_oracle_entry(HDX, ACA, period), Some(PRICE_ENTRY_1),);
         }
@@ -398,6 +398,34 @@ fn calculate_new_ema_entry_works() {
         timestamp: 6,
     };
     assert_eq!(next_oracle, Some(expected_oracle));
+}
+
+#[test]
+fn calculate_new_ema_equals_update_via_ema_with() {
+    let period: u32 = 7;
+    let mut start_oracle = OracleEntry {
+        price: 4.into(),
+        volume: Volume::from_a_in_b_out(1u128, 4u128),
+        liquidity: 4u128,
+        timestamp: 5,
+    };
+
+    let next_value = OracleEntry {
+        price: 8.into(),
+        volume: Volume::from_a_in_b_out(1u128, 8u128),
+        liquidity: 8u128,
+        timestamp: 6,
+    };
+    let next_oracle = next_value.calculate_new_ema_entry(period, &start_oracle);
+    let expected_oracle = OracleEntry {
+        price: 5.into(),
+        volume: Volume::from_a_in_b_out(1u128, 5u128),
+        liquidity: 5u128,
+        timestamp: 6,
+    };
+    assert_eq!(next_oracle, Some(expected_oracle.clone()));
+    start_oracle.update_via_ema_with(period, &next_value).unwrap();
+    assert_eq!(start_oracle, expected_oracle);
 }
 
 #[test]

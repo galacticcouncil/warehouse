@@ -191,14 +191,16 @@ impl<T: Config> Pallet<T> {
     fn update_oracles_from_accumulator() {
         // update oracles based on data accumulated during the block
         for ((src, assets), oracle_entry) in Accumulator::<T>::take().into_iter() {
-            for period in OraclePeriod::all_periods() {
+            for period in OraclePeriod::non_immediate_periods() {
                 Self::update_oracle(src, assets, into_blocks::<T>(period), oracle_entry.clone());
             }
+            // We use (the old value of) the `LastBlock` entry to update the other oracles so it
+            // gets updated last.
+            Self::update_oracle(src, assets, into_blocks::<T>(&LastBlock), oracle_entry.clone());
         }
     }
 
     /// Update the oracle of the given source, assets and period with `oracle_entry`.
-    ///
     fn update_oracle(
         src: Source,
         assets: (AssetId, AssetId),
@@ -209,14 +211,22 @@ impl<T: Config> Pallet<T> {
             let new_oracle = oracle
                 .as_ref()
                 .map(|(prev_entry, init)| {
-                    (
-                        // TODO: this should first update to the state of the parent block and then
-                        // integrate the new value
-                        oracle_entry
+                    let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
+                    let base = if parent > prev_entry.timestamp {
+                        let (mut last_block, _) = Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))
+                            .expect("last block entry should be there");
+                        last_block.timestamp = parent;
+                        last_block
                             .calculate_new_ema_entry(period, prev_entry)
-                            .unwrap_or_else(|| prev_entry.clone()),
-                        *init,
-                    )
+                            .expect("prev and last block should work")
+                    } else {
+                        prev_entry.clone()
+                    };
+                    let new_entry = oracle_entry
+                        .calculate_new_ema_entry(period, &base)
+                        .unwrap_or_else(|| prev_entry.clone());
+
+                    (new_entry, *init)
                 })
                 // initialize the oracle entry if it doesn't exist
                 .unwrap_or((oracle_entry.clone(), T::BlockNumberProvider::current_block_number()));
@@ -242,7 +252,6 @@ impl<T: Config> Pallet<T> {
         if period == LastBlock {
             return Some((last_block, init));
         }
-        let last_block = last_block;
 
         let (entry, init) = Self::oracle((src, assets, into_blocks::<T>(&period)))?;
         if entry.timestamp < parent {

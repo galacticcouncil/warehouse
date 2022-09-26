@@ -22,6 +22,7 @@ pub use crate::mock::{
 };
 
 use frame_support::assert_storage_noop;
+use pretty_assertions::assert_eq;
 use proptest::prelude::*;
 use sp_arithmetic::{traits::One, FixedPointNumber};
 
@@ -220,6 +221,63 @@ fn update_data_should_work() {
                 Some(PRICE_ENTRY_2.accumulate_volume(&PRICE_ENTRY_1)),
             );
             assert_eq!(get_oracle_entry(HDX, ACA, period), Some(PRICE_ENTRY_1),);
+        }
+    });
+}
+
+#[test]
+fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
+    new_test_ext().execute_with(|| {
+        env_logger::init();
+
+        System::set_block_number(5);
+        EmaOracle::on_initialize(5);
+        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1);
+        EmaOracle::on_finalize(5);
+
+        System::set_block_number(6);
+        EmaOracle::on_initialize(6);
+        let second_entry = OracleEntry {
+            liquidity: 3_000,
+            timestamp: 6,
+            ..PRICE_ENTRY_1
+        };
+        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), second_entry.clone());
+        EmaOracle::on_finalize(6);
+
+        System::set_block_number(50);
+        EmaOracle::on_initialize(50);
+        let third_entry = OracleEntry {
+            liquidity: 10,
+            timestamp: 50,
+            ..PRICE_ENTRY_1
+        };
+        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), third_entry.clone());
+        EmaOracle::on_finalize(50);
+
+        for period in OraclePeriod::all_periods() {
+            let period_num = into_blocks::<Test>(period);
+            let second_at_50 = OracleEntry {
+                timestamp: 49,
+                ..second_entry.clone()
+            };
+            let expected = third_entry.calculate_new_ema_entry(
+                period_num,
+                &second_at_50
+                    .calculate_new_ema_entry(
+                        period_num,
+                        &second_entry
+                            .calculate_new_ema_entry(period_num, &PRICE_ENTRY_1)
+                            .unwrap(),
+                    )
+                    .unwrap(),
+            );
+            assert_eq!(
+                get_oracle_entry(HDX, DOT, period),
+                expected,
+                "Oracle entry should be updated correctly for {:?}",
+                period
+            );
         }
     });
 }
@@ -442,9 +500,9 @@ fn get_price_returns_updated_price() {
                 liquidity: 2_000_000,
                 timestamp: 10_000,
             };
-            System::set_block_number(10_000);
+            System::set_block_number(1);
             EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), on_trade_entry);
-            EmaOracle::on_finalize(10_000);
+            EmaOracle::on_finalize(1);
 
             System::set_block_number(10_001);
 

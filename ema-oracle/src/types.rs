@@ -132,12 +132,14 @@ where
 
     /// Determine a new price entry based on the previous entry (self) and an incoming entry.
     ///
+    /// Returns the mutated `self` for chaining.
+    ///
     /// Uses an exponential moving average with a smoothing factor of `alpha = 2 / (N + 1)`.
     /// `alpha = 2 / (N + 1)` leads to the center of mass of the EMA corresponding to an N-length SMA.
     ///
     /// Uses the difference between the `timestamp`s to determine the time to cover and exponentiates
     /// the complement (`1 - alpha`) with that time difference.
-    pub fn update_via_ema_with(&mut self, period: BlockNumber, incoming: &Self) -> Option<&mut Self> {
+    pub fn chained_update_via_ema_with(&mut self, period: BlockNumber, incoming: &Self) -> Option<&mut Self> {
         if period <= One::one() {
             *self = incoming.clone();
             return Some(self);
@@ -157,6 +159,17 @@ where
         self.liquidity = balance_ema(self.liquidity, exp_complement, incoming.liquidity, exp_alpha)?;
         self.timestamp = incoming.timestamp;
         Some(self)
+    }
+
+    /// Determine a new price entry based on the previous entry (self) and an incoming entry.
+    ///
+    /// Uses an exponential moving average with a smoothing factor of `alpha = 2 / (N + 1)`.
+    /// `alpha = 2 / (N + 1)` leads to the center of mass of the EMA corresponding to an N-length SMA.
+    ///
+    /// Uses the difference between the `timestamp`s to determine the time to cover and exponentiates
+    /// the complement (`1 - alpha`) with that time difference.
+    pub fn update_via_ema_with(&mut self, period: BlockNumber, incoming: &Self) -> Option<()> {
+        self.chained_update_via_ema_with(period, incoming).map(|_| ())
     }
 }
 

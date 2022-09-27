@@ -261,19 +261,16 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
                 timestamp: 49,
                 ..second_entry.clone()
             };
-            let expected = third_entry.calculate_new_ema_entry(
-                period_num,
-                &second_at_50
-                    .calculate_new_ema_entry(
-                        period_num,
-                        &second_entry
-                            .calculate_new_ema_entry(period_num, &PRICE_ENTRY_1)
-                            .unwrap(),
-                    )
-                    .unwrap(),
-            );
+            let mut expected = PRICE_ENTRY_1.clone();
+            expected
+                .chained_update_via_ema_with(period_num, &second_entry)
+                .unwrap()
+                .chained_update_via_ema_with(period_num, &second_at_50)
+                .unwrap()
+                .update_via_ema_with(period_num, &third_entry)
+                .unwrap();
             assert_eq!(
-                get_oracle_entry(HDX, DOT, period),
+                get_oracle_entry(HDX, DOT, period).unwrap(),
                 expected,
                 "Oracle entry should be updated correctly for {:?}",
                 period

@@ -208,34 +208,38 @@ impl<T: Config> Pallet<T> {
         oracle_entry: OracleEntry<T::BlockNumber>,
     ) {
         Oracles::<T>::mutate((src, assets, period), |oracle| {
-            let new_oracle = oracle
-                .as_ref()
-                .map(|(prev_entry, init)| {
+            // initialize the oracle entry if it doesn't exist
+            if oracle.is_none() {
+                *oracle = Some((oracle_entry.clone(), T::BlockNumberProvider::current_block_number()));
+                return;
+            }
+            oracle
+                .as_mut()
+                .map(|(prev_entry, _)| {
                     let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
-                    let base = if parent > prev_entry.timestamp {
+                    // update the entry to the last block if it hasn't been updated for a while
+                    if parent > prev_entry.timestamp {
                         Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))
-                            .and_then(|(mut last_block, _)| {
+                            .and_then(|(mut last_block, _)| -> Option<()> {
                                 last_block.timestamp = parent;
-                                last_block.calculate_new_ema_entry(period, prev_entry)
+                                prev_entry.update_via_ema_with(period, &last_block)?;
+                                Some(())
                             }).unwrap_or_else(|| {
-                                log::warn!(target: "runtime::ema-oracle", "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to parent block failed. Defaulting to previous value.");
-                                prev_entry.clone()
+                                log::warn!(
+                                    target: "runtime::ema-oracle",
+                                    "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to parent block failed. Defaulting to previous value."
+                                );
                             })
-                    } else {
-                        prev_entry.clone()
-                    };
-                    let new_entry = oracle_entry
-                        .calculate_new_ema_entry(period, &base)
+                    }
+                    // calculate the actual update with the new value
+                    prev_entry.update_via_ema_with(period, &oracle_entry)
                         .unwrap_or_else(|| {
-                            log::warn!(target: "runtime::ema-oracle", "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to new value failed. Defaulting to previous value.");
-                            prev_entry.clone()
+                            log::warn!(
+                                target: "runtime::ema-oracle",
+                                "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to new value failed. Defaulting to previous value."
+                            );
                     });
-
-                    (new_entry, *init)
-                })
-                // initialize the oracle entry if it doesn't exist
-                .unwrap_or((oracle_entry.clone(), T::BlockNumberProvider::current_block_number()));
-            *oracle = Some(new_oracle);
+                });
         });
     }
 

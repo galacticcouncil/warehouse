@@ -157,6 +157,30 @@ where
     }
 }
 
+impl<Balance> From<(Balance, Balance, Balance, Balance)> for Volume<Balance> {
+    fn from((a_in, b_out, a_out, b_in): (Balance, Balance, Balance, Balance)) -> Self {
+        Self {
+            a_in,
+            b_out,
+            a_out,
+            b_in,
+        }
+    }
+}
+
+impl<Balance> From<Volume<Balance>> for (Balance, Balance, Balance, Balance) {
+    fn from(
+        Volume {
+            a_in,
+            b_out,
+            a_out,
+            b_in,
+        }: Volume<Balance>,
+    ) -> Self {
+        (a_in, b_out, a_out, b_in)
+    }
+}
+
 /// Identifier for oracle data sources.
 pub type Source = [u8; 8];
 

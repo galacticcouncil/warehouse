@@ -23,6 +23,7 @@ scale-info = { version = "1.0", default-features = false, features = ["derive"] 
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "61a47b6806864530cbc24281584a06e2f3b41aa0", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false, optional = true }
@@ -58,5 +59,6 @@ std = [
   'sp-core/std',
   'sp-std/std',
   'hydradx-traits/std',
+  'hydra-dx-math/std',
   'scale-info/std',
 ]

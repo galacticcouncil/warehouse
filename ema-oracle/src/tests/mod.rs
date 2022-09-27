@@ -25,7 +25,7 @@ pub use crate::mock::{
 
 use frame_support::assert_storage_noop;
 use pretty_assertions::assert_eq;
-use sp_arithmetic::{traits::One, FixedPointNumber};
+use sp_arithmetic::FixedPointNumber;
 
 /// Default oracle source for tests.
 const SOURCE: Source = *b"dummysrc";
@@ -278,81 +278,6 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
             );
         }
     });
-}
-
-#[test]
-fn ema_stays_stable_if_the_value_does_not_change() {
-    let alpha = alpha_from_period::<u32>(7);
-    debug_assert!(alpha <= Price::one());
-    let complement = Price::one() - alpha;
-
-    let start_price = Price::saturating_from_integer(4u32);
-    let incoming_price = start_price;
-    let next_price = price_ema(start_price, complement, incoming_price, alpha);
-    assert_eq!(next_price, Some(start_price));
-    let start_balance = 4u32.into();
-    let incoming_balance = start_balance;
-    let next_balance = balance_ema(start_balance, complement, incoming_balance, alpha);
-    assert_eq!(next_balance, Some(start_balance));
-}
-
-#[test]
-fn ema_works() {
-    let alpha = alpha_from_period::<u32>(7);
-    debug_assert!(alpha <= Price::one());
-    let complement = Price::one() - alpha;
-
-    // price
-    let start_price = 4.into();
-    let incoming_price = 8.into();
-    let next_price = price_ema(start_price, complement, incoming_price, alpha).unwrap();
-    assert_eq!(next_price, 5.into());
-
-    let start_price = Price::saturating_from_rational(4, 100);
-    let incoming_price = Price::saturating_from_rational(8, 100);
-    let next_price = price_ema(start_price, complement, incoming_price, alpha).unwrap();
-    assert_eq!(next_price, Price::saturating_from_rational(5, 100));
-
-    // balance
-    let start_balance = 4u128;
-    let incoming_balance = 8u128;
-    let next_balance = balance_ema(start_balance, complement, incoming_balance, alpha).unwrap();
-    assert_eq!(next_balance, 5u128);
-
-    // volume
-    let start_volume = Volume {
-        a_in: 4u128,
-        b_out: 1u128,
-        a_out: 8u128,
-        b_in: 0u128,
-    };
-    let incoming_volume = Volume {
-        a_in: 8u128,
-        b_out: 1u128,
-        a_out: 4u128,
-        b_in: 0u128,
-    };
-    let next_volume = volume_ema(&start_volume, complement, &incoming_volume, alpha).unwrap();
-    assert_eq!(
-        next_volume,
-        Volume {
-            a_in: 5u128,
-            b_out: 1u128,
-            a_out: 7u128,
-            b_in: 0u128
-        }
-    );
-}
-
-#[test]
-fn ema_does_not_saturate() {
-    let alpha = Price::one();
-    let complement = Price::zero();
-
-    let start_balance = u128::MAX;
-    let incoming_balance = u128::MAX;
-    let next_balance = balance_ema(start_balance, complement, incoming_balance, alpha);
-    assert_eq!(next_balance, Some(incoming_balance));
 }
 
 #[test]

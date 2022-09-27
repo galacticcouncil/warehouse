@@ -16,12 +16,12 @@
 // limitations under the License.
 
 use codec::{Decode, Encode};
-use frame_support::sp_runtime::traits::CheckedMul;
 use frame_support::sp_runtime::{FixedU128, RuntimeDebug};
+use hydra_dx_math::ema::{balance_ema, exp_smoothing_and_complement, price_ema, smoothing_from_period, volume_ema};
 use hydradx_traits::{AggregatedEntry, Volume};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
-    traits::{AtLeast32BitUnsigned, One, SaturatedConversion, Saturating, UniqueSaturatedInto, Zero},
+    traits::{AtLeast32BitUnsigned, One, SaturatedConversion, UniqueSaturatedInto, Zero},
     FixedPointNumber,
 };
 
@@ -118,18 +118,19 @@ where
             return Some(incoming.clone());
         }
         // determine smoothing factor
-        let alpha = alpha_from_period(period);
-        debug_assert!(alpha <= Price::one());
-        let complement = Price::one() - alpha;
+        let smoothing = smoothing_from_period(period.saturated_into::<u64>());
+        let (exp_smoothing, exp_complement) =
+            exp_smoothing_and_complement(smoothing, iterations.saturated_into::<u32>());
 
-        // exponentiate it to account for the number of iterations
-        let exp_complement = complement.saturating_pow(iterations.saturated_into::<u32>() as usize);
-        debug_assert!(exp_complement <= Price::one());
-        let exp_alpha = Price::one() - exp_complement;
-
-        let price = price_ema(self.price, exp_complement, incoming.price, exp_alpha)?;
-        let volume = volume_ema(&self.volume, exp_complement, &incoming.volume, exp_alpha)?;
-        let liquidity = balance_ema(self.liquidity, exp_complement, incoming.liquidity, exp_alpha)?;
+        let price = price_ema(self.price, exp_complement, incoming.price, exp_smoothing)?;
+        let volume = volume_ema(
+            self.volume.clone().into(),
+            exp_complement,
+            incoming.volume.clone().into(),
+            exp_smoothing,
+        )?
+        .into();
+        let liquidity = balance_ema(self.liquidity, exp_complement, incoming.liquidity, exp_smoothing)?;
 
         Some(Self {
             price,
@@ -170,85 +171,6 @@ where
     pub fn update_via_ema_with(&mut self, period: BlockNumber, incoming: &Self) -> Option<()> {
         self.chained_update_via_ema_with(period, incoming).map(|_| ())
     }
-}
-
-/// Calculates smoothing factor alpha for an exponential moving average based on `period`:
-/// `alpha = 2 / (period + 1)`. It leads to the "center of mass" of the EMA corresponding to the
-/// "center of mass" of a `period`-length SMA.
-///
-/// Possible alternatives for `alpha = 2 / (period + 1)`:
-/// + `alpha = 1 - 0.5^(1 / period)` for a half-life of `period` or
-/// + `alpha = 1 - 0.5^(2 / period)` to have the same median as a `period`-length SMA. See
-/// https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA (N = period).
-pub fn alpha_from_period<BlockNumber>(period: BlockNumber) -> Price
-where
-    BlockNumber: AtLeast32BitUnsigned + Copy + UniqueSaturatedInto<u64>,
-{
-    Price::saturating_from_rational(2u64, period.saturating_add(One::one()).saturated_into::<u64>())
-}
-
-/// Calculate the next exponential moving average for the given prices.
-/// `prev` is the previous oracle value, `incoming` is the new value to integrate.
-pub fn price_ema(prev: Price, prev_weight: FixedU128, incoming: Price, weight: FixedU128) -> Option<Price> {
-    debug_assert!(prev_weight + weight == Price::one());
-    // Safe to use bare `+` because `prev_weight + weight == 1`.
-    // `prev_value * prev_weight + incoming_value * weight`
-    let price = prev.checked_mul(&prev_weight)? + incoming.checked_mul(&weight)?;
-    Some(price)
-}
-
-/// Calculate the next exponential moving average for the given values.
-/// `prev` is the previous oracle value, `incoming` is the new value to integrate.
-/// `weight` is the weight of the new value, `prev_weight` is the weight of the previous value.
-pub fn balance_ema(prev: Balance, prev_weight: FixedU128, incoming: Balance, weight: FixedU128) -> Option<Balance> {
-    debug_assert!(prev_weight + weight == Price::one());
-    // Safe to use bare `+` because `prev_weight + apha == 1`.
-    // `prev_value * prev_weight + incoming_value * weight`
-    let new_value = if prev < u64::MAX.into() && incoming < u64::MAX.into() {
-        // We use `checked_mul` in combination with `Price::from` to avoid rounding errors induced
-        // by using `checked_mul_int` with small values.
-        (prev_weight.checked_mul(&Price::from(prev))? + weight.checked_mul(&Price::from(incoming))?)
-            .saturating_mul_int(Balance::one())
-    } else {
-        // We use `checked_mul_int` to avoid saturating the fixed point type for big balance values.
-        // Note: Incurs rounding errors for small balance values, but the relative error is small
-        // because the other value is greater than `u64::MAX`.
-        prev_weight.checked_mul_int(prev)? + weight.checked_mul_int(incoming)?
-    };
-    Some(new_value)
-}
-
-/// Calculate the next exponential moving average for the given volumes.
-/// `prev` is the previous oracle value, `incoming` is the new value to integrate.
-/// `weight` is the weight of the new value, `prev_weight` is the weight of the previous value.
-///
-/// Note: Just delegates to `balance_ema` under the hood.
-pub fn volume_ema(
-    prev: &Volume<Balance>,
-    prev_weight: FixedU128,
-    incoming: &Volume<Balance>,
-    weight: FixedU128,
-) -> Option<Volume<Balance>> {
-    debug_assert!(prev_weight + weight == Price::one());
-    let Volume {
-        a_in: prev_a_in,
-        b_out: prev_b_out,
-        a_out: prev_a_out,
-        b_in: prev_b_in,
-    } = prev;
-    let Volume {
-        a_in,
-        b_out,
-        a_out,
-        b_in,
-    } = incoming;
-    let volume = Volume {
-        a_in: balance_ema(*prev_a_in, prev_weight, *a_in, weight)?,
-        b_out: balance_ema(*prev_b_out, prev_weight, *b_out, weight)?,
-        a_out: balance_ema(*prev_a_out, prev_weight, *a_out, weight)?,
-        b_in: balance_ema(*prev_b_in, prev_weight, *b_in, weight)?,
-    };
-    Some(volume)
 }
 
 impl<BlockNumber> From<(Price, Volume<Balance>, Balance, BlockNumber)> for OracleEntry<BlockNumber> {

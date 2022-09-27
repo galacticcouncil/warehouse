@@ -264,7 +264,7 @@ impl<T: Config> Pallet<T> {
 
         let (entry, init) = Self::oracle((src, assets, into_blocks::<T>(&period)))?;
         if entry.timestamp < parent {
-            last_block.calculate_new_ema_entry(into_blocks::<T>(&period), &entry)
+            entry.combine_via_ema_with(into_blocks::<T>(&period), &last_block)
         } else {
             Some(entry)
         }

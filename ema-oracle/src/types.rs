@@ -97,77 +97,76 @@ where
         }
     }
 
-    /// Determine a new price entry based on self and a previous entry.
+    /// Determine a new oracle entry based on a previous (`self`) and an `incoming` entry as well as
+    /// a `period`.
     ///
-    /// Uses an exponential moving average with a smoothing factor of `alpha = 2 / (N + 1)`.
-    /// `alpha = 2 / (N + 1)` leads to the center of mass of the EMA corresponding to an N-length SMA.
+    /// Returns `None` if any of the calculations fail (including the `incoming` entry not being
+    /// more recent than `self`).
     ///
-    /// Uses the difference between the `timestamp`s to determine the time to cover and exponentiates
-    /// the complement (`1 - alpha`) with that time difference.
-    pub fn calculate_new_ema_entry(&self, period: BlockNumber, previous_entry: &Self) -> Option<Self> {
-        if period <= One::one() {
-            return Some(self.clone());
+    /// The period is used to determine the smoothing factor alpha for an exponential moving
+    /// average. The smoothing factor is calculated as `alpha = 2 / (period + 1)`. `alpha = 2 /
+    /// (period + 1)` leads to the "center of mass" of the EMA corresponding to a period-length SMA.
+    ///
+    /// Uses the difference between the `timestamp`s to determine the time to cover and
+    /// exponentiates the complement (`1 - alpha`) with that time difference.
+    pub fn combine_via_ema_with(&self, period: BlockNumber, incoming: &Self) -> Option<Self> {
+        let iterations = incoming.timestamp.checked_sub(&self.timestamp)?;
+        if iterations.is_zero() {
+            return None;
         }
+        if period <= One::one() {
+            return Some(incoming.clone());
+        }
+        // determine smoothing factor
         let alpha = alpha_from_period(period);
         debug_assert!(alpha <= Price::one());
         let complement = Price::one() - alpha;
 
-        debug_assert!(self.timestamp > previous_entry.timestamp);
-        let iterations = self.timestamp.checked_sub(&previous_entry.timestamp)?;
+        // exponentiate it to account for the number of iterations
         let exp_complement = complement.saturating_pow(iterations.saturated_into::<u32>() as usize);
         debug_assert!(exp_complement <= Price::one());
         let exp_alpha = Price::one() - exp_complement;
 
-        let price = price_ema(previous_entry.price, exp_complement, self.price, exp_alpha)?;
-        let volume = volume_ema(&previous_entry.volume, exp_complement, &self.volume, exp_alpha)?;
-        let liquidity = balance_ema(previous_entry.liquidity, exp_complement, self.liquidity, exp_alpha)?;
+        let price = price_ema(self.price, exp_complement, incoming.price, exp_alpha)?;
+        let volume = volume_ema(&self.volume, exp_complement, &incoming.volume, exp_alpha)?;
+        let liquidity = balance_ema(self.liquidity, exp_complement, incoming.liquidity, exp_alpha)?;
 
         Some(Self {
             price,
             volume,
             liquidity,
-            timestamp: self.timestamp,
+            timestamp: incoming.timestamp,
         })
     }
 
-    /// Determine a new price entry based on the previous entry (self) and an incoming entry.
+    /// Update `self` based on a previous (`self`) and an `incoming` entry as well as a `period`.
     ///
-    /// Returns the mutated `self` for chaining.
+    /// Returns `None` if any of the calculations fail (including the `incoming` entry not being
+    /// more recent than `self`) or - on success - a reference to `self` for chaining. Use
+    /// [`update_via_ema_with`] if you only care about success and failure without chaining.
     ///
-    /// Uses an exponential moving average with a smoothing factor of `alpha = 2 / (N + 1)`.
-    /// `alpha = 2 / (N + 1)` leads to the center of mass of the EMA corresponding to an N-length SMA.
+    /// The period is used to determine the smoothing factor alpha for an exponential moving
+    /// average. The smoothing factor is calculated as `alpha = 2 / (period + 1)`. `alpha = 2 /
+    /// (period + 1)` leads to the "center of mass" of the EMA corresponding to a period-length SMA.
     ///
-    /// Uses the difference between the `timestamp`s to determine the time to cover and exponentiates
-    /// the complement (`1 - alpha`) with that time difference.
+    /// Uses the difference between the `timestamp`s to determine the time to cover and
+    /// exponentiates the complement (`1 - alpha`) with that time difference.
     pub fn chained_update_via_ema_with(&mut self, period: BlockNumber, incoming: &Self) -> Option<&mut Self> {
-        if period <= One::one() {
-            *self = incoming.clone();
-            return Some(self);
-        }
-        let alpha = alpha_from_period(period);
-        debug_assert!(alpha <= Price::one());
-        let complement = Price::one() - alpha;
-
-        debug_assert!(incoming.timestamp > self.timestamp);
-        let iterations = incoming.timestamp.checked_sub(&self.timestamp)?;
-        let exp_complement = complement.saturating_pow(iterations.saturated_into::<u32>() as usize);
-        debug_assert!(exp_complement <= Price::one());
-        let exp_alpha = Price::one() - exp_complement;
-
-        self.price = price_ema(self.price, exp_complement, incoming.price, exp_alpha)?;
-        self.volume = volume_ema(&self.volume, exp_complement, &incoming.volume, exp_alpha)?;
-        self.liquidity = balance_ema(self.liquidity, exp_complement, incoming.liquidity, exp_alpha)?;
-        self.timestamp = incoming.timestamp;
+        *self = self.combine_via_ema_with(period, incoming)?;
         Some(self)
     }
 
-    /// Determine a new price entry based on the previous entry (self) and an incoming entry.
+    /// Update `self` based on a previous (`self`) and an `incoming` entry as well as a `period`.
     ///
-    /// Uses an exponential moving average with a smoothing factor of `alpha = 2 / (N + 1)`.
-    /// `alpha = 2 / (N + 1)` leads to the center of mass of the EMA corresponding to an N-length SMA.
+    /// Returns `None` if any of the calculations fail (including the `incoming` entry not being
+    /// more recent than `self`) or `()` on success.
     ///
-    /// Uses the difference between the `timestamp`s to determine the time to cover and exponentiates
-    /// the complement (`1 - alpha`) with that time difference.
+    /// The period is used to determine the smoothing factor alpha for an exponential moving
+    /// average. The smoothing factor is calculated as `alpha = 2 / (period + 1)`. `alpha = 2 /
+    /// (period + 1)` leads to the "center of mass" of the EMA corresponding to a period-length SMA.
+    ///
+    /// Uses the difference between the `timestamp`s to determine the time to cover and
+    /// exponentiates the complement (`1 - alpha`) with that time difference.
     pub fn update_via_ema_with(&mut self, period: BlockNumber, incoming: &Self) -> Option<()> {
         self.chained_update_via_ema_with(period, incoming).map(|_| ())
     }

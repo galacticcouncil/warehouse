@@ -15,6 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod invariants;
+
 use super::*;
 pub use crate::mock::{
     BlockNumber, EmaOracle, Event as TestEvent, ExtBuilder, Origin, System, Test, ACA, DOT, HDX, PRICE_ENTRY_1,
@@ -23,7 +25,6 @@ pub use crate::mock::{
 
 use frame_support::assert_storage_noop;
 use pretty_assertions::assert_eq;
-use proptest::prelude::*;
 use sp_arithmetic::{traits::One, FixedPointNumber};
 
 /// Default oracle source for tests.
@@ -355,7 +356,7 @@ fn ema_does_not_saturate() {
 }
 
 #[test]
-fn calculate_new_ema_entry_only_updates_timestamp_on_stable_values() {
+fn combine_via_ema_with_only_updates_timestamp_on_stable_values() {
     let period: u32 = 7;
     let start_oracle = OracleEntry {
         price: 4.into(),
@@ -367,12 +368,12 @@ fn calculate_new_ema_entry_only_updates_timestamp_on_stable_values() {
         timestamp: 6,
         ..start_oracle.clone()
     };
-    let next_oracle = next_value.calculate_new_ema_entry(period, &start_oracle);
+    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value);
     assert_eq!(next_oracle, Some(next_value));
 }
 
 #[test]
-fn calculate_new_ema_entry_works() {
+fn combine_via_ema_with_works() {
     let period: u32 = 7;
     let start_oracle = OracleEntry {
         price: 4.into(),
@@ -387,7 +388,7 @@ fn calculate_new_ema_entry_works() {
         liquidity: 8u128,
         timestamp: 6,
     };
-    let next_oracle = next_value.calculate_new_ema_entry(period, &start_oracle);
+    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value);
     let expected_oracle = OracleEntry {
         price: 5.into(),
         volume: Volume::from_a_in_b_out(1u128, 5u128),
@@ -413,7 +414,7 @@ fn calculate_new_ema_equals_update_via_ema_with() {
         liquidity: 8u128,
         timestamp: 6,
     };
-    let next_oracle = next_value.calculate_new_ema_entry(period, &start_oracle);
+    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value);
     let expected_oracle = OracleEntry {
         price: 5.into(),
         volume: Volume::from_a_in_b_out(1u128, 5u128),
@@ -440,7 +441,7 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
         liquidity: 8_000u32.into(),
         timestamp: 100,
     };
-    let next_oracle = next_value.calculate_new_ema_entry(period, &start_oracle).unwrap();
+    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value).unwrap();
     assert_eq_approx!(
         next_oracle.price,
         next_value.price,
@@ -454,7 +455,7 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
         liquidity: 8_000u32.into(),
         timestamp: 8,
     };
-    let next_oracle = next_value.calculate_new_ema_entry(period, &start_oracle);
+    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value);
     let expected_oracle = OracleEntry {
         price: Price::saturating_from_rational(63125, 10),
         volume: Volume::from_a_in_b_out(1, 6_312),
@@ -570,48 +571,28 @@ fn get_price_returns_updated_price() {
         });
 }
 
-// Invariant Testing
+#[test]
+fn ema_update_should_return_none_if_new_entry_is_older() {
+    let mut entry = OracleEntry {
+        timestamp: 10,
+        ..PRICE_ENTRY_1
+    };
+    let original = entry.clone();
+    // older than current
+    let outdated_entry = OracleEntry {
+        timestamp: 9,
+        ..PRICE_ENTRY_2
+    };
+    assert_eq!(entry.combine_via_ema_with(10, &outdated_entry), None);
+    assert_eq!(entry.combine_via_ema_with(1, &outdated_entry), None);
+    // same timestamp as current
+    let outdated_entry = OracleEntry {
+        timestamp: 10,
+        ..PRICE_ENTRY_2
+    };
+    assert_eq!(entry.combine_via_ema_with(10, &outdated_entry), None);
+    assert_eq!(entry.combine_via_ema_with(1, &outdated_entry), None);
 
-// Strategies
-fn valid_asset_ids() -> impl Strategy<Value = (AssetId, AssetId)> {
-    (any::<AssetId>(), any::<AssetId>()).prop_filter("asset ids should not be equal", |(a, b)| a != b)
-}
-
-fn non_zero_amount() -> impl Strategy<Value = Balance> {
-    any::<Balance>().prop_filter("balances should be greater 0", |b| b > &0)
-}
-
-proptest! {
-    #[test]
-    fn price_normalization_should_be_independent_of_asset_order(
-        (asset_a, asset_b) in valid_asset_ids(),
-        (amount_a, amount_b) in (non_zero_amount(), non_zero_amount())
-    ) {
-        let a_then_b = determine_normalized_price(asset_a, asset_b, amount_a, amount_b);
-        let b_then_a = determine_normalized_price(asset_b, asset_a, amount_b, amount_a);
-        prop_assert!(a_then_b.is_some());
-        prop_assert!(b_then_a.is_some());
-        prop_assert_eq!(a_then_b.unwrap(), b_then_a.unwrap());
-    }
-}
-
-proptest! {
-    #[test]
-    fn on_liquidity_changed_should_not_change_volume(
-        (asset_a, asset_b) in valid_asset_ids(),
-        (amount_a, amount_b) in (non_zero_amount(), non_zero_amount()),
-        liquidity in non_zero_amount(),
-        (second_amount_a, second_amount_b) in (non_zero_amount(), non_zero_amount()),
-        second_liquidity in non_zero_amount(),
-    ) {
-        new_test_ext().execute_with(|| {
-            let timestamp = 5;
-            System::set_block_number(timestamp);
-            OnActivityHandler::<Test>::on_trade(SOURCE, asset_a, asset_b, amount_a, amount_b, liquidity);
-            let volume_before = get_accumulator_entry(SOURCE, (asset_a, asset_b)).unwrap().volume;
-            OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, asset_a, asset_b, second_amount_a, second_amount_b, second_liquidity);
-            let volume_after = get_accumulator_entry(SOURCE, (asset_a, asset_b)).unwrap().volume;
-            assert_eq!(volume_before, volume_after);
-        });
-    }
+    assert_eq!(entry.update_via_ema_with(10, &outdated_entry), None);
+    assert_eq!(entry, original);
 }

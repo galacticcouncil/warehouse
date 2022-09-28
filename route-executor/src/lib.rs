@@ -23,8 +23,8 @@ use frame_support::traits::fungibles::Inspect;
 use frame_support::traits::Get;
 use frame_support::transactional;
 use frame_system::ensure_signed;
-use hydradx_traits::router::{ExecutorError, PoolType};
 use hydradx_traits::router::TradeExecution;
+use hydradx_traits::router::{ExecutorError, PoolType};
 use orml_traits::arithmetic::{CheckedAdd, CheckedSub};
 use scale_info::TypeInfo;
 use sp_runtime::DispatchError;
@@ -158,20 +158,26 @@ pub mod pallet {
 
             let amount_in_and_outs = Self::calculate_sell_trade_amount_in_and_outs(&route, amount_in)?;
 
-            let (_,last_trade_amount_out) = amount_in_and_outs.last().ok_or(Error::<T>::UnexpectedError)?;
-            ensure!(*last_trade_amount_out >= min_amount_out, Error::<T>::TradingLimitReached);
+            let (_, last_trade_amount_out) = amount_in_and_outs.last().ok_or(Error::<T>::UnexpectedError)?;
+            ensure!(
+                *last_trade_amount_out >= min_amount_out,
+                Error::<T>::TradingLimitReached
+            );
 
-            //TODO:
-            // do the same for buy
-            //    add amountINOut helper struct
-            // extract methods
+            //do the same calculation for buy
             //testing?
 
-            for ((amount_in,amount_out), trade) in amount_in_and_outs.iter().zip(route) {
+            for ((amount_in, amount_out), trade) in amount_in_and_outs.iter().zip(route) {
                 let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(trade.asset_in, &who, false);
 
-                let execution_result =
-                    T::AMM::execute_sell(origin.clone(), trade.pool, trade.asset_in, trade.asset_out, *amount_in, *amount_out);
+                let execution_result = T::AMM::execute_sell(
+                    origin.clone(),
+                    trade.pool,
+                    trade.asset_in,
+                    trade.asset_out,
+                    *amount_in,
+                    *amount_out,
+                );
 
                 handle_execution_error!(execution_result);
 
@@ -279,7 +285,20 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn calculate_sell_trade_amount_in_and_outs(route: &Vec<Trade<T::AssetId>>, amount_in: T::Balance) -> Result<Vec<(T::Balance, T::Balance)>, DispatchError> {
+    fn ensure_route_size(route_length: usize) -> Result<(), DispatchError> {
+        ensure!(route_length > 0, Error::<T>::RouteHasNoTrades);
+        ensure!(
+            (route_length as u8) <= T::MaxNumberOfTrades::get(),
+            Error::<T>::MaxTradesExceeded
+        );
+
+        Ok(())
+    }
+
+    fn calculate_sell_trade_amount_in_and_outs(
+        route: &Vec<Trade<T::AssetId>>,
+        amount_in: T::Balance,
+    ) -> Result<Vec<(T::Balance, T::Balance)>, DispatchError> {
         let mut amount_in_and_outs = Vec::<(T::Balance, T::Balance)>::with_capacity(route.len() + 1);
         let mut amount_in = amount_in;
 
@@ -296,16 +315,6 @@ impl<T: Config> Pallet<T> {
         }
 
         Ok(amount_in_and_outs)
-    }
-
-    fn ensure_route_size(route_length: usize) -> Result<(), DispatchError> {
-        ensure!(route_length > 0, Error::<T>::RouteHasNoTrades);
-        ensure!(
-            (route_length as u8) <= T::MaxNumberOfTrades::get(),
-            Error::<T>::MaxTradesExceeded
-        );
-
-        Ok(())
     }
 
     fn ensure_that_user_received_asset_out(

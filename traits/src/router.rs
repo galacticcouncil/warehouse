@@ -38,6 +38,7 @@ pub trait TradeExecution<Origin, AccountId, AssetId, Balance> {
         asset_in: AssetId,
         asset_out: AssetId,
         amount_in: Balance,
+        amount_out: Balance,
     ) -> Result<(), ExecutorError<Self::Error>>;
 
     fn execute_buy(
@@ -99,10 +100,11 @@ impl<E: PartialEq, Origin: Clone, AccountId, AssetId: Copy, Balance: Copy>
         asset_in: AssetId,
         asset_out: AssetId,
         amount_in: Balance,
+        amount_out: Balance,
     ) -> Result<(), ExecutorError<Self::Error>> {
         for_tuples!(
             #(
-                let value = match Tuple::execute_sell(who.clone(),pool_type, asset_in, asset_out, amount_in) {
+                let value = match Tuple::execute_sell(who.clone(),pool_type, asset_in, asset_out, amount_in, amount_out) {
                     Ok(result) => return Ok(result),
                     Err(v) if v == ExecutorError::NotSupported => v,
                     Err(v) => return Err(v),

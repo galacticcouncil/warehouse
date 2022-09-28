@@ -156,31 +156,35 @@ pub mod pallet {
                 Error::<T>::InsufficientBalance
             );
 
-            let mut amounts_to_sell = Vec::<T::Balance>::with_capacity(route.len() + 1);
-            let mut amount = amount_in;
-            amounts_to_sell.push(amount);
+            let mut amount_in_and_outs = Vec::<(T::Balance, T::Balance)>::with_capacity(route.len() + 1);
 
+            let mut amount_in_to_sell = amount_in;
             for trade in route.iter() {
-                let result = T::AMM::calculate_sell(trade.pool, trade.asset_in, trade.asset_out, amount);
+                let result = T::AMM::calculate_sell(trade.pool, trade.asset_in, trade.asset_out, amount_in_to_sell);
                 match result {
                     Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
                     Err(ExecutorError::Error(dispatch_error)) => return Err(dispatch_error),
-                    Ok(amount_to_sell) => {
-                        amount = amount_to_sell;
-                        amounts_to_sell.push(amount_to_sell);
+                    Ok(amount_out) => {
+                        amount_in_and_outs.push((amount_in_to_sell, amount_out));
+                        amount_in_to_sell = amount_out;
                     }
                 }
             }
 
-            //We pop the last calculation amount as we use it only for verification and not for executing further trades
-            let last_amount = amounts_to_sell.pop().ok_or(Error::<T>::UnexpectedError)?;
-            ensure!(last_amount >= min_amount_out, Error::<T>::TradingLimitReached);
+            let (_,last_trade_amount_out) = amount_in_and_outs.last().ok_or(Error::<T>::UnexpectedError)?;
+            ensure!(*last_trade_amount_out >= min_amount_out, Error::<T>::TradingLimitReached);
 
-            for (amount, trade) in amounts_to_sell.iter().zip(route) {
+            //TODO:
+            // do the same for buy
+            //    add amountINOut helper struct
+            // extract methods
+            //testing?
+
+            for ((amount_in,amount_out), trade) in amount_in_and_outs.iter().zip(route) {
                 let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(trade.asset_in, &who, false);
 
                 let execution_result =
-                    T::AMM::execute_sell(origin.clone(), trade.pool, trade.asset_in, trade.asset_out, *amount);
+                    T::AMM::execute_sell(origin.clone(), trade.pool, trade.asset_in, trade.asset_out, *amount_in, *amount_out);
 
                 handle_execution_error!(execution_result);
 
@@ -188,7 +192,7 @@ pub mod pallet {
                     who.clone(),
                     trade.asset_in,
                     user_balance_of_asset_in_before_trade,
-                    *amount,
+                    *amount_in,
                 )?;
             }
 
@@ -196,14 +200,14 @@ pub mod pallet {
                 who,
                 asset_out,
                 user_balance_of_asset_out_before_trade,
-                last_amount,
+                *last_trade_amount_out,
             )?;
 
             Self::deposit_event(Event::RouteExecuted {
                 asset_in,
                 asset_out,
                 amount_in,
-                amount_out: last_amount,
+                amount_out: *last_trade_amount_out,
             });
 
             Ok(())

@@ -23,7 +23,7 @@ use frame_support::traits::fungibles::Inspect;
 use frame_support::traits::Get;
 use frame_support::transactional;
 use frame_system::ensure_signed;
-use hydradx_traits::router::PoolType;
+use hydradx_traits::router::{ExecutorError, PoolType};
 use hydradx_traits::router::TradeExecution;
 use orml_traits::arithmetic::{CheckedAdd, CheckedSub};
 use scale_info::TypeInfo;
@@ -156,20 +156,7 @@ pub mod pallet {
                 Error::<T>::InsufficientBalance
             );
 
-            let mut amount_in_and_outs = Vec::<(T::Balance, T::Balance)>::with_capacity(route.len() + 1);
-
-            let mut amount_in_to_sell = amount_in;
-            for trade in route.iter() {
-                let result = T::AMM::calculate_sell(trade.pool, trade.asset_in, trade.asset_out, amount_in_to_sell);
-                match result {
-                    Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
-                    Err(ExecutorError::Error(dispatch_error)) => return Err(dispatch_error),
-                    Ok(amount_out) => {
-                        amount_in_and_outs.push((amount_in_to_sell, amount_out));
-                        amount_in_to_sell = amount_out;
-                    }
-                }
-            }
+            let amount_in_and_outs = Self::calculate_sell_trade_amount_in_and_outs(&route, amount_in)?;
 
             let (_,last_trade_amount_out) = amount_in_and_outs.last().ok_or(Error::<T>::UnexpectedError)?;
             ensure!(*last_trade_amount_out >= min_amount_out, Error::<T>::TradingLimitReached);
@@ -292,6 +279,25 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+    fn calculate_sell_trade_amount_in_and_outs(route: &Vec<Trade<T::AssetId>>, amount_in: T::Balance) -> Result<Vec<(T::Balance, T::Balance)>, DispatchError> {
+        let mut amount_in_and_outs = Vec::<(T::Balance, T::Balance)>::with_capacity(route.len() + 1);
+        let mut amount_in = amount_in;
+
+        for trade in route.iter() {
+            let result = T::AMM::calculate_sell(trade.pool, trade.asset_in, trade.asset_out, amount_in);
+            match result {
+                Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
+                Err(ExecutorError::Error(dispatch_error)) => return Err(dispatch_error),
+                Ok(amount_out) => {
+                    amount_in_and_outs.push((amount_in, amount_out));
+                    amount_in = amount_out;
+                }
+            }
+        }
+
+        Ok(amount_in_and_outs)
+    }
+
     fn ensure_route_size(route_length: usize) -> Result<(), DispatchError> {
         ensure!(route_length > 0, Error::<T>::RouteHasNoTrades);
         ensure!(

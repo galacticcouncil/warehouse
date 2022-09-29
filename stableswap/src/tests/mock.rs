@@ -133,7 +133,6 @@ impl orml_tokens::Config for Test {
 parameter_types! {
     pub const HDXAssetId: AssetId = HDX;
     pub const DAIAssetId: AssetId = DAI;
-    pub const Precision: Balance = 1;
     pub const MinimumLiquidity: Balance = 1000;
     pub const MinimumTradingLimit: Balance = 1000;
     pub const AmplificationRange: RangeInclusive<u16> = RangeInclusive::new(2, 10_000);
@@ -146,7 +145,6 @@ impl Config for Test {
     type ShareAccountId = AccountIdConstructor;
     type AssetRegistry = DummyRegistry<Test>;
     type CreatePoolOrigin = EnsureSigned<AccountId>;
-    type Precision = Precision;
     type MinPoolLiquidity = MinimumLiquidity;
     type AmplificationRange = AmplificationRange;
     type MinTradingLimit = MinimumTradingLimit;

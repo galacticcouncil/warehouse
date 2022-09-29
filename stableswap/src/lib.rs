@@ -119,10 +119,6 @@ pub mod pallet {
         /// The origin which can create a new pool
         type CreatePoolOrigin: EnsureOrigin<Self::Origin>;
 
-        /// Precision used in Newton's method to solve math equations iteratively.
-        #[pallet::constant]
-        type Precision: Get<Balance>;
-
         /// Minimum pool liquidity
         #[pallet::constant]
         type MinPoolLiquidity: Get<Balance>;

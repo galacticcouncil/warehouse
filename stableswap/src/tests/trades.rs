@@ -7,7 +7,7 @@ use frame_support::{assert_noop, assert_ok};
 use sp_runtime::Permill;
 
 #[test]
-fn simple_sell_works() {
+fn sell_should_work_when_correct_input_provided() {
     let asset_a: AssetId = 1;
     let asset_b: AssetId = 2;
     ExtBuilder::default()
@@ -61,7 +61,7 @@ fn simple_sell_works() {
 }
 
 #[test]
-fn simple_buy_works() {
+fn buy_should_work_when_correct_input_provided() {
     let asset_a: AssetId = 1;
     let asset_b: AssetId = 2;
     ExtBuilder::default()
@@ -115,7 +115,7 @@ fn simple_buy_works() {
 }
 
 #[test]
-fn simple_sell_with_fee_works() {
+fn sell_with_fee_should_work_when_correct_input_provided() {
     let asset_a: AssetId = 1;
     let asset_b: AssetId = 2;
 
@@ -174,7 +174,7 @@ fn simple_sell_with_fee_works() {
 }
 
 #[test]
-fn simple_sell_with_small_fee_works() {
+fn sell_should_work_when_fee_is_small() {
     let asset_a: AssetId = 1;
     let asset_b: AssetId = 2;
     ExtBuilder::default()
@@ -232,7 +232,7 @@ fn simple_sell_with_small_fee_works() {
 }
 
 #[test]
-fn simple_buy_with_fee_works() {
+fn buy_should_work_when_fee_is_set() {
     let asset_a: AssetId = 1;
     let asset_b: AssetId = 2;
     ExtBuilder::default()
@@ -290,7 +290,7 @@ fn simple_buy_with_fee_works() {
 }
 
 #[test]
-fn sell_with_invalid_amounts_fails() {
+fn sell_should_fail_when_insufficient_amount_is_provided() {
     let asset_a: AssetId = 1000;
     let asset_b: AssetId = 2000;
     ExtBuilder::default()
@@ -359,7 +359,7 @@ fn sell_with_invalid_amounts_fails() {
 }
 
 #[test]
-fn buy_with_invalid_amounts_fails() {
+fn buy_should_fail_when_insufficient_amount_is_provided() {
     let asset_a: AssetId = 1000;
     let asset_b: AssetId = 2000;
     ExtBuilder::default()

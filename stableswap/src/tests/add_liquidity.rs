@@ -309,3 +309,145 @@ fn add_liquidity_should_fail_when_providing_insufficient_liquidity() {
             );
         });
 }
+
+#[test]
+fn add_liquidity_should_work_when_providing_one_asset_only() {
+    let asset_a: AssetId = 1;
+    let asset_b: AssetId = 2;
+    let asset_c: AssetId = 3;
+    let asset_d: AssetId = 4;
+
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![
+            (BOB, asset_a, 200 * ONE),
+            (ALICE, asset_a, 100 * ONE),
+            (ALICE, asset_b, 200 * ONE),
+            (ALICE, asset_c, 300 * ONE),
+            (ALICE, asset_d, 400 * ONE),
+        ])
+        .with_registered_asset("one".as_bytes().to_vec(), asset_a)
+        .with_registered_asset("two".as_bytes().to_vec(), asset_b)
+        .with_registered_asset("three".as_bytes().to_vec(), asset_c)
+        .with_registered_asset("four".as_bytes().to_vec(), asset_d)
+        .with_pool(
+            ALICE,
+            PoolInfo::<AssetId> {
+                assets: vec![asset_a, asset_b, asset_c, asset_d].try_into().unwrap(),
+                amplification: 100u16,
+                trade_fee: Permill::from_percent(0),
+                withdraw_fee: Permill::from_percent(0),
+            },
+            InitialLiquidity {
+                account: ALICE,
+                assets: vec![
+                    AssetLiquidity {
+                        asset_id: asset_a,
+                        amount: 100 * ONE,
+                    },
+                    AssetLiquidity {
+                        asset_id: asset_b,
+                        amount: 200 * ONE,
+                    },
+                    AssetLiquidity {
+                        asset_id: asset_c,
+                        amount: 300 * ONE,
+                    },
+                    AssetLiquidity {
+                        asset_id: asset_d,
+                        amount: 400 * ONE,
+                    },
+                ],
+            },
+        )
+        .build()
+        .execute_with(|| {
+            let pool_id = get_pool_id_at(0);
+            let amount_added = 200 * ONE;
+
+            assert_ok!(Stableswap::add_liquidity(
+                Origin::signed(BOB),
+                pool_id,
+                vec![AssetLiquidity {
+                    asset_id: asset_a,
+                    amount: amount_added
+                },]
+            ));
+        });
+}
+
+#[test]
+fn add_liquidity_should_fail_when_providing_one_asset_not_in_pool() {
+    let asset_a: AssetId = 1;
+    let asset_b: AssetId = 2;
+    let asset_c: AssetId = 3;
+    let asset_d: AssetId = 4;
+    let asset_e: AssetId = 5;
+
+    ExtBuilder::default()
+        .with_endowed_accounts(vec![
+            (BOB, asset_a, 200 * ONE),
+            (BOB, asset_e, 200 * ONE),
+            (ALICE, asset_a, 100 * ONE),
+            (ALICE, asset_b, 200 * ONE),
+            (ALICE, asset_c, 300 * ONE),
+            (ALICE, asset_d, 400 * ONE),
+        ])
+        .with_registered_asset("one".as_bytes().to_vec(), asset_a)
+        .with_registered_asset("two".as_bytes().to_vec(), asset_b)
+        .with_registered_asset("three".as_bytes().to_vec(), asset_c)
+        .with_registered_asset("four".as_bytes().to_vec(), asset_d)
+        .with_registered_asset("five".as_bytes().to_vec(), asset_e)
+        .with_pool(
+            ALICE,
+            PoolInfo::<AssetId> {
+                assets: vec![asset_a, asset_b, asset_c, asset_d].try_into().unwrap(),
+                amplification: 100u16,
+                trade_fee: Permill::from_percent(0),
+                withdraw_fee: Permill::from_percent(0),
+            },
+            InitialLiquidity {
+                account: ALICE,
+                assets: vec![
+                    AssetLiquidity {
+                        asset_id: asset_a,
+                        amount: 100 * ONE,
+                    },
+                    AssetLiquidity {
+                        asset_id: asset_b,
+                        amount: 200 * ONE,
+                    },
+                    AssetLiquidity {
+                        asset_id: asset_c,
+                        amount: 300 * ONE,
+                    },
+                    AssetLiquidity {
+                        asset_id: asset_d,
+                        amount: 400 * ONE,
+                    },
+                ],
+            },
+        )
+        .build()
+        .execute_with(|| {
+            let pool_id = get_pool_id_at(0);
+            let amount_added = 200 * ONE;
+
+            assert_noop!(
+                Stableswap::add_liquidity(
+                    Origin::signed(BOB),
+                    pool_id,
+                    vec![
+                        AssetLiquidity {
+                            asset_id: asset_a,
+                            amount: amount_added
+                        },
+                        AssetLiquidity {
+                            asset_id: asset_e,
+                            amount: amount_added
+                        },
+                    ]
+                ),
+                Error::<Test>::AssetNotInPool
+            );
+        });
+}

@@ -43,7 +43,7 @@
 use frame_support::pallet_prelude::{DispatchResult, Get};
 use frame_support::{ensure, transactional};
 use sp_runtime::traits::Zero;
-use sp_runtime::{ArithmeticError, DispatchError, Permill};
+use sp_runtime::{ArithmeticError, DispatchError};
 use sp_std::prelude::*;
 
 pub use pallet::*;
@@ -597,20 +597,7 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 }
 
-/// Rounding method to use
-enum Rounding {
-    Down,
-    Up,
-}
-
 impl<T: Config> Pallet<T> {
-    fn calculate_fee_amount(amount: Balance, fee: Permill, rounding: Rounding) -> Balance {
-        match rounding {
-            Rounding::Down => fee.mul_floor(amount),
-            Rounding::Up => fee.mul_ceil(amount),
-        }
-    }
-
     fn calculate_out_amount(
         pool_id: T::AssetId,
         asset_out: T::AssetId,
@@ -627,20 +614,15 @@ impl<T: Config> Pallet<T> {
         ensure!(balances[index_in] > Balance::zero(), Error::<T>::InsufficientLiquidity);
         ensure!(balances[index_out] > Balance::zero(), Error::<T>::InsufficientLiquidity);
 
-        let amount_out = hydra_dx_math::stableswap::calculate_out_given_in::<D_ITERATIONS, Y_ITERATIONS>(
+        hydra_dx_math::stableswap::calculate_out_given_in_with_fee::<D_ITERATIONS, Y_ITERATIONS>(
             &balances,
             index_in,
             index_out,
             amount_in,
             pool.amplification.into(),
+            pool.trade_fee,
         )
-        .ok_or(ArithmeticError::Overflow)?;
-
-        let fee_amount = Self::calculate_fee_amount(amount_out, pool.trade_fee, Rounding::Down);
-
-        let amount_out = amount_out.checked_sub(fee_amount).ok_or(ArithmeticError::Underflow)?;
-
-        Ok((amount_out, fee_amount))
+        .ok_or_else(|| ArithmeticError::Overflow.into())
     }
 
     fn calculate_in_amount(
@@ -659,19 +641,14 @@ impl<T: Config> Pallet<T> {
         ensure!(balances[index_out] > amount_out, Error::<T>::InsufficientLiquidity);
         ensure!(balances[index_in] > Balance::zero(), Error::<T>::InsufficientLiquidity);
 
-        let amount_in = hydra_dx_math::stableswap::calculate_in_given_out::<D_ITERATIONS, Y_ITERATIONS>(
+        hydra_dx_math::stableswap::calculate_in_given_out_with_fee::<D_ITERATIONS, Y_ITERATIONS>(
             &balances,
             index_in,
             index_out,
             amount_out,
             pool.amplification.into(),
+            pool.trade_fee,
         )
-        .ok_or(ArithmeticError::Overflow)?;
-
-        let fee_amount = Self::calculate_fee_amount(amount_in, pool.trade_fee, Rounding::Up);
-
-        let amount_in = amount_in.checked_add(fee_amount).ok_or(ArithmeticError::Overflow)?;
-
-        Ok((amount_in, fee_amount))
+        .ok_or_else(|| ArithmeticError::Overflow.into())
     }
 }

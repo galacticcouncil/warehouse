@@ -408,7 +408,7 @@ pub mod pallet {
         ///
         /// Withdraws liquidity of selected asset from a pool.
         ///
-        /// Sahre amount is burn and LP receives corresponding amount of chosen asset.
+        /// Share amount is burn and LP receives corresponding amount of chosen asset.
         ///
         /// Withdraw fee is applied to the asset amount.
         ///

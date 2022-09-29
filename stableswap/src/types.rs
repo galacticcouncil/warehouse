@@ -17,7 +17,7 @@ pub(crate) type Balance = u128;
 /// `assets`: pool assets
 /// `amplification`: amp parameter
 /// `fee`: trade fee to be withdrawn on sell/buy
-#[derive(Clone, Encode, Decode, MaxEncodedLen, TypeInfo, RuntimeDebug)]
+#[derive(Clone, PartialEq, Encode, Decode, MaxEncodedLen, TypeInfo, RuntimeDebug)]
 pub struct PoolInfo<AssetId> {
     pub assets: BoundedVec<AssetId, ConstU32<MAX_ASSETS_IN_POOL>>,
     pub amplification: u16,

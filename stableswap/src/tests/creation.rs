@@ -1,4 +1,5 @@
 use crate::tests::mock::*;
+use crate::types::PoolInfo;
 use crate::Error;
 use crate::Pools;
 use frame_support::{assert_noop, assert_ok};
@@ -59,28 +60,40 @@ fn create_multi_asset_pool_should_work_when_assets_are_registered() {
 }
 
 #[test]
-fn create_pool_with_asset_order_swapped_works() {
+fn create_pool_should_store_assets_correctly_when_input_is_not_sorted() {
+    let asset_a: AssetId = 1;
+    let asset_b: AssetId = 2;
+    let asset_c: AssetId = 3;
+    let asset_d: AssetId = 4;
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
-        .with_registered_asset("one".as_bytes().to_vec(), 1)
-        .with_registered_asset("two".as_bytes().to_vec(), 2)
+        .with_registered_asset("one".as_bytes().to_vec(), asset_a)
+        .with_registered_asset("two".as_bytes().to_vec(), asset_b)
+        .with_registered_asset("three".as_bytes().to_vec(), asset_c)
+        .with_registered_asset("four".as_bytes().to_vec(), asset_d)
         .build()
         .execute_with(|| {
-            let asset_a: AssetId = 1;
-            let asset_b: AssetId = 2;
             let amplification: u16 = 100;
 
             let pool_id = retrieve_current_asset_id();
 
             assert_ok!(Stableswap::create_pool(
                 Origin::signed(ALICE),
-                vec![asset_b, asset_a],
+                vec![asset_c, asset_d, asset_b, asset_a],
                 amplification,
-                Permill::from_percent(0),
-                Permill::from_percent(0),
+                Permill::from_percent(5),
+                Permill::from_percent(10),
             ));
 
-            assert!(<Pools<Test>>::get(pool_id).is_some());
+            assert_eq!(
+                <Pools<Test>>::get(pool_id).unwrap(),
+                PoolInfo {
+                    assets: vec![asset_a, asset_b, asset_c, asset_d].try_into().unwrap(),
+                    amplification,
+                    trade_fee: Permill::from_percent(5),
+                    withdraw_fee: Permill::from_percent(10)
+                }
+            );
         });
 }
 

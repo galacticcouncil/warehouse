@@ -6,7 +6,7 @@ use hydradx_traits::AccountIdFor;
 use sp_runtime::Permill;
 
 #[test]
-fn add_initial_liquidity_works() {
+fn add_initial_liquidity_should_work_when_called_first_time() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![
             (BOB, 1, 200 * ONE),
@@ -60,7 +60,7 @@ fn add_initial_liquidity_works() {
 }
 
 #[test]
-fn add_initial_liquidity_with_insufficient_balance_fails() {
+fn add_initial_liquidity_should_fail_when_lp_has_insufficient_balance() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![
             (BOB, 1, 200 * ONE),
@@ -116,7 +116,7 @@ fn add_initial_liquidity_with_insufficient_balance_fails() {
         });
 }
 #[test]
-fn add_liquidity_works() {
+fn add_liquidity_should_work_when_initial_liquidity_has_been_provided() {
     let asset_a: AssetId = 1;
     let asset_b: AssetId = 2;
 
@@ -183,7 +183,7 @@ fn add_liquidity_works() {
 }
 
 #[test]
-fn add_liquidity_other_asset_works() {
+fn add_liquidity_should_work_when_order_is_not_sorted() {
     let asset_a: AssetId = 1;
     let asset_b: AssetId = 2;
 
@@ -250,7 +250,7 @@ fn add_liquidity_other_asset_works() {
 }
 
 #[test]
-fn add_insufficient_liquidity_fails() {
+fn add_liquidity_should_fail_when_providing_insufficient_liquidity() {
     let asset_a: AssetId = 1;
     let asset_b: AssetId = 2;
 

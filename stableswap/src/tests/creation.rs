@@ -98,7 +98,7 @@ fn create_pool_should_store_assets_correctly_when_input_is_not_sorted() {
 }
 
 #[test]
-fn create_pool_with_same_assets_fails() {
+fn create_pool_should_fail_when_same_assets_is_specified() {
     ExtBuilder::default().build().execute_with(|| {
         let asset_a: AssetId = 1;
         let amplification: u16 = 100;
@@ -106,7 +106,7 @@ fn create_pool_with_same_assets_fails() {
         assert_noop!(
             Stableswap::create_pool(
                 Origin::signed(ALICE),
-                vec![asset_a, asset_a],
+                vec![asset_a, 3, 4, asset_a],
                 amplification,
                 Permill::from_percent(0),
                 Permill::from_percent(0),
@@ -117,7 +117,7 @@ fn create_pool_with_same_assets_fails() {
 }
 
 #[test]
-fn create_pool_with_no_registered_assets_fails() {
+fn create_pool_should_fail_when_asset_is_not_registered() {
     ExtBuilder::default()
         .with_registered_asset("one".as_bytes().to_vec(), 1000)
         .build()
@@ -151,7 +151,7 @@ fn create_pool_with_no_registered_assets_fails() {
 }
 
 #[test]
-fn create_existing_pool_fails() {
+fn create_pool_should_when_same_pool_already_exists() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
         .with_registered_asset("one".as_bytes().to_vec(), 1)
@@ -184,7 +184,7 @@ fn create_existing_pool_fails() {
 }
 
 #[test]
-fn create_pool_with_invalid_amp_fails() {
+fn create_pool_should_fail_when_amplification_is_incorrect() {
     ExtBuilder::default()
         .with_endowed_accounts(vec![(ALICE, 1000, 200 * ONE), (ALICE, 2000, 200 * ONE)])
         .with_registered_asset("one".as_bytes().to_vec(), 1000)

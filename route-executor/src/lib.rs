@@ -164,9 +164,6 @@ pub mod pallet {
                 Error::<T>::TradingLimitReached
             );
 
-            //do the same calculation for buy
-            //testing?
-
             for ((amount_in, amount_out), trade) in amount_in_and_outs.iter().zip(route) {
                 let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(trade.asset_in, &who, false);
 
@@ -232,33 +229,17 @@ pub mod pallet {
 
             let user_balance_of_asset_in_before_trade = T::Currency::reducible_balance(asset_in, &who, false);
 
-            let mut amounts_to_buy = Vec::<T::Balance>::with_capacity(route.len() + 1);
-            let mut amount = amount_out;
-            amounts_to_buy.push(amount);
+            let amount_in_and_outs = Self::calculate_buy_trade_amount_in_and_outs(&route, amount_out)?;
 
-            for trade in route.iter().rev() {
-                let result = T::AMM::calculate_buy(trade.pool, trade.asset_in, trade.asset_out, amount);
+            let (last_trade_amount_in, _) = amount_in_and_outs.last().ok_or(Error::<T>::UnexpectedError)?;
+            ensure!(*last_trade_amount_in <= max_amount_in, Error::<T>::TradingLimitReached);
 
-                match result {
-                    Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
-                    Err(ExecutorError::Error(dispatch_error)) => return Err(dispatch_error),
-                    Ok(amount_to_buy) => {
-                        amount = amount_to_buy;
-                        amounts_to_buy.push(amount_to_buy);
-                    }
-                }
-            }
-
-            //We pop the last calculation amount as we use it only for verification and not for executing further trades
-            let last_amount = amounts_to_buy.pop().ok_or(Error::<T>::UnexpectedError)?;
-            ensure!(last_amount <= max_amount_in, Error::<T>::TradingLimitReached);
-
-            for (amount, trade) in amounts_to_buy.iter().rev().zip(route) {
+            for ((amount_in,amount_out), trade) in amount_in_and_outs.iter().rev().zip(route) {
                 let user_balance_of_asset_out_before_trade =
                     T::Currency::reducible_balance(trade.asset_out, &who, false);
 
                 let execution_result =
-                    T::AMM::execute_buy(origin.clone(), trade.pool, trade.asset_in, trade.asset_out, *amount);
+                    T::AMM::execute_buy(origin.clone(), trade.pool, trade.asset_in, trade.asset_out, *amount_in, *amount_out);
 
                 handle_execution_error!(execution_result);
 
@@ -266,16 +247,16 @@ pub mod pallet {
                     who.clone(),
                     trade.asset_out,
                     user_balance_of_asset_out_before_trade,
-                    *amount,
+                    *amount_out,
                 )?;
             }
 
-            Self::ensure_that_user_spent_asset_in(who, asset_in, user_balance_of_asset_in_before_trade, last_amount)?;
+            Self::ensure_that_user_spent_asset_in(who, asset_in, user_balance_of_asset_in_before_trade, *last_trade_amount_in)?;
 
             Self::deposit_event(Event::RouteExecuted {
                 asset_in,
                 asset_out,
-                amount_in: last_amount,
+                amount_in: *last_trade_amount_in,
                 amount_out,
             });
 
@@ -310,6 +291,29 @@ impl<T: Config> Pallet<T> {
                 Ok(amount_out) => {
                     amount_in_and_outs.push((amount_in, amount_out));
                     amount_in = amount_out;
+                }
+            }
+        }
+
+        Ok(amount_in_and_outs)
+    }
+
+    fn calculate_buy_trade_amount_in_and_outs(
+        route: &Vec<Trade<T::AssetId>>,
+        amount_out: T::Balance,
+    ) -> Result<Vec<(T::Balance, T::Balance)>, DispatchError> {
+        let mut amount_in_and_outs = Vec::<(T::Balance, T::Balance)>::with_capacity(route.len() + 1);
+        let mut amount_out = amount_out;
+
+        for trade in route.iter().rev() {
+            let result = T::AMM::calculate_buy(trade.pool, trade.asset_in, trade.asset_out, amount_out);
+
+            match result {
+                Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
+                Err(ExecutorError::Error(dispatch_error)) => return Err(dispatch_error),
+                Ok(amount_in) => {
+                    amount_in_and_outs.push((amount_in, amount_out));
+                    amount_out = amount_in;
                 }
             }
         }

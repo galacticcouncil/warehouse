@@ -289,7 +289,7 @@ macro_rules! impl_fake_executor {
                 asset_in: AssetId,
                 asset_out: AssetId,
                 amount_in: Balance,
-                amount_out: Balance,
+                _amount_out: Balance,
             ) -> Result<(), ExecutorError<Self::Error>> {
                 if !matches!(pool_type, $pool_type) {
                     return Err(ExecutorError::NotSupported);
@@ -315,6 +315,7 @@ macro_rules! impl_fake_executor {
                 pool_type: PoolType<AssetId>,
                 asset_in: AssetId,
                 asset_out: AssetId,
+                _amount_in: Balance,
                 amount_out: Balance,
             ) -> Result<(), ExecutorError<Self::Error>> {
                 if !matches!(pool_type, $pool_type) {
@@ -326,9 +327,6 @@ macro_rules! impl_fake_executor {
                 });
 
                 let amount_in = $buy_calculation_result;
-
-                //T::Currency::transfer(asset_out, &pair_account, who, amount_out).map_err(|_| ExecutorError::Error(()))?;
-                // T::Currency::transfer(asset_in, who, &pair_account, amount_in).map_err(|_| ExecutorError::Error(()))?;
 
                 Currencies::transfer(Origin::signed(ASSET_PAIR_ACCOUNT), ALICE, asset_out, amount_out)
                     .map_err(|e| ExecutorError::Error(e))?;

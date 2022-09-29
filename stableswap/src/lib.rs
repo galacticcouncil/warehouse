@@ -383,7 +383,6 @@ pub mod pallet {
                 &initial_reserves,
                 &updated_reserves,
                 pool.amplification.into(),
-                T::Precision::get(),
                 share_issuance,
             )
             .ok_or(ArithmeticError::Overflow)?;
@@ -463,7 +462,6 @@ pub mod pallet {
                 asset_idx,
                 share_issuance,
                 pool.amplification.into(),
-                T::Precision::get(),
                 pool.withdraw_fee,
             )
             .ok_or(ArithmeticError::Overflow)?;
@@ -639,7 +637,6 @@ impl<T: Config> Pallet<T> {
             index_out,
             amount_in,
             pool.amplification.into(),
-            T::Precision::get(),
         )
         .ok_or(ArithmeticError::Overflow)?;
 
@@ -672,7 +669,6 @@ impl<T: Config> Pallet<T> {
             index_out,
             amount_out,
             pool.amplification.into(),
-            T::Precision::get(),
         )
         .ok_or(ArithmeticError::Overflow)?;
 

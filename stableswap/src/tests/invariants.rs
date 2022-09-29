@@ -247,7 +247,7 @@ proptest! {
 
                 let asset_a_reserve = Tokens::free_balance(asset_a, &pool_account);
                 let asset_b_reserve = Tokens::free_balance(asset_b, &pool_account);
-                let d_prev = calculate_d::<128u8>(&[asset_a_reserve,asset_b_reserve], amplification.into(), 1u128).unwrap();
+                let d_prev = calculate_d::<128u8>(&[asset_a_reserve,asset_b_reserve], amplification.into()).unwrap();
 
                 assert_ok!(Stableswap::sell(
                     Origin::signed(BOB),
@@ -260,7 +260,7 @@ proptest! {
 
                 let asset_a_reserve = Tokens::free_balance(asset_a, &pool_account);
                 let asset_b_reserve = Tokens::free_balance(asset_b, &pool_account);
-                let d = calculate_d::<128u8>(&[asset_a_reserve,asset_b_reserve], amplification.into(), 1u128).unwrap();
+                let d = calculate_d::<128u8>(&[asset_a_reserve,asset_b_reserve], amplification.into()).unwrap();
 
                 assert!(d >= d_prev);
                 assert!(d - d_prev <= 10u128);
@@ -316,7 +316,7 @@ proptest! {
 
                 let asset_a_reserve = Tokens::free_balance(asset_a, &pool_account);
                 let asset_b_reserve = Tokens::free_balance(asset_b, &pool_account);
-                let d_prev = calculate_d::<128u8>(&[asset_a_reserve,asset_b_reserve], amplification.into(), 1u128).unwrap();
+                let d_prev = calculate_d::<128u8>(&[asset_a_reserve,asset_b_reserve], amplification.into()).unwrap();
 
                 assert_ok!(Stableswap::buy(
                     Origin::signed(BOB),
@@ -328,7 +328,7 @@ proptest! {
                 ));
                 let asset_a_reserve = Tokens::free_balance(asset_a, &pool_account);
                 let asset_b_reserve = Tokens::free_balance(asset_b, &pool_account);
-                let d = calculate_d::<128u8>(&[asset_a_reserve,asset_b_reserve], amplification.into(), 1u128).unwrap();
+                let d = calculate_d::<128u8>(&[asset_a_reserve,asset_b_reserve], amplification.into()).unwrap();
 
                 assert!(d >= d_prev);
                 assert!(d - d_prev <= 10u128);

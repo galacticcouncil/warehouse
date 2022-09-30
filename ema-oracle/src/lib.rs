@@ -188,8 +188,8 @@ impl<T: Config> Pallet<T> {
         Self::on_entry(src, assets, oracle_entry)
     }
 
+    /// Update oracles based on data accumulated during the block.
     fn update_oracles_from_accumulator() {
-        // update oracles based on data accumulated during the block
         for ((src, assets), oracle_entry) in Accumulator::<T>::take().into_iter() {
             for period in OraclePeriod::non_immediate_periods() {
                 Self::update_oracle(src, assets, into_blocks::<T>(period), oracle_entry.clone());
@@ -218,7 +218,8 @@ impl<T: Config> Pallet<T> {
                 .map(|(prev_entry, _)| {
                     let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
                     // update the entry to the last block if it hasn't been updated for a while
-                    if parent > prev_entry.timestamp {
+                    // skip if we're updating the `LastBlock` event
+                    if parent > prev_entry.timestamp && period != into_blocks::<T>(&LastBlock) {
                         Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))
                             .and_then(|(mut last_block, _)| -> Option<()> {
                                 last_block.timestamp = parent;

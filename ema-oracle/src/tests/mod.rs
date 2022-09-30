@@ -324,6 +324,27 @@ fn combine_via_ema_with_works() {
 }
 
 #[test]
+fn combine_via_ema_with_last_block_period_returns_new_value() {
+    let period: u32 = 1;
+    let start_oracle = OracleEntry {
+        price: 4.into(),
+        volume: Volume::from_a_in_b_out(1u128, 4u128),
+        liquidity: 4u128,
+        timestamp: 5,
+    };
+
+    let next_value = OracleEntry {
+        price: 8.into(),
+        volume: Volume::from_a_in_b_out(1u128, 8u128),
+        liquidity: 8u128,
+        timestamp: 6,
+    };
+    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value);
+    let expected_oracle = next_value;
+    assert_eq!(next_oracle, Some(expected_oracle));
+}
+
+#[test]
 fn calculate_new_ema_equals_update_via_ema_with() {
     let period: u32 = 7;
     let mut start_oracle = OracleEntry {

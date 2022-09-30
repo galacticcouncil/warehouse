@@ -217,7 +217,7 @@ impl<T: Config> Pallet<T> {
                 .as_mut()
                 .map(|(prev_entry, _)| {
                     let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
-                    // update the entry to the last block if it hasn't been updated for a while
+                    // update the entry to the parent block if it hasn't been updated for a while
                     // skip if we're updating the `LastBlock` event
                     if parent > prev_entry.timestamp && period != into_blocks::<T>(&LastBlock) {
                         Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))

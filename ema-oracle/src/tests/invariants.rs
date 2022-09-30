@@ -26,7 +26,7 @@ fn valid_asset_ids() -> impl Strategy<Value = (AssetId, AssetId)> {
 }
 
 fn non_zero_amount() -> impl Strategy<Value = Balance> {
-    any::<Balance>().prop_filter("balances should be greater 0", |b| b > &0)
+    any::<Balance>().prop_filter("balance should be greater 0", |b| b > &0)
 }
 
 // Tests

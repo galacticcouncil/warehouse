@@ -94,7 +94,7 @@ parameter_types! {
     pub const BlockHashCount: u64 = 250;
     pub const SS58Prefix: u8 = 63;
 
-    pub const HdxAssetId: u32 = 0;
+    pub const HdxAssetId: u32 = HDX;
     pub const ExistentialDeposit: u128 = 2;
     pub const MaxLocks: u32 = 50;
     pub const TransactionByteFee: Balance = 1;

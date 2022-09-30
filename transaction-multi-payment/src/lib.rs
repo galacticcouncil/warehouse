@@ -33,15 +33,13 @@ use frame_support::{
     dispatch::DispatchResult,
     ensure,
     traits::{Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, WithdrawReasons},
-    transactional,
-    weights::DispatchClass,
-    weights::WeightToFeePolynomial,
+    weights::{DispatchClass, WeightToFee},
 };
 use frame_system::ensure_signed;
 use sp_runtime::{
     traits::{DispatchInfoOf, One, PostDispatchInfoOf, Saturating, Zero},
     transaction_validity::{InvalidTransaction, TransactionValidityError},
-    FixedU128,
+    FixedU128, ModuleError,
 };
 use sp_std::prelude::*;
 
@@ -105,7 +103,7 @@ pub mod pallet {
         }
 
         fn on_finalize(_n: T::BlockNumber) {
-            AcceptedCurrencyPrice::<T>::remove_all(None);
+            let _ = <AcceptedCurrencyPrice<T>>::clear(u32::MAX, None);
         }
     }
 
@@ -131,7 +129,7 @@ pub mod pallet {
         type WithdrawFeeForSetCurrency: Get<Pays>;
 
         /// Convert a weight value into a deductible fee based on the currency type.
-        type WeightToFee: WeightToFeePolynomial<Balance = BalanceOf<Self>>;
+        type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
 
         /// Native Asset
         #[pallet::constant]
@@ -254,7 +252,6 @@ pub mod pallet {
         ///
         /// Emits `CurrencySet` event when successful.
         #[pallet::weight((<T as Config>::WeightInfo::set_currency(), DispatchClass::Normal, Pays::No))]
-        #[transactional]
         pub fn set_currency(origin: OriginFor<T>, currency: AssetIdOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -368,7 +365,7 @@ where
         // cap the weight to the maximum defined in runtime, otherwise it will be the
         // `Bounded` maximum of its data type, which is not desired.
         let capped_weight: Weight = weight.min(T::BlockWeights::get().max_block);
-        <T as Config>::WeightToFee::calc(&capped_weight)
+        <T as Config>::WeightToFee::weight_to_fee(&capped_weight)
     }
 
     fn check_balance(account: &T::AccountId, currency: AssetIdOf<T>) -> Result<(), Error<T>> {
@@ -399,6 +396,45 @@ where
             };
 
             Ok((currency, Some(price)))
+        }
+    }
+
+    // This method is required by WithdrawFee
+    /// Execute a trade to buy HDX and sell selected currency.
+    pub fn withdraw_fee_non_native(
+        who: &T::AccountId,
+        fee: BalanceOf<T>,
+    ) -> Result<PaymentWithdrawResult, DispatchError> {
+        let currency = Self::account_currency(who);
+
+        if currency == T::NativeAssetId::get() {
+            Ok(PaymentWithdrawResult::Native)
+        } else {
+            let price = if let Some(spot_price) = Self::currency_price(currency) {
+                spot_price
+            } else {
+                // If not loaded in on_init, let's try first the spot price provider again
+                // This is unlikely scenario as the price would be retrieved in on_init for each block
+                if let Some(spot_price) = T::SpotPriceProvider::spot_price(T::NativeAssetId::get(), currency) {
+                    spot_price
+                } else {
+                    Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?
+                }
+            };
+
+            let amount = price.checked_mul_int(fee).ok_or(Error::<T>::Overflow)?;
+
+            T::Currencies::withdraw(currency, who, amount)?;
+
+            Self::deposit_event(Event::FeeWithdrawn {
+                account_id: who.clone(),
+                asset_id: currency,
+                native_fee_amount: fee,
+                non_native_fee_amount: amount,
+                destination_account_id: T::FeeReceiver::get(),
+            });
+
+            Ok(PaymentWithdrawResult::Transferred)
         }
     }
 }
@@ -532,13 +568,21 @@ where
     }
 }
 
+impl<T: Config> CurrencyWithdraw<<T as frame_system::Config>::AccountId, BalanceOf<T>> for Pallet<T>
+where
+    BalanceOf<T>: FixedPointOperand,
+{
+    fn withdraw(who: &T::AccountId, fee: BalanceOf<T>) -> Result<PaymentWithdrawResult, DispatchError> {
+        Self::withdraw_fee_non_native(who, fee)
+    }
+}
+
 /// Implements the transaction payment for native as well as non-native currencies
 pub struct WithdrawFees<C, OU, SW>(PhantomData<(C, OU, SW)>);
 
 impl<T, C, OU, SW> OnChargeTransaction<T> for WithdrawFees<C, OU, SW>
 where
     T: Config,
-    T::TransactionByteFee: Get<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance>,
     C: Currency<<T as frame_system::Config>::AccountId>,
     C::PositiveImbalance:
         Imbalance<<C as Currency<<T as frame_system::Config>::AccountId>>::Balance, Opposite = C::NegativeImbalance>,
@@ -633,6 +677,16 @@ impl<T: Config + Send + Sync> sp_std::fmt::Debug for CurrencyBalanceCheck<T> {
     }
 }
 
+/// convert an Error to a custom InvalidTransaction with the inner code being the error
+/// number.
+pub fn error_to_invalid<T: Config>(error: Error<T>) -> InvalidTransaction {
+    let error_number = match error.into() {
+        DispatchError::Module(ModuleError { error, .. }) => error[0],
+        _ => 0, // this case should never happen because an Error is always converted to DispatchError::Module(ModuleError)
+    };
+    InvalidTransaction::Custom(error_number)
+}
+
 impl<T: Config + Send + Sync> SignedExtension for CurrencyBalanceCheck<T>
 where
     <T as frame_system::Config>::Call: IsSubType<Call<T>>,
@@ -658,7 +712,7 @@ where
         match call.is_sub_type() {
             Some(Call::set_currency { currency }) => match Pallet::<T>::check_balance(who, *currency) {
                 Ok(_) => Ok(ValidTransaction::default()),
-                Err(error) => InvalidTransaction::Custom(error.as_u8()).into(),
+                Err(error) => error_to_invalid(error).into(),
             },
             _ => Ok(Default::default()),
         }
@@ -674,9 +728,7 @@ where
         match call.is_sub_type() {
             Some(Call::set_currency { currency }) => match Pallet::<T>::check_balance(who, *currency) {
                 Ok(_) => Ok(()),
-                Err(error) => Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                    error.as_u8(),
-                ))),
+                Err(error) => Err(TransactionValidityError::Invalid(error_to_invalid(error))),
             },
             _ => Ok(()),
         }

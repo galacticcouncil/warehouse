@@ -23,8 +23,8 @@ use frame_system as system;
 use frame_system::pallet_prelude::OriginFor;
 use hydradx_adapters::inspect::MultiInspectAdapter;
 use hydradx_traits::router::{ExecutorError, PoolType, TradeExecution};
-use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
+use pallet_currencies::BasicCurrencyAdapter;
 use pretty_assertions::assert_eq;
 use sp_core::H256;
 use sp_runtime::{
@@ -52,7 +52,7 @@ frame_support::construct_runtime!(
          Router: router::{Pallet, Call,Event<T>},
          Tokens: orml_tokens::{Pallet, Event<T>},
          Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-         Currencies: orml_currencies::{Pallet, Event<T>},
+         Currencies: pallet_currencies::{Pallet, Event<T>},
      }
 );
 
@@ -108,6 +108,8 @@ impl orml_tokens::Config for Test {
     type DustRemovalWhitelist = Nothing;
     type OnNewTokenAccount = ();
     type OnKilledTokenAccount = ();
+    type ReserveIdentifier = ();
+    type MaxReserves = ();
 }
 
 parameter_types! {
@@ -127,7 +129,7 @@ impl pallet_balances::Config for Test {
     type ReserveIdentifier = ();
 }
 
-impl orml_currencies::Config for Test {
+impl pallet_currencies::Config for Test {
     type Event = Event;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, u32>;

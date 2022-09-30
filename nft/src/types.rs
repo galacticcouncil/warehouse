@@ -22,30 +22,30 @@ use serde::{Deserialize, Serialize};
 
 use scale_info::TypeInfo;
 
-/// NFT Class ID
-pub type ClassId = u128;
+/// NFT Collection ID
+pub type CollectionId = u128;
 
-/// NFT Instance ID
-pub type InstanceId = u128;
+/// NFT Item ID
+pub type ItemId = u128;
 
 #[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct ClassInfo<ClassType, BoundedVec> {
-    /// A class type that implies permissions, e.g. for transfer and other operations
-    pub class_type: ClassType,
-    /// Arbitrary data about a class, e.g. IPFS hash
+pub struct CollectionInfo<CollectionType, BoundedVec> {
+    /// A collection type that implies permissions, e.g. for transfer and other operations
+    pub collection_type: CollectionType,
+    /// Arbitrary data about a collection, e.g. IPFS hash
     pub metadata: BoundedVec,
 }
 
 #[derive(Encode, Decode, Eq, Copy, PartialEq, Clone, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct InstanceInfo<BoundedVec> {
+pub struct ItemInfo<BoundedVec> {
     pub metadata: BoundedVec,
 }
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum ClassType {
+pub enum CollectionType {
     Marketplace = 0_isize,
     LiquidityMining = 1_isize,
     Redeemable = 2_isize,
@@ -53,47 +53,50 @@ pub enum ClassType {
     HydraHeads = 4_isize,
 }
 
-impl Default for ClassType {
+impl Default for CollectionType {
     fn default() -> Self {
-        ClassType::Marketplace
+        CollectionType::Marketplace
     }
 }
 
-pub trait NftPermission<InnerClassType> {
-    fn can_create(class_type: &InnerClassType) -> bool;
-    fn can_mint(class_type: &InnerClassType) -> bool;
-    fn can_transfer(class_type: &InnerClassType) -> bool;
-    fn can_burn(class_type: &InnerClassType) -> bool;
-    fn can_destroy(class_type: &InnerClassType) -> bool;
-    fn has_deposit(class_type: &InnerClassType) -> bool;
+pub trait NftPermission<InnerCollectionType> {
+    fn can_create(collection_type: &InnerCollectionType) -> bool;
+    fn can_mint(collection_type: &InnerCollectionType) -> bool;
+    fn can_transfer(collection_type: &InnerCollectionType) -> bool;
+    fn can_burn(collection_type: &InnerCollectionType) -> bool;
+    fn can_destroy(collection_type: &InnerCollectionType) -> bool;
+    fn has_deposit(collection_type: &InnerCollectionType) -> bool;
 }
 
 #[derive(Encode, Decode, Eq, Copy, PartialEq, Clone, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct NftPermissions;
 
-impl NftPermission<ClassType> for NftPermissions {
-    fn can_create(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace)
+impl NftPermission<CollectionType> for NftPermissions {
+    fn can_create(collection_type: &CollectionType) -> bool {
+        matches!(*collection_type, CollectionType::Marketplace)
     }
 
-    fn can_mint(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace)
+    fn can_mint(collection_type: &CollectionType) -> bool {
+        matches!(*collection_type, CollectionType::Marketplace)
     }
 
-    fn can_transfer(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace | ClassType::LiquidityMining)
+    fn can_transfer(collection_type: &CollectionType) -> bool {
+        matches!(
+            *collection_type,
+            CollectionType::Marketplace | CollectionType::LiquidityMining
+        )
     }
 
-    fn can_burn(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace)
+    fn can_burn(collection_type: &CollectionType) -> bool {
+        matches!(*collection_type, CollectionType::Marketplace)
     }
 
-    fn can_destroy(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace)
+    fn can_destroy(collection_type: &CollectionType) -> bool {
+        matches!(*collection_type, CollectionType::Marketplace)
     }
 
-    fn has_deposit(class_type: &ClassType) -> bool {
-        matches!(*class_type, ClassType::Marketplace)
+    fn has_deposit(collection_type: &CollectionType) -> bool {
+        matches!(*collection_type, CollectionType::Marketplace)
     }
 }

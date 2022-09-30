@@ -40,6 +40,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate core;
+
 use frame_support::pallet_prelude::{DispatchResult, Get};
 use frame_support::{ensure, transactional};
 use sp_runtime::traits::Zero;
@@ -449,7 +451,8 @@ pub mod pallet {
             let share_issuance = T::Currency::total_issuance(pool_id);
 
             ensure!(
-                share_issuance.saturating_sub(share_amount) >= T::MinPoolLiquidity::get(),
+                share_issuance == share_amount
+                    || share_issuance.saturating_sub(share_amount) >= T::MinPoolLiquidity::get(),
                 Error::<T>::InsufficientLiquidityRemaining
             );
 
@@ -462,8 +465,6 @@ pub mod pallet {
                 pool.withdraw_fee,
             )
             .ok_or(ArithmeticError::Overflow)?;
-
-            // TODO: what do with fee?
 
             T::Currency::withdraw(pool_id, &who, share_amount)?;
             T::Currency::transfer(asset_id, &pool_account, &who, amount)?;

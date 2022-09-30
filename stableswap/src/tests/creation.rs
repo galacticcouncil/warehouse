@@ -26,7 +26,15 @@ fn create_two_asset_pool_should_work_when_assets_are_registered() {
                 Permill::from_percent(0),
             ));
 
-            assert!(<Pools<Test>>::get(pool_id).is_some());
+            assert_eq!(
+                <Pools<Test>>::get(pool_id).unwrap(),
+                PoolInfo {
+                    assets: vec![asset_a, asset_b].try_into().unwrap(),
+                    amplification: 100u16,
+                    trade_fee: Permill::from_percent(0),
+                    withdraw_fee: Permill::from_percent(0)
+                }
+            );
         });
 }
 

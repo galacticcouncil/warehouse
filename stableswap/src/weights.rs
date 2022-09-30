@@ -46,6 +46,7 @@ use sp_std::marker::PhantomData;
 /// Weight functions needed for pallet_stableswap.
 pub trait WeightInfo {
     fn create_pool() -> Weight;
+    fn update_pool() -> Weight;
     fn add_liquidity() -> Weight;
     fn remove_liquidity_one_asset() -> Weight;
     fn sell() -> Weight;
@@ -60,6 +61,11 @@ impl<T: frame_system::Config> WeightInfo for BasiliskWeight<T> {
             .saturating_add(T::DbWeight::get().reads(13 as Weight))
             .saturating_add(T::DbWeight::get().writes(12 as Weight))
     }
+
+    fn update_pool() -> Weight {
+        0u128 as Weight
+    }
+
     fn add_liquidity() -> Weight {
         (64_481_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(10 as Weight))
@@ -88,6 +94,9 @@ impl WeightInfo for () {
         (69_401_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(13 as Weight))
             .saturating_add(RocksDbWeight::get().writes(12 as Weight))
+    }
+    fn update_pool() -> Weight {
+        0u128 as Weight
     }
     fn add_liquidity() -> Weight {
         (64_481_000 as Weight)

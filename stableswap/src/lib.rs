@@ -153,6 +153,13 @@ pub mod pallet {
             trade_fee: Permill,
             withdraw_fee: Permill,
         },
+        /// Pool parameters has been updated.
+        PoolUpdated {
+            pool_id: T::AssetId,
+            amplification: u16,
+            trade_fee: Permill,
+            withdraw_fee: Permill,
+        },
         /// Liquidity of an asset was added to a pool.
         LiquidityAdded {
             pool_id: T::AssetId,
@@ -247,6 +254,9 @@ pub mod pallet {
 
         /// Remaining balance of share asset is below asset's existential deposit.
         InsufficientShareBalance,
+
+        /// No pool parameters to update are provided.
+        NothingToUpdate,
     }
 
     #[pallet::call]
@@ -320,6 +330,42 @@ pub mod pallet {
             });
 
             Ok(())
+        }
+
+        #[pallet::weight(<T as Config>::WeightInfo::update_pool())]
+        #[transactional]
+        pub fn update_pool(
+            origin: OriginFor<T>,
+            pool_id: T::AssetId,
+            amplification: Option<u16>,
+            trade_fee: Option<Permill>,
+            withdraw_fee: Option<Permill>,
+        ) -> DispatchResult {
+            T::CreatePoolOrigin::ensure_origin(origin)?;
+
+            ensure!(
+                amplification.is_some() || trade_fee.is_some() || withdraw_fee.is_some(),
+                Error::<T>::NothingToUpdate
+            );
+
+            Pools::<T>::try_mutate(&pool_id, |maybe_pool| -> DispatchResult {
+                let mut pool = maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound)?;
+
+                pool.amplification = amplification.unwrap_or(pool.amplification);
+                ensure!(
+                    T::AmplificationRange::get().contains(&pool.amplification),
+                    Error::<T>::InvalidAmplification
+                );
+                pool.trade_fee = trade_fee.unwrap_or(pool.trade_fee);
+                pool.withdraw_fee = withdraw_fee.unwrap_or(pool.withdraw_fee);
+                Self::deposit_event(Event::PoolUpdated {
+                    pool_id,
+                    amplification: pool.amplification,
+                    trade_fee: pool.trade_fee,
+                    withdraw_fee: pool.withdraw_fee,
+                });
+                Ok(())
+            })
         }
 
         /// Add liquidity to selected pool.

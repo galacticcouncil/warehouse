@@ -232,7 +232,10 @@ pub mod pallet {
             let trade_amounts = Self::calculate_buy_trade_amounts(&route, amount_out)?;
 
             let last_trade_amount = trade_amounts.last().ok_or(Error::<T>::UnexpectedError)?;
-            ensure!(last_trade_amount.amount_in <= max_amount_in, Error::<T>::TradingLimitReached);
+            ensure!(
+                last_trade_amount.amount_in <= max_amount_in,
+                Error::<T>::TradingLimitReached
+            );
 
             for (trade_amount, trade) in trade_amounts.iter().rev().zip(route) {
                 let user_balance_of_asset_out_before_trade =
@@ -277,8 +280,8 @@ pub mod pallet {
 }
 
 struct AmountInAndOut<T: Config> {
-    pub amount_in : T::Balance,
-    pub amount_out : T::Balance,
+    pub amount_in: T::Balance,
+    pub amount_out: T::Balance,
 }
 
 impl<T: Config> Pallet<T> {
@@ -305,7 +308,7 @@ impl<T: Config> Pallet<T> {
                 Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
                 Err(ExecutorError::Error(dispatch_error)) => return Err(dispatch_error),
                 Ok(amount_out) => {
-                    amount_in_and_outs.push(AmountInAndOut{amount_in, amount_out});
+                    amount_in_and_outs.push(AmountInAndOut { amount_in, amount_out });
                     amount_in = amount_out;
                 }
             }
@@ -328,7 +331,7 @@ impl<T: Config> Pallet<T> {
                 Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
                 Err(ExecutorError::Error(dispatch_error)) => return Err(dispatch_error),
                 Ok(amount_in) => {
-                    amount_in_and_outs.push(AmountInAndOut{amount_in, amount_out});
+                    amount_in_and_outs.push(AmountInAndOut { amount_in, amount_out });
                     amount_out = amount_in;
                 }
             }

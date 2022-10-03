@@ -299,7 +299,7 @@ impl<T: Config> Pallet<T> {
         route: &Vec<Trade<T::AssetId>>,
         amount_in: T::Balance,
     ) -> Result<Vec<AmountInAndOut<T>>, DispatchError> {
-        let mut amount_in_and_outs = Vec::<AmountInAndOut<T>>::with_capacity(route.len() + 1);
+        let mut amount_in_and_outs = Vec::<AmountInAndOut<T>>::with_capacity(route.len());
         let mut amount_in = amount_in;
 
         for trade in route.iter() {
@@ -321,7 +321,7 @@ impl<T: Config> Pallet<T> {
         route: &Vec<Trade<T::AssetId>>,
         amount_out: T::Balance,
     ) -> Result<Vec<AmountInAndOut<T>>, DispatchError> {
-        let mut amount_in_and_outs = Vec::<AmountInAndOut<T>>::with_capacity(route.len() + 1);
+        let mut amount_in_and_outs = Vec::<AmountInAndOut<T>>::with_capacity(route.len());
         let mut amount_out = amount_out;
 
         for trade in route.iter().rev() {

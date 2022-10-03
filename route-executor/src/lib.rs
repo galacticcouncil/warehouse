@@ -234,12 +234,18 @@ pub mod pallet {
             let (last_trade_amount_in, _) = amount_in_and_outs.last().ok_or(Error::<T>::UnexpectedError)?;
             ensure!(*last_trade_amount_in <= max_amount_in, Error::<T>::TradingLimitReached);
 
-            for ((amount_in,amount_out), trade) in amount_in_and_outs.iter().rev().zip(route) {
+            for ((amount_in, amount_out), trade) in amount_in_and_outs.iter().rev().zip(route) {
                 let user_balance_of_asset_out_before_trade =
                     T::Currency::reducible_balance(trade.asset_out, &who, false);
 
-                let execution_result =
-                    T::AMM::execute_buy(origin.clone(), trade.pool, trade.asset_in, trade.asset_out, *amount_in, *amount_out);
+                let execution_result = T::AMM::execute_buy(
+                    origin.clone(),
+                    trade.pool,
+                    trade.asset_in,
+                    trade.asset_out,
+                    *amount_in,
+                    *amount_out,
+                );
 
                 handle_execution_error!(execution_result);
 
@@ -251,7 +257,12 @@ pub mod pallet {
                 )?;
             }
 
-            Self::ensure_that_user_spent_asset_in(who, asset_in, user_balance_of_asset_in_before_trade, *last_trade_amount_in)?;
+            Self::ensure_that_user_spent_asset_in(
+                who,
+                asset_in,
+                user_balance_of_asset_in_before_trade,
+                *last_trade_amount_in,
+            )?;
 
             Self::deposit_event(Event::RouteExecuted {
                 asset_in,
@@ -303,7 +314,7 @@ impl<T: Config> Pallet<T> {
     fn calculate_buy_trade_amount_in_and_outs(
         route: &Vec<Trade<T::AssetId>>,
         amount_out: T::Balance,
-    ) -> TradeAmountCalculationResult<T>  {
+    ) -> TradeAmountCalculationResult<T> {
         let mut amount_in_and_outs = Vec::<(T::Balance, T::Balance)>::with_capacity(route.len() + 1);
         let mut amount_out = amount_out;
 

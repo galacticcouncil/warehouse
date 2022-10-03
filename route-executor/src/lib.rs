@@ -265,6 +265,8 @@ pub mod pallet {
     }
 }
 
+type TradeAmountCalculationResult<T> = Result<Vec<(<T as Config>::Balance, <T as Config>::Balance)>, DispatchError>;
+
 impl<T: Config> Pallet<T> {
     fn ensure_route_size(route_length: usize) -> Result<(), DispatchError> {
         ensure!(route_length > 0, Error::<T>::RouteHasNoTrades);
@@ -279,7 +281,7 @@ impl<T: Config> Pallet<T> {
     fn calculate_sell_trade_amount_in_and_outs(
         route: &Vec<Trade<T::AssetId>>,
         amount_in: T::Balance,
-    ) -> Result<Vec<(T::Balance, T::Balance)>, DispatchError> {
+    ) -> TradeAmountCalculationResult<T> {
         let mut amount_in_and_outs = Vec::<(T::Balance, T::Balance)>::with_capacity(route.len() + 1);
         let mut amount_in = amount_in;
 
@@ -301,7 +303,7 @@ impl<T: Config> Pallet<T> {
     fn calculate_buy_trade_amount_in_and_outs(
         route: &Vec<Trade<T::AssetId>>,
         amount_out: T::Balance,
-    ) -> Result<Vec<(T::Balance, T::Balance)>, DispatchError> {
+    ) -> TradeAmountCalculationResult<T>  {
         let mut amount_in_and_outs = Vec::<(T::Balance, T::Balance)>::with_capacity(route.len() + 1);
         let mut amount_out = amount_out;
 

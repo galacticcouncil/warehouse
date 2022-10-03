@@ -940,15 +940,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             .checked_sub(&farm_entry.entered_at)
                             .ok_or(ArithmeticError::Overflow)?;
 
-                        if !yield_farm.state.is_stopped() {
-                            Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
-
+                        if yield_farm.state.is_stopped() {
                             //Stop loyalty factor for all users at the point when yield farm was last
                             //time rewarded(stopped).
                             periods = yield_farm
                                 .updated_at
                                 .checked_sub(&farm_entry.entered_at)
                                 .ok_or(ArithmeticError::Overflow)?;
+                        } else {
+                            Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
                         }
 
                         let loyalty_multiplier =

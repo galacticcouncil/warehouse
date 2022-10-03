@@ -600,7 +600,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
             //Stop yield farming before claiming.
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
-            //set_block_number(20_000);
+            set_block_number(20_000);
 
             let expected_claimed_rewards = 23_306;
             let unclaimable_rewards = 20_444;
@@ -629,7 +629,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         accumulated_claimed_rewards: expected_claimed_rewards,
                         entered_at: 18,
-                        updated_at: 25,
+                        updated_at: 200,
                         _phantom: PhantomData::default(),
                     }]
                     .try_into()

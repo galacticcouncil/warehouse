@@ -649,6 +649,21 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                 bsx_tkn1_yield_farm_reward_balance - expected_claimed_rewards
             );
 
+            //Second claim on same deposit from stopped yield farm.
+            //This should claim 0 rewards.
+            set_block_number(300_000);
+            //claim A1.1  (dep. A1 1-th time)
+            pretty_assertions::assert_eq!(
+                LiquidityMining::claim_rewards(
+                    ALICE,
+                    PREDEFINED_DEPOSIT_IDS[0],
+                    GC_BSX_TKN1_YIELD_FARM_ID,
+                    FAIL_ON_DOUBLECLAIM
+                )
+                .unwrap(),
+                (global_farm_id, BSX, 0, unclaimable_rewards)
+            );
+
             TransactionOutcome::Commit(())
         });
     });

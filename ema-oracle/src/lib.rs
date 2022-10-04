@@ -226,36 +226,34 @@ impl<T: Config> Pallet<T> {
                 *oracle = Some((oracle_entry.clone(), T::BlockNumberProvider::current_block_number()));
                 return;
             }
-            oracle
-                .as_mut()
-                .map(|(prev_entry, _)| {
-                    let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
-                    // update the entry to the parent block if it hasn't been updated for a while
-                    // skip if we're updating the `LastBlock` event
-                    if parent > prev_entry.timestamp && period != into_blocks::<T>(&LastBlock) {
-                        Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))
-                            .and_then(|(mut last_block, _)| -> Option<()> {
-                                last_block.timestamp = parent;
-                                prev_entry.update_via_ema_with(period, &last_block)?;
-                                Some(())
-                            }).unwrap_or_else(|| {
-                                log::warn!(
-                                    target: "runtime::ema-oracle",
-                                    "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to parent block failed. Defaulting to previous value."
-                                );
-                                debug_assert!(false, "Updating to parent block should not fail.");
-                            })
-                    }
-                    // calculate the actual update with the new value
-                    prev_entry.update_via_ema_with(period, &oracle_entry)
-                        .unwrap_or_else(|| {
+            if let Some((prev_entry, _)) = oracle.as_mut() {
+                let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
+                // update the entry to the parent block if it hasn't been updated for a while
+                // skip if we're updating the `LastBlock` event
+                if parent > prev_entry.timestamp && period != into_blocks::<T>(&LastBlock) {
+                    Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))
+                        .and_then(|(mut last_block, _)| -> Option<()> {
+                            last_block.timestamp = parent;
+                            prev_entry.update_via_ema_with(period, &last_block)?;
+                            Some(())
+                        }).unwrap_or_else(|| {
                             log::warn!(
                                 target: "runtime::ema-oracle",
-                                "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to new value failed. Defaulting to previous value."
+                                "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to parent block failed. Defaulting to previous value."
                             );
-                            debug_assert!(false, "Updating to new value should not fail.");
-                    });
+                            debug_assert!(false, "Updating to parent block should not fail.");
+                        })
+                }
+                // calculate the actual update with the new value
+                prev_entry.update_via_ema_with(period, &oracle_entry)
+                    .unwrap_or_else(|| {
+                        log::warn!(
+                            target: "runtime::ema-oracle",
+                            "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to new value failed. Defaulting to previous value."
+                        );
+                        debug_assert!(false, "Updating to new value should not fail.");
                 });
+            };
         });
     }
 

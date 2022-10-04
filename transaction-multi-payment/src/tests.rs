@@ -15,19 +15,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use crate::{mock::*, Config, Error};
-use frame_support::dispatch::{DispatchError, Dispatchable};
-use frame_support::sp_runtime::transaction_validity::ValidTransaction;
-use frame_support::weights::{DispatchInfo, PostDispatchInfo, Weight};
-use frame_support::{assert_err, assert_noop, assert_ok};
-use pallet_transaction_payment::ChargeTransactionPayment;
-use sp_runtime::traits::SignedExtension;
-
 use crate::traits::TransactionMultiPaymentDataProvider;
 use crate::{error_to_invalid, CurrencyBalanceCheck, PaymentInfo, Price};
+pub use crate::{mock::*, Config, Error};
+
+use frame_support::{
+    assert_err, assert_noop, assert_ok,
+    dispatch::{DispatchError, Dispatchable},
+    weights::{DispatchInfo, PostDispatchInfo, Weight},
+};
 use orml_traits::MultiCurrency;
 use pallet_balances::Call as BalancesCall;
-use sp_runtime::traits::BadOrigin;
+use pallet_transaction_payment::ChargeTransactionPayment;
+use sp_runtime::{
+    traits::{BadOrigin, SignedExtension},
+    transaction_validity::ValidTransaction,
+};
 use sp_std::marker::PhantomData;
 
 const CALL: &<Test as frame_system::Config>::Call = &Call::Balances(BalancesCall::transfer { dest: 2, value: 69 });

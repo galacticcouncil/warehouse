@@ -15,13 +15,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::traits::TransactionMultiPaymentDataProvider;
-use crate::{error_to_invalid, CurrencyBalanceCheck, PaymentInfo, Price};
-pub use crate::{mock::*, Config, Error};
+use crate::{error_to_invalid, traits::TransactionMultiPaymentDataProvider, CurrencyBalanceCheck, PaymentInfo, Price};
+pub use crate::{mock::*, AcceptedCurrencies, AcceptedCurrencyPrice, Config, Error};
 
 use frame_support::{
     assert_err, assert_noop, assert_ok,
     dispatch::{DispatchError, Dispatchable},
+    traits::Hooks,
     weights::{DispatchInfo, PostDispatchInfo, Weight},
 };
 use orml_traits::MultiCurrency;
@@ -34,6 +34,59 @@ use sp_runtime::{
 use sp_std::marker::PhantomData;
 
 const CALL: &<Test as frame_system::Config>::Call = &Call::Balances(BalancesCall::transfer { dest: 2, value: 69 });
+
+#[test]
+fn on_initialize_should_fill_storage_with_prices() {
+    // Arrange
+    ExtBuilder::default().build().execute_with(|| {
+        // Act
+        let current = System::block_number();
+        PaymentPallet::on_finalize(current);
+        // the block number is not important here and can stay the same
+        PaymentPallet::on_initialize(current);
+
+        // Assert
+        // verify that all accepted currencies have the price set
+        let iter = <AcceptedCurrencies<Test>>::iter();
+        for (asset_id, _) in iter {
+            assert!(<AcceptedCurrencyPrice<Test>>::contains_key(asset_id));
+        }
+
+        // fallback price
+        assert_eq!(
+            PaymentPallet::currency_price(SUPPORTED_CURRENCY),
+            Some(Price::from_float(1.5))
+        );
+        // price from the spot price provider
+        assert_eq!(
+            PaymentPallet::currency_price(SUPPORTED_CURRENCY_WITH_PRICE),
+            Some(Price::from_float(0.1))
+        );
+        // not supported
+        assert_eq!(PaymentPallet::currency_price(UNSUPPORTED_CURRENCY), None);
+    });
+}
+
+#[test]
+fn on_finalize_should_remove_prices_from_storage() {
+    // Arrange
+    ExtBuilder::default().build().execute_with(|| {
+        let current = System::block_number();
+
+        // verify that the storage is not empty
+        assert_eq!(
+            PaymentPallet::currency_price(SUPPORTED_CURRENCY),
+            Some(Price::from_float(1.5))
+        );
+
+        // Act
+        PaymentPallet::on_finalize(current);
+
+        // Assert
+        let mut iter = <AcceptedCurrencyPrice<Test>>::iter_values();
+        assert_eq!(iter.next(), None);
+    });
+}
 
 #[test]
 fn set_unsupported_currency() {

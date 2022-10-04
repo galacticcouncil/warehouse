@@ -46,134 +46,70 @@ pub mod v1 {
         ItemInfoOf<T>,
     >;
 
-    pub mod move_old_storage{
-        use super::*;
+    pub fn pre_migrate<T: Config>() {
+        assert_eq!(StorageVersion::get::<Pallet<T>>(), 0, "Storage version too high.");
 
-        pub fn pre_migrate<T: Config>() {
-            assert_eq!(StorageVersion::get::<Pallet<T>>(), 0, "Storage version too high.");
-
-            log::info!(
-                target: "runtime::nft",
-                "move_old_storage migration: PRE checks successful!"
-            );
-        }
-
-        pub fn migrate<T: Config>() -> Weight {
-            log::info!(
-                target: "runtime::nft",
-                "Running move_old_storage migration to v1"
-            );
-
-            let pallet_name = <Pallet<T> as PalletInfoAccess>::name().as_bytes();
-
-            // move Classes to Collections
-            let new_storage_prefix = storage_prefix(pallet_name, Collections::<T>::storage_prefix());
-            let old_storage_prefix = storage_prefix(pallet_name, Classes::<T>::storage_prefix());
-
-            move_prefix(&old_storage_prefix, &new_storage_prefix);
-            if let Some(value) = unhashed::get_raw(&old_storage_prefix) {
-                unhashed::put_raw(&new_storage_prefix, &value);
-                unhashed::kill(&old_storage_prefix);
-            }
-
-            // move Instances to Items
-            let new_storage_prefix = storage_prefix(pallet_name, Items::<T>::storage_prefix());
-            let old_storage_prefix = storage_prefix(pallet_name, Instances::<T>::storage_prefix());
-
-            move_prefix(&old_storage_prefix, &new_storage_prefix);
-            if let Some(value) = unhashed::get_raw(&old_storage_prefix) {
-                unhashed::put_raw(&new_storage_prefix, &value);
-                unhashed::kill(&old_storage_prefix);
-            }
-
-            StorageVersion::new(1).put::<Pallet<T>>();
-
-            <T as frame_system::Config>::BlockWeights::get().max_block
-        }
-
-        pub fn post_migrate<T: Config>() {
-            assert_eq!(StorageVersion::get::<Pallet<T>>(), 1, "Unexpected storage version.");
-
-            let pallet_name = <Pallet<T> as PalletInfoAccess>::name().as_bytes();
-
-            // Assert that no `Classes` storage remains at the old prefix.
-            let old_storage_prefix = Classes::<T>::storage_prefix();
-            let old_key = [&twox_128(pallet_name), &twox_128(old_storage_prefix)[..]].concat();
-            let old_key_iter =
-                frame_support::storage::KeyPrefixIterator::new(old_key.to_vec(), old_key.to_vec(), |_| Ok(()));
-            assert_eq!(old_key_iter.count(), 0);
-
-            // Assert that no `Instances` storage remains at the old prefix.
-            let old_storage_prefix = Instances::<T>::storage_prefix();
-            let old_key = [&twox_128(pallet_name), &twox_128(old_storage_prefix)[..]].concat();
-            let old_key_iter =
-                frame_support::storage::KeyPrefixIterator::new(old_key.to_vec(), old_key.to_vec(), |_| Ok(()));
-            assert_eq!(old_key_iter.count(), 0);
-
-            log::info!(
-                target: "runtime::nft",
-                "move_old_storage migration: POST checks successful!"
-            );
-        }
+        log::info!(
+            target: "runtime::nft",
+            "NFT migration: PRE checks successful!"
+        );
     }
 
-    // kill the old storages and update the storage version to v1
-    pub mod kill_old_storage{
-        use super::*;
+    pub fn migrate<T: Config>() -> Weight {
+        log::info!(
+            target: "runtime::nft",
+            "Running migration to v1 for NFT"
+        );
 
-        pub fn pre_migrate<T: Config>() {
-            assert_eq!(StorageVersion::get::<Pallet<T>>(), 0, "Storage version too high.");
+        let pallet_name = <Pallet<T> as PalletInfoAccess>::name().as_bytes();
 
-            log::info!(
-                target: "runtime::nft",
-                "kill_old_storage migration: PRE checks successful!"
-            );
-        }
+        // move Classes to Collections
+        let new_storage_prefix = storage_prefix(pallet_name, Collections::<T>::storage_prefix());
+        let old_storage_prefix = storage_prefix(pallet_name, Classes::<T>::storage_prefix());
 
-        pub fn migrate<T: Config>() -> Weight {
-            log::info!(
-                target: "runtime::nft",
-                "Running kill_old_storage migration to v1"
-            );
-
-            let pallet_name = <Pallet<T> as PalletInfoAccess>::name().as_bytes();
-
-            // kill Classes storage
-            let old_storage_prefix = storage_prefix(pallet_name, Classes::<T>::storage_prefix());
+        move_prefix(&old_storage_prefix, &new_storage_prefix);
+        if let Some(value) = unhashed::get_raw(&old_storage_prefix) {
+            unhashed::put_raw(&new_storage_prefix, &value);
             unhashed::kill(&old_storage_prefix);
+        }
 
-            // kill Instances storage
-            let old_storage_prefix = storage_prefix(pallet_name, Instances::<T>::storage_prefix());
+        // move Instances to Items
+        let new_storage_prefix = storage_prefix(pallet_name, Items::<T>::storage_prefix());
+        let old_storage_prefix = storage_prefix(pallet_name, Instances::<T>::storage_prefix());
+
+        move_prefix(&old_storage_prefix, &new_storage_prefix);
+        if let Some(value) = unhashed::get_raw(&old_storage_prefix) {
+            unhashed::put_raw(&new_storage_prefix, &value);
             unhashed::kill(&old_storage_prefix);
-
-            StorageVersion::new(1).put::<Pallet<T>>();
-
-            <T as frame_system::Config>::BlockWeights::get().max_block
         }
 
-        pub fn post_migrate<T: Config>() {
-            assert_eq!(StorageVersion::get::<Pallet<T>>(), 1, "Unexpected storage version.");
+        StorageVersion::new(1).put::<Pallet<T>>();
 
-            let pallet_name = <Pallet<T> as PalletInfoAccess>::name().as_bytes();
+        <T as frame_system::Config>::BlockWeights::get().max_block
+    }
 
-            // Assert that no `Classes` storage remains at the old prefix.
-            let old_storage_prefix = Classes::<T>::storage_prefix();
-            let old_key = [&twox_128(pallet_name), &twox_128(old_storage_prefix)[..]].concat();
-            let old_key_iter =
-                frame_support::storage::KeyPrefixIterator::new(old_key.to_vec(), old_key.to_vec(), |_| Ok(()));
-            assert_eq!(old_key_iter.count(), 0);
+    pub fn post_migrate<T: Config>() {
+        assert_eq!(StorageVersion::get::<Pallet<T>>(), 1, "Unexpected storage version.");
 
-            // Assert that no `Instances` storage remains at the old prefix.
-            let old_storage_prefix = Instances::<T>::storage_prefix();
-            let old_key = [&twox_128(pallet_name), &twox_128(old_storage_prefix)[..]].concat();
-            let old_key_iter =
-                frame_support::storage::KeyPrefixIterator::new(old_key.to_vec(), old_key.to_vec(), |_| Ok(()));
-            assert_eq!(old_key_iter.count(), 0);
+        let pallet_name = <Pallet<T> as PalletInfoAccess>::name().as_bytes();
 
-            log::info!(
-                target: "runtime::nft",
-                "kill_old_storage migration: POST checks successful!"
-            );
-        }
+        // Assert that no `Classes` storage remains at the old prefix.
+        let old_storage_prefix = Classes::<T>::storage_prefix();
+        let old_key = [&twox_128(pallet_name), &twox_128(old_storage_prefix)[..]].concat();
+        let old_key_iter =
+            frame_support::storage::KeyPrefixIterator::new(old_key.to_vec(), old_key.to_vec(), |_| Ok(()));
+        assert_eq!(old_key_iter.count(), 0);
+
+        // Assert that no `Instances` storage remains at the old prefix.
+        let old_storage_prefix = Instances::<T>::storage_prefix();
+        let old_key = [&twox_128(pallet_name), &twox_128(old_storage_prefix)[..]].concat();
+        let old_key_iter =
+            frame_support::storage::KeyPrefixIterator::new(old_key.to_vec(), old_key.to_vec(), |_| Ok(()));
+        assert_eq!(old_key_iter.count(), 0);
+
+        log::info!(
+            target: "runtime::nft",
+            "NFT migration: POST checks successful!"
+        );
     }
 }

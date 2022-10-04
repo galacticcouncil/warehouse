@@ -10,37 +10,30 @@ repository = 'https://github.com/galacticcouncil/warehouse'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
-# alias "parity-scale-code" to "codec"
-[dependencies.codec]
-default-features = false
-features = ['derive']
-package = 'parity-scale-codec'
-version = '2.3.1'
-
 [dependencies]
 serde = {features = ['derive'], optional = true, version = '1.0.136'}
-scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
+codec = { package = 'parity-scale-codec', version = '3.2.1', default-features = false, features = ['derive', "max-encoded-len"] }
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "61a47b6806864530cbc24281584a06e2f3b41aa0", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "43a2650fabb6e87dbb2afceae943fa9d9253a51a", default-features = false }
 
 # Substrate dependencies
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false, optional = true }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
-frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false, optional = true }
-sp-arithmetic = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.17", default-features = false }
-sp-core = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.17", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
+frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false, optional = true }
+sp-arithmetic = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.28", default-features = false }
+sp-core = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.28", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
 
 log = { version = "0.4.14", default-features = false }
 
 [dev-dependencies]
-proptest = "1.0.0"
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 pretty_assertions = "1.3.0"
-env_logger = "*"
+proptest = "1.0.0"
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
 
 [features]
 default = ['std']
@@ -56,6 +49,7 @@ std = [
   'frame-system/std',
   'frame-benchmarking/std',
   'log/std',
+  'sp-arithmetic/std',
   'sp-core/std',
   'sp-std/std',
   'hydradx-traits/std',

@@ -18,3 +18,6 @@ members = [
 ]
 
 resolver = "2"
+
+[patch."https://crates.io"]
+fixed = "=1.17.0"

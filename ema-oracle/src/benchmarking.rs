@@ -25,10 +25,13 @@ pub const DOT: AssetId = 2_000;
 use frame_benchmarking::benchmarks;
 use frame_support::traits::Hooks;
 
+#[cfg(test)]
+use pretty_assertions::assert_eq;
+
 use crate::Pallet as EmaOracle;
 
-/// Maximum number of tokens to run the benchmark for.
-pub const MAX_TOKEN_PAIRS: u32 = 600;
+/// Maximum paramter to run the benchmark for.
+pub const MAX_TOKEN_PAIRS: u32 = MAX_TRADES - 1;
 
 /// Default oracle source.
 const SOURCE: Source = *b"dummysrc";
@@ -61,7 +64,7 @@ benchmarks! {
             timestamp: block_num,
         };
 
-        assert_eq!(Accumulator::<T>::get(), [((SOURCE, ordered_pair(HDX, DOT)), entry.clone())].into_iter().collect());
+        assert_eq!(Accumulator::<T>::get().into_inner(), [((SOURCE, ordered_pair(HDX, DOT)), entry.clone())].into_iter().collect());
 
     }: { EmaOracle::<T>::on_finalize(block_num); }
     verify {
@@ -92,7 +95,7 @@ benchmarks! {
             timestamp: block_num,
         };
 
-        assert_eq!(Accumulator::<T>::get(), [((SOURCE, ordered_pair(HDX, DOT)), entry.clone())].into_iter().collect());
+        assert_eq!(Accumulator::<T>::get().into_inner(), [((SOURCE, ordered_pair(HDX, DOT)), entry.clone())].into_iter().collect());
 
     }: { EmaOracle::<T>::on_finalize(block_num); }
     verify {
@@ -177,7 +180,7 @@ benchmarks! {
     verify {
         entries.push(((SOURCE, ordered_pair(asset_a, asset_b)), entry.clone()));
 
-        assert_eq!(Accumulator::<T>::get(), entries.into_iter().collect());
+        assert_eq!(Accumulator::<T>::get().into_inner(), entries.into_iter().collect());
     }
 
     on_liquidity_changed_multiple_tokens {
@@ -226,7 +229,7 @@ benchmarks! {
         };
         entries.push(((SOURCE, ordered_pair(asset_a, asset_b)), liquidity_entry));
 
-        assert_eq!(Accumulator::<T>::get(), entries.into_iter().collect());
+        assert_eq!(Accumulator::<T>::get().into_inner(), entries.into_iter().collect());
     }
 
     get_entry {

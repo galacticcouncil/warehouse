@@ -229,8 +229,6 @@ fn update_data_should_work() {
 #[test]
 fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
     new_test_ext().execute_with(|| {
-        env_logger::init();
-
         System::set_block_number(5);
         EmaOracle::on_initialize(5);
         EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1);

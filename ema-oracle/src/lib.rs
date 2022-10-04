@@ -41,7 +41,6 @@ use hydradx_traits::{
     Volume,
 };
 use sp_arithmetic::traits::Saturating;
-use sp_std::collections::btree_map::BTreeMap;
 use sp_std::marker::PhantomData;
 use sp_std::prelude::*;
 
@@ -71,9 +70,10 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use frame_support::BoundedBTreeMap;
+    use frame_system::pallet_prelude::BlockNumberFor;
 
     #[pallet::pallet]
-    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -99,8 +99,11 @@ pub mod pallet {
     /// Accumulator for oracle data in current block that will be recorded at the end of the block.
     #[pallet::storage]
     #[pallet::getter(fn accumulator)]
-    pub type Accumulator<T: Config> =
-        StorageValue<_, BTreeMap<(Source, (AssetId, AssetId)), OracleEntry<T::BlockNumber>>, ValueQuery>;
+    pub type Accumulator<T: Config> = StorageValue<
+        _,
+        BoundedBTreeMap<(Source, (AssetId, AssetId)), OracleEntry<T::BlockNumber>, ConstU32<MAX_TRADES>>,
+        ValueQuery,
+    >;
 
     /// Orace storage keyed by data source, involved asset ids and the period length of the oracle.
     ///
@@ -147,12 +150,12 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        fn on_initialize(_n: T::BlockNumber) -> Weight {
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
             T::WeightInfo::on_finalize_no_entry()
         }
 
-        fn on_finalize(_n: T::BlockNumber) {
+        fn on_finalize(_n: BlockNumberFor<T>) {
             // update oracles based on data accumulated during the block
             Self::update_oracles_from_accumulator();
         }
@@ -167,12 +170,22 @@ impl<T: Config> Pallet<T> {
     /// takes the most recent data for the rest.
     pub(crate) fn on_entry(src: Source, assets: (AssetId, AssetId), oracle_entry: OracleEntry<T::BlockNumber>) {
         Accumulator::<T>::mutate(|accumulator| {
-            accumulator
-                .entry((src, assets))
-                .and_modify(|entry| {
+            if accumulator
+                .get_mut(&(src, assets))
+                .map(|entry| {
                     entry.accumulate_volume_and_update_from(&oracle_entry);
                 })
-                .or_insert(oracle_entry);
+                .is_none()
+            {
+                accumulator.try_insert((src, assets), oracle_entry).unwrap_or_else(|((src, assets), entry)| {
+                        log::error!(
+                            target: "runtime::ema-oracle",
+                            "Could not insert oracle entry at ({src:?}, {assets:?}). Dropping new entry ({entry:?}). This should not happen and implies that the configuration needs to be changed!"
+                        );
+                        debug_assert!(false, "Should not try to insert more than MAX_TRADES entries in accumulator.");
+                        None
+                    });
+            }
         });
     }
 
@@ -230,6 +243,7 @@ impl<T: Config> Pallet<T> {
                                     target: "runtime::ema-oracle",
                                     "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to parent block failed. Defaulting to previous value."
                                 );
+                                debug_assert!(false, "Updating to parent block should not fail.");
                             })
                     }
                     // calculate the actual update with the new value
@@ -239,6 +253,7 @@ impl<T: Config> Pallet<T> {
                                 target: "runtime::ema-oracle",
                                 "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to new value failed. Defaulting to previous value."
                             );
+                            debug_assert!(false, "Updating to new value should not fail.");
                     });
                 });
         });

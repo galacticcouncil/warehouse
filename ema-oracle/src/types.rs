@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::sp_runtime::{FixedU128, RuntimeDebug};
 use hydra_dx_math::ema::{balance_ema, exp_smoothing_and_complement, price_ema, smoothing_from_period, volume_ema};
 use hydradx_traits::{AggregatedEntry, Volume};
@@ -39,7 +39,7 @@ pub type Price = FixedU128;
 /// A type representing data produced by a trade or liquidity event. Timestamped to the block where
 /// it was created.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(RuntimeDebug, Encode, Decode, Clone, PartialEq, Eq, Default, TypeInfo)]
+#[derive(RuntimeDebug, Encode, Decode, Clone, PartialEq, Eq, Default, TypeInfo, MaxEncodedLen)]
 pub struct OracleEntry<BlockNumber> {
     pub price: Price,
     pub volume: Volume<Balance>,

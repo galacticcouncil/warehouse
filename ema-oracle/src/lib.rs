@@ -170,13 +170,13 @@ impl<T: Config> Pallet<T> {
     /// takes the most recent data for the rest.
     pub(crate) fn on_entry(src: Source, assets: (AssetId, AssetId), oracle_entry: OracleEntry<T::BlockNumber>) {
         Accumulator::<T>::mutate(|accumulator| {
-            if accumulator
-                .get_mut(&(src, assets))
-                .map(|entry| {
-                    entry.accumulate_volume_and_update_from(&oracle_entry);
-                })
-                .is_none()
-            {
+            let is_present = if let Some(entry) = accumulator.get_mut(&(src, assets)) {
+                entry.accumulate_volume_and_update_from(&oracle_entry);
+                true
+            } else {
+                false
+            };
+            if !is_present {
                 accumulator.try_insert((src, assets), oracle_entry).unwrap_or_else(|((src, assets), entry)| {
                         log::error!(
                             target: "runtime::ema-oracle",

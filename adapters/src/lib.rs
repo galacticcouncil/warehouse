@@ -36,7 +36,7 @@ mod tests;
 
 /// Weight trader that accepts multiple assets as weight fee payment.
 ///
-/// It uses `ConvertWeightToFee` in combination with a `NativePriceOracle` to set the right price for weight.
+/// It uses `WeightToFee` in combination with a `NativePriceOracle` to set the right price for weight.
 /// Keeps track of the assets used to pay for weight and can refund them one by one (interface only
 /// allows returning one asset per refund). Will pass any remaining assets on `Drop` to
 /// `TakeRevenue`.

@@ -6,6 +6,7 @@ members = [
 	"traits",
 	"relaychain-info",
 	"price-oracle",
+	"route-executor",
 	"transaction-multi-payment",
 	"nft",
 	"asset-registry",

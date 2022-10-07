@@ -63,7 +63,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::OriginFor;
 
     #[pallet::pallet]
-    #[pallet::without_storage_info]
+    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -78,7 +78,8 @@ pub mod pallet {
             + HasCompact
             + AtLeast32BitUnsigned
             + Into<Self::ClassId>
-            + From<Self::ClassId>;
+            + From<Self::ClassId>
+            + MaxEncodedLen;
         type NftInstanceId: Member
             + Parameter
             + Default
@@ -86,8 +87,9 @@ pub mod pallet {
             + HasCompact
             + AtLeast32BitUnsigned
             + Into<Self::InstanceId>
-            + From<Self::InstanceId>;
-        type ClassType: Member + Parameter + Default + Copy;
+            + From<Self::InstanceId>
+            + MaxEncodedLen;
+        type ClassType: Member + Parameter + Default + Copy + MaxEncodedLen;
         type Permissions: NftPermission<Self::ClassType>;
         /// Class IDs reserved for runtime up to the following constant
         #[pallet::constant]

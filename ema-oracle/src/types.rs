@@ -122,15 +122,15 @@ where
         let (exp_smoothing, exp_complement) =
             exp_smoothing_and_complement(smoothing, iterations.saturated_into::<u32>());
 
-        let price = price_ema(self.price, exp_complement, incoming.price, exp_smoothing)?;
+        let price = price_ema(self.price, exp_complement, incoming.price, exp_smoothing);
         let volume = volume_ema(
             self.volume.clone().into(),
             exp_complement,
             incoming.volume.clone().into(),
             exp_smoothing,
-        )?
+        )
         .into();
-        let liquidity = balance_ema(self.liquidity, exp_complement, incoming.liquidity, exp_smoothing)?;
+        let liquidity = balance_ema(self.liquidity, exp_complement, incoming.liquidity, exp_smoothing);
 
         Some(Self {
             price,

@@ -22,7 +22,7 @@ use test_ext::*;
 #[test]
 fn claim_rewards_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const FAIL_ON_DOUBLECLAIM: bool = true;
             const REWARD_CURRENCY: AssetId = BSX;
             let global_farm_id = GC_FARM;
@@ -261,7 +261,7 @@ fn claim_rewards_should_work() {
                 bst_tkn1_yield_farm_reward_balance + yield_farm_claim_from_global_farm - expected_claimed_rewards
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 
@@ -269,7 +269,7 @@ fn claim_rewards_should_work() {
     //This test check if correct currency is transferred if rewards and incentivized
     //assets are different, otherwise farm behavior is the same as in tests above.
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const FAIL_ON_DOUBLECLAIM: bool = true;
             set_block_number(1_800); //period 18
 
@@ -317,7 +317,7 @@ fn claim_rewards_should_work() {
             //Alice had 0 ACA before claim.
             pretty_assertions::assert_eq!(Tokens::free_balance(ACA, &ALICE), expected_claimed_rewards);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -325,7 +325,7 @@ fn claim_rewards_should_work() {
 #[test]
 fn claim_rewards_deposit_with_multiple_entries_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const FAIL_ON_DOUBLECLAIM: bool = true;
             //predefined_deposit[0] - GC_FARM, BSX_TKN1_AMM
             set_block_number(50_000);
@@ -522,7 +522,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 ]
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -530,7 +530,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
 #[test]
 fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const FAIL_ON_DOUBLECLAIM: bool = true;
             let global_farm_id = GC_FARM;
             let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
@@ -582,7 +582,7 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
                 Error::<Test, Instance1>::DoubleClaimInPeriod
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -590,7 +590,7 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
 #[test]
 fn claim_rewards_from_canceled_yield_farm_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const FAIL_ON_DOUBLECLAIM: bool = true;
             let global_farm_id = GC_FARM;
             let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
@@ -664,7 +664,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                 (global_farm_id, BSX, 0, unclaimable_rewards)
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -673,7 +673,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
 fn claim_rewards_from_removed_yield_farm_should_not_work() {
     const FAIL_ON_DOUBLECLAIM: bool = true;
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             //Stop yield farming before removing.
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
@@ -695,7 +695,7 @@ fn claim_rewards_from_removed_yield_farm_should_not_work() {
                 Error::<Test, Instance1>::YieldFarmNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -705,7 +705,7 @@ fn claim_rewards_doubleclaim_should_work() {
     const FAIL_ON_DOUBLECLAIM: bool = true;
 
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let (_, _, claimable_rewards, unclaimable_rewards) = LiquidityMining::claim_rewards(
                 ALICE,
                 PREDEFINED_DEPOSIT_IDS[0],
@@ -741,7 +741,7 @@ fn claim_rewards_doubleclaim_should_work() {
                 Error::<Test, Instance1>::DoubleClaimInPeriod
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -750,7 +750,7 @@ fn claim_rewards_doubleclaim_should_work() {
 #[test]
 fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
     new_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const GLOBAL_FARM: GlobalFarmId = 1;
             const YIELD_FARM_A: YieldFarmId = 2;
             const YIELD_FARM_B: YieldFarmId = 3;
@@ -837,7 +837,7 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
 
             pretty_assertions::assert_eq!(bob_rewards, charlie_rewards);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

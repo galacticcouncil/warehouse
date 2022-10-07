@@ -250,7 +250,7 @@ impl Default for LoyaltyCurve {
 /// Every deposit should have at least one farm entry and deposit without farm entries
 /// should be removed from storage and LP shares should be unlocked.
 /// `redeposit_lp_shares()` is used to add a new farm entry into the deposit("re-lock" LP shares").
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo, PartialEq, MaxEncodedLen)]
+#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
 #[codec(mel_bound())]
 #[scale_info(skip_type_params(T, I))]
 pub struct DepositData<T: Config<I>, I: 'static = ()> {

@@ -24,7 +24,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 pub fn predefined_test_ext() -> sp_io::TestExternalities {
     let mut ext = new_test_ext();
     ext.execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let expected_farm = get_predefined_global_farm_ins1(0);
             assert_ok!(LiquidityMining::create_global_farm(
                 100_000_000_000,
@@ -194,7 +194,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
             let yield_farm = get_predefined_yield_farm_ins1(5);
             init_yield_farm_ins1(EVE, EVE_FARM, BSX_TKN2_AMM, BSX, TKN2, yield_farm);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 
@@ -228,11 +228,11 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
     let mut ext = predefined_test_ext();
 
     ext.execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let farm_id = GC_FARM;
 
             let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
-            let pot_account = LiquidityMining::pot_account_id();
+            let pot_account = LiquidityMining::pot_account_id().unwrap();
             let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
             let bsx_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
 
@@ -400,7 +400,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account), 116_550);
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 1_167_000);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 

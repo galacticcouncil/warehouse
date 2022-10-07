@@ -28,7 +28,7 @@ use rand::Rng;
 #[test]
 fn non_full_farm_running_longer_than_expected() {
     new_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const GLOBAL_FARM: GlobalFarmId = 1;
             const YIELD_FARM_A: YieldFarmId = 2;
             const YIELD_FARM_B: YieldFarmId = 3;
@@ -155,7 +155,7 @@ fn non_full_farm_running_longer_than_expected() {
 
             assert_eq!(bob_claimed, charlie_claimed, "bob_claimed == charlie_claimed");
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -165,7 +165,7 @@ fn non_full_farm_running_longer_than_expected() {
 #[test]
 fn non_full_farm_distribute_everything_and_update_farms() {
     new_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const GLOBAL_FARM: GlobalFarmId = 1;
             const YIELD_FARM_A: YieldFarmId = 2;
             const YIELD_FARM_B: YieldFarmId = 3;
@@ -250,7 +250,10 @@ fn non_full_farm_distribute_everything_and_update_farms() {
             );
 
             //NOTE: 1 because we are not able to claim everything becasue us rounding errors
-            assert_eq!(Tokens::free_balance(BSX, &LiquidityMining2::pot_account_id()), 1);
+            assert_eq!(
+                Tokens::free_balance(BSX, &LiquidityMining2::pot_account_id().unwrap()),
+                1
+            );
 
             set_block_number(501);
             let (_, _, claimed, unclaimable) =
@@ -277,7 +280,7 @@ fn non_full_farm_distribute_everything_and_update_farms() {
                 100
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -287,7 +290,7 @@ fn non_full_farm_distribute_everything_and_update_farms() {
 #[test]
 fn overcrowded_farm_running_longer_than_expected() {
     new_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const GLOBAL_FARM: GlobalFarmId = 1;
             const YIELD_FARM_A: YieldFarmId = 2;
             const YIELD_FARM_B: YieldFarmId = 3;
@@ -441,7 +444,7 @@ fn overcrowded_farm_running_longer_than_expected() {
 
             assert_eq!(bob_claimed, charlie_claimed, "bob_claimed == charlie_claimed");
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -451,7 +454,7 @@ fn overcrowded_farm_running_longer_than_expected() {
 #[test]
 fn full_farm_running_planned_time() {
     new_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const GLOBAL_FARM: GlobalFarmId = 1;
             const YIELD_FARM_A: YieldFarmId = 2;
             const YIELD_FARM_B: YieldFarmId = 3;
@@ -623,7 +626,7 @@ fn full_farm_running_planned_time() {
 
             assert_eq!(bob_claimed, charlie_claimed, "bob_claimed == charlie_claimed");
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -632,7 +635,7 @@ fn full_farm_running_planned_time() {
 #[test]
 fn yield_farm_should_claim_expected_amount() {
     new_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const GLOBAL_FARM: GlobalFarmId = 1;
             const YIELD_FARM_A: YieldFarmId = 2;
             const YIELD_FARM_B: YieldFarmId = 3;
@@ -708,7 +711,7 @@ fn yield_farm_should_claim_expected_amount() {
                 |_, _| { Ok(1_u128) }
             ));
 
-            let pot = LiquidityMining2::pot_account_id();
+            let pot = LiquidityMining2::pot_account_id().unwrap();
             let farm_a_account = LiquidityMining2::farm_account_id(YIELD_FARM_A).unwrap();
             let farm_b_account = LiquidityMining2::farm_account_id(YIELD_FARM_B).unwrap();
 
@@ -754,7 +757,7 @@ fn yield_farm_should_claim_expected_amount() {
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &farm_b_account), 1);
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 0);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

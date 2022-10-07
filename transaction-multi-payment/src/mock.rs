@@ -1,6 +1,6 @@
 // This file is part of Basilisk-node.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,10 +28,9 @@ use sp_runtime::{
     Perbill,
 };
 
-use frame_support::weights::IdentityFee;
-use frame_support::weights::Weight;
+use frame_support::weights::{IdentityFee, Weight};
 use hydradx_traits::AssetPairAccountIdFor;
-use orml_currencies::BasicCurrencyAdapter;
+use pallet_currencies::BasicCurrencyAdapter;
 use std::cell::RefCell;
 
 use frame_support::traits::{Everything, GenesisBuild, Get, Nothing};
@@ -62,12 +61,77 @@ const MAX_BLOCK_WEIGHT: Weight = 1024;
 
 thread_local! {
     static EXTRINSIC_BASE_WEIGHT: RefCell<u64> = RefCell::new(0);
+    static TRANSFER_FEE: RefCell<bool> = RefCell::new(true);
 }
 
 pub struct ExtrinsicBaseWeight;
 impl Get<u64> for ExtrinsicBaseWeight {
     fn get() -> u64 {
         EXTRINSIC_BASE_WEIGHT.with(|v| *v.borrow())
+    }
+}
+
+pub struct ChargeAdapter<L, R>(PhantomData<L>, PhantomData<R>);
+
+#[derive(Default, Eq, PartialEq, Debug)]
+pub struct Info<L, R>(pub Option<L>, pub Option<R>);
+
+impl<T, L, R> OnChargeTransaction<T> for ChargeAdapter<L, R>
+where
+    L: OnChargeTransaction<T>,
+    R: OnChargeTransaction<T>,
+    T: Config,
+    L::Balance: From<u128>,
+    R::Balance: From<u128>,
+{
+    type Balance = u128;
+    type LiquidityInfo = Info<L::LiquidityInfo, R::LiquidityInfo>;
+
+    fn withdraw_fee(
+        who: &T::AccountId,
+        call: &T::Call,
+        dispatch_info: &DispatchInfoOf<T::Call>,
+        fee: Self::Balance,
+        tip: Self::Balance,
+    ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
+        let f = TRANSFER_FEE.with(|v| *v.borrow());
+        if f {
+            let r = L::withdraw_fee(who, call, dispatch_info, fee.into(), tip.into())?;
+            Ok(Info(Some(r), None))
+        } else {
+            let r = R::withdraw_fee(who, call, dispatch_info, fee.into(), tip.into())?;
+            Ok(Info(None, Some(r)))
+        }
+    }
+
+    fn correct_and_deposit_fee(
+        who: &T::AccountId,
+        dispatch_info: &DispatchInfoOf<T::Call>,
+        post_info: &PostDispatchInfoOf<T::Call>,
+        corrected_fee: Self::Balance,
+        tip: Self::Balance,
+        already_withdrawn: Self::LiquidityInfo,
+    ) -> Result<(), TransactionValidityError> {
+        let f = TRANSFER_FEE.with(|v| *v.borrow());
+        if f {
+            L::correct_and_deposit_fee(
+                who,
+                dispatch_info,
+                post_info,
+                corrected_fee.into(),
+                tip.into(),
+                already_withdrawn.0.unwrap(),
+            )
+        } else {
+            R::correct_and_deposit_fee(
+                who,
+                dispatch_info,
+                post_info,
+                corrected_fee.into(),
+                tip.into(),
+                already_withdrawn.1.unwrap(),
+            )
+        }
     }
 }
 
@@ -82,9 +146,9 @@ frame_support::construct_runtime!(
      {
          System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
          PaymentPallet: multi_payment::{Pallet, Call, Storage, Event<T>},
-         TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
          Balances: pallet_balances::{Pallet,Call, Storage,Config<T>, Event<T>},
-         Currencies: orml_currencies::{Pallet, Event<T>},
+         Currencies: pallet_currencies::{Pallet, Event<T>},
          Tokens: orml_tokens::{Pallet, Event<T>},
      }
 
@@ -97,7 +161,6 @@ parameter_types! {
     pub const HdxAssetId: u32 = HDX;
     pub const ExistentialDeposit: u128 = 2;
     pub const MaxLocks: u32 = 50;
-    pub const TransactionByteFee: Balance = 1;
     pub const RegistryStringLimit: u32 = 100;
     pub const FeeReceiver: AccountId = FEE_RECEIVER;
 
@@ -176,8 +239,12 @@ impl pallet_balances::Config for Test {
 }
 
 impl pallet_transaction_payment::Config for Test {
-    type OnChargeTransaction = TransferFees<Currencies, PaymentPallet, DepositAll<Test>>;
-    type TransactionByteFee = TransactionByteFee;
+    type Event = Event;
+    type OnChargeTransaction = ChargeAdapter<
+        TransferFees<Currencies, PaymentPallet, DepositAll<Test>>,
+        WithdrawFees<Balances, (), PaymentPallet>,
+    >;
+    type LengthToFee = IdentityFee<Balance>;
     type OperationalFeeMultiplier = ();
     type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate = ();
@@ -221,6 +288,10 @@ parameter_type_with_key! {
     };
 }
 
+parameter_types! {
+    pub const MaxReserves: u32 = 50;
+}
+
 impl orml_tokens::Config for Test {
     type Event = Event;
     type Balance = Balance;
@@ -233,9 +304,11 @@ impl orml_tokens::Config for Test {
     type DustRemovalWhitelist = Nothing;
     type OnNewTokenAccount = AddTxAssetOnAccount<Test>;
     type OnKilledTokenAccount = RemoveTxAssetOnKilled<Test>;
+    type ReserveIdentifier = ();
+    type MaxReserves = MaxReserves;
 }
 
-impl orml_currencies::Config for Test {
+impl pallet_currencies::Config for Test {
     type Event = Event;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, u32>;
@@ -285,6 +358,10 @@ impl ExtBuilder {
     }
     fn set_constants(&self) {
         EXTRINSIC_BASE_WEIGHT.with(|v| *v.borrow_mut() = self.base_weight);
+    }
+    pub fn with_fee_withdrawal(self) -> Self {
+        TRANSFER_FEE.with(|v| *v.borrow_mut() = false);
+        self
     }
     pub fn build(self) -> sp_io::TestExternalities {
         use frame_support::traits::OnInitialize;

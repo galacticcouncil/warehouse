@@ -21,7 +21,7 @@ use test_ext::*;
 #[test]
 fn redeposit_lp_shares_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             //predefined_deposit[0] - GC_FARM, BSX_TKN1_AMM
             set_block_number(50_000);
             pretty_assertions::assert_eq!(
@@ -100,7 +100,7 @@ fn redeposit_lp_shares_should_work() {
                 ]
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -108,7 +108,7 @@ fn redeposit_lp_shares_should_work() {
 #[test]
 fn redeposit_lp_shares_deposit_not_found_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let yield_farm_id = DAVE_BSX_TKN1_YIELD_FARM_ID;
 
             assert_noop!(
@@ -116,7 +116,7 @@ fn redeposit_lp_shares_deposit_not_found_should_not_work() {
                 Error::<Test, Instance1>::DepositNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -124,7 +124,7 @@ fn redeposit_lp_shares_deposit_not_found_should_not_work() {
 #[test]
 fn redeposit_lp_shares_to_wrong_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             // Desired yield farm is for different assert pair than original deposit.
             let yield_farm_id = EVE_BSX_TKN2_YIELD_FARM_ID; //original deposit is for bsx/tkn1 assert pair
 
@@ -153,7 +153,7 @@ fn redeposit_lp_shares_to_wrong_yield_farm_should_not_work() {
                 Error::<Test, Instance1>::YieldFarmNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -161,7 +161,7 @@ fn redeposit_lp_shares_to_wrong_yield_farm_should_not_work() {
 #[test]
 fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let yield_farm_id = EVE_BSX_TKN1_YIELD_FARM_ID;
 
             //Deposit to yield farm to prevent flushing from storage on destroy.
@@ -208,7 +208,7 @@ fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
                 Error::<Test, Instance1>::LiquidityMiningCanceled
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -216,7 +216,7 @@ fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
 #[test]
 fn redeposit_lp_shares_non_existing_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const NON_EXISTING_YILED_FARM_ID: FarmId = 999_999_999;
 
             assert_noop!(
@@ -240,7 +240,7 @@ fn redeposit_lp_shares_non_existing_farm_should_not_work() {
                 Error::<Test, Instance1>::YieldFarmNotFound //NOTE: check for yield farm existence is first that's why this error.
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -248,7 +248,7 @@ fn redeposit_lp_shares_non_existing_farm_should_not_work() {
 #[test]
 fn redeposit_lp_shares_same_deposit_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::redeposit_lp_shares(
                     GC_FARM,
@@ -259,7 +259,7 @@ fn redeposit_lp_shares_same_deposit_should_not_work() {
                 Error::<Test, Instance1>::DoubleLock
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

@@ -87,6 +87,7 @@
 //!
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::derive_partial_eq_without_eq)]
 
 #[cfg(test)]
 mod tests;
@@ -177,7 +178,7 @@ pub mod pallet {
     }
 
     #[pallet::error]
-    #[cfg_attr(test, derive(PartialEq))]
+    #[cfg_attr(test, derive(Eq, PartialEq))]
     pub enum Error<T, I = ()> {
         /// Global farm does not exist.
         GlobalFarmNotFound,
@@ -257,6 +258,9 @@ pub mod pallet {
 
         /// Price adjustment multiplier can't be 0.
         InvalidPriceAdjustment,
+
+        /// Account creation from id failed.
+        ErrorGetAccountId,
     }
 
     /// Id sequencer for `GlobalFarm` and `YieldFarm`.
@@ -1216,8 +1220,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     }
 
     /// Account id holding rewards allocated from all global farms for all yield farms.
-    pub fn pot_account_id() -> T::AccountId {
-        T::PalletId::get().into_account()
+    pub fn pot_account_id() -> Option<T::AccountId> {
+        T::PalletId::get().try_into_account()
     }
 
     /// This function returns account from `FarmId` or error.
@@ -1226,7 +1230,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     pub fn farm_account_id(farm_id: FarmId) -> Result<T::AccountId, Error<T, I>> {
         Self::validate_farm_id(farm_id)?;
 
-        Ok(T::PalletId::get().into_sub_account(farm_id))
+        match T::PalletId::get().try_into_sub_account(farm_id) {
+            Some(account) => Ok(account),
+            None => Err(Error::<T, I>::ErrorGetAccountId),
+        }
     }
 
     /// This function returns current period number or error.
@@ -1298,7 +1305,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             .min(left_to_distribute);
 
         if !reward.is_zero() {
-            let pot = Self::pot_account_id();
+            let pot = Self::pot_account_id().ok_or(Error::<T, I>::ErrorGetAccountId)?;
             T::MultiCurrency::transfer(global_farm.reward_currency, &global_farm_account, &pot, reward)?;
 
             global_farm.accumulated_rpz =
@@ -1375,11 +1382,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         .map_err(|_| ArithmeticError::Overflow)?;
         yield_farm.updated_at = current_period;
 
-        let pot_balance = T::MultiCurrency::free_balance(reward_currency, &Self::pot_account_id());
+        let pot = Self::pot_account_id().ok_or(Error::<T, I>::ErrorGetAccountId)?;
+        let pot_balance = T::MultiCurrency::free_balance(reward_currency, &pot);
 
         ensure!(pot_balance >= yield_farm_rewards, Error::<T, I>::InsufficientPotBalance);
 
-        let pot = Self::pot_account_id();
         let yield_farm_account = Self::farm_account_id(yield_farm.id)?;
 
         T::MultiCurrency::transfer(reward_currency, &pot, &yield_farm_account, yield_farm_rewards)?;

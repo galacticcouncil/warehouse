@@ -143,7 +143,7 @@ fn create_yield_farm_should_work() {
     ];
 
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             for (assets, yield_farm, amm_id, who, global_farm_id, now, global_farm) in test_data.clone() {
                 set_block_number(now);
 
@@ -173,7 +173,7 @@ fn create_yield_farm_should_work() {
                 );
             }
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -181,7 +181,7 @@ fn create_yield_farm_should_work() {
 #[test]
 fn add_yield_farm_missing_incentivized_asset_should_not_work() {
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::create_yield_farm(
                     ALICE,
@@ -195,7 +195,7 @@ fn add_yield_farm_missing_incentivized_asset_should_not_work() {
                 Error::<Test, Instance1>::MissingIncentivizedAsset
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -203,7 +203,7 @@ fn add_yield_farm_missing_incentivized_asset_should_not_work() {
 #[test]
 fn add_yield_farm_not_owner_should_not_work() {
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::create_yield_farm(
                     BOB,
@@ -228,7 +228,7 @@ fn add_yield_farm_not_owner_should_not_work() {
                 Error::<Test, Instance1>::Forbidden
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -236,7 +236,7 @@ fn add_yield_farm_not_owner_should_not_work() {
 #[test]
 fn add_yield_farm_invalid_loyalty_curve_should_not_work() {
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let curves = vec![
                 Some(LoyaltyCurve {
                     initial_reward_percentage: FixedU128::one(),
@@ -278,7 +278,7 @@ fn add_yield_farm_invalid_loyalty_curve_should_not_work() {
                 );
             }
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -286,7 +286,7 @@ fn add_yield_farm_invalid_loyalty_curve_should_not_work() {
 #[test]
 fn add_yield_farm_invalid_multiplier_should_not_work() {
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::create_yield_farm(
                     ALICE,
@@ -299,7 +299,7 @@ fn add_yield_farm_invalid_multiplier_should_not_work() {
                 Error::<Test, Instance1>::InvalidMultiplier
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -307,7 +307,7 @@ fn add_yield_farm_invalid_multiplier_should_not_work() {
 #[test]
 fn add_yield_farm_add_duplicate_amm_should_not_work() {
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             set_block_number(20_000);
 
             let aca_ksm_assets = AssetPair {
@@ -348,7 +348,7 @@ fn add_yield_farm_add_duplicate_amm_should_not_work() {
                 Error::<Test, Instance1>::YieldFarmAlreadyExists
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -356,7 +356,7 @@ fn add_yield_farm_add_duplicate_amm_should_not_work() {
 #[test]
 fn add_yield_farm_global_farm_full_should_not_work() {
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             //GC FARM is initialized with 2 yield farms and mock limit is 4.
 
             // This should works 3-rd yield farm
@@ -466,7 +466,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
                 vec![BSX, HDX],
             ));
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

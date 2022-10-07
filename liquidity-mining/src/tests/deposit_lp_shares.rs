@@ -22,7 +22,7 @@ use test_ext::*;
 fn deposit_lp_shares_should_work() {
     //NOTE: farm incentivize BSX token.
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let global_farm_id = GC_FARM;
             let global_farm_account = LiquidityMining::farm_account_id(global_farm_id).unwrap();
             let bsx_tnk1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
@@ -480,7 +480,7 @@ fn deposit_lp_shares_should_work() {
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 116_550);
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 1_167_000);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 
@@ -489,7 +489,7 @@ fn deposit_lp_shares_should_work() {
     //This test only check if valued shares are correctly calculated if reward and incentivized
     //assets are different, otherwise farm behavior is same as in test above.
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             set_block_number(2_596); //period 25
 
             let ksm_balance_in_amm = 16_u128;
@@ -525,14 +525,14 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
 
 #[test]
 fn deposit_lp_shares_bellow_min_deposit_should_not_work() {
-    predefined_test_ext_with_deposits().execute_with(|| {
+    let _ = predefined_test_ext_with_deposits().execute_with(|| {
         with_transaction(|| {
             //NOTE: min. deposit is 10
             let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
@@ -561,7 +561,7 @@ fn deposit_lp_shares_bellow_min_deposit_should_not_work() {
                 |_, _| { Ok(10_u128) }
             ));
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         })
     });
 }
@@ -569,7 +569,7 @@ fn deposit_lp_shares_bellow_min_deposit_should_not_work() {
 #[test]
 fn deposit_lp_shares_non_existing_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::deposit_lp_shares(GC_FARM, BSX_DOT_YIELD_FARM_ID, BSX_DOT_AMM, 10_000, |_, _| {
                     Ok(10_u128)
@@ -577,14 +577,14 @@ fn deposit_lp_shares_non_existing_yield_farm_should_not_work() {
                 Error::<Test, Instance1>::YieldFarmNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
 
 #[test]
 fn deposit_lp_shares_stop_yield_farm_should_not_work() {
-    predefined_test_ext_with_deposits().execute_with(|| {
+    let _ = predefined_test_ext_with_deposits().execute_with(|| {
         with_transaction(|| {
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
@@ -595,7 +595,7 @@ fn deposit_lp_shares_stop_yield_farm_should_not_work() {
                 Error::<Test, Instance1>::LiquidityMiningCanceled
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         })
     });
 }

@@ -168,7 +168,7 @@ proptest! {
         left_to_distribute in left_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
-            with_transaction(|| {
+            let _ = with_transaction(|| {
                 let farm_account = LiquidityMining::farm_account_id(farm.id).unwrap();
                 Tokens::set_balance(Origin::root(), farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
@@ -195,7 +195,7 @@ proptest! {
                     "acc_rewards[1] = acc_rewards[0] + reward"
                 );
 
-                TransactionOutcome::Commit(())
+                TransactionOutcome::Commit(DispatchResult::Ok(()))
             });
         });
     }
@@ -234,7 +234,7 @@ proptest! {
             let yield_farm_account = LiquidityMining::farm_account_id(yield_farm.id).unwrap();
 
             //rewads for yield farm are paid from pot account
-            let pot_account = LiquidityMining::pot_account_id();
+            let pot_account = LiquidityMining::pot_account_id().unwrap();
             Tokens::set_balance(Origin::root(), pot_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
             //NOTE: _0 - before action, _1 - after action
@@ -243,7 +243,7 @@ proptest! {
 
             let accumulated_rpvs_0 = yield_farm.accumulated_rpvs;
 
-            let _ = LiquidityMining::update_yield_farm(
+            LiquidityMining::update_yield_farm(
                 &mut yield_farm, yield_farm_rewards, current_period, GLOBAL_FARM_ID, REWARD_CURRENCY).unwrap();
 
             //invariant 1
@@ -283,10 +283,10 @@ proptest! {
         (mut global_farm, _, current_period, _, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
-            with_transaction(|| {
+            let _ = with_transaction(|| {
                 const GLOBAL_FARM_ID: GlobalFarmId = 1;
                 let global_farm_account = LiquidityMining::farm_account_id(GLOBAL_FARM_ID).unwrap();
-                let pot = LiquidityMining::pot_account_id();
+                let pot = LiquidityMining::pot_account_id().unwrap();
                 Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
                 let left_to_distribute_0 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
@@ -314,7 +314,7 @@ proptest! {
                     "global_farm_account[0] + pot[0] = global_farm_account[1] + pot[1]"
                 );
 
-                TransactionOutcome::Commit(())
+                TransactionOutcome::Commit(DispatchResult::Ok(()))
             });
         });
     }

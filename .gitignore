@@ -20,4 +20,3 @@
 *.orig
 .env
 
-Cargo.lock

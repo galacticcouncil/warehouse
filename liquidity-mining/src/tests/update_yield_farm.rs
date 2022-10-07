@@ -22,7 +22,7 @@ use test_ext::*;
 fn update_yield_farm_should_work() {
     //Yield farm without deposits.
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let new_multiplier: FarmMultiplier = FixedU128::from(5_000_u128);
             let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
             let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
@@ -42,13 +42,13 @@ fn update_yield_farm_should_work() {
 
             pretty_assertions::assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 
     //Yield farm with deposits.
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             //Same period as last yield farm update so no farms(global or yield) need to be updated.
             let new_multiplier: FarmMultiplier = FixedU128::from(10_000_u128);
             let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
@@ -124,7 +124,7 @@ fn update_yield_farm_should_work() {
                 yield_farm_bsx_balance + 1_498_432_831 //1_498_432_831 - yield farm claim from global farm
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -132,13 +132,13 @@ fn update_yield_farm_should_work() {
 #[test]
 fn update_yield_farm_zero_multiplier_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, BSX_TKN1_AMM, FixedU128::from(0_u128),),
                 Error::<Test, Instance1>::InvalidMultiplier
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -146,7 +146,7 @@ fn update_yield_farm_zero_multiplier_should_not_work() {
 #[test]
 fn update_yield_farm_stopped_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
             //Yield farm must be in the active yield farm storage to update works.
@@ -155,7 +155,7 @@ fn update_yield_farm_stopped_farm_should_not_work() {
                 Error::<Test, Instance1>::YieldFarmNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -164,7 +164,7 @@ fn update_yield_farm_stopped_farm_should_not_work() {
 fn update_yield_farm_deleted_farm_should_not_work() {
     //NOTE: yield farm is in the storage but it's deleted.
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
             assert_ok!(LiquidityMining::destroy_yield_farm(
@@ -182,7 +182,7 @@ fn update_yield_farm_deleted_farm_should_not_work() {
                 Error::<Test, Instance1>::YieldFarmNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -190,7 +190,7 @@ fn update_yield_farm_deleted_farm_should_not_work() {
 #[test]
 fn update_yield_farm_not_owner_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let not_owner = ALICE;
             assert_noop!(
                 LiquidityMining::update_yield_farm_multiplier(
@@ -202,7 +202,7 @@ fn update_yield_farm_not_owner_should_not_work() {
                 Error::<Test, Instance1>::Forbidden
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

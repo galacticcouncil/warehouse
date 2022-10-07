@@ -21,7 +21,7 @@ use test_ext::*;
 #[test]
 fn stop_yield_farm_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
             let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
             let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
@@ -63,13 +63,13 @@ fn stop_yield_farm_should_work() {
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &yield_farm_account), yield_farm_bsx_balance);
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), global_farm_bsx_balance);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 
     //Cancel yield farming with farms update.
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
             let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
             let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
@@ -120,7 +120,7 @@ fn stop_yield_farm_should_work() {
 
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 29_972_316_825);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -128,13 +128,13 @@ fn stop_yield_farm_should_work() {
 #[test]
 fn stop_yield_farm_invalid_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_DOT_AMM),
                 Error::<Test, Instance1>::YieldFarmNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -142,7 +142,7 @@ fn stop_yield_farm_invalid_yield_farm_should_not_work() {
 #[test]
 fn stop_yield_farm_liquidity_mining_already_canceled() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             //1-th stop should pass ok.
             pretty_assertions::assert_eq!(
                 LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM).unwrap(),
@@ -154,7 +154,7 @@ fn stop_yield_farm_liquidity_mining_already_canceled() {
                 Error::<Test, Instance1>::YieldFarmNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -162,7 +162,7 @@ fn stop_yield_farm_liquidity_mining_already_canceled() {
 #[test]
 fn stop_yield_farm_not_owner_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const NOT_FARMS_OWNER: u128 = ALICE;
 
             assert_noop!(
@@ -170,7 +170,7 @@ fn stop_yield_farm_not_owner_should_not_work() {
                 Error::<Test, Instance1>::Forbidden
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

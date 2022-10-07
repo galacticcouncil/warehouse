@@ -21,7 +21,7 @@ use test_ext::*;
 #[test]
 fn resume_yield_farm_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             //Stop yield farming before resuming.
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
@@ -68,7 +68,7 @@ fn resume_yield_farm_should_work() {
                 }
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -76,7 +76,7 @@ fn resume_yield_farm_should_work() {
 #[test]
 fn resume_yield_farm_non_existing_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let new_multiplier = FixedU128::from(7_490_000);
 
             assert_noop!(
@@ -84,7 +84,7 @@ fn resume_yield_farm_non_existing_yield_farm_should_not_work() {
                 Error::<Test, Instance1>::YieldFarmNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -92,7 +92,7 @@ fn resume_yield_farm_non_existing_yield_farm_should_not_work() {
 #[test]
 fn resume_yield_farm_non_canceled_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let new_multiplier = FixedU128::from(7_490_000);
 
             assert_noop!(
@@ -106,7 +106,7 @@ fn resume_yield_farm_non_canceled_yield_farm_should_not_work() {
                 Error::<Test, Instance1>::YieldFarmAlreadyExists
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -114,7 +114,7 @@ fn resume_yield_farm_non_canceled_yield_farm_should_not_work() {
 #[test]
 fn resume_yield_farm_not_owner_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let new_multiplier = FixedU128::from(7_490_000);
 
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
@@ -130,7 +130,7 @@ fn resume_yield_farm_not_owner_should_not_work() {
                 Error::<Test, Instance1>::Forbidden
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -138,7 +138,7 @@ fn resume_yield_farm_not_owner_should_not_work() {
 #[test]
 fn resume_yield_farm_deleted_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let new_multiplier = FixedU128::from(7_490_000);
 
             //Farm have to be stopped before delete.
@@ -162,7 +162,7 @@ fn resume_yield_farm_deleted_farm_should_not_work() {
                 Error::<Test, Instance1>::LiquidityMiningIsActive
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -172,7 +172,7 @@ fn resume_yield_farm_deleted_farm_should_not_work() {
 #[test]
 fn resume_yield_farm_same_amm_farm_active_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let new_multiplier = FixedU128::from(7_490_000);
 
             //Stop 1-th farm.
@@ -200,7 +200,7 @@ fn resume_yield_farm_same_amm_farm_active_should_not_work() {
                 ),
                 Error::<Test, Instance1>::YieldFarmAlreadyExists
             );
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

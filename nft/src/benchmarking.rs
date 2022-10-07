@@ -29,7 +29,7 @@ use sp_std::convert::TryInto;
 
 const SEED: u32 = 0;
 const ENDOWMENT: u128 = 100_000_000_000_000_000_000;
-const CLASS_ID_0: u32 = 1_000_000;
+const COLLECTION_ID_0: u32 = 1_000_000;
 
 fn create_account<T: Config>(name: &'static str, index: u32) -> T::AccountId {
     let caller: T::AccountId = account(name, index, SEED);
@@ -37,66 +37,69 @@ fn create_account<T: Config>(name: &'static str, index: u32) -> T::AccountId {
     caller
 }
 
-fn do_create_class<T: Config>(caller: T::AccountId, class_id: T::NftClassId) {
+fn do_create_collection<T: Config>(caller: T::AccountId, collection_id: T::NftCollectionId) {
     let metadata: BoundedVec<_, _> = vec![0; <T as UNQ::Config>::StringLimit::get() as usize]
         .try_into()
         .unwrap();
-    assert!(
-        NFT::Pallet::<T>::create_class(RawOrigin::Signed(caller).into(), class_id, Default::default(), metadata)
-            .is_ok()
-    );
+    assert!(NFT::Pallet::<T>::create_collection(
+        RawOrigin::Signed(caller).into(),
+        collection_id,
+        Default::default(),
+        metadata
+    )
+    .is_ok());
 }
 
-fn do_mint<T: Config>(caller: T::AccountId, class_id: T::NftClassId, instance_id: T::NftInstanceId) {
+fn do_mint<T: Config>(caller: T::AccountId, collection_id: T::NftCollectionId, item_id: T::NftItemId) {
     let metadata: BoundedVec<_, _> = vec![0; <T as UNQ::Config>::StringLimit::get() as usize]
         .try_into()
         .unwrap();
-    assert!(NFT::Pallet::<T>::mint(RawOrigin::Signed(caller).into(), class_id, instance_id, metadata).is_ok());
+    assert!(NFT::Pallet::<T>::mint(RawOrigin::Signed(caller).into(), collection_id, item_id, metadata).is_ok());
 }
 
 benchmarks! {
-    create_class {
+    create_collection {
         let caller = create_account::<T>("caller", 0);
         let metadata: BoundedVec<_, _> = vec![0; <T as UNQ::Config>::StringLimit::get() as usize].try_into().unwrap();
-    }: _(RawOrigin::Signed(caller.clone()), CLASS_ID_0.into(), Default::default(), metadata)
+    }: _(RawOrigin::Signed(caller.clone()), COLLECTION_ID_0.into(), Default::default(), metadata)
     verify {
-        assert_eq!(UNQ::Pallet::<T>::class_owner(&T::NftClassId::from(CLASS_ID_0).into()), Some(caller));
+        assert_eq!(UNQ::Pallet::<T>::collection_owner(T::NftCollectionId::from(COLLECTION_ID_0).into()), Some(caller));
     }
 
     mint {
         let caller = create_account::<T>("caller", 0);
-        do_create_class::<T>(caller.clone(), 1_000_000u32.into());
+        do_create_collection::<T>(caller.clone(), 1_000_000u32.into());
         let metadata: BoundedVec<_, _> = vec![0; <T as UNQ::Config>::StringLimit::get() as usize].try_into().unwrap();
-    }: _(RawOrigin::Signed(caller.clone()), CLASS_ID_0.into(), 0u32.into(), metadata)
+    }: _(RawOrigin::Signed(caller.clone()), COLLECTION_ID_0.into(), 0u32.into(), metadata)
     verify {
-        assert_eq!(UNQ::Pallet::<T>::owner(T::NftClassId::from(CLASS_ID_0).into(), T::NftInstanceId::from(0u32).into()), Some(caller));
+        assert_eq!(UNQ::Pallet::<T>::owner(T::NftCollectionId::from(COLLECTION_ID_0).into(), T::NftItemId::from(0u32).into()), Some(caller));
     }
 
     transfer {
         let caller = create_account::<T>("caller", 1);
-        do_create_class::<T>(caller.clone(), CLASS_ID_0.into());
+        do_create_collection::<T>(caller.clone(), COLLECTION_ID_0.into());
         let caller_lookup = T::Lookup::unlookup(caller.clone());
         let caller2 = create_account::<T>("caller2", 1);
         let caller2_lookup = T::Lookup::unlookup(caller2.clone());
-        do_mint::<T>(caller.clone(), CLASS_ID_0.into(), 0u32.into());
-    }: _(RawOrigin::Signed(caller), CLASS_ID_0.into(), 0u32.into(), caller2_lookup)
+        do_mint::<T>(caller.clone(), COLLECTION_ID_0.into(), 0u32.into());
+    }: _(RawOrigin::Signed(caller), COLLECTION_ID_0.into(), 0u32.into(), caller2_lookup)
     verify {
-        assert_eq!(UNQ::Pallet::<T>::owner(T::NftClassId::from(CLASS_ID_0).into(), T::NftInstanceId::from(0u32).into()), Some(caller2));
+        assert_eq!(UNQ::Pallet::<T>::owner(T::NftCollectionId::from(COLLECTION_ID_0).into(), T::NftItemId::from(0u32).into()), Some(caller2));
     }
 
-    destroy_class {
+    destroy_collection {
         let caller = create_account::<T>("caller", 1);
-        do_create_class::<T>(caller.clone(), CLASS_ID_0.into());
-    }: _(RawOrigin::Signed(caller), CLASS_ID_0.into())
+        do_create_collection::<T>(caller.clone(), COLLECTION_ID_0.into());
+    }: _(RawOrigin::Signed(caller), COLLECTION_ID_0.into())
     verify {
-        assert_eq!(UNQ::Pallet::<T>::classes().count(), 0);
+        assert_eq!(UNQ::Pallet::<T>::collections().count(), 0);
     }
 
     burn {
         let caller = create_account::<T>("caller", 1);
-        do_create_class::<T>(caller.clone(), CLASS_ID_0.into());
-        do_mint::<T>(caller.clone(), CLASS_ID_0.into(), 0u32.into());
-    }: _(RawOrigin::Signed(caller.clone()), CLASS_ID_0.into(), 0u32.into())
+        do_create_collection::<T>(caller.clone(), COLLECTION_ID_0.into());
+        do_mint::<T>(caller.clone(), COLLECTION_ID_0.into(), 0u32.into());
+    }: _(RawOrigin::Signed(caller.clone()), COLLECTION_ID_0.into(), 0u32.into())
     verify {
         assert_eq!(UNQ::Pallet::<T>::owned(&caller).count(), 0);
     }

@@ -279,7 +279,7 @@ parameter_types! {
     pub const LMPalletId: PalletId = PalletId(*b"TEST_lm_");
     pub const MinPlannedYieldingPeriods: BlockNumber = 100;
     pub const MinTotalFarmRewards: Balance = 1_000_000;
-    #[derive(PartialEq)]
+    #[derive(PartialEq, Eq)]
     pub const MaxEntriesPerDeposit: u8 = 5;
     pub const MaxYieldFarmsPerGlobalFarm: u8 = 4;
 }
@@ -354,6 +354,8 @@ impl orml_tokens::Config for Test {
     type DustRemovalWhitelist = Nothing;
     type OnKilledTokenAccount = ();
     type OnNewTokenAccount = ();
+    type MaxReserves = ConstU32<100_000>;
+    type ReserveIdentifier = ();
 }
 
 pub struct ExtBuilder {

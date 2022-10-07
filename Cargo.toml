@@ -13,19 +13,8 @@ members = [
 	"adapters",
 	"collator-rewards",
 	"transaction-pause",
-	"liquidity-mining"
+	"liquidity-mining",
+	"currencies",
 ]
 
 resolver = "2"
-
-# Use a fork of ORML until we are using a version that includes
-# https://github.com/open-web3-stack/open-runtime-module-library/pull/754
-[patch."https://github.com/open-web3-stack/open-runtime-module-library"]
-orml-currencies = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
-orml-tokens = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
-orml-traits = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
-orml-utilities = { git = "https://github.com/apopiak/open-runtime-module-library", branch = "apopiak/on-new-account-9-17" }
-
-[patch.crates-io]
-# https://github.com/paritytech/substrate/pull/11707
-syn = { git = "https://github.com/dtolnay/syn", rev = "19b3f0b53525ac7ab0882882a822adbd874dbe8c" }

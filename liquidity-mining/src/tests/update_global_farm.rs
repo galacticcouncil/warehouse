@@ -21,7 +21,7 @@ use test_ext::*;
 #[test]
 fn update_global_farm_price_adjustment_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let new_price_adjustment = FixedU128::from_float(0.856_f64);
             let global_farm_0 = LiquidityMining::global_farm(GC_FARM).unwrap();
 
@@ -52,7 +52,7 @@ fn update_global_farm_price_adjustment_should_work() {
                 },
             ));
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -60,7 +60,7 @@ fn update_global_farm_price_adjustment_should_work() {
 #[test]
 fn update_global_farm_price_adjustment_in_same_period_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let new_price_adjustment = FixedU128::from_float(0.856_f64);
             set_block_number(10_000);
 
@@ -94,7 +94,7 @@ fn update_global_farm_price_adjustment_in_same_period_should_work() {
                 },
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -102,7 +102,7 @@ fn update_global_farm_price_adjustment_in_same_period_should_work() {
 #[test]
 fn update_global_farm_price_adjustment_not_owner_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let new_price_adjustment = FixedU128::from_float(0.6_f64);
             let not_owner = ALICE;
 
@@ -113,7 +113,7 @@ fn update_global_farm_price_adjustment_not_owner_should_not_work() {
                 Error::<Test, Instance1>::Forbidden
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -122,7 +122,7 @@ fn update_global_farm_price_adjustment_not_owner_should_not_work() {
 #[test]
 fn update_global_farm_price_adjustment_not_existing_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let new_price_adjustment = FixedU128::from_float(0.6_f64);
             let not_existing_farm = GlobalFarmId::MAX;
 
@@ -133,7 +133,7 @@ fn update_global_farm_price_adjustment_not_existing_farm_should_not_work() {
                 Error::<Test, Instance1>::GlobalFarmNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

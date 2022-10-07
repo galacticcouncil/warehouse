@@ -1493,7 +1493,7 @@ fn update_yield_farm_should_work() {
         };
 
         let global_farm_account_id = LiquidityMining::farm_account_id(*global_farm_id).unwrap();
-        let pot_account_id = LiquidityMining::pot_account_id();
+        let pot_account_id = LiquidityMining::pot_account_id().unwrap();
         let yield_farm_account_id = LiquidityMining::farm_account_id(*yield_farm_id).unwrap();
 
         new_test_ext().execute_with(|| {
@@ -1591,7 +1591,7 @@ fn update_yield_farm_should_work() {
 #[test]
 fn update_yield_farm_should_not_work_when_pot_balance_is_not_enough() {
     new_test_ext().execute_with(|| {
-        let pot = LiquidityMining::pot_account_id();
+        let pot = LiquidityMining::pot_account_id().unwrap();
 
         Tokens::set_balance(Origin::root(), pot, BSX, 1_000 * ONE, Zero::zero()).unwrap();
 
@@ -1685,9 +1685,9 @@ fn maybe_update_farms_should_work() {
     };
 
     new_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let farm_account_id = LiquidityMining::farm_account_id(get_predefined_global_farm_ins1(0).id).unwrap();
-            let _ = Tokens::transfer(
+            Tokens::transfer(
                 Origin::signed(TREASURY),
                 farm_account_id,
                 reward_currency,
@@ -1781,7 +1781,7 @@ fn maybe_update_farms_should_work() {
             pretty_assertions::assert_eq!(global_farm.updated_at, current_period);
             pretty_assertions::assert_eq!(yield_farm.updated_at, current_period);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -2115,7 +2115,7 @@ fn global_farm_should_work() {
 #[test]
 fn is_yield_farm_clamable_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             //active farm
             assert!(LiquidityMining::is_yield_farm_claimable(
                 GC_FARM,
@@ -2152,7 +2152,7 @@ fn is_yield_farm_clamable_should_work() {
                 BSX_TKN1_AMM
             ));
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -2160,7 +2160,7 @@ fn is_yield_farm_clamable_should_work() {
 #[test]
 fn get_global_farm_id_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             //happy path
             pretty_assertions::assert_eq!(
                 LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], GC_BSX_TKN1_YIELD_FARM_ID),
@@ -2189,7 +2189,7 @@ fn get_global_farm_id_should_work() {
                 LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], DAVE_BSX_TKN1_YIELD_FARM_ID).is_none()
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

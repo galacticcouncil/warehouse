@@ -22,7 +22,7 @@ use test_ext::*;
 fn destroy_global_farm_should_work() {
     //Test with flushing - global farm should be removed from storage if it has no yield farms.
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let predefined_global_farm = get_predefined_global_farm_ins1(1);
             let farm_account = LiquidityMining::farm_account_id(BOB_FARM).unwrap();
             let bob_reward_currency_balance = Tokens::free_balance(predefined_global_farm.reward_currency, &BOB);
@@ -48,13 +48,13 @@ fn destroy_global_farm_should_work() {
                 bob_reward_currency_balance + undistributed_rewards
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 
     //Without flushing - global farm should stay in the storage marked as deleted.
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let predefined_global_farm = get_predefined_global_farm_ins1(3);
             let farm_account = LiquidityMining::farm_account_id(CHARLIE_FARM).unwrap();
             let charlie_reward_currency_balance =
@@ -101,7 +101,7 @@ fn destroy_global_farm_should_work() {
                 charlie_reward_currency_balance + undistributed_rewards
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     })
 }
@@ -109,7 +109,7 @@ fn destroy_global_farm_should_work() {
 #[test]
 fn destroy_global_farm_not_owner_should_not_work() {
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::destroy_global_farm(ALICE, BOB_FARM),
                 Error::<Test, Instance1>::Forbidden
@@ -120,7 +120,7 @@ fn destroy_global_farm_not_owner_should_not_work() {
                 get_predefined_global_farm_ins1(1)
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -128,14 +128,14 @@ fn destroy_global_farm_not_owner_should_not_work() {
 #[test]
 fn destroy_global_farm_farm_not_exists_should_not_work() {
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const NON_EXISTING_FARM: u32 = 999_999_999;
             assert_noop!(
                 LiquidityMining::destroy_global_farm(ALICE, NON_EXISTING_FARM),
                 Error::<Test, Instance1>::GlobalFarmNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -144,7 +144,7 @@ fn destroy_global_farm_farm_not_exists_should_not_work() {
 fn destroy_global_farm_with_yield_farms_should_not_work() {
     //Global farm CAN'T be destroyed if it has active or stopped yield farms.
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             //Destroy farm with active yield farms should not work.
             let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[2].id);
             pretty_assertions::assert_eq!(
@@ -177,7 +177,7 @@ fn destroy_global_farm_with_yield_farms_should_not_work() {
                 get_predefined_global_farm_ins1(3)
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -185,7 +185,7 @@ fn destroy_global_farm_with_yield_farms_should_not_work() {
 #[test]
 fn destroy_global_farm_healthy_farm_should_not_work() {
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
             let predefined_global_farm = get_predefined_global_farm_ins1(2);
             assert!(!Tokens::free_balance(predefined_global_farm.reward_currency, &farm_account).is_zero());
@@ -196,7 +196,8 @@ fn destroy_global_farm_healthy_farm_should_not_work() {
             );
 
             pretty_assertions::assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), predefined_global_farm);
-            TransactionOutcome::Commit(())
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

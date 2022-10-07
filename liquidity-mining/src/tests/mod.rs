@@ -260,6 +260,7 @@ pub mod redeposit_lp_shares;
 pub mod resume_yield_farm;
 pub mod stop_yield_farm;
 pub mod test_ext;
+
 #[allow(clippy::module_inception)]
 pub mod tests;
 pub mod update_global_farm;

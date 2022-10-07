@@ -21,7 +21,7 @@ use test_ext::*;
 #[test]
 fn withdraw_shares_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const REWARD_CURRENCY: u32 = BSX;
             const GLOBAL_FARM_ID: GlobalFarmId = GC_FARM;
 
@@ -481,7 +481,7 @@ fn withdraw_shares_should_work() {
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]).is_none());
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 
@@ -489,7 +489,7 @@ fn withdraw_shares_should_work() {
     //This test check if correct currency is transferred if rewards and incentvized
     //assets are different, otherwise farm behavior is the same as in test above.
     predefined_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             set_block_number(1_800); //period 18
 
             let deposited_amount = 50;
@@ -531,7 +531,7 @@ fn withdraw_shares_should_work() {
                 (CHARLIE_FARM, deposited_amount, expected_deposit_destroyed)
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -539,7 +539,7 @@ fn withdraw_shares_should_work() {
 #[test]
 fn withdraw_with_multiple_entries_and_flush_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let alice_bsx_tkn1_lp_shares_balance = Tokens::free_balance(BSX_TKN1_SHARE_ID, &ALICE);
 
             //Redeposit to multiple yield farms.
@@ -642,7 +642,7 @@ fn withdraw_with_multiple_entries_and_flush_should_work() {
             //Last withdraw from deposit should flush deposit.
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).is_none());
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -653,7 +653,7 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
     //In this case only amm shares should be withdrawn.
 
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             //Stop all yield farms in the global farm.
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
@@ -769,7 +769,7 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
                 assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[deposit_idx]).is_none());
             }
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -777,7 +777,7 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
 #[test]
 fn withdraw_shares_from_canceled_yield_farm_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             set_block_number(10_000);
 
             // Stop yield farm before withdraw test.
@@ -921,7 +921,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
                 yield_farm_bsx_balance - unclaimable_rewards
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -929,7 +929,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
 #[test]
 fn withdraw_shares_from_removed_pool_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             set_block_number(10_000);
 
             //Stop yield farm before removing.
@@ -1041,7 +1041,7 @@ fn withdraw_shares_from_removed_pool_should_work() {
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &BOB), bob_bsx_balance);
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), global_farm_bsx_balance);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -1049,14 +1049,14 @@ fn withdraw_shares_from_removed_pool_should_work() {
 #[test]
 fn withdraw_shares_yield_farm_entry_not_found_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             const DEPOSIT_ID: DepositId = 1;
             const NOT_FOUND_ENTRY_ID: YieldFarmId = 999_999;
             assert_noop!(
                 LiquidityMining::withdraw_lp_shares(DEPOSIT_ID, NOT_FOUND_ENTRY_ID, 0),
                 Error::<Test, Instance1>::YieldFarmEntryNotFound
             );
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -1064,13 +1064,13 @@ fn withdraw_shares_yield_farm_entry_not_found_should_not_work() {
 #[test]
 fn withdraw_shares_deposit_not_found_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::withdraw_lp_shares(72_334_321_125_861_359_621, GC_BSX_TKN1_YIELD_FARM_ID, 0),
                 Error::<Test, Instance1>::DepositNotFound
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

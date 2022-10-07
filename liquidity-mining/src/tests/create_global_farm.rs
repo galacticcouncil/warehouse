@@ -21,7 +21,7 @@ use test_ext::*;
 #[test]
 fn create_global_farm_should_work() {
     new_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let global_farm_id = 1;
             let total_rewards: Balance = 50_000_000_000;
             let reward_currency = BSX;
@@ -84,7 +84,7 @@ fn create_global_farm_should_work() {
 
             pretty_assertions::assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -92,7 +92,7 @@ fn create_global_farm_should_work() {
 #[test]
 fn create_global_farm_invalid_data_should_not_work() {
     new_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             let created_at_block = 15_896;
 
             set_block_number(created_at_block);
@@ -193,7 +193,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                 Error::<Test, Instance1>::InvalidPriceAdjustment
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
@@ -202,7 +202,7 @@ fn create_global_farm_invalid_data_should_not_work() {
 fn create_global_farm_with_inssufficient_balance_should_not_work() {
     //Owner's account balance is 1M BSX.
     new_test_ext().execute_with(|| {
-        with_transaction(|| {
+        let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::create_global_farm(
                     1_000_001,
@@ -218,7 +218,7 @@ fn create_global_farm_with_inssufficient_balance_should_not_work() {
                 Error::<Test, Instance1>::InsufficientRewardCurrencyBalance
             );
 
-            TransactionOutcome::Commit(())
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }

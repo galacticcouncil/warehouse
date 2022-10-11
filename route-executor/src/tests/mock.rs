@@ -289,7 +289,7 @@ macro_rules! impl_fake_executor {
                 asset_in: AssetId,
                 asset_out: AssetId,
                 amount_in: Balance,
-                _amount_out: Balance,
+                _min_limit: Balance,
             ) -> Result<(), ExecutorError<Self::Error>> {
                 if !matches!(pool_type, $pool_type) {
                     return Err(ExecutorError::NotSupported);
@@ -315,8 +315,8 @@ macro_rules! impl_fake_executor {
                 pool_type: PoolType<AssetId>,
                 asset_in: AssetId,
                 asset_out: AssetId,
-                _amount_in: Balance,
                 amount_out: Balance,
+                _max_limit: Balance,
             ) -> Result<(), ExecutorError<Self::Error>> {
                 if !matches!(pool_type, $pool_type) {
                     return Err(ExecutorError::NotSupported);

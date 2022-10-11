@@ -38,7 +38,7 @@ pub trait TradeExecution<Origin, AccountId, AssetId, Balance> {
         asset_in: AssetId,
         asset_out: AssetId,
         amount_in: Balance,
-        amount_out: Balance,
+        min_limit: Balance,
     ) -> Result<(), ExecutorError<Self::Error>>;
 
     fn execute_buy(
@@ -46,8 +46,8 @@ pub trait TradeExecution<Origin, AccountId, AssetId, Balance> {
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_in: Balance,
         amount_out: Balance,
+        max_limit: Balance,
     ) -> Result<(), ExecutorError<Self::Error>>;
 }
 
@@ -101,11 +101,11 @@ impl<E: PartialEq, Origin: Clone, AccountId, AssetId: Copy, Balance: Copy>
         asset_in: AssetId,
         asset_out: AssetId,
         amount_in: Balance,
-        amount_out: Balance,
+        min_limit: Balance,
     ) -> Result<(), ExecutorError<Self::Error>> {
         for_tuples!(
             #(
-                let value = match Tuple::execute_sell(who.clone(),pool_type, asset_in, asset_out, amount_in, amount_out) {
+                let value = match Tuple::execute_sell(who.clone(),pool_type, asset_in, asset_out, amount_in, min_limit) {
                     Ok(result) => return Ok(result),
                     Err(v) if v == ExecutorError::NotSupported => v,
                     Err(v) => return Err(v),
@@ -120,12 +120,12 @@ impl<E: PartialEq, Origin: Clone, AccountId, AssetId: Copy, Balance: Copy>
         pool_type: PoolType<AssetId>,
         asset_in: AssetId,
         asset_out: AssetId,
-        amount_in: Balance,
         amount_out: Balance,
+        max_limit: Balance,
     ) -> Result<(), ExecutorError<Self::Error>> {
         for_tuples!(
             #(
-                let value = match Tuple::execute_buy(who.clone(), pool_type,asset_in, asset_out, amount_in, amount_out) {
+                let value = match Tuple::execute_buy(who.clone(), pool_type,asset_in, asset_out, amount_out, max_limit) {
                     Ok(result) => return Ok(result),
                     Err(v) if v == ExecutorError::NotSupported => v,
                     Err(v) => return Err(v),

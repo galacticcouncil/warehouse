@@ -246,8 +246,8 @@ pub mod pallet {
                     trade.pool,
                     trade.asset_in,
                     trade.asset_out,
-                    trade_amount.amount_in,
                     trade_amount.amount_out,
+                    trade_amount.amount_in,
                 );
 
                 handle_execution_error!(execution_result);

@@ -215,7 +215,7 @@ fn set_metadata_works() {
             System::set_block_number(1); //TO have the ement emitted
 
             let dot: BoundedVec<u8, <Test as crate::Config>::StringLimit> = b"DOT".to_vec().try_into().unwrap();
-            let dot_id = AssetRegistryPallet::asset_ids(dot.clone()).unwrap();
+            let dot_id = AssetRegistryPallet::asset_ids(dot).unwrap();
             let b_symbol: BoundedVec<u8, <Test as crate::Config>::StringLimit> = b"xDOT".to_vec().try_into().unwrap();
 
             assert_ok!(AssetRegistryPallet::set_metadata(

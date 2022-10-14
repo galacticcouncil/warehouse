@@ -83,5 +83,5 @@ fn reward_collator_on_end_session_should_work() {
 }
 
 fn assert_that_session_ended() {
-    assert_eq!(SESSION_ENDED.with(|t| *t.borrow()), true);
+    assert!(SESSION_ENDED.with(|t| *t.borrow()));
 }

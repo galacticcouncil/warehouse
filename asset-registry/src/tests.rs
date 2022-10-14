@@ -18,12 +18,12 @@
 use super::Error;
 use crate::mock::*;
 use crate::types::{AssetDetails, AssetMetadata, AssetType};
+use crate::Event;
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok, BoundedVec};
+use orml_traits::GetByKey;
 use polkadot_xcm::v0::{Junction::*, MultiLocation::*};
 use sp_std::convert::TryInto;
-use orml_traits::GetByKey;
-use crate::Event;
 
 #[test]
 fn register_asset_works() {
@@ -52,7 +52,8 @@ fn register_asset_works() {
             asset_id: 1,
             asset_name: bn.clone(),
             asset_type: AssetType::Token,
-        }.into()]);
+        }
+        .into()]);
 
         assert_eq!(AssetRegistryPallet::asset_ids(&bn).unwrap(), 1u32);
         assert_eq!(
@@ -147,8 +148,9 @@ fn location_mapping_works() {
 
         expect_events(vec![Event::LocationSet {
             asset_id: 1,
-            location: asset_location.clone()
-        }.into()]);
+            location: asset_location.clone(),
+        }
+        .into()]);
 
         assert_eq!(
             AssetRegistryPallet::location_to_asset(asset_location.clone()),
@@ -227,8 +229,8 @@ fn set_metadata_works() {
                 asset_id: dot_id,
                 symbol: b_symbol.clone(),
                 decimals: 12u8,
-            }.into()]);
-
+            }
+            .into()]);
 
             assert_eq!(
                 AssetRegistryPallet::asset_metadata(dot_id).unwrap(),
@@ -244,7 +246,6 @@ fn set_metadata_works() {
                 b"xDOT".to_vec(),
                 30u8
             ));
-
 
             assert_eq!(
                 AssetRegistryPallet::asset_metadata(dot_id).unwrap(),
@@ -292,7 +293,8 @@ fn update_asset() {
             asset_id: btc_asset_id,
             asset_name: bn.clone(),
             asset_type: AssetType::Token,
-        }.into()]);
+        }
+        .into()]);
 
         assert_eq!(
             AssetRegistryPallet::assets(btc_asset_id).unwrap(),
@@ -382,15 +384,10 @@ fn update_asset() {
 
 #[test]
 fn native_asset_should_be_not_locked_when_genesis_block_built() {
-    ExtBuilder::default()
-        .build()
-        .execute_with(|| {
-            assert!(
-                !AssetRegistryPallet::assets(0u32).unwrap().locked
-            );
-        });
+    ExtBuilder::default().build().execute_with(|| {
+        assert!(!AssetRegistryPallet::assets(0u32).unwrap().locked);
+    });
 }
-
 
 #[test]
 fn get_ed_by_key_works() {

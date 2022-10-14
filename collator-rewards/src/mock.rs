@@ -1,6 +1,6 @@
-use std::cell::RefCell;
 use crate as collator_rewards;
 use crate::Config;
+use std::cell::RefCell;
 
 use frame_support::{
     parameter_types,
@@ -135,14 +135,12 @@ thread_local! {
     pub static SESSION_ENDED: RefCell<bool> = RefCell::new(false);
 }
 
-pub struct MockSessionManager {
-}
+pub struct MockSessionManager {}
 impl SessionManager<AccountId> for MockSessionManager {
     fn new_session(_: SessionIndex) -> Option<Vec<AccountId>> {
         Some(vec![ALICE, BOB, GC_COLL_1, CHARLIE, GC_COLL_2, DAVE, GC_COLL_3])
     }
-    fn start_session(_: SessionIndex) {
-    }
+    fn start_session(_: SessionIndex) {}
     fn end_session(_: SessionIndex) {
         SESSION_ENDED.with(|e| *e.borrow_mut() = true);
     }

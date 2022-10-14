@@ -164,4 +164,3 @@ fn last_events(n: usize) -> Vec<Event> {
         .map(|e| e.event)
         .collect()
 }
-

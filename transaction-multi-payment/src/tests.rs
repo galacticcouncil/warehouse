@@ -16,7 +16,10 @@
 // limitations under the License.
 
 pub use crate::{mock::*, Config, Error};
-use crate::{traits::TransactionMultiPaymentDataProvider, AcceptedCurrencies, AcceptedCurrencyPrice, CurrencyBalanceCheck, PaymentInfo, Price, Event};
+use crate::{
+    traits::TransactionMultiPaymentDataProvider, AcceptedCurrencies, AcceptedCurrencyPrice, CurrencyBalanceCheck,
+    Event, PaymentInfo, Price,
+};
 
 use frame_support::{
     assert_err, assert_noop, assert_ok,
@@ -260,9 +263,7 @@ fn fee_payment_non_native_insufficient_balance() {
 fn add_new_accepted_currency() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
         assert_ok!(PaymentPallet::add_currency(Origin::root(), 100, Price::from_float(1.1)));
-        expect_events(vec![Event::CurrencyAdded {
-            asset_id: 100,
-        }.into()]);
+        expect_events(vec![Event::CurrencyAdded { asset_id: 100 }.into()]);
 
         assert_eq!(PaymentPallet::currencies(100), Some(Price::from_float(1.1)));
         assert_noop!(
@@ -291,9 +292,7 @@ fn removed_accepted_currency() {
         );
 
         assert_ok!(PaymentPallet::remove_currency(Origin::root(), 100));
-        expect_events(vec![Event::CurrencyRemoved {
-            asset_id: 100,
-        }.into()]);
+        expect_events(vec![Event::CurrencyRemoved { asset_id: 100 }.into()]);
 
         assert_eq!(PaymentPallet::currencies(100), None);
 
@@ -360,7 +359,8 @@ fn account_currency_works() {
         expect_events(vec![Event::CurrencySet {
             account_id: ALICE,
             asset_id: SUPPORTED_CURRENCY,
-        }.into()]);
+        }
+        .into()]);
 
         assert_eq!(PaymentPallet::account_currency(&ALICE), SUPPORTED_CURRENCY);
 
@@ -419,8 +419,9 @@ fn transfer_set_fee_with_core_asset_should_work() {
             asset_id: HDX,
             native_fee_amount: 1029,
             non_native_fee_amount: 1029,
-            destination_account_id: FEE_RECEIVER
-        }.into()]);
+            destination_account_id: FEE_RECEIVER,
+        }
+        .into()]);
 
         assert_eq!(hdx_balance_before - 1029, Currencies::free_balance(HDX, &ALICE));
         assert_eq!(fb_balance_before + 1029, Currencies::free_balance(HDX, &fb_account));

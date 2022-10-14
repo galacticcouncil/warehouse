@@ -16,7 +16,7 @@
 // limitations under the License.
 
 use super::*;
-use crate::mock::{Currency, ExtBuilder, Faucet, Origin, Test, ALICE, HDX, expect_events, System};
+use crate::mock::{expect_events, Currency, ExtBuilder, Faucet, Origin, System, Test, ALICE, HDX};
 use frame_support::traits::OnFinalize;
 use frame_support::{assert_noop, assert_ok};
 
@@ -33,8 +33,9 @@ fn rampage_mints() {
         expect_events(vec![Event::RampageMint {
             account_id: ALICE,
             asset_id: HDX,
-            amount: 1000
-        }.into()]);
+            amount: 1000,
+        }
+        .into()]);
     });
 }
 
@@ -54,9 +55,7 @@ fn mints() {
         assert_eq!(Currency::free_balance(3000, &ALICE), 1_000_000_000_000_000);
         assert_eq!(Currency::free_balance(4000, &ALICE), 0);
 
-        expect_events(vec![Event::Mint {
-            account_id: ALICE
-        }.into()]);
+        expect_events(vec![Event::Mint { account_id: ALICE }.into()]);
     });
 }
 

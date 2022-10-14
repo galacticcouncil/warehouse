@@ -379,15 +379,5 @@ pub fn assert_executed_buy_trades(expected_trades: Vec<(PoolType<AssetId>, Balan
 }
 
 pub fn expect_events(e: Vec<Event>) {
-    let last_events = last_events(e.len());
-    assert_eq!(last_events, e);
-}
-fn last_events(n: usize) -> Vec<Event> {
-    frame_system::Pallet::<Test>::events()
-        .into_iter()
-        .rev()
-        .take(n)
-        .rev()
-        .map(|e| e.event)
-        .collect()
+    test_utils::expect_events::<Event, Test>(e);
 }

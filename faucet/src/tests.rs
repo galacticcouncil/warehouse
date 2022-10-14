@@ -29,6 +29,7 @@ fn rampage_mints() {
         //Act
         assert_ok!(Faucet::rampage_mint(Origin::signed(ALICE), HDX, 1000));
 
+        //Assert
         assert_eq!(Currency::free_balance(HDX, &ALICE), 2000);
         expect_events(vec![Event::RampageMint {
             account_id: ALICE,

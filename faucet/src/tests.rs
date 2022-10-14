@@ -16,26 +16,47 @@
 // limitations under the License.
 
 use super::*;
-use crate::mock::{Currency, ExtBuilder, Faucet, Origin, Test, ALICE, HDX};
+use crate::mock::{Currency, ExtBuilder, Faucet, Origin, Test, ALICE, HDX, expect_events, System};
 use frame_support::traits::OnFinalize;
 use frame_support::{assert_noop, assert_ok};
 
 #[test]
 fn rampage_mints() {
     ExtBuilder::default().build_rampage().execute_with(|| {
+        //Arrange
+        System::set_block_number(1); //For event emitting
+
+        //Act
         assert_ok!(Faucet::rampage_mint(Origin::signed(ALICE), HDX, 1000));
+
         assert_eq!(Currency::free_balance(HDX, &ALICE), 2000);
+        expect_events(vec![Event::RampageMint {
+            account_id: ALICE,
+            asset_id: HDX,
+            amount: 1000
+        }.into()]);
     });
 }
 
 #[test]
 fn mints() {
     ExtBuilder::default().build_live().execute_with(|| {
+        //Arrange
+        System::set_block_number(1); //For event emitting
+
         assert_eq!(Currency::free_balance(2000, &ALICE), 0);
+
+        //Act
         assert_ok!(Faucet::mint(Origin::signed(ALICE)));
+
+        //Assert
         assert_eq!(Currency::free_balance(2000, &ALICE), 1_000_000_000_000_000);
         assert_eq!(Currency::free_balance(3000, &ALICE), 1_000_000_000_000_000);
         assert_eq!(Currency::free_balance(4000, &ALICE), 0);
+
+        expect_events(vec![Event::Mint {
+            account_id: ALICE
+        }.into()]);
     });
 }
 

@@ -150,3 +150,18 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     ext.execute_with(|| System::set_block_number(1));
     ext
 }
+
+pub fn expect_events(e: Vec<Event>) {
+    let last_events = last_events(e.len());
+    assert_eq!(last_events, e);
+}
+fn last_events(n: usize) -> Vec<Event> {
+    frame_system::Pallet::<Test>::events()
+        .into_iter()
+        .rev()
+        .take(n)
+        .rev()
+        .map(|e| e.event)
+        .collect()
+}
+

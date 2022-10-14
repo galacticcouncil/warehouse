@@ -1,9 +1,6 @@
 use super::*;
 
-use crate::mock::{
-    set_block_number, CollatorRewards, ExtBuilder, Test, Tokens, ALICE, BOB, CHARLIE, COLLATOR_REWARD, DAVE, GC_COLL_1,
-    GC_COLL_2, GC_COLL_3, NATIVE_TOKEN,
-};
+use crate::mock::{set_block_number, CollatorRewards, ExtBuilder, Test, Tokens, ALICE, BOB, CHARLIE, COLLATOR_REWARD, DAVE, GC_COLL_1, GC_COLL_2, GC_COLL_3, NATIVE_TOKEN, SESSION_ENDED};
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut ext = ExtBuilder::default().build();
@@ -35,6 +32,8 @@ fn reward_collator_on_end_session_should_work() {
             !Collators::<Test>::contains_key(0),
             "there should be no session 0 data left"
         );
+        assert_that_session_ended();
+
         trigger_next_session(2);
         assert!(
             !Collators::<Test>::contains_key(1),
@@ -78,4 +77,8 @@ fn reward_collator_on_end_session_should_work() {
             currency: NATIVE_TOKEN,
         }));
     });
+}
+
+fn assert_that_session_ended() {
+    assert_eq!(SESSION_ENDED.with(|t| *t.borrow()), true);
 }

@@ -22,3 +22,13 @@ where
         .map(|e| e.event)
         .collect()
 }
+
+#[macro_export]
+macro_rules! assert_eq_approx {
+	( $x:expr, $y:expr, $z:expr, $r:expr) => {{
+		let diff = if $x >= $y { $x - $y } else { $y - $x };
+		if diff > $z {
+			panic!("\n{} not equal\nleft: {:?}\nright: {:?}\n", $r, $x, $y);
+		}
+	}};
+}

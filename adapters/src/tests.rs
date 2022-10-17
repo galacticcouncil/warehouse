@@ -387,10 +387,13 @@ fn revenue_goes_to_fee_receiver() {
 
     Revenue::take_revenue((core_id, 1234).into());
 
-    assert_that_fee_is_deposited();
+    assert_that_fee_is_deposited!();
 }
 
-fn assert_that_fee_is_deposited() {
+
+#[macro_export]
+macro_rules! assert_that_fee_is_deposited {
+    () => {
     EXPECTED_DEPOSITS.with(|remaining| {
         assert!(
             remaining.borrow().is_empty(),
@@ -398,4 +401,5 @@ fn assert_that_fee_is_deposited() {
             remaining
         );
     });
+    };
 }

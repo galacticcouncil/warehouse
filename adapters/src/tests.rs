@@ -390,16 +390,15 @@ fn revenue_goes_to_fee_receiver() {
     assert_that_fee_is_deposited!();
 }
 
-
 #[macro_export]
 macro_rules! assert_that_fee_is_deposited {
     () => {
-    EXPECTED_DEPOSITS.with(|remaining| {
-        assert!(
-            remaining.borrow().is_empty(),
-            "There should be no expected fees remaining. Remaining: {:?}",
-            remaining
-        );
-    });
+        EXPECTED_DEPOSITS.with(|remaining| {
+            assert!(
+                remaining.borrow().is_empty(),
+                "There should be no expected fees remaining. Remaining: {:?}",
+                remaining
+            );
+        });
     };
 }

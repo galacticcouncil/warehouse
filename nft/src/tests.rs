@@ -682,6 +682,15 @@ fn burn_should_work_when_account_has_no_balance() {
         ));
 
         //act & assert
+        assert_noop!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+                &COLLECTION_ID_0,
+                &ITEM_ID_0,
+                Some(&ALICE) // not owner
+            ),
+            Error::<Test>::NotPermitted
+        );
+
         assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
             &COLLECTION_ID_0,
             &ITEM_ID_0,

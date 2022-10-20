@@ -539,9 +539,13 @@ impl<T: Config> Mutate<T::AccountId> for Pallet<T> {
     fn burn(
         collection: &Self::CollectionId,
         item: &Self::ItemId,
-        _maybe_check_owner: Option<&T::AccountId>,
+        maybe_check_owner: Option<&T::AccountId>,
     ) -> DispatchResult {
-        let owner = Self::owner(*collection, *item).ok_or(Error::<T>::ItemUnknown)?;
+        let owner = if let Some(check_owner) = maybe_check_owner {
+            check_owner.clone()
+        } else {
+            Self::owner(*collection, *item).ok_or(Error::<T>::ItemUnknown)?
+        };
 
         Self::do_burn(owner, *collection, *item)?;
 

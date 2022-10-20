@@ -17,7 +17,7 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::sp_runtime::{FixedU128, RuntimeDebug};
-use hydra_dx_math::ema::{balance_ema, exp_smoothing_and_complement, price_ema, smoothing_from_period, volume_ema};
+use hydra_dx_math::ema::{balance_ema, exp_smoothing, price_ema, smoothing_from_period, volume_ema};
 use hydradx_traits::{AggregatedEntry, Volume};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
@@ -120,7 +120,7 @@ where
         // determine smoothing factor
         let smoothing = smoothing_from_period(period.saturated_into::<u64>());
         let (exp_smoothing, exp_complement) =
-            exp_smoothing_and_complement(smoothing, iterations.saturated_into::<u32>());
+            exp_smoothing(smoothing, iterations.saturated_into::<u32>());
 
         let price = price_ema(self.price, exp_complement, incoming.price, exp_smoothing);
         let volume = volume_ema(

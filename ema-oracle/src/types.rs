@@ -119,8 +119,7 @@ where
         }
         // determine smoothing factor
         let smoothing = smoothing_from_period(period.saturated_into::<u64>());
-        let (exp_smoothing, exp_complement) =
-            exp_smoothing(smoothing, iterations.saturated_into::<u32>());
+        let (exp_smoothing, exp_complement) = exp_smoothing(smoothing, iterations.saturated_into::<u32>());
 
         let price = price_ema(self.price, exp_complement, incoming.price, exp_smoothing);
         let volume = volume_ema(

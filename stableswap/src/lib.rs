@@ -50,11 +50,11 @@ use sp_std::prelude::*;
 
 pub use pallet::*;
 
-mod impls;
+mod trade_execution;
 pub mod types;
 pub mod weights;
 
-pub use impls::*;
+pub use trade_execution::*;
 
 use crate::types::Balance;
 use weights::WeightInfo;
@@ -309,7 +309,7 @@ pub mod pallet {
             let share_asset_ident = T::ShareAccountId::name(&pool.assets, Some(POOL_IDENTIFIER));
             let share_asset = T::AssetRegistry::get_or_create_shared_asset(
                 share_asset_ident,
-                pool.assets.clone().into(), //TODO: fix the trait to accept refeerence instead
+                pool.assets.clone().into(),
                 T::MinPoolLiquidity::get(),
             )?;
 
@@ -332,6 +332,22 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Update given stableswap pool's parameters.
+        ///
+        /// Updates one or more parameters of stablesswap pool ( amplification, trade fee, withdraw fee).
+        ///
+        /// If all parameters are none, `NothingToUpdate` error is returned.
+        ///
+        /// if pool does not exist, `PoolNotFound` is returned.
+        ///
+        /// Parameters:
+        /// - `origin`: Must be T::CreatePoolOrigin
+        /// - `pool_id`: pool to update
+        /// - `amplification`: new pool amplification or None
+        /// - `trade_fee`: new trade fee or None
+        /// - `withdraw_fee`: new withdraw fee or None
+        ///
+        /// Emits `PoolUpdated` event if successful.
         #[pallet::weight(<T as Config>::WeightInfo::update_pool())]
         #[transactional]
         pub fn update_pool(

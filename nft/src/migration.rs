@@ -67,6 +67,10 @@ pub mod v1 {
         let new_storage_prefix = storage_prefix(pallet_name, Collections::<T>::storage_prefix());
         let old_storage_prefix = storage_prefix(pallet_name, Classes::<T>::storage_prefix());
 
+        // If the number of collections overflows the max weight, return the max weight.
+        // Make sure this won't happen by running try-runtime command before executing the migration.
+        let num_of_collections = Collections::<T>::iter().count().try_into().unwrap_or(Weight::MAX);
+
         move_prefix(&old_storage_prefix, &new_storage_prefix);
         if let Some(value) = unhashed::get_raw(&old_storage_prefix) {
             unhashed::put_raw(&new_storage_prefix, &value);
@@ -77,6 +81,10 @@ pub mod v1 {
         let new_storage_prefix = storage_prefix(pallet_name, Items::<T>::storage_prefix());
         let old_storage_prefix = storage_prefix(pallet_name, Instances::<T>::storage_prefix());
 
+        // If the number of items overflows the max weight, return the max weight.
+        // Make sure this won't happen by running try-runtime command before executing the migration.
+        let num_of_instances = Items::<T>::iter().count().try_into().unwrap_or(Weight::MAX);
+
         move_prefix(&old_storage_prefix, &new_storage_prefix);
         if let Some(value) = unhashed::get_raw(&old_storage_prefix) {
             unhashed::put_raw(&new_storage_prefix, &value);
@@ -85,7 +93,17 @@ pub mod v1 {
 
         StorageVersion::new(1).put::<Pallet<T>>();
 
-        <T as frame_system::Config>::BlockWeights::get().max_block
+        let reads = num_of_collections
+            .checked_mul(2)
+            .and_then(|v| v.checked_add(num_of_instances.checked_mul(2).unwrap_or(Weight::MAX)))
+            .and_then(|v| v.checked_add(6))
+            .unwrap_or(Weight::MAX);
+        let writes = num_of_collections
+            .checked_add(num_of_instances)
+            .and_then(|v| v.checked_add(5))
+            .unwrap_or(Weight::MAX);
+
+        T::DbWeight::get().reads_writes(reads, writes)
     }
 
     pub fn post_migrate<T: Config>() {

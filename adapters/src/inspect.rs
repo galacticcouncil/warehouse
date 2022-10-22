@@ -59,11 +59,11 @@ where
         }
     }
 
-    fn can_deposit(asset: Self::AssetId, who: &AccountId, amount: Self::Balance) -> DepositConsequence {
+    fn can_deposit(asset: Self::AssetId, who: &AccountId, amount: Self::Balance, mint: bool) -> DepositConsequence {
         if GetNativeCurrencyId::get() == asset {
-            NativeCurrency::can_deposit(who, amount)
+            NativeCurrency::can_deposit(who, amount, mint)
         } else {
-            MultiCurrency::can_deposit(asset, who, amount)
+            MultiCurrency::can_deposit(asset, who, amount, mint)
         }
     }
 

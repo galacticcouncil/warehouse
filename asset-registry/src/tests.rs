@@ -1,6 +1,6 @@
 // This file is part of pallet-asset-registry.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -129,7 +129,11 @@ fn location_mapping_works() {
             },
         );
 
-        let asset_location = AssetLocation(X3(Parent, Parachain(200), GeneralKey(asset_id.encode())));
+        let asset_location = AssetLocation(X3(
+            Parent,
+            Parachain(200),
+            GeneralKey(asset_id.encode().try_into().unwrap()),
+        ));
 
         assert_ok!(AssetRegistryPallet::set_location(
             Origin::root(),

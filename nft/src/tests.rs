@@ -23,56 +23,61 @@ use std::convert::TryInto;
 type NFTPallet = Pallet<Test>;
 
 #[test]
-fn create_class_works() {
+fn create_collection_works() {
     ExtBuilder::default().build().execute_with(|| {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_0,
+            COLLECTION_ID_0,
             Default::default(), // Marketplace
             metadata.clone()
         ));
         assert_eq!(
-            NFTPallet::classes(CLASS_ID_0).unwrap(),
-            ClassInfo {
-                class_type: ClassType::Marketplace,
+            NFTPallet::collections(COLLECTION_ID_0).unwrap(),
+            CollectionInfo {
+                collection_type: CollectionType::Marketplace,
                 metadata: metadata.clone()
             }
         );
 
-        expect_events(vec![crate::Event::ClassCreated {
+        expect_events(vec![crate::Event::CollectionCreated {
             owner: ALICE,
-            class_id: CLASS_ID_0,
-            class_type: ClassType::Marketplace,
+            collection_id: COLLECTION_ID_0,
+            collection_type: CollectionType::Marketplace,
             metadata: metadata.clone(),
         }
         .into()]);
 
         // not allowed in Permissions
         assert_noop!(
-            NFTPallet::create_class(Origin::signed(ALICE), CLASS_ID_2, ClassType::Auction, metadata.clone()),
+            NFTPallet::create_collection(
+                Origin::signed(ALICE),
+                COLLECTION_ID_2,
+                CollectionType::Auction,
+                metadata.clone()
+            ),
             Error::<Test>::NotPermitted
         );
 
-        // existing class ID
+        // existing collection ID
         assert_noop!(
-            NFTPallet::create_class(
+            NFTPallet::create_collection(
                 Origin::signed(ALICE),
-                CLASS_ID_0,
-                ClassType::LiquidityMining,
+                COLLECTION_ID_0,
+                CollectionType::LiquidityMining,
                 metadata.clone()
             ),
             pallet_uniques::Error::<Test>::InUse
         );
 
-        // reserved class ID
+        // reserved collection ID
         assert_noop!(
-            NFTPallet::create_class(
+            NFTPallet::create_collection(
                 Origin::signed(ALICE),
-                CLASS_ID_RESERVED,
-                ClassType::Marketplace,
+                COLLECTION_ID_RESERVED,
+                CollectionType::Marketplace,
                 metadata
             ),
             Error::<Test>::IdReserved
@@ -86,62 +91,62 @@ fn mint_works() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_0,
+            COLLECTION_ID_0,
             Default::default(), // Marketplace
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_1,
-            ClassType::Redeemable,
+            COLLECTION_ID_1,
+            CollectionType::Redeemable,
             metadata.clone()
         ));
 
         assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
-            CLASS_ID_0,
-            INSTANCE_ID_0,
+            COLLECTION_ID_0,
+            ITEM_ID_0,
             metadata.clone()
         ));
         assert_eq!(
-            NFTPallet::instances(CLASS_ID_0, INSTANCE_ID_0).unwrap(),
-            InstanceInfo {
+            NFTPallet::items(COLLECTION_ID_0, ITEM_ID_0).unwrap(),
+            ItemInfo {
                 metadata: metadata.clone()
             }
         );
 
-        expect_events(vec![crate::Event::InstanceMinted {
+        expect_events(vec![crate::Event::ItemMinted {
             owner: ALICE,
-            class_id: CLASS_ID_0,
-            instance_id: INSTANCE_ID_0,
+            collection_id: COLLECTION_ID_0,
+            item_id: ITEM_ID_0,
             metadata: metadata.clone(),
         }
         .into()]);
 
-        // duplicate instance
+        // duplicate item
         assert_noop!(
-            NFTPallet::mint(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0, metadata.clone()),
+            NFTPallet::mint(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0, metadata.clone()),
             pallet_uniques::Error::<Test>::AlreadyExists
         );
 
         // not allowed in Permissions
         assert_noop!(
-            NFTPallet::mint(Origin::signed(ALICE), CLASS_ID_1, INSTANCE_ID_0, metadata.clone()),
+            NFTPallet::mint(Origin::signed(ALICE), COLLECTION_ID_1, ITEM_ID_0, metadata.clone()),
             Error::<Test>::NotPermitted
         );
 
         // not owner
         assert_noop!(
-            NFTPallet::mint(Origin::signed(BOB), CLASS_ID_1, INSTANCE_ID_0, metadata.clone()),
+            NFTPallet::mint(Origin::signed(BOB), COLLECTION_ID_1, ITEM_ID_0, metadata.clone()),
             Error::<Test>::NotPermitted
         );
 
-        // invalid class ID
+        // invalid collection ID
         assert_noop!(
-            NFTPallet::mint(Origin::signed(ALICE), NON_EXISTING_CLASS_ID, INSTANCE_ID_0, metadata),
-            Error::<Test>::ClassUnknown
+            NFTPallet::mint(Origin::signed(ALICE), NON_EXISTING_COLLECTION_ID, ITEM_ID_0, metadata),
+            Error::<Test>::CollectionUnknown
         );
     });
 }
@@ -152,70 +157,70 @@ fn transfer_works() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_0,
+            COLLECTION_ID_0,
             Default::default(),
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_1,
-            ClassType::LiquidityMining,
+            COLLECTION_ID_1,
+            CollectionType::LiquidityMining,
             metadata.clone()
         ));
         assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
-            CLASS_ID_0,
-            INSTANCE_ID_0,
+            COLLECTION_ID_0,
+            ITEM_ID_0,
             metadata.clone()
         ));
         assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
-            CLASS_ID_1,
-            INSTANCE_ID_0,
+            COLLECTION_ID_1,
+            ITEM_ID_0,
             metadata
         ));
 
         // not existing
         assert_noop!(
-            NFTPallet::transfer(Origin::signed(CHARLIE), CLASS_ID_2, INSTANCE_ID_0, ALICE),
-            Error::<Test>::ClassUnknown
+            NFTPallet::transfer(Origin::signed(CHARLIE), COLLECTION_ID_2, ITEM_ID_0, ALICE),
+            Error::<Test>::CollectionUnknown
         );
 
         // not owner
         assert_noop!(
-            NFTPallet::transfer(Origin::signed(CHARLIE), CLASS_ID_0, INSTANCE_ID_0, ALICE),
+            NFTPallet::transfer(Origin::signed(CHARLIE), COLLECTION_ID_0, ITEM_ID_0, ALICE),
             Error::<Test>::NotPermitted
         );
 
         // not allowed in Permissions
         assert_noop!(
-            NFTPallet::transfer(Origin::signed(ALICE), CLASS_ID_1, INSTANCE_ID_0, BOB),
+            NFTPallet::transfer(Origin::signed(ALICE), COLLECTION_ID_1, ITEM_ID_0, BOB),
             Error::<Test>::NotPermitted
         );
 
         assert_ok!(NFTPallet::transfer(
             Origin::signed(ALICE),
-            CLASS_ID_0,
-            INSTANCE_ID_0,
+            COLLECTION_ID_0,
+            ITEM_ID_0,
             ALICE
         ));
-        assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0).unwrap(), ALICE);
+        assert_eq!(NFTPallet::owner(COLLECTION_ID_0, ITEM_ID_0).unwrap(), ALICE);
 
         assert_ok!(NFTPallet::transfer(
             Origin::signed(ALICE),
-            CLASS_ID_0,
-            INSTANCE_ID_0,
+            COLLECTION_ID_0,
+            ITEM_ID_0,
             BOB
         ));
-        assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0).unwrap(), BOB);
+        assert_eq!(NFTPallet::owner(COLLECTION_ID_0, ITEM_ID_0).unwrap(), BOB);
 
-        expect_events(vec![crate::Event::InstanceTransferred {
+        expect_events(vec![crate::Event::ItemTransferred {
             from: ALICE,
             to: BOB,
-            class_id: CLASS_ID_0,
-            instance_id: INSTANCE_ID_0,
+            collection_id: COLLECTION_ID_0,
+            item_id: ITEM_ID_0,
         }
         .into()]);
     });
@@ -227,118 +232,118 @@ fn burn_works() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_0,
+            COLLECTION_ID_0,
             Default::default(),
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_1,
-            ClassType::LiquidityMining,
+            COLLECTION_ID_1,
+            CollectionType::LiquidityMining,
             metadata.clone()
         ));
         assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
-            CLASS_ID_0,
-            INSTANCE_ID_0,
+            COLLECTION_ID_0,
+            ITEM_ID_0,
             metadata.clone()
         ));
         assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
-            CLASS_ID_0,
-            INSTANCE_ID_1,
+            COLLECTION_ID_0,
+            ITEM_ID_1,
             metadata.clone()
         ));
         assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
-            CLASS_ID_1,
-            INSTANCE_ID_0,
+            COLLECTION_ID_1,
+            ITEM_ID_0,
             metadata
         ));
 
         // not owner
         assert_noop!(
-            NFTPallet::burn(Origin::signed(BOB), CLASS_ID_0, INSTANCE_ID_0),
+            NFTPallet::burn(Origin::signed(BOB), COLLECTION_ID_0, ITEM_ID_0),
             Error::<Test>::NotPermitted
         );
 
         // not allowed in Permissions
         assert_noop!(
-            NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_1, INSTANCE_ID_0),
+            NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_1, ITEM_ID_0),
             Error::<Test>::NotPermitted
         );
 
-        assert_ok!(NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0));
-        assert!(!<Instances<Test>>::contains_key(CLASS_ID_0, INSTANCE_ID_0));
+        assert_ok!(NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0));
+        assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_0));
 
-        expect_events(vec![crate::Event::InstanceBurned {
+        expect_events(vec![crate::Event::ItemBurned {
             owner: ALICE,
-            class_id: CLASS_ID_0,
-            instance_id: INSTANCE_ID_0,
+            collection_id: COLLECTION_ID_0,
+            item_id: ITEM_ID_0,
         }
         .into()]);
 
         // not existing
         assert_noop!(
-            NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0),
-            pallet_uniques::Error::<Test>::Unknown
+            NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0),
+            pallet_uniques::Error::<Test>::UnknownCollection
         );
     });
 }
 
 #[test]
-fn destroy_class_works() {
+fn destroy_collection_works() {
     ExtBuilder::default().build().execute_with(|| {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_0,
+            COLLECTION_ID_0,
             Default::default(), // Marketplace
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_1,
-            ClassType::Redeemable,
+            COLLECTION_ID_1,
+            CollectionType::Redeemable,
             metadata.clone()
         ));
         assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
-            CLASS_ID_0,
-            INSTANCE_ID_0,
+            COLLECTION_ID_0,
+            ITEM_ID_0,
             metadata
         ));
 
-        // existing instance
+        // existing item
         assert_noop!(
-            NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0),
-            Error::<Test>::TokenClassNotEmpty
+            NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0),
+            Error::<Test>::TokenCollectionNotEmpty
         );
-        assert_ok!(NFTPallet::burn(Origin::signed(ALICE), CLASS_ID_0, INSTANCE_ID_0));
+        assert_ok!(NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0));
 
         // not allowed in Permissions
         assert_noop!(
-            NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_1),
+            NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_1),
             Error::<Test>::NotPermitted
         );
 
-        assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
-        assert_eq!(NFTPallet::classes(CLASS_ID_0), None);
+        assert_ok!(NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0));
+        assert_eq!(NFTPallet::collections(COLLECTION_ID_0), None);
 
-        expect_events(vec![crate::Event::ClassDestroyed {
+        expect_events(vec![crate::Event::CollectionDestroyed {
             owner: ALICE,
-            class_id: CLASS_ID_0,
+            collection_id: COLLECTION_ID_0,
         }
         .into()]);
 
         // not existing
         assert_noop!(
-            NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0),
-            Error::<Test>::ClassUnknown
+            NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0),
+            Error::<Test>::CollectionUnknown
         );
     });
 }
@@ -349,27 +354,27 @@ fn deposit_works() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        let class_deposit = <Test as pallet_uniques::Config>::ClassDeposit::get();
+        let collection_deposit = <Test as pallet_uniques::Config>::CollectionDeposit::get();
         let initial_balance = <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE);
 
         // has deposit
         assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_0,
-            ClassType::Marketplace,
+            COLLECTION_ID_0,
+            CollectionType::Marketplace,
             metadata.clone()
         ));
         assert_eq!(
             <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
-            initial_balance - class_deposit
+            initial_balance - collection_deposit
         );
         assert_eq!(
             <Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE),
-            class_deposit
+            collection_deposit
         );
 
-        assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
+        assert_ok!(NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0));
         assert_eq!(
             <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
             initial_balance
@@ -377,10 +382,10 @@ fn deposit_works() {
         assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
 
         // no deposit
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_0,
-            ClassType::LiquidityMining,
+            COLLECTION_ID_0,
+            CollectionType::LiquidityMining,
             metadata
         ));
         assert_eq!(
@@ -389,7 +394,7 @@ fn deposit_works() {
         );
         assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
 
-        assert_ok!(NFTPallet::destroy_class(Origin::signed(ALICE), CLASS_ID_0));
+        assert_ok!(NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0));
         assert_eq!(
             <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
             initial_balance
@@ -404,128 +409,136 @@ fn nonfungible_traits_work() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_0,
+            COLLECTION_ID_0,
             Default::default(),
             metadata.clone()
         ));
 
         assert_ok!(NFTPallet::mint(
             Origin::signed(BOB),
-            CLASS_ID_0,
-            INSTANCE_ID_0,
+            COLLECTION_ID_0,
+            ITEM_ID_0,
             metadata.clone()
         ));
 
         // `Inspect` trait
         assert_eq!(
-            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_0, &INSTANCE_ID_0),
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&COLLECTION_ID_0, &ITEM_ID_0),
             Some(BOB)
         );
         assert_eq!(
-            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_1, &INSTANCE_ID_0),
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&COLLECTION_ID_1, &ITEM_ID_0),
             None
         );
         assert_eq!(
-            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&CLASS_ID_0, &INSTANCE_ID_1),
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&COLLECTION_ID_0, &ITEM_ID_1),
             None
         );
 
         assert_eq!(
-            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::class_owner(&CLASS_ID_0),
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::collection_owner(&COLLECTION_ID_0),
             Some(ALICE)
         );
         assert_eq!(
-            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::class_owner(&CLASS_ID_1),
+            <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::collection_owner(&COLLECTION_ID_1),
             None
         );
 
         assert!(
             <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::can_transfer(
-                &CLASS_ID_0,
-                &INSTANCE_ID_0
+                &COLLECTION_ID_0,
+                &ITEM_ID_0
             )
         );
         assert!(
             !<NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::can_transfer(
-                &CLASS_ID_1,
-                &INSTANCE_ID_1
+                &COLLECTION_ID_1,
+                &ITEM_ID_1
             )
         );
 
         // `InspectEnumerable` trait
         assert_eq!(
-            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::classes()
-                .collect::<Vec<ClassId>>(),
-            vec![CLASS_ID_0]
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::collections()
+                .collect::<Vec<CollectionId>>(),
+            vec![COLLECTION_ID_0]
         );
         assert_eq!(
-            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::instances(&CLASS_ID_0)
-                .collect::<Vec<InstanceId>>(),
-            vec![INSTANCE_ID_0]
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::items(&COLLECTION_ID_0)
+                .collect::<Vec<ItemId>>(),
+            vec![ITEM_ID_0]
         );
         assert_eq!(
             *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned(&BOB)
-                .collect::<Vec<(ClassId, InstanceId)>>(),
-            vec![(CLASS_ID_0, INSTANCE_ID_0)]
+                .collect::<Vec<(CollectionId, ItemId)>>(),
+            vec![(COLLECTION_ID_0, ITEM_ID_0)]
         );
         assert_eq!(
-            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned_in_class(
-                &CLASS_ID_0,
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned_in_collection(
+                &COLLECTION_ID_0,
                 &BOB
             )
-            .collect::<Vec<InstanceId>>(),
-            vec![INSTANCE_ID_0]
+            .collect::<Vec<ItemId>>(),
+            vec![ITEM_ID_0]
         );
 
         // `Create` trait
         assert_noop!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_class(&CLASS_ID_0, &BOB, &ALICE),
+            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
+                &COLLECTION_ID_0,
+                &BOB,
+                &ALICE
+            ),
             pallet_uniques::Error::<Test>::InUse
         );
         assert_ok!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_class(&CLASS_ID_1, &BOB, &ALICE)
+            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
+                &COLLECTION_ID_1,
+                &BOB,
+                &ALICE
+            )
         );
 
         // `Destroy` trait
         let witness =
-            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::get_destroy_witness(&CLASS_ID_0)
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::get_destroy_witness(&COLLECTION_ID_0)
                 .unwrap();
 
         assert_eq!(
             witness,
             pallet_uniques::DestroyWitness {
-                instances: 1,
-                instance_metadatas: 0,
+                items: 1,
+                item_metadatas: 0,
                 attributes: 0
             }
         );
         assert_noop!(
             <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
-                CLASS_ID_0,
+                COLLECTION_ID_0,
                 witness,
                 Some(ALICE)
             ),
-            Error::<Test>::TokenClassNotEmpty
+            Error::<Test>::TokenCollectionNotEmpty
         );
 
         let empty_witness = pallet_uniques::DestroyWitness {
-            instances: 0,
-            instance_metadatas: 0,
+            items: 0,
+            item_metadatas: 0,
             attributes: 0,
         };
 
-        assert_ok!(NFTPallet::create_class(
+        assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
-            CLASS_ID_2,
+            COLLECTION_ID_2,
             Default::default(),
             metadata,
         ));
 
         assert_ok!(
             <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
-                CLASS_ID_2,
+                COLLECTION_ID_2,
                 empty_witness,
                 Some(ALICE)
             ),
@@ -535,34 +548,36 @@ fn nonfungible_traits_work() {
         // `Mutate` trait
         assert_noop!(
             <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
-                &CLASS_ID_2,
-                &INSTANCE_ID_1,
+                &COLLECTION_ID_2,
+                &ITEM_ID_1,
                 &BOB
             ),
-            Error::<Test>::ClassUnknown
+            Error::<Test>::CollectionUnknown
         );
         assert_ok!(
             <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
-                &CLASS_ID_0,
-                &INSTANCE_ID_1,
+                &COLLECTION_ID_0,
+                &ITEM_ID_1,
                 &BOB
             )
         );
 
-        assert_ok!(
-            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn_from(&CLASS_ID_0, &INSTANCE_ID_1)
-        );
-        assert!(!<Instances<Test>>::contains_key(CLASS_ID_0, INSTANCE_ID_1));
+        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+            &COLLECTION_ID_0,
+            &ITEM_ID_1,
+            None
+        ));
+        assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_1));
 
         // `Transfer` trait
         assert_ok!(
             <NFTPallet as Transfer<<Test as frame_system::Config>::AccountId>>::transfer(
-                &CLASS_ID_0,
-                &INSTANCE_ID_0,
+                &COLLECTION_ID_0,
+                &ITEM_ID_0,
                 &ALICE
             )
         );
-        assert_eq!(NFTPallet::owner(CLASS_ID_0, INSTANCE_ID_0), Some(ALICE));
+        assert_eq!(NFTPallet::owner(COLLECTION_ID_0, ITEM_ID_0), Some(ALICE));
     });
 }
 
@@ -570,46 +585,46 @@ fn nonfungible_traits_work() {
 fn is_id_reserved_should_return_true_when_id_is_from_reserved_range() {
     assert!(
         NFTPallet::is_id_reserved(0),
-        "0 should be part of reserved classId range"
+        "0 should be part of reserved CollectionId range"
     );
 
     assert!(
         NFTPallet::is_id_reserved(13),
-        "num <= ReserveClassIdUpTo should be part of reserved classId range"
+        "num <= ReserveCollectionIdUpTo should be part of reserved CollectionId range"
     );
 
     assert!(
-        NFTPallet::is_id_reserved(mock::ReserveClassIdUpTo::get()),
-        "num == ReserveClassIdUpTo should be part of reserved classId range"
+        NFTPallet::is_id_reserved(mock::ReserveCollectionIdUpTo::get()),
+        "num == ReserveCollectionIdUpTo should be part of reserved CollectionId range"
     );
 }
 
 #[test]
 fn is_id_reserved_should_return_false_when_id_is_not_from_reserved_range() {
     assert!(
-        !NFTPallet::is_id_reserved(mock::ReserveClassIdUpTo::get() + 1),
-        "(ReserveClassIdUpTo + 1) should not be part of reserved classId range"
+        !NFTPallet::is_id_reserved(mock::ReserveCollectionIdUpTo::get() + 1),
+        "(ReserveCollectionIdUpTo + 1) should not be part of reserved CollectionId range"
     );
 
     assert!(
-        !NFTPallet::is_id_reserved(mock::ReserveClassIdUpTo::get() + 500_000_000_000),
-        "num > ReserveClassIdUpTo should not be part of reserved classId range"
+        !NFTPallet::is_id_reserved(mock::ReserveCollectionIdUpTo::get() + 500_000_000_000),
+        "num > ReserveCollectionIdUpTo should not be part of reserved CollectionId range"
     );
 }
 
 #[test]
-fn create_typed_class_should_work_without_deposit_when_deposit_is_not_required() {
+fn create_typed_collection_should_work_without_deposit_when_deposit_is_not_required() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(NFTPallet::create_typed_class(
+        assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
-            CLASS_ID_0,
-            ClassType::LiquidityMining
+            COLLECTION_ID_0,
+            CollectionType::LiquidityMining
         ));
 
         assert_eq!(
-            NFTPallet::classes(CLASS_ID_0).unwrap(),
-            ClassInfoOf::<Test> {
-                class_type: ClassType::LiquidityMining,
+            NFTPallet::collections(COLLECTION_ID_0).unwrap(),
+            CollectionInfoOf::<Test> {
+                collection_type: CollectionType::LiquidityMining,
                 metadata: Default::default()
             }
         )
@@ -617,10 +632,10 @@ fn create_typed_class_should_work_without_deposit_when_deposit_is_not_required()
 }
 
 #[test]
-fn create_typed_class_should_not_work_without_deposit_when_deposit_is_required() {
+fn create_typed_collection_should_not_work_without_deposit_when_deposit_is_required() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            NFTPallet::create_typed_class(ACCOUNT_WITH_NO_BALANCE, CLASS_ID_0, ClassType::Marketplace),
+            NFTPallet::create_typed_collection(ACCOUNT_WITH_NO_BALANCE, COLLECTION_ID_0, CollectionType::Marketplace),
             pallet_balances::Error::<Test>::InsufficientBalance
         );
     });
@@ -630,38 +645,61 @@ fn create_typed_class_should_not_work_without_deposit_when_deposit_is_required()
 fn do_mint_should_work_when_account_has_no_balance() {
     ExtBuilder::default().build().execute_with(|| {
         //arrange
-        assert_ok!(NFTPallet::create_typed_class(
+        assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
-            CLASS_ID_0,
-            ClassType::LiquidityMining
+            COLLECTION_ID_0,
+            CollectionType::LiquidityMining
         ));
 
         //act & assert
         assert_ok!(NFTPallet::mint_into(
-            &CLASS_ID_0,
-            &INSTANCE_ID_0,
+            &COLLECTION_ID_0,
+            &ITEM_ID_0,
             &ACCOUNT_WITH_NO_BALANCE,
         ));
     });
 }
 
 #[test]
-fn burn_from_should_work_when_account_has_no_balance() {
+fn burn_should_work_when_account_has_no_balance() {
     ExtBuilder::default().build().execute_with(|| {
         //arrange
-        assert_ok!(NFTPallet::create_typed_class(
+        assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
-            CLASS_ID_0,
-            ClassType::LiquidityMining
+            COLLECTION_ID_0,
+            CollectionType::LiquidityMining
         ));
 
         assert_ok!(NFTPallet::mint_into(
-            &CLASS_ID_0,
-            &INSTANCE_ID_0,
+            &COLLECTION_ID_0,
+            &ITEM_ID_0,
+            &ACCOUNT_WITH_NO_BALANCE,
+        ));
+        assert_ok!(NFTPallet::mint_into(
+            &COLLECTION_ID_0,
+            &ITEM_ID_1,
             &ACCOUNT_WITH_NO_BALANCE,
         ));
 
         //act & assert
-        assert_ok!(NFTPallet::burn_from(&CLASS_ID_0, &INSTANCE_ID_0,));
+        assert_noop!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+                &COLLECTION_ID_0,
+                &ITEM_ID_0,
+                Some(&ALICE) // not owner
+            ),
+            Error::<Test>::NotPermitted
+        );
+
+        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+            &COLLECTION_ID_0,
+            &ITEM_ID_0,
+            None
+        ));
+        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+            &COLLECTION_ID_0,
+            &ITEM_ID_1,
+            Some(&ACCOUNT_WITH_NO_BALANCE)
+        ));
     });
 }

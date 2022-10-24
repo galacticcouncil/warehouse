@@ -1,6 +1,6 @@
 // This file is part of pallet-asset-registry.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,6 @@
 use frame_support::dispatch::DispatchError;
 use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::CheckedAdd;
-use frame_support::transactional;
 use frame_system::pallet_prelude::*;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::BaseArithmetic;
@@ -243,7 +242,6 @@ pub mod pallet {
         ///
         /// Emits 'Registered` event when successful.
         #[pallet::weight(<T as Config>::WeightInfo::register())]
-        #[transactional]
         pub fn register(
             origin: OriginFor<T>,
             name: Vec<u8>,
@@ -272,7 +270,6 @@ pub mod pallet {
 
         // TODO: No tests
         #[pallet::weight(<T as Config>::WeightInfo::update())]
-        #[transactional]
         pub fn update(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
@@ -321,7 +318,6 @@ pub mod pallet {
         ///
         /// Emits `MetadataSet` event when successful.
         #[pallet::weight(<T as Config>::WeightInfo::set_metadata())]
-        #[transactional]
         pub fn set_metadata(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
@@ -358,7 +354,6 @@ pub mod pallet {
         ///
         /// Emits `LocationSet` event when successful.
         #[pallet::weight(<T as Config>::WeightInfo::set_location())]
-        #[transactional]
         pub fn set_location(
             origin: OriginFor<T>,
             asset_id: T::AssetId,

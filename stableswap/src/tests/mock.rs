@@ -127,6 +127,8 @@ impl orml_tokens::Config for Test {
     type OnNewTokenAccount = ();
     type OnKilledTokenAccount = ();
     type MaxLocks = ();
+    type MaxReserves = ();
+    type ReserveIdentifier = ();
     type DustRemovalWhitelist = Everything;
 }
 

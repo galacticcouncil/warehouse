@@ -17,12 +17,16 @@
 
 use frame_support::{dispatch::DispatchResult, traits::tokens::nonfungibles::Create};
 
-pub trait CreateTypedClass<AccountId, ClassId, ClassType>: Create<AccountId> {
-    /// This function create an NFT class of `class_type` type.
-    fn create_typed_class(owner: AccountId, class_id: ClassId, class_type: ClassType) -> DispatchResult;
+pub trait CreateTypedCollection<AccountId, CollectionId, CollectionType>: Create<AccountId> {
+    /// This function create an NFT collection of `collection_type` type.
+    fn create_typed_collection(
+        owner: AccountId,
+        collection_id: CollectionId,
+        collection_type: CollectionType,
+    ) -> DispatchResult;
 }
 
-pub trait ReserveClassId<ClassId> {
-    /// This function returns `true` if class id is from the reserved range, `false` otherwise.
-    fn is_id_reserved(id: ClassId) -> bool;
+pub trait ReserveCollectionId<CollectionId> {
+    /// This function returns `true` if collection id is from the reserved range, `false` otherwise.
+    fn is_id_reserved(id: CollectionId) -> bool;
 }

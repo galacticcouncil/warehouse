@@ -16,7 +16,9 @@
 // limitations under the License.
 
 use crate::traits::TransactionMultiPaymentDataProvider;
-use crate::{error_to_invalid, AcceptedCurrencies, AcceptedCurrencyPrice, CurrencyBalanceCheck, PaymentInfo, Price};
+use crate::{
+    error_to_invalid, AcceptedCurrencies, AcceptedCurrencyPrice, CurrencyBalanceCheck, Event, PaymentInfo, Price,
+};
 pub use crate::{mock::*, Config, Error};
 
 use frame_support::{

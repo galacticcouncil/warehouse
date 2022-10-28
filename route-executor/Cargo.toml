@@ -34,6 +34,7 @@ pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "p
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.28", default-features = false }
 pallet-currencies = { path = "../currencies", default-features = false }
 hydradx-adapters = { path = "../adapters", default-features = false }
+test-utils = { path = "../test-utils", default-features = false }
 
 [features]
 default = ['std']

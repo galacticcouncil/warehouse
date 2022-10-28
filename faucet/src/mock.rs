@@ -63,7 +63,7 @@ impl system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = ();
+    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -90,7 +90,7 @@ parameter_types! {
 }
 
 impl orml_tokens::Config for Test {
-    type Event = ();
+    type Event = Event;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = AssetId;
@@ -106,7 +106,7 @@ impl orml_tokens::Config for Test {
 }
 
 impl Config for Test {
-    type Event = ();
+    type Event = Event;
     type Currency = Currency;
 }
 
@@ -169,4 +169,8 @@ impl ExtBuilder {
 
         t.into()
     }
+}
+
+pub fn expect_events(e: Vec<Event>) {
+    test_utils::expect_events::<Event, Test>(e)
 }

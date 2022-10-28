@@ -25,6 +25,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
+test-utils = { path = "../test-utils", default-features = false }
 
 [features]
 default = ['std']

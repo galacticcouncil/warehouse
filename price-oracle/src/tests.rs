@@ -28,18 +28,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     ExtBuilder::default().build()
 }
 
-fn last_events(n: usize) -> Vec<TestEvent> {
-    frame_system::Pallet::<Test>::events()
-        .into_iter()
-        .rev()
-        .take(n)
-        .rev()
-        .map(|e| e.event)
-        .collect()
-}
-
 fn expect_events(e: Vec<TestEvent>) {
-    assert_eq!(last_events(e.len()), e);
+    test_utils::expect_events::<TestEvent, Test>(e);
 }
 
 #[test]

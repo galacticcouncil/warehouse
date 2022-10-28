@@ -13,6 +13,7 @@ members = [
 	"adapters",
 	"collator-rewards",
 	"transaction-pause",
+	"liquidity-mining",
 	"currencies",
 	"test-utils"
 ]

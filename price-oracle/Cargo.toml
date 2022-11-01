@@ -1,6 +1,6 @@
 [package]
 name = 'pallet-price-oracle'
-version = '0.3.1'
+version = '0.3.2'
 description = 'Price oracle for AMM pools'
 authors = ['GalacticCouncil']
 edition = '2021'

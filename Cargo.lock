@@ -2756,6 +2756,18 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "hydra-dx-math"
+version = "4.7.0"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=9a18513bb48ece2a3b61b43c6eb83a70086f4f8a#9a18513bb48ece2a3b61b43c6eb83a70086f4f8a"
+dependencies = [
+ "fixed",
+ "num-traits",
+ "parity-scale-codec",
+ "primitive-types 0.12.0",
+ "sp-arithmetic",
+]
+
+[[package]]
+name = "hydra-dx-math"
 version = "4.8.0"
 source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=7d2ba1e169bba6379d8eed7978633dedeb0752fc#7d2ba1e169bba6379d8eed7978633dedeb0752fc"
 dependencies = [
@@ -2786,13 +2798,14 @@ dependencies = [
 
 [[package]]
 name = "hydradx-traits"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-arithmetic",
  "sp-std",
 ]
 
@@ -4517,6 +4530,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-currencies"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.28#20969f385bf77e41386e8d8aa9626b003a306204"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "orml-utilities",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.28#20969f385bf77e41386e8d8aa9626b003a306204"
@@ -4608,6 +4638,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "substrate-wasm-builder",
+ "test-utils",
  "xcm",
 ]
 
@@ -4920,6 +4951,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-utils",
 ]
 
 [[package]]
@@ -4992,6 +5024,31 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-liquidity-mining"
+version = "1.0.0"
+dependencies = [
+ "fixed",
+ "frame-support",
+ "frame-system",
+ "hydra-dx-math 4.7.0",
+ "hydradx-traits",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "pretty_assertions",
+ "proptest",
+ "rand 0.8.5",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
@@ -5146,6 +5203,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-std",
+ "test-utils",
 ]
 
 [[package]]
@@ -5198,6 +5256,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-utils",
 ]
 
 [[package]]
@@ -5244,7 +5303,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hydra-dx-math",
+ "hydra-dx-math 4.8.0",
  "hydradx-traits",
  "orml-tokens",
  "orml-traits",
@@ -5345,6 +5404,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-utils",
 ]
 
 [[package]]
@@ -9981,6 +10041,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bab24d30b911b2376f3a13cc2cd443142f0c81dda04c118693e35b3835757755"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "test-utils"
+version = "1.0.0"
+dependencies = [
+ "frame-system",
+ "pretty_assertions",
 ]
 
 [[package]]

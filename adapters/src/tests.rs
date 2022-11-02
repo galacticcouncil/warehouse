@@ -164,13 +164,6 @@ impl DepositFee<AccountId, AssetId, Balance> for ExpectDeposit {
             "Unexpected combination of receiver and fee {:?} deposited that was not expected.",
             (*who, asset, amount)
         );
-        EXPECTED_DEPOSITS.with(|remaining| {
-            assert!(
-                remaining.borrow().is_empty(),
-                "There should be no expected fees remaining. Remaining: {:?}",
-                remaining
-            );
-        });
         Ok(())
     }
 }
@@ -388,4 +381,19 @@ fn revenue_goes_to_fee_receiver() {
     ExpectDeposit::register_expected_fee(42, CORE_ASSET_ID, 1234);
 
     Revenue::take_revenue((core_id, 1234).into());
+
+    assert_that_fee_is_deposited!();
+}
+
+#[macro_export]
+macro_rules! assert_that_fee_is_deposited {
+    () => {
+        EXPECTED_DEPOSITS.with(|remaining| {
+            assert!(
+                remaining.borrow().is_empty(),
+                "There should be no expected fees remaining. Remaining: {:?}",
+                remaining
+            );
+        });
+    };
 }

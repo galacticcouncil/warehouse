@@ -1,0 +1,57 @@
+[package]
+name = "pallet-liquidity-mining"
+version = "1.0.0"
+description = "Liquidity mining"
+authors = ["GalacticCouncil"]
+edition = "2021"
+homepage = "https://github.com/galacticcouncil/warehouse"
+license = "Apache 2.0"
+repository = "https://github.com/galacticcouncil/warehouse"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.1.5", features = ["derive", "max-encoded-len"], default-features = false }
+scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
+
+# ORML dependencies
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.28", default-features = false }
+
+# HydraDX dependencies
+hydradx-traits = { path = "../traits", version="0.8.2", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev="9a18513bb48ece2a3b61b43c6eb83a70086f4f8a", default-features = false }
+
+# Substrate dependencies
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
+
+[dev-dependencies]
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.28" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.28" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
+# This can be updated to lates after rust update(>=1.61)
+fixed = { version = "=1.15.0", default-features = false }
+proptest = "1.0.0"
+pretty_assertions = "1.2.1"
+rand = "0.8.5"
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "frame-support/std",
+    "frame-system/std",
+    "sp-std/std",
+    "orml-traits/std",
+    "hydradx-traits/std",
+    "sp-arithmetic/std",
+    "sp-runtime/std",
+    "scale-info/std",
+    "hydra-dx-math/std",
+]

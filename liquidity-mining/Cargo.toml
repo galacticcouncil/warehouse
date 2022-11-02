@@ -55,3 +55,4 @@ std = [
     "scale-info/std",
     "hydra-dx-math/std",
 ]
+try-runtime = ["frame-support/try-runtime"]

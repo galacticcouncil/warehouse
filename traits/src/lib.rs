@@ -127,6 +127,13 @@ pub trait AMM<AccountId, AssetId, AssetPair, Amount: Zero> {
     fn get_max_out_ratio() -> u128;
 
     fn get_fee(pool_account_id: &AccountId) -> (u32, u32);
+
+    /// This function calculates amount of assets behind the `share_token`s.
+    fn get_liquidity_behind_shares(
+        asset_a: AssetId,
+        asset_b: AssetId,
+        shares_amount: Amount,
+    ) -> Result<(u128, u128), dispatch::DispatchError>;
 }
 
 pub trait Resolver<AccountId, Intention, E> {

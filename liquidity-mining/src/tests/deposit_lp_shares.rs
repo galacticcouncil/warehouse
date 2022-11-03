@@ -39,7 +39,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN1_AMM,
                     deposited_amount,
-                    |_, _| { Ok(50_u128) }
+                    |_, _| { Ok(2_500_u128) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[0]
@@ -91,7 +91,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN1_AMM,
                     deposited_amount,
-                    |_, _| { Ok(52_u128) }
+                    |_, _| { Ok(4_160_u128) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[1]
@@ -153,7 +153,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN2_AMM,
                     deposited_amount,
-                    |_, _| { Ok(8_u128) }
+                    |_, _| { Ok(200_u128) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[2]
@@ -219,7 +219,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN2_AMM,
                     deposited_amount,
-                    |_, _| { Ok(58_u128) }
+                    |_, _| { Ok(46_400_u128) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[3]
@@ -288,7 +288,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN2_AMM,
                     deposited_amount,
-                    |_, _| { Ok(3_u128) }
+                    |_, _| { Ok(261_u128) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[4]
@@ -356,7 +356,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN2_AMM,
                     deposited_amount,
-                    |_, _| { Ok(16_u128) }
+                    |_, _| { Ok(768_u128) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[5]
@@ -423,7 +423,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN1_AMM,
                     deposited_amount,
-                    |_, _| { Ok(80_u128) }
+                    |_, _| { Ok(38_880_u128) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[6]
@@ -502,7 +502,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     ACA_KSM_AMM,
                     deposited_amount,
-                    |_, _| { Ok(16_u128) }
+                    |_, _| { Ok(16_000_000_u128) }
                 )
                 .unwrap(),
                 deposit_id

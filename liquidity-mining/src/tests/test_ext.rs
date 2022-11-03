@@ -245,7 +245,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 BSX_TKN1_AMM,
                 deposited_amount,
-                |_, _| { Ok(50_u128) },
+                |_, _| { Ok(2_500_u128) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).is_some());
@@ -258,7 +258,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                     GC_BSX_TKN1_YIELD_FARM_ID,
                     BSX_TKN1_AMM,
                     deposited_amount,
-                    |_, _| { Ok(52_u128) },
+                    |_, _| { Ok(4_160_u128) },
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[1]
@@ -273,7 +273,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 GC_BSX_TKN2_YIELD_FARM_ID,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _| { Ok(8_u128) },
+                |_, _| { Ok(200_u128) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]).is_some());
@@ -287,7 +287,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 GC_BSX_TKN2_YIELD_FARM_ID,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _| { Ok(58_u128) },
+                |_, _| { Ok(46_400_u128) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[3]).is_some());
@@ -301,7 +301,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 GC_BSX_TKN2_YIELD_FARM_ID,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _| { Ok(3_u128) },
+                |_, _| { Ok(261_u128) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[4]).is_some());
@@ -315,7 +315,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 GC_BSX_TKN2_YIELD_FARM_ID,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _| { Ok(16_u128) },
+                |_, _| { Ok(768_u128) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[5]).is_some());
@@ -329,7 +329,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 BSX_TKN1_AMM,
                 deposited_amount,
-                |_, _| { Ok(80_u128) },
+                |_, _| { Ok(38_880_u128) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[6]).is_some());

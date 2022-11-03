@@ -102,7 +102,7 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         yield_farm_id: YieldFarmId,
         amm_pool_id: Self::AmmPoolId,
         shares_amount: Self::Balance,
-        get_balance_in_amm: fn(AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
+        get_token_value_of_lp_shares: fn(AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
     ) -> Result<DepositId, Self::Error>;
 
     /// Redeposit already locked LP shares to another yield farm.
@@ -113,7 +113,7 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
-        get_balance_in_amm: fn(AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
+        get_token_value_of_lp_shares: fn(AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
     ) -> Result<Self::Balance, Self::Error>;
 
     /// Claim rewards for given deposit.

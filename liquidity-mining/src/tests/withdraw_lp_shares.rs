@@ -498,7 +498,7 @@ fn withdraw_shares_should_work() {
                 CHARLIE_ACA_KSM_YIELD_FARM_ID,
                 ACA_KSM_AMM,
                 deposited_amount,
-                |_, _| { Ok(50_u128) }
+                |_, _| { Ok(2_500_u128) }
             ));
 
             const DEPOSIT_ID: DepositId = 1;

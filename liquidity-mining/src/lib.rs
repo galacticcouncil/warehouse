@@ -838,19 +838,24 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `amm_pool_id`: identifier of the AMM pool.
     /// - `shares_amount`: amount of LP shares user want to deposit.
     /// - `amm_pool_id`: identifier of the AMM pool.
-    /// - `get_balance_in_amm`: callback function returning balance of incentivized asset in amm
-    /// pool
+    /// - `get_token_value_of_lp_shares`: callback function returning amount of
+    /// `incentivized_asset` behind `lp_shares`.
     #[require_transactional]
     fn deposit_lp_shares(
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         amm_pool_id: T::AmmPoolId,
         shares_amount: Balance,
-        get_balance_in_amm: fn(T::AssetId, T::AmmPoolId) -> Result<Balance, DispatchError>,
+        get_token_value_of_lp_shares: fn(T::AssetId, T::AmmPoolId) -> Result<Balance, DispatchError>,
     ) -> Result<DepositId, DispatchError> {
         let mut deposit = DepositData::new(shares_amount, amm_pool_id);
 
-        Self::do_deposit_lp_shares(&mut deposit, global_farm_id, yield_farm_id, get_balance_in_amm)?;
+        Self::do_deposit_lp_shares(
+            &mut deposit,
+            global_farm_id,
+            yield_farm_id,
+            get_token_value_of_lp_shares,
+        )?;
 
         //Save deposit to storage.
         let deposit_id = Self::get_next_deposit_id()?;
@@ -870,18 +875,18 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `global_farm_id`: global farm identifier.
     /// - `yield_farm_id`: yield farm identifier redepositing to.
     /// - `deposit_id`: identifier of the AMM pool.
-    /// - `get_balance_in_amm`: callback function returning balance of incentivized asset in amm
-    /// pool
+    /// - `get_token_value_of_lp_shares`: callback function returning amount of
+    /// `incentivized_asset` behind `lp_shares`.
     fn redeposit_lp_shares(
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
-        get_balance_in_amm: fn(T::AssetId, T::AmmPoolId) -> Result<Balance, DispatchError>,
+        get_token_value_of_lp_shares: fn(T::AssetId, T::AmmPoolId) -> Result<Balance, DispatchError>,
     ) -> Result<Balance, DispatchError> {
         <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
             let deposit = maybe_deposit.as_mut().ok_or(Error::<T, I>::DepositNotFound)?;
 
-            Self::do_deposit_lp_shares(deposit, global_farm_id, yield_farm_id, get_balance_in_amm)?;
+            Self::do_deposit_lp_shares(deposit, global_farm_id, yield_farm_id, get_token_value_of_lp_shares)?;
 
             Ok(deposit.shares)
         })
@@ -1105,7 +1110,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         deposit: &mut DepositData<T, I>,
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
-        get_balance_in_amm: fn(T::AssetId, T::AmmPoolId) -> Result<Balance, DispatchError>,
+        get_token_value_of_lp_shares: fn(T::AssetId, T::AmmPoolId) -> Result<Balance, DispatchError>,
     ) -> Result<(), DispatchError> {
         //LP shares can be locked only once in the same yield farm.
         ensure!(
@@ -1136,12 +1141,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                     Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
 
-                    let valued_shares = Self::get_valued_shares(
-                        deposit.shares,
-                        deposit.amm_pool_id.clone(),
-                        global_farm.incentivized_asset,
-                        get_balance_in_amm,
-                    )?;
+                    let valued_shares =
+                        get_token_value_of_lp_shares(global_farm.incentivized_asset, deposit.amm_pool_id.clone())?;
 
                     let deposit_stake_in_global_farm =
                         math::calculate_global_farm_shares(valued_shares, yield_farm.multiplier)
@@ -1440,20 +1441,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         Ok(())
     }
 
-    /// This function calculate account's valued shares[`Balance`] or error.
-    fn get_valued_shares(
-        shares: Balance,
-        amm: T::AmmPoolId,
-        incentivized_asset: T::AssetId,
-        get_balance_in_amm: fn(T::AssetId, T::AmmPoolId) -> Result<Balance, DispatchError>,
-    ) -> Result<Balance, DispatchError> {
-        let incentivized_asset_balance = get_balance_in_amm(incentivized_asset, amm)?;
-
-        shares
-            .checked_mul(incentivized_asset_balance)
-            .ok_or_else(|| ArithmeticError::Overflow.into())
-    }
-
     /// This function update both (global and yield) farms if conditions are met.
     #[require_transactional]
     fn maybe_update_farms(
@@ -1648,14 +1635,14 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         yield_farm_id: YieldFarmId,
         amm_pool_id: Self::AmmPoolId,
         shares_amount: Self::Balance,
-        get_balance_in_amm: fn(T::AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
+        get_token_value_of_lp_shares: fn(T::AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
     ) -> Result<DepositId, Self::Error> {
         Self::deposit_lp_shares(
             global_farm_id,
             yield_farm_id,
             amm_pool_id,
             shares_amount,
-            get_balance_in_amm,
+            get_token_value_of_lp_shares,
         )
     }
 
@@ -1663,9 +1650,9 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
-        get_balance_in_amm: fn(T::AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
+        get_token_value_of_lp_shares: fn(T::AssetId, Self::AmmPoolId) -> Result<Self::Balance, Self::Error>,
     ) -> Result<Self::Balance, Self::Error> {
-        Self::redeposit_lp_shares(global_farm_id, yield_farm_id, deposit_id, get_balance_in_amm)
+        Self::redeposit_lp_shares(global_farm_id, yield_farm_id, deposit_id, get_token_value_of_lp_shares)
     }
 
     fn claim_rewards(

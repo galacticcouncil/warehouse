@@ -76,7 +76,7 @@ fn non_full_farm_running_longer_than_expected() {
                 YIELD_FARM_A,
                 BSX_TKN1_AMM,
                 5_000 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(5_000 * ONE) }
             ));
 
             set_block_number(140);
@@ -86,7 +86,7 @@ fn non_full_farm_running_longer_than_expected() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 2_500 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(2_500 * ONE) }
             ));
 
             //charlie
@@ -95,7 +95,7 @@ fn non_full_farm_running_longer_than_expected() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 2_500 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(2_500 * ONE) }
             ));
 
             set_block_number(401);
@@ -213,7 +213,7 @@ fn non_full_farm_distribute_everything_and_update_farms() {
                 YIELD_FARM_A,
                 BSX_TKN1_AMM,
                 5_000 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(5_000 * ONE) }
             ));
 
             set_block_number(140);
@@ -223,7 +223,7 @@ fn non_full_farm_distribute_everything_and_update_farms() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 2_500 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(2_500 * ONE) }
             ));
 
             //charlie
@@ -232,7 +232,7 @@ fn non_full_farm_distribute_everything_and_update_farms() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 2_500 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(2_500 * ONE) }
             ));
 
             set_block_number(401);
@@ -339,7 +339,7 @@ fn overcrowded_farm_running_longer_than_expected() {
                 YIELD_FARM_A,
                 BSX_TKN1_AMM,
                 10_000 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(10_000 * ONE) }
             ));
 
             //bob
@@ -348,7 +348,7 @@ fn overcrowded_farm_running_longer_than_expected() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 5_000 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(5_000 * ONE) }
             ));
 
             //charlie
@@ -357,7 +357,7 @@ fn overcrowded_farm_running_longer_than_expected() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 5_000 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(5_000 * ONE) }
             ));
 
             let mut block_number = 131;
@@ -508,7 +508,7 @@ fn full_farm_running_planned_time() {
                 YIELD_FARM_A,
                 BSX_TKN1_AMM,
                 5_000 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(5_000 * ONE) }
             ));
 
             //bob
@@ -517,7 +517,7 @@ fn full_farm_running_planned_time() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 5_000 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(5_000 * ONE) }
             ));
 
             //charlie
@@ -526,7 +526,7 @@ fn full_farm_running_planned_time() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 5_000 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(5_000 * ONE) }
             ));
 
             let alice_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
@@ -677,7 +677,7 @@ fn yield_farm_should_claim_expected_amount() {
                 YIELD_FARM_A,
                 BSX_TKN1_AMM,
                 10_000 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(10_000 * ONE) }
             ));
 
             set_block_number(1_500);
@@ -698,7 +698,7 @@ fn yield_farm_should_claim_expected_amount() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 10_000 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(10_000 * ONE) }
             ));
 
             set_block_number(2_500);
@@ -708,7 +708,7 @@ fn yield_farm_should_claim_expected_amount() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 10_000 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(10_000 * ONE) }
             ));
 
             let pot = LiquidityMining2::pot_account_id().unwrap();

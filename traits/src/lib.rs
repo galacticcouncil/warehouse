@@ -186,3 +186,15 @@ pub trait LockedBalance<AssetId, AccountId, Balance> {
 pub trait NativePriceOracle<AssetId, Price> {
     fn price(currency: AssetId) -> Option<Price>;
 }
+
+/// Implementers of this trait provides information about user's position in the AMM pool.
+pub trait AMMPosition<AssetId, Balance> {
+    type Error;
+
+    /// This function calculates amount of assets behind the `share_token`s.
+    fn get_liquidity_behind_shares(
+        asset_a: AssetId,
+        asset_b: AssetId,
+        shares_amount: Balance,
+    ) -> Result<(Balance, Balance), Self::Error>;
+}

@@ -127,13 +127,6 @@ pub trait AMM<AccountId, AssetId, AssetPair, Amount: Zero> {
     fn get_max_out_ratio() -> u128;
 
     fn get_fee(pool_account_id: &AccountId) -> (u32, u32);
-
-    /// This function calculates amount of assets behind the `share_token`s.
-    fn get_liquidity_behind_shares(
-        asset_a: AssetId,
-        asset_b: AssetId,
-        shares_amount: Amount,
-    ) -> Result<(u128, u128), dispatch::DispatchError>;
 }
 
 pub trait Resolver<AccountId, Intention, E> {
@@ -192,4 +185,16 @@ pub trait LockedBalance<AssetId, AccountId, Balance> {
 /// Should return `None` if no price is available.
 pub trait NativePriceOracle<AssetId, Price> {
     fn price(currency: AssetId) -> Option<Price>;
+}
+
+/// Implementers of this trait provides information about user's position in the AMM pool.
+pub trait AMMPosition<AssetId, Balance> {
+    type Error;
+
+    /// This function calculates amount of assets behind the `share_token`s.
+    fn get_liquidity_behind_shares(
+        asset_a: AssetId,
+        asset_b: AssetId,
+        shares_amount: Balance,
+    ) -> Result<(Balance, Balance), Self::Error>;
 }

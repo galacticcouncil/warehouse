@@ -269,14 +269,6 @@ impl AMM<AccountId, AssetId, AssetPair, Balance> for Amm {
             None => BSX,
         })
     }
-
-    fn get_liquidity_behind_shares(
-        _asset_a: AssetId,
-        _asset_b: AssetId,
-        _shares_amount: Balance,
-    ) -> Result<(u128, u128), frame_support::dispatch::DispatchError> {
-        Err(sp_runtime::DispatchError::Other("NotImplemented"))
-    }
 }
 
 pub fn asset_pair_to_map_key(assets: AssetPair) -> String {

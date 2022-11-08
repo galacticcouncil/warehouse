@@ -428,8 +428,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn do_destroy_collection(owner: T::AccountId, collection_id: T::NftCollectionId) -> DispatchResult {
-        let witness = pallet_uniques::Pallet::<T>::get_destroy_witness(&collection_id.into())
-            .ok_or(Error::<T>::CollectionUnknown)?;
+        let witness = Self::get_destroy_witness(&collection_id).ok_or(Error::<T>::CollectionUnknown)?;
 
         // witness struct is empty because we don't allow destroying a collection with existing items
         ensure!(witness.items == 0u32, Error::<T>::TokenCollectionNotEmpty);

@@ -514,6 +514,8 @@ fn nonfungible_traits_work() {
                 attributes: 0
             }
         );
+
+        // collection is not empty
         assert_noop!(
             <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
                 COLLECTION_ID_0,
@@ -533,9 +535,20 @@ fn nonfungible_traits_work() {
             Origin::signed(ALICE),
             COLLECTION_ID_2,
             Default::default(),
-            metadata,
+            metadata.clone(),
         ));
 
+        // not owner
+        assert_noop!(
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
+                COLLECTION_ID_2,
+                empty_witness,
+                Some(BOB)
+            ),
+            pallet_uniques::Error::<Test>::NoPermission
+        );
+
+        // with owner check
         assert_ok!(
             <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
                 COLLECTION_ID_2,
@@ -543,6 +556,33 @@ fn nonfungible_traits_work() {
                 Some(ALICE)
             ),
             empty_witness
+        );
+
+        assert_ok!(NFTPallet::create_collection(
+            Origin::signed(ALICE),
+            COLLECTION_ID_2,
+            Default::default(),
+            metadata,
+        ));
+
+        // no owner check
+        assert_ok!(
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
+                COLLECTION_ID_2,
+                empty_witness,
+                None
+            ),
+            empty_witness
+        );
+
+        // collection does not exist
+        assert_noop!(
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
+                COLLECTION_ID_2,
+                empty_witness,
+                Some(ALICE)
+            ),
+            Error::<Test>::CollectionUnknown
         );
 
         // `Mutate` trait
@@ -562,12 +602,49 @@ fn nonfungible_traits_work() {
             )
         );
 
+        // not owner
+        assert_noop!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+                &COLLECTION_ID_0,
+                &ITEM_ID_0,
+                Some(&ALICE)
+            ),
+            Error::<Test>::NotPermitted
+        );
+
+        // no owner check
         assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
             &COLLECTION_ID_0,
             &ITEM_ID_1,
             None
         ));
         assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_1));
+
+        assert_ok!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
+                &COLLECTION_ID_0,
+                &ITEM_ID_1,
+                &BOB
+            )
+        );
+
+        // with owner check
+        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+            &COLLECTION_ID_0,
+            &ITEM_ID_1,
+            Some(&BOB)
+        ));
+        assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_1));
+
+        // item does not exist
+        assert_noop!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+                &COLLECTION_ID_0,
+                &ITEM_ID_1,
+                Some(&ALICE)
+            ),
+            pallet_uniques::Error::<Test>::UnknownCollection
+        );
 
         // `Transfer` trait
         assert_ok!(

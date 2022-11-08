@@ -427,18 +427,22 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    fn do_destroy_collection(owner: T::AccountId, collection_id: T::NftCollectionId) -> DispatchResult {
+    fn do_destroy_collection(
+        owner: T::AccountId,
+        collection_id: T::NftCollectionId,
+    ) -> Result<DestroyWitness, DispatchError> {
         let witness = pallet_uniques::Pallet::<T>::get_destroy_witness(&collection_id.into())
             .ok_or(Error::<T>::CollectionUnknown)?;
 
         // witness struct is empty because we don't allow destroying a collection with existing items
         ensure!(witness.items == 0u32, Error::<T>::TokenCollectionNotEmpty);
 
-        pallet_uniques::Pallet::<T>::do_destroy_collection(collection_id.into(), witness, Some(owner.clone()))?;
+        let witness =
+            pallet_uniques::Pallet::<T>::do_destroy_collection(collection_id.into(), witness, Some(owner.clone()))?;
         Collections::<T>::remove(collection_id);
 
         Self::deposit_event(Event::CollectionDestroyed { owner, collection_id });
-        Ok(())
+        Ok(witness)
     }
 }
 
@@ -518,14 +522,7 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
     ) -> Result<Self::DestroyWitness, DispatchError> {
         let owner = Self::collection_owner(collection).ok_or(Error::<T>::CollectionUnknown)?;
 
-        Self::do_destroy_collection(owner, collection)?;
-
-        // We can return empty struct here because we don't allow destroying a collection with existing items
-        Ok(DestroyWitness {
-            items: 0,
-            item_metadatas: 0,
-            attributes: 0,
-        })
+        Self::do_destroy_collection(owner, collection)
     }
 }
 

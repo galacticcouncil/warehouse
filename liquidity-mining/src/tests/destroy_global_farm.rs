@@ -68,7 +68,7 @@ fn destroy_global_farm_should_work() {
                 yield_farm_id,
                 ACA_KSM_AMM,
                 1_000,
-                |_, _| { Ok(10_u128) },
+                |_, _, _| { Ok(10_u128) },
             ));
 
             //Stop farming.

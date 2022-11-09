@@ -87,7 +87,7 @@ pub mod pallet {
         fn on_initialize(_n: T::BlockNumber) -> Weight {
             let native_asset = T::NativeAssetId::get();
 
-            let mut weight: Weight = 0;
+            let mut weight: u64 = 0;
 
             for (asset_id, fallback_price) in <AcceptedCurrencies<T>>::iter() {
                 let maybe_price = T::SpotPriceProvider::spot_price(native_asset, asset_id);
@@ -96,10 +96,10 @@ pub mod pallet {
 
                 AcceptedCurrencyPrice::<T>::insert(asset_id, price);
 
-                weight += T::WeightInfo::get_spot_price();
+                weight += T::WeightInfo::get_spot_price().ref_time();
             }
 
-            weight
+            Weight::from_ref_time(weight)
         }
 
         fn on_finalize(_n: T::BlockNumber) {

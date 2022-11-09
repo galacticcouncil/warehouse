@@ -283,7 +283,7 @@ fn claim_rewards_should_work() {
                 CHARLIE_ACA_KSM_YIELD_FARM_ID,
                 ACA_KSM_AMM,
                 deposited_amount,
-                |_, _| { Ok(50_u128) }
+                |_, _, _| { Ok(2_500_u128) }
             ));
 
             pretty_assertions::assert_eq!(
@@ -333,7 +333,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 EVE_FARM,
                 EVE_BSX_TKN1_YIELD_FARM_ID,
                 PREDEFINED_DEPOSIT_IDS[0],
-                |_, _| { Ok(80_u128) }
+                |_, _, _| { Ok(4_000_u128) }
             ));
 
             set_block_number(800_000);
@@ -341,7 +341,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 DAVE_FARM,
                 DAVE_BSX_TKN1_YIELD_FARM_ID,
                 PREDEFINED_DEPOSIT_IDS[0],
-                |_, _| { Ok(100_u128) }
+                |_, _, _| { Ok(5_000_u128) }
             ));
 
             let deposit = LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap();
@@ -791,7 +791,7 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 YIELD_FARM_A,
                 BSX_TKN1_AMM,
                 100 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(1_u128) }
             ));
 
             set_block_number(1_500);
@@ -812,7 +812,7 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 100 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(1_u128) }
             ));
 
             //charlie
@@ -821,7 +821,7 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
                 100 * ONE,
-                |_, _| { Ok(1_u128) }
+                |_, _, _| { Ok(1_u128) }
             ));
 
             let bob_bsx_balance_0 = Tokens::free_balance(BSX, &BOB);

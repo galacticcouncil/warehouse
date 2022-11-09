@@ -2173,7 +2173,7 @@ fn get_global_farm_id_should_work() {
                 EVE_FARM,
                 EVE_BSX_TKN1_YIELD_FARM_ID,
                 PREDEFINED_DEPOSIT_IDS[0],
-                |_, _| { Ok(10_u128) }
+                |_, _, _| { Ok(10_u128) }
             ));
 
             pretty_assertions::assert_eq!(

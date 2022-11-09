@@ -57,16 +57,16 @@ pub const HIGH_ED_CURRENCY: AssetId = 6000;
 pub const HIGH_ED: Balance = 5;
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
-const MAX_BLOCK_WEIGHT: Weight = 1024;
+const MAX_BLOCK_WEIGHT: Weight = Weight::from_ref_time(1024);
 
 thread_local! {
-    static EXTRINSIC_BASE_WEIGHT: RefCell<u64> = RefCell::new(0);
+    static EXTRINSIC_BASE_WEIGHT: RefCell<Weight> = RefCell::new(Weight::zero());
     static TRANSFER_FEE: RefCell<bool> = RefCell::new(true);
 }
 
 pub struct ExtrinsicBaseWeight;
-impl Get<u64> for ExtrinsicBaseWeight {
-    fn get() -> u64 {
+impl Get<Weight> for ExtrinsicBaseWeight {
+    fn get() -> Weight {
         EXTRINSIC_BASE_WEIGHT.with(|v| *v.borrow())
     }
 }
@@ -165,7 +165,7 @@ parameter_types! {
     pub const FeeReceiver: AccountId = FEE_RECEIVER;
 
     pub RuntimeBlockWeights: system::limits::BlockWeights = system::limits::BlockWeights::builder()
-        .base_block(10)
+        .base_block(Weight::from_ref_time(10))
         .for_class(DispatchClass::all(), |weights| {
             weights.base_extrinsic = ExtrinsicBaseWeight::get();
         })
@@ -317,7 +317,7 @@ impl pallet_currencies::Config for Test {
 }
 
 pub struct ExtBuilder {
-    base_weight: u64,
+    base_weight: Weight,
     native_balances: Vec<(AccountId, Balance)>,
     endowed_accounts: Vec<(AccountId, AssetId, Balance)>,
     account_currencies: Vec<(AccountId, AssetId)>,
@@ -326,7 +326,7 @@ pub struct ExtBuilder {
 impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
-            base_weight: 0,
+            base_weight: Weight::zero(),
             native_balances: vec![(ALICE, INITIAL_BALANCE)],
             endowed_accounts: vec![
                 (ALICE, HDX, INITIAL_BALANCE),
@@ -341,7 +341,7 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
     pub fn base_weight(mut self, base_weight: u64) -> Self {
-        self.base_weight = base_weight;
+        self.base_weight = Weight::from_ref_time(base_weight);
         self
     }
     pub fn account_native_balance(mut self, account: AccountId, balance: Balance) -> Self {

@@ -416,7 +416,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 BSX_TKN1_AMM,
                 1_000,
-                |_, _| { Ok(10_u128) }
+                |_, _, _| { Ok(10_u128) }
             ));
 
             //stop and destroy

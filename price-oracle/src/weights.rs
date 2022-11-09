@@ -62,31 +62,31 @@ pub trait WeightInfo {
 pub struct HydraWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for HydraWeight<T> {
     fn on_finalize_no_entry() -> Weight {
-        0
+        Weight::zero()
     }
     fn on_finalize_one_token() -> Weight {
-        0
+        Weight::zero()
     }
-    fn on_finalize_multiple_tokens_all_bucket_levels(a: u32) -> Weight {
-        (a * 0).into()
+    fn on_finalize_multiple_tokens_all_bucket_levels(_a: u32) -> Weight {
+        Weight::zero()
     }
-    fn on_finalize_multiple_tokens(b: u32) -> Weight {
-        (b * 0).into()
+    fn on_finalize_multiple_tokens(_b: u32) -> Weight {
+        Weight::zero()
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn on_finalize_no_entry() -> Weight {
-        0
+        Weight::zero()
     }
     fn on_finalize_one_token() -> Weight {
-        0
+        Weight::zero()
     }
-    fn on_finalize_multiple_tokens_all_bucket_levels(a: u32) -> Weight {
-        (a * 0).into()
+    fn on_finalize_multiple_tokens_all_bucket_levels(_a: u32) -> Weight {
+        Weight::zero()
     }
-    fn on_finalize_multiple_tokens(b: u32) -> Weight {
-        (b * 0).into()
+    fn on_finalize_multiple_tokens(_b: u32) -> Weight {
+        Weight::zero()
     }
 }

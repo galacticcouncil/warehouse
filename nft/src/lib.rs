@@ -60,7 +60,7 @@ pub use pallet::*;
 pub mod pallet {
 
     use super::*;
-    use frame_support::{pallet_prelude::*, traits::EnsureOrigin};
+    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -74,7 +74,6 @@ pub mod pallet {
     pub trait Config: frame_system::Config + pallet_uniques::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type WeightInfo: WeightInfo;
-        type ProtocolOrigin: EnsureOrigin<Self::Origin>;
         type NftCollectionId: Member
             + Parameter
             + Default
@@ -167,8 +166,6 @@ pub mod pallet {
         }
 
         /// Transfers NFT from account A to account B
-        /// Only the ProtocolOrigin can send NFT to another account
-        /// This is to prevent creating deposit burden for others
         ///
         /// Parameters:
         /// - `collection_id`: The collection of the asset to be transferred.

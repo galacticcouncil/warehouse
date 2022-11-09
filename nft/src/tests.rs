@@ -637,7 +637,7 @@ fn nonfungible_traits_work() {
                 &ITEM_ID_1,
                 Some(&ALICE)
             ),
-            pallet_uniques::Error::<Test>::UnknownCollection
+            Error::<Test>::ItemUnknown
         );
 
         // `Transfer` trait

@@ -511,7 +511,7 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
         let owner = if let Some(check_owner) = maybe_check_owner {
             check_owner
         } else {
-            Self::collection_owner(collection).ok_or(Error::<T>::CollectionUnknown)?
+            Self::collection_owner(&collection).ok_or(Error::<T>::CollectionUnknown)?
         };
 
         Self::do_destroy_collection(owner, collection)?;

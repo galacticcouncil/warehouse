@@ -60,7 +60,7 @@ pub use pallet::*;
 pub mod pallet {
 
     use super::*;
-    use frame_support::{pallet_prelude::*, traits::EnsureOrigin};
+    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -74,7 +74,6 @@ pub mod pallet {
     pub trait Config: frame_system::Config + pallet_uniques::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type WeightInfo: WeightInfo;
-        type ProtocolOrigin: EnsureOrigin<Self::Origin>;
         type NftCollectionId: Member
             + Parameter
             + Default
@@ -167,8 +166,6 @@ pub mod pallet {
         }
 
         /// Transfers NFT from account A to account B
-        /// Only the ProtocolOrigin can send NFT to another account
-        /// This is to prevent creating deposit burden for others
         ///
         /// Parameters:
         /// - `collection_id`: The collection of the asset to be transferred.
@@ -296,14 +293,6 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    pub fn collection_owner(collection_id: T::NftCollectionId) -> Option<T::AccountId> {
-        pallet_uniques::Pallet::<T>::collection_owner(collection_id.into())
-    }
-
-    pub fn owner(collection_id: T::NftCollectionId, item_id: T::NftItemId) -> Option<T::AccountId> {
-        pallet_uniques::Pallet::<T>::owner(collection_id.into(), item_id.into())
-    }
-
     fn do_create_collection(
         owner: T::AccountId,
         collection_id: T::NftCollectionId,
@@ -377,6 +366,10 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    /// Transfer NFT from account `from` to `to`.
+    /// Fails if `from` is not the NFT owner.
+    ///
+    /// Is a no-op if `from` is the same as `to`.
     fn do_transfer(
         collection_id: T::NftCollectionId,
         item_id: T::NftItemId,
@@ -387,13 +380,14 @@ impl<T: Config> Pallet<T> {
             return Ok(());
         }
 
+        let owner = Self::owner(&collection_id, &item_id).ok_or(Error::<T>::ItemUnknown)?;
+        ensure!(owner == from, Error::<T>::NotPermitted);
+
         pallet_uniques::Pallet::<T>::do_transfer(
             collection_id.into(),
             item_id.into(),
             to.clone(),
             |_collection_details, _item_details| {
-                let owner = Self::owner(collection_id, item_id).ok_or(Error::<T>::ItemUnknown)?;
-                ensure!(owner == from, Error::<T>::NotPermitted);
                 Self::deposit_event(Event::ItemTransferred {
                     from,
                     to,
@@ -406,14 +400,13 @@ impl<T: Config> Pallet<T> {
     }
 
     fn do_burn(owner: T::AccountId, collection_id: T::NftCollectionId, item_id: T::NftItemId) -> DispatchResult {
+        let item_owner = Self::owner(&collection_id, &item_id).ok_or(Error::<T>::ItemUnknown)?;
+        ensure!(owner == item_owner, Error::<T>::NotPermitted);
+
         pallet_uniques::Pallet::<T>::do_burn(
             collection_id.into(),
             item_id.into(),
-            |_collection_details, _item_details| {
-                let iowner = Self::owner(collection_id, item_id).ok_or(Error::<T>::ItemUnknown)?;
-                ensure!(owner == iowner, Error::<T>::NotPermitted);
-                Ok(())
-            },
+            |_collection_details, _item_details| Ok(()),
         )?;
 
         Items::<T>::remove(collection_id, item_id);
@@ -428,8 +421,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn do_destroy_collection(owner: T::AccountId, collection_id: T::NftCollectionId) -> DispatchResult {
-        let witness = pallet_uniques::Pallet::<T>::get_destroy_witness(&collection_id.into())
-            .ok_or(Error::<T>::CollectionUnknown)?;
+        let witness = Self::get_destroy_witness(&collection_id).ok_or(Error::<T>::CollectionUnknown)?;
 
         // witness struct is empty because we don't allow destroying a collection with existing items
         ensure!(witness.items == 0u32, Error::<T>::TokenCollectionNotEmpty);
@@ -447,11 +439,11 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
     type CollectionId = T::NftCollectionId;
 
     fn owner(collection: &Self::CollectionId, item: &Self::ItemId) -> Option<T::AccountId> {
-        Self::owner(*collection, *item)
+        pallet_uniques::Pallet::<T>::owner((*collection).into(), (*item).into())
     }
 
     fn collection_owner(collection: &Self::CollectionId) -> Option<T::AccountId> {
-        Self::collection_owner(*collection)
+        pallet_uniques::Pallet::<T>::collection_owner((*collection).into())
     }
 
     fn can_transfer(collection: &Self::CollectionId, _item: &Self::ItemId) -> bool {
@@ -548,7 +540,7 @@ impl<T: Config> Mutate<T::AccountId> for Pallet<T> {
         let owner = if let Some(check_owner) = maybe_check_owner {
             check_owner.clone()
         } else {
-            Self::owner(*collection, *item).ok_or(Error::<T>::ItemUnknown)?
+            Self::owner(collection, item).ok_or(Error::<T>::ItemUnknown)?
         };
 
         Self::do_burn(owner, *collection, *item)?;
@@ -559,7 +551,7 @@ impl<T: Config> Mutate<T::AccountId> for Pallet<T> {
 
 impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
     fn transfer(collection: &Self::CollectionId, item: &Self::ItemId, destination: &T::AccountId) -> DispatchResult {
-        let owner = Self::owner(*collection, *item).ok_or(Error::<T>::ItemUnknown)?;
+        let owner = Self::owner(collection, item).ok_or(Error::<T>::ItemUnknown)?;
 
         Self::do_transfer(*collection, *item, owner, destination.clone())
     }

@@ -206,7 +206,7 @@ fn transfer_works() {
             ITEM_ID_0,
             ALICE
         ));
-        assert_eq!(NFTPallet::owner(COLLECTION_ID_0, ITEM_ID_0).unwrap(), ALICE);
+        assert_eq!(NFTPallet::owner(&COLLECTION_ID_0, &ITEM_ID_0).unwrap(), ALICE);
 
         assert_ok!(NFTPallet::transfer(
             Origin::signed(ALICE),
@@ -214,7 +214,7 @@ fn transfer_works() {
             ITEM_ID_0,
             BOB
         ));
-        assert_eq!(NFTPallet::owner(COLLECTION_ID_0, ITEM_ID_0).unwrap(), BOB);
+        assert_eq!(NFTPallet::owner(&COLLECTION_ID_0, &ITEM_ID_0).unwrap(), BOB);
 
         expect_events(vec![crate::Event::ItemTransferred {
             from: ALICE,
@@ -252,12 +252,6 @@ fn burn_works() {
         ));
         assert_ok!(NFTPallet::mint(
             Origin::signed(ALICE),
-            COLLECTION_ID_0,
-            ITEM_ID_1,
-            metadata.clone()
-        ));
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
             COLLECTION_ID_1,
             ITEM_ID_0,
             metadata
@@ -288,7 +282,7 @@ fn burn_works() {
         // not existing
         assert_noop!(
             NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0),
-            pallet_uniques::Error::<Test>::UnknownCollection
+            Error::<Test>::ItemUnknown
         );
     });
 }
@@ -654,7 +648,7 @@ fn nonfungible_traits_work() {
                 &ALICE
             )
         );
-        assert_eq!(NFTPallet::owner(COLLECTION_ID_0, ITEM_ID_0), Some(ALICE));
+        assert_eq!(NFTPallet::owner(&COLLECTION_ID_0, &ITEM_ID_0), Some(ALICE));
     });
 }
 

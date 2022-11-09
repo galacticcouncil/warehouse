@@ -369,6 +369,10 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    /// Transfer NFT from account `from` to `to`.
+    /// Fails if `from` is not the NFT owner.
+    ///
+    /// Is a no-op if `from` is the same as `to`.
     fn do_transfer(
         collection_id: T::NftCollectionId,
         item_id: T::NftItemId,

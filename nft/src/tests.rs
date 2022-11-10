@@ -497,7 +497,7 @@ fn nonfungible_traits_work() {
             ),
             Error::<Test>::IdReserved
         );
-        
+
         assert_ok!(
             <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
                 &COLLECTION_ID_1,

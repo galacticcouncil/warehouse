@@ -234,7 +234,17 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        fn integrity_test() {
+            // Ensure that pallet_uniques::Config::ItemDeposit is zero https://github.com/galacticcouncil/warehouse/issues/90
+            assert_eq!(
+                T::ItemDeposit::get(),
+                <<T as pallet_uniques::Config>::Currency as frame_support::traits::Currency<
+                    <T as frame_system::Config>::AccountId,
+                >>::Balance::zero()
+            );
+        }
+    }
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]

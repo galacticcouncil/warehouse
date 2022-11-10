@@ -106,7 +106,7 @@ impl Config for Test {
 
 parameter_types! {
     pub const CollectionDeposit: Balance = 10_000 * BSX; // 1 UNIT deposit to create asset collection
-    pub const ItemDeposit: Balance = 100 * BSX; // 1/100 UNIT deposit to create asset item
+    pub const ItemDeposit: Balance = 0; // deposit to create asset item
     pub const KeyLimit: u32 = 32;	// Max 32 bytes per key
     pub const ValueLimit: u32 = 64;	// Max 64 bytes per value
     pub const UniquesMetadataDepositBase: Balance = 1000 * BSX;

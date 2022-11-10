@@ -487,6 +487,17 @@ fn nonfungible_traits_work() {
             ),
             pallet_uniques::Error::<Test>::InUse
         );
+
+        // reserved id
+        assert_noop!(
+            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
+                &COLLECTION_ID_RESERVED,
+                &BOB,
+                &ALICE
+            ),
+            Error::<Test>::IdReserved
+        );
+        
         assert_ok!(
             <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
                 &COLLECTION_ID_1,
@@ -617,6 +628,25 @@ fn create_typed_collection_should_work_without_deposit_when_deposit_is_not_requi
 
         assert_eq!(
             NFTPallet::collections(COLLECTION_ID_0).unwrap(),
+            CollectionInfoOf::<Test> {
+                collection_type: CollectionType::LiquidityMining,
+                metadata: Default::default()
+            }
+        )
+    });
+}
+
+#[test]
+fn create_typed_collection_should_work_with_reserved_id() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(NFTPallet::create_typed_collection(
+            ALICE,
+            COLLECTION_ID_RESERVED,
+            CollectionType::LiquidityMining
+        ));
+
+        assert_eq!(
+            NFTPallet::collections(COLLECTION_ID_RESERVED).unwrap(),
             CollectionInfoOf::<Test> {
                 collection_type: CollectionType::LiquidityMining,
                 metadata: Default::default()

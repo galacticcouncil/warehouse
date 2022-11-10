@@ -5134,7 +5134,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-nft"
-version = "4.0.2"
+version = "5.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

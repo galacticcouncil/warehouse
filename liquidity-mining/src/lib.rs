@@ -114,6 +114,7 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::ArithmeticError;
 
 use hydra_dx_math::liquidity_mining as math;
+use hydradx_traits::pools::DustRemovalAccountWhitelist;
 use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
 use sp_arithmetic::{
@@ -136,7 +137,27 @@ pub mod pallet {
     pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
     #[pallet::hooks]
-    impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {}
+    impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
+        fn integrity_test() {
+            assert!(
+                T::MaxFarmEntriesPerDeposit::get().ge(&1_u32),
+                "`T::MaxFarmEntriesPerDeposit` must be greater or eaqual to 1"
+            );
+        }
+    }
+
+    #[pallet::genesis_config]
+    #[cfg_attr(feature = "std", derive(Default))]
+    pub struct GenesisConfig {}
+
+    #[pallet::genesis_build]
+    impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig {
+        fn build(&self) {
+            let pot = <Pallet<T, I>>::pot_account_id().unwrap();
+
+            T::NonDustableWhitelistHandler::add_account(&pot).unwrap();
+        }
+    }
 
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config + TypeInfo {
@@ -175,6 +196,9 @@ pub mod pallet {
         /// storage(active, stopped, deleted).
         #[pallet::constant]
         type MaxYieldFarmsPerGlobalFarm: Get<u32>;
+
+        /// Account whitelist manager to exclude pool accounts from dusting mechanism.
+        type NonDustableWhitelistHandler: DustRemovalAccountWhitelist<Self::AccountId, Error = DispatchError>;
     }
 
     #[pallet::error]
@@ -401,6 +425,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         <GlobalFarm<T, I>>::insert(&global_farm.id, &global_farm);
 
         let global_farm_account = Self::farm_account_id(global_farm.id)?;
+
+        T::NonDustableWhitelistHandler::add_account(&global_farm_account)?;
         T::MultiCurrency::transfer(reward_currency, &global_farm.owner, &global_farm_account, total_rewards)?;
 
         Ok((farm_id, max_reward_per_period))
@@ -476,6 +502,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
             let reward_currency = global_farm.reward_currency;
             if global_farm.can_be_removed() {
+                let global_farm_account = Self::farm_account_id(farm_id)?;
+                T::NonDustableWhitelistHandler::remove_account(&global_farm_account)?;
+
                 *maybe_global_farm = None;
             }
 
@@ -548,6 +577,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                     <YieldFarm<T, I>>::insert((amm_pool_id, global_farm_id, yield_farm_id), yield_farm);
                     global_farm.increase_yield_farm_counts()?;
+
+                    let yield_farm_account = Self::farm_account_id(yield_farm_id)?;
+                    T::NonDustableWhitelistHandler::add_account(&yield_farm_account)?;
 
                     *maybe_active_yield_farm = Some(yield_farm_id);
 
@@ -815,6 +847,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     if yield_farm.can_be_removed() {
                         global_farm.decrease_total_yield_farm_count()?;
 
+                        let yield_farm_account = Self::farm_account_id(yield_farm_id)?;
+                        T::NonDustableWhitelistHandler::remove_account(&yield_farm_account)?;
+
                         *maybe_yield_farm = None;
                     }
 
@@ -1047,7 +1082,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                                 .checked_sub(farm_entry.valued_shares)
                                 .ok_or(ArithmeticError::Underflow)?;
 
-                            // yield farm's stake in global pool is set to `0` when farm is
+                            // yield farm's stake in global farm is set to `0` when farm is
                             // stopped and yield farm have to be stopped before it's deleted so
                             // this update is only required for active farms.
                             if yield_farm.state.is_active() {
@@ -1077,6 +1112,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             if yield_farm.can_be_removed() {
                                 global_farm.decrease_total_yield_farm_count()?;
 
+                                let yield_farm_account = Self::farm_account_id(yield_farm.id)?;
+                                T::NonDustableWhitelistHandler::remove_account(&yield_farm_account)?;
+
                                 *maybe_yield_farm = None;
                             }
 
@@ -1085,6 +1123,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     )?;
 
                     if global_farm.can_be_removed() {
+                        let global_farm_account = Self::farm_account_id(global_farm.id)?;
+                        T::NonDustableWhitelistHandler::remove_account(&global_farm_account)?;
+
                         *maybe_global_farm = None;
                     }
 

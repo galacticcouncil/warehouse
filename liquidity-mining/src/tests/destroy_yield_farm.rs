@@ -66,6 +66,10 @@ fn destroy_yield_farm_with_deposits_should_work() {
                 global_farm_bsx_balance.checked_add(yield_farm_bsx_balance).unwrap()
             );
 
+            //NOTE: Farm's account should stay in non-dustable until farm is removed from storage.
+            //Non-dustable check
+            pretty_assertions::assert_eq!(Whitelist::contains(&yield_farm_account), true);
+
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
@@ -76,9 +80,9 @@ fn destroy_yield_farm_without_deposits_should_work() {
     predefined_test_ext().execute_with(|| {
         let _ = with_transaction(|| {
             let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
-            let yield_farm_acoount = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
+            let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
 
-            let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_acoount);
+            let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
             let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
 
             //Stop yield farm before removing
@@ -106,7 +110,7 @@ fn destroy_yield_farm_without_deposits_should_work() {
             //Yield farm without deposits should be flushed.
             assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).is_none());
 
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &yield_farm_acoount), 0);
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &yield_farm_account), 0);
 
             //Unpaid rewards from yield farm account should be transferred back to global farm's account.
             pretty_assertions::assert_eq!(
@@ -114,13 +118,16 @@ fn destroy_yield_farm_without_deposits_should_work() {
                 global_farm_bsx_balance.checked_add(yield_farm_bsx_balance).unwrap()
             );
 
+            //Non-dustable check
+            pretty_assertions::assert_eq!(Whitelist::contains(&yield_farm_account), false);
+
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
 }
 
 #[test]
-fn destroy_yield_farm_non_stopped_yield_farming_should_not_work() {
+fn destroy_yield_farm_not_stopped_yield_farming_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
             assert_noop!(

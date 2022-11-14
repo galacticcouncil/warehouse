@@ -627,6 +627,13 @@ fn withdraw_with_multiple_entries_and_flush_should_work() {
             assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, DAVE_FARM, DAVE_BSX_TKN1_YIELD_FARM_ID)).is_none());
             assert!(LiquidityMining::global_farm(DAVE_FARM).is_none());
 
+            //Non-dustable check
+            let global_farm_account = LiquidityMining::farm_account_id(DAVE_FARM).unwrap();
+            pretty_assertions::assert_eq!(Whitelist::contains(&global_farm_account), false);
+
+            let yield_farm_account = LiquidityMining::farm_account_id(DAVE_BSX_TKN1_YIELD_FARM_ID).unwrap();
+            pretty_assertions::assert_eq!(Whitelist::contains(&yield_farm_account), false);
+
             //This withdraw should flush yield and global farms.
             let expected_deposit_destroyed = true;
             pretty_assertions::assert_eq!(

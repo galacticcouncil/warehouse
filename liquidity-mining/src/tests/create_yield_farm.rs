@@ -171,6 +171,10 @@ fn create_yield_farm_should_work() {
                     LiquidityMining::yield_farm((amm_id, global_farm_id, yield_farm.id)).unwrap(),
                     YieldFarmData { ..yield_farm }
                 );
+
+                let yield_farm_account = LiquidityMining::farm_account_id(yield_farm.id).unwrap();
+                //Non-dustable check
+                pretty_assertions::assert_eq!(Whitelist::contains(&yield_farm_account), true);
             }
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

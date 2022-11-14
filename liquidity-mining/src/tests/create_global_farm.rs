@@ -83,6 +83,8 @@ fn create_global_farm_should_work() {
             );
 
             pretty_assertions::assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
+            //Non-dustable check
+            pretty_assertions::assert_eq!(Whitelist::contains(&global_farm_account), true);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

@@ -26,7 +26,7 @@ use frame_support::{
     PalletId,
 };
 use frame_system as system;
-use hydradx_traits::AMM;
+use hydradx_traits::{pools::DustRemovalAccountWhitelist, AMM};
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
@@ -182,6 +182,8 @@ thread_local! {
     //This is used to check if `on_accumulated_rpz_update()` was called with correct values
     //`(global_farm_id, accumulated_rpz, total_shares_z)`
     pub static RPZ_UPDATED: RefCell<(GlobalFarmId, Balance, Balance)> = RefCell::new((0,0,0));
+
+    pub static DUSTER_WHITELIST: RefCell<Vec<AccountId>> = RefCell::new(Vec::new());
 }
 
 impl AMM<AccountId, AssetId, AssetPair, Balance> for Amm {
@@ -295,6 +297,7 @@ impl Config<Instance1> for Test {
     type AmmPoolId = AccountId;
     type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit;
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
+    type NonDustableWhitelistHandler = Whitelist;
 }
 
 parameter_types! {
@@ -316,6 +319,7 @@ impl Config<Instance2> for Test {
     type AmmPoolId = AccountId;
     type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit2;
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
+    type NonDustableWhitelistHandler = Whitelist;
 }
 
 parameter_types! {
@@ -356,6 +360,35 @@ impl orml_tokens::Config for Test {
     type OnNewTokenAccount = ();
     type MaxReserves = ConstU32<100_000>;
     type ReserveIdentifier = ();
+}
+
+pub struct Whitelist;
+
+impl Whitelist {
+    pub fn contains(account: &AccountId) -> bool {
+        DUSTER_WHITELIST.with(|v| v.borrow().contains(account))
+    }
+}
+
+impl DustRemovalAccountWhitelist<AccountId> for Whitelist {
+    type Error = DispatchError;
+
+    fn add_account(account: &AccountId) -> Result<(), Self::Error> {
+        DUSTER_WHITELIST.with(|v| v.borrow_mut().push(*account));
+
+        Ok(())
+    }
+
+    fn remove_account(account: &AccountId) -> Result<(), Self::Error> {
+        DUSTER_WHITELIST.with(|v| {
+            let mut v = v.borrow_mut();
+
+            let idx = v.iter().position(|x| *x == *account).unwrap();
+            v.remove(idx);
+
+            Ok(())
+        })
+    }
 }
 
 pub struct ExtBuilder {

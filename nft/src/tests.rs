@@ -398,7 +398,7 @@ fn deposit_works() {
 }
 
 #[test]
-fn nonfungible_traits_work() {
+fn inspect_trait_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
@@ -414,10 +414,9 @@ fn nonfungible_traits_work() {
             Origin::signed(BOB),
             COLLECTION_ID_0,
             ITEM_ID_0,
-            metadata.clone()
+            metadata
         ));
 
-        // `Inspect` trait
         assert_eq!(
             <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&COLLECTION_ID_0, &ITEM_ID_0),
             Some(BOB)
@@ -452,8 +451,29 @@ fn nonfungible_traits_work() {
                 &ITEM_ID_1
             )
         );
+    });
+}
 
-        // `InspectEnumerable` trait
+#[test]
+fn inspect_enumerable_trait_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
+            b"metadata".to_vec().try_into().unwrap();
+
+        assert_ok!(NFTPallet::create_collection(
+            Origin::signed(ALICE),
+            COLLECTION_ID_0,
+            Default::default(),
+            metadata.clone()
+        ));
+
+        assert_ok!(NFTPallet::mint(
+            Origin::signed(BOB),
+            COLLECTION_ID_0,
+            ITEM_ID_0,
+            metadata
+        ));
+
         assert_eq!(
             *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::collections()
                 .collect::<Vec<CollectionId>>(),
@@ -477,8 +497,21 @@ fn nonfungible_traits_work() {
             .collect::<Vec<ItemId>>(),
             vec![ITEM_ID_0]
         );
+    });
+}
 
-        // `Create` trait
+#[test]
+fn create_trait_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(
+            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
+                &COLLECTION_ID_0,
+                &BOB,
+                &ALICE
+            )
+        );
+
+        // collection already exists
         assert_noop!(
             <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
                 &COLLECTION_ID_0,
@@ -488,7 +521,7 @@ fn nonfungible_traits_work() {
             pallet_uniques::Error::<Test>::InUse
         );
 
-        // reserved id
+        // collection ID needs to be outside of the range of reserved IDs
         assert_noop!(
             <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
                 &COLLECTION_ID_RESERVED,
@@ -497,28 +530,43 @@ fn nonfungible_traits_work() {
             ),
             Error::<Test>::IdReserved
         );
+    });
+}
 
-        assert_ok!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
-                &COLLECTION_ID_1,
-                &BOB,
-                &ALICE
-            )
-        );
+#[test]
+fn destroy_trait_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
+            b"metadata".to_vec().try_into().unwrap();
 
-        // `Destroy` trait
+        assert_ok!(NFTPallet::create_collection(
+            Origin::signed(ALICE),
+            COLLECTION_ID_0,
+            Default::default(),
+            metadata.clone()
+        ));
+
+        assert_ok!(NFTPallet::mint(
+            Origin::signed(BOB),
+            COLLECTION_ID_0,
+            ITEM_ID_0,
+            metadata
+        ));
+
         let witness =
             <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::get_destroy_witness(&COLLECTION_ID_0)
                 .unwrap();
 
         assert_eq!(
             witness,
-            pallet_uniques::DestroyWitness {
+            DestroyWitness {
                 items: 1,
                 item_metadatas: 0,
                 attributes: 0
             }
         );
+
+        // collection is not empty
         assert_noop!(
             <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
                 COLLECTION_ID_0,
@@ -528,53 +576,122 @@ fn nonfungible_traits_work() {
             Error::<Test>::TokenCollectionNotEmpty
         );
 
-        let empty_witness = pallet_uniques::DestroyWitness {
+        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+            &COLLECTION_ID_0,
+            &ITEM_ID_0,
+            None
+        ));
+
+        let witness =
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::get_destroy_witness(&COLLECTION_ID_0)
+                .unwrap();
+
+        let empty_witness = DestroyWitness {
             items: 0,
             item_metadatas: 0,
             attributes: 0,
         };
 
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
-            COLLECTION_ID_2,
-            Default::default(),
-            metadata,
-        ));
+        // we expect empty `witness`
+        assert_eq!(witness, empty_witness);
 
         assert_ok!(
             <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
-                COLLECTION_ID_2,
-                empty_witness,
+                COLLECTION_ID_0,
+                witness,
                 Some(ALICE)
             ),
-            empty_witness
+            witness
         );
+    });
+}
 
-        // `Mutate` trait
+#[test]
+fn mutate_trait_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
+            b"metadata".to_vec().try_into().unwrap();
+
+        assert_ok!(NFTPallet::create_collection(
+            Origin::signed(ALICE),
+            COLLECTION_ID_0,
+            Default::default(),
+            metadata
+        ));
+
+        // collection does not exist
         assert_noop!(
             <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
                 &COLLECTION_ID_2,
-                &ITEM_ID_1,
+                &ITEM_ID_0,
                 &BOB
             ),
             Error::<Test>::CollectionUnknown
         );
+
         assert_ok!(
             <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
                 &COLLECTION_ID_0,
-                &ITEM_ID_1,
+                &ITEM_ID_0,
                 &BOB
             )
         );
 
+        // item does not exist
+        assert_noop!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(&COLLECTION_ID_0, &ITEM_ID_1, None),
+            Error::<Test>::ItemUnknown
+        );
+
         assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
             &COLLECTION_ID_0,
-            &ITEM_ID_1,
+            &ITEM_ID_0,
             None
         ));
-        assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_1));
+        assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_0));
+    });
+}
 
-        // `Transfer` trait
+#[test]
+fn transfer_trait_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        // collection does not exist
+        assert_noop!(
+            <NFTPallet as Transfer<<Test as frame_system::Config>::AccountId>>::transfer(
+                &COLLECTION_ID_1,
+                &ITEM_ID_0,
+                &ALICE
+            ),
+            Error::<Test>::ItemUnknown
+        );
+
+        // item does not exist
+        assert_noop!(
+            <NFTPallet as Transfer<<Test as frame_system::Config>::AccountId>>::transfer(
+                &COLLECTION_ID_0,
+                &ITEM_ID_1,
+                &ALICE
+            ),
+            Error::<Test>::ItemUnknown
+        );
+
+        let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
+            b"metadata".to_vec().try_into().unwrap();
+
+        assert_ok!(NFTPallet::create_collection(
+            Origin::signed(ALICE),
+            COLLECTION_ID_0,
+            Default::default(),
+            metadata.clone()
+        ));
+
+        assert_ok!(NFTPallet::mint(
+            Origin::signed(BOB),
+            COLLECTION_ID_0,
+            ITEM_ID_0,
+            metadata
+        ));
+
         assert_ok!(
             <NFTPallet as Transfer<<Test as frame_system::Config>::AccountId>>::transfer(
                 &COLLECTION_ID_0,

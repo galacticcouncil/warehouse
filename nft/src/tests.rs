@@ -550,7 +550,7 @@ fn destroy_trait_should_work() {
             Origin::signed(BOB),
             COLLECTION_ID_0,
             ITEM_ID_0,
-            metadata
+            metadata.clone()
         ));
 
         let witness =
@@ -595,6 +595,17 @@ fn destroy_trait_should_work() {
         // we expect empty `witness`
         assert_eq!(witness, empty_witness);
 
+        // not owner
+        assert_noop!(
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
+                COLLECTION_ID_0,
+                empty_witness,
+                Some(BOB)
+            ),
+            pallet_uniques::Error::<Test>::NoPermission
+        );
+
+        // with owner check
         assert_ok!(
             <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
                 COLLECTION_ID_0,
@@ -602,6 +613,23 @@ fn destroy_trait_should_work() {
                 Some(ALICE)
             ),
             witness
+        );
+
+        assert_ok!(NFTPallet::create_collection(
+            Origin::signed(ALICE),
+            COLLECTION_ID_0,
+            Default::default(),
+            metadata,
+        ));
+
+        // no owner check
+        assert_ok!(
+            <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::destroy(
+                COLLECTION_ID_0,
+                empty_witness,
+                None
+            ),
+            empty_witness
         );
     });
 }
@@ -637,18 +665,49 @@ fn mutate_trait_should_work() {
             )
         );
 
-        // item does not exist
+        // not owner
         assert_noop!(
-            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(&COLLECTION_ID_0, &ITEM_ID_1, None),
-            Error::<Test>::ItemUnknown
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+                &COLLECTION_ID_0,
+                &ITEM_ID_0,
+                Some(&ALICE)
+            ),
+            Error::<Test>::NotPermitted
         );
 
+        // no owner check
         assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
             &COLLECTION_ID_0,
             &ITEM_ID_0,
             None
         ));
+        assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_1));
+
+        assert_ok!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
+                &COLLECTION_ID_0,
+                &ITEM_ID_0,
+                &BOB
+            )
+        );
+
+        // with owner check
+        assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+            &COLLECTION_ID_0,
+            &ITEM_ID_0,
+            Some(&BOB)
+        ));
         assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_0));
+
+        // item does not exist
+        assert_noop!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
+                &COLLECTION_ID_0,
+                &ITEM_ID_0,
+                Some(&ALICE)
+            ),
+            Error::<Test>::ItemUnknown
+        );
     });
 }
 

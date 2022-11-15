@@ -519,6 +519,7 @@ impl<T: Config> Create<T::AccountId> for Pallet<T> {
     ///
     /// Emits CollectionCreated event
     fn create_collection(collection: &Self::CollectionId, who: &T::AccountId, _admin: &T::AccountId) -> DispatchResult {
+        ensure!(!Self::is_id_reserved(*collection), Error::<T>::IdReserved);
         Self::do_create_collection(who.clone(), *collection, Default::default(), BoundedVec::default())?;
 
         Ok(())

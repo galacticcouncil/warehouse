@@ -1,6 +1,6 @@
 [package]
 name = "pallet-collator-rewards"
-version = "1.0.2"
+version = "1.0.3"
 description = "Pallet for collator rewards"
 authors = ["GalacticCouncil"]
 edition = "2021"
@@ -64,3 +64,4 @@ std = [
     "pallet-aura/std",
     "pallet-session/std",
 ]
+try-runtime = ["frame-support/try-runtime"]

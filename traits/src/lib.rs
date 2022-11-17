@@ -1,6 +1,6 @@
 // This file is part of hydradx-traits.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::upper_case_acronyms)]
 
+pub mod liquidity_mining;
 pub mod nft;
 pub mod pools;
 pub mod registry;
@@ -224,4 +225,16 @@ impl<AssetId, Balance> OnLiquidityChangedHandler<AssetId, Balance> for () {
     fn on_liquidity_changed_weight() -> Weight {
         Weight::zero()
     }
+}
+
+/// Implementers of this trait provides information about user's position in the AMM pool.
+pub trait AMMPosition<AssetId, Balance> {
+    type Error;
+
+    /// This function calculates amount of assets behind the `share_token`s.
+    fn get_liquidity_behind_shares(
+        asset_a: AssetId,
+        asset_b: AssetId,
+        shares_amount: Balance,
+    ) -> Result<(Balance, Balance), Self::Error>;
 }

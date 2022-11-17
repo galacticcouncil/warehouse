@@ -1,6 +1,6 @@
 // This file is part of pallet-asset-registry.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -149,4 +149,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut ext = ExtBuilder::default().build();
     ext.execute_with(|| System::set_block_number(1));
     ext
+}
+
+pub fn expect_events(e: Vec<Event>) {
+    test_utils::expect_events::<Event, Test>(e);
 }

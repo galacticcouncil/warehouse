@@ -1,6 +1,6 @@
 // This file is part of pallet-price-oracle.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,18 +31,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     ExtBuilder::default().build()
 }
 
-fn last_events(n: usize) -> Vec<TestEvent> {
-    frame_system::Pallet::<Test>::events()
-        .into_iter()
-        .rev()
-        .take(n)
-        .rev()
-        .map(|e| e.event)
-        .collect()
-}
-
 fn expect_events(e: Vec<TestEvent>) {
-    assert_eq!(last_events(e.len()), e);
+    test_utils::expect_events::<TestEvent, Test>(e);
 }
 
 #[test]

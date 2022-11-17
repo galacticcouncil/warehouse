@@ -1,5 +1,6 @@
 use crate as collator_rewards;
 use crate::Config;
+use std::cell::RefCell;
 
 use frame_support::{
     parameter_types,
@@ -132,13 +133,19 @@ parameter_types! {
     pub GcCollators: Vec<AccountId> = vec![GC_COLL_1, GC_COLL_2, GC_COLL_3];
 }
 
-pub struct MockSessionManager;
+thread_local! {
+    pub static SESSION_ENDED: RefCell<bool> = RefCell::new(false);
+}
+
+pub struct MockSessionManager {}
 impl SessionManager<AccountId> for MockSessionManager {
     fn new_session(_: SessionIndex) -> Option<Vec<AccountId>> {
         Some(vec![ALICE, BOB, GC_COLL_1, CHARLIE, GC_COLL_2, DAVE, GC_COLL_3])
     }
     fn start_session(_: SessionIndex) {}
-    fn end_session(_: SessionIndex) {}
+    fn end_session(_: SessionIndex) {
+        SESSION_ENDED.with(|e| *e.borrow_mut() = true);
+    }
 }
 
 impl Config for Test {

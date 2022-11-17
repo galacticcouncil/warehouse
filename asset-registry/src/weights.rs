@@ -1,6 +1,6 @@
 // This file is part of pallet-asset-registry.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,37 +57,37 @@ pub struct HydraWeight<T>(PhantomData<T>);
 
 impl<T: frame_system::Config> WeightInfo for HydraWeight<T> {
     fn register() -> Weight {
-        0
+        Weight::zero()
     }
 
     fn update() -> Weight {
-        0
+        Weight::zero()
     }
 
     fn set_metadata() -> Weight {
-        0
+        Weight::zero()
     }
 
     fn set_location() -> Weight {
-        0
+        Weight::zero()
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn register() -> Weight {
-        0
+        Weight::zero()
     }
 
     fn update() -> Weight {
-        0
+        Weight::zero()
     }
 
     fn set_metadata() -> Weight {
-        0
+        Weight::zero()
     }
 
     fn set_location() -> Weight {
-        0
+        Weight::zero()
     }
 }

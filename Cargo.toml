@@ -14,7 +14,9 @@ members = [
 	"collator-rewards",
 	"transaction-pause",
 	"ema-oracle",
+	"liquidity-mining",
 	"currencies",
+	"test-utils"
 ]
 
 resolver = "2"

@@ -1,6 +1,6 @@
 // This file is part of pallet-asset-registry.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +18,10 @@
 use super::Error;
 use crate::mock::*;
 use crate::types::{AssetDetails, AssetMetadata, AssetType};
+use crate::Event;
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok, BoundedVec};
+use orml_traits::GetByKey;
 use polkadot_xcm::v0::{Junction::*, MultiLocation::*};
 use sp_std::convert::TryInto;
 
@@ -45,6 +47,13 @@ fn register_asset_works() {
         ));
 
         let bn = AssetRegistryPallet::to_bounded_name(name.clone()).unwrap();
+
+        expect_events(vec![Event::Registered {
+            asset_id: 1,
+            asset_name: bn.clone(),
+            asset_type: AssetType::Token,
+        }
+        .into()]);
 
         assert_eq!(AssetRegistryPallet::asset_ids(&bn).unwrap(), 1u32);
         assert_eq!(
@@ -141,6 +150,12 @@ fn location_mapping_works() {
             asset_location.clone()
         ));
 
+        expect_events(vec![Event::LocationSet {
+            asset_id: 1,
+            location: asset_location.clone(),
+        }
+        .into()]);
+
         assert_eq!(
             AssetRegistryPallet::location_to_asset(asset_location.clone()),
             Some(asset_id)
@@ -201,6 +216,8 @@ fn set_metadata_works() {
         .with_assets(vec![(b"DOT".to_vec(), 1_000u128)])
         .build()
         .execute_with(|| {
+            System::set_block_number(1); //TO have the ement emitted
+
             let dot: BoundedVec<u8, <Test as crate::Config>::StringLimit> = b"DOT".to_vec().try_into().unwrap();
             let dot_id = AssetRegistryPallet::asset_ids(dot).unwrap();
             let b_symbol: BoundedVec<u8, <Test as crate::Config>::StringLimit> = b"xDOT".to_vec().try_into().unwrap();
@@ -211,6 +228,13 @@ fn set_metadata_works() {
                 b"xDOT".to_vec(),
                 12u8
             ));
+
+            expect_events(vec![Event::MetadataSet {
+                asset_id: dot_id,
+                symbol: b_symbol.clone(),
+                decimals: 12u8,
+            }
+            .into()]);
 
             assert_eq!(
                 AssetRegistryPallet::asset_metadata(dot_id).unwrap(),
@@ -268,6 +292,13 @@ fn update_asset() {
             None
         ));
         let bn = AssetRegistryPallet::to_bounded_name(b"superBTC".to_vec()).unwrap();
+
+        expect_events(vec![Event::Updated {
+            asset_id: btc_asset_id,
+            asset_name: bn.clone(),
+            asset_type: AssetType::Token,
+        }
+        .into()]);
 
         assert_eq!(
             AssetRegistryPallet::assets(btc_asset_id).unwrap(),
@@ -355,7 +386,12 @@ fn update_asset() {
     });
 }
 
-use orml_traits::GetByKey;
+#[test]
+fn native_asset_should_be_not_locked_when_genesis_block_built() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert!(!AssetRegistryPallet::assets(0u32).unwrap().locked);
+    });
+}
 
 #[test]
 fn get_ed_by_key_works() {

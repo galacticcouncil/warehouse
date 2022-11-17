@@ -17,10 +17,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::weights::{Weight, WeightToFee};
+use frame_support::weights::WeightToFee;
 use hydradx_traits::NativePriceOracle;
 use pallet_transaction_multi_payment::{DepositFee, TransactionMultiPaymentDataProvider};
 use polkadot_xcm::latest::prelude::*;
+use polkadot_xcm::latest::Weight;
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, Convert, Saturating, Zero},
     FixedPointNumber, FixedPointOperand, SaturatedConversion,
@@ -36,7 +37,7 @@ mod tests;
 
 /// Weight trader that accepts multiple assets as weight fee payment.
 ///
-/// It uses `ConvertWeightToFee` in combination with a `NativePriceOracle` to set the right price for weight.
+/// It uses `WeightToFee` in combination with a `NativePriceOracle` to set the right price for weight.
 /// Keeps track of the assets used to pay for weight and can refund them one by one (interface only
 /// allows returning one asset per refund). Will pass any remaining assets on `Drop` to
 /// `TakeRevenue`.
@@ -128,7 +129,7 @@ impl<
             weight, payment
         );
         let (asset_loc, price) = self.get_asset_and_price(&payment).ok_or(XcmError::AssetNotFound)?;
-        let fee = ConvertWeightToFee::weight_to_fee(&weight);
+        let fee = ConvertWeightToFee::weight_to_fee(&frame_support::weights::Weight::from_ref_time(weight));
         let converted_fee = price.checked_mul_int(fee).ok_or(XcmError::Overflow)?;
         let amount: u128 = converted_fee.try_into().map_err(|_| XcmError::Overflow)?;
         let required = (Concrete(asset_loc.clone()), amount).into();
@@ -152,7 +153,7 @@ impl<
         );
         let weight = weight.min(self.weight);
         self.weight -= weight; // Will not underflow because of `min()` above.
-        let fee = ConvertWeightToFee::weight_to_fee(&weight);
+        let fee = ConvertWeightToFee::weight_to_fee(&frame_support::weights::Weight::from_ref_time(weight));
         if let Some(((asset_loc, price), amount)) = self.paid_assets.iter_mut().next() {
             let converted_fee: u128 = price.saturating_mul_int(fee).saturated_into();
             let refund = converted_fee.min(*amount);

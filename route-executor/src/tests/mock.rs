@@ -1,6 +1,6 @@
 // This file is part of HydraDX.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,11 +48,11 @@ frame_support::construct_runtime!(
      NodeBlock = Block,
      UncheckedExtrinsic = UncheckedExtrinsic,
      {
-         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-         Router: router::{Pallet, Call,Event<T>},
-         Tokens: orml_tokens::{Pallet, Event<T>},
-         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-         Currencies: pallet_currencies::{Pallet, Event<T>},
+         System: frame_system,
+         Router: router,
+         Tokens: orml_tokens,
+         Balances: pallet_balances,
+         Currencies: pallet_currencies,
      }
 );
 
@@ -291,6 +291,7 @@ macro_rules! impl_fake_executor {
                 asset_in: AssetId,
                 asset_out: AssetId,
                 amount_in: Balance,
+                _min_limit: Balance,
             ) -> Result<(), ExecutorError<Self::Error>> {
                 if !matches!(pool_type, $pool_type) {
                     return Err(ExecutorError::NotSupported);
@@ -317,6 +318,7 @@ macro_rules! impl_fake_executor {
                 asset_in: AssetId,
                 asset_out: AssetId,
                 amount_out: Balance,
+                _max_limit: Balance,
             ) -> Result<(), ExecutorError<Self::Error>> {
                 if !matches!(pool_type, $pool_type) {
                     return Err(ExecutorError::NotSupported);
@@ -327,9 +329,6 @@ macro_rules! impl_fake_executor {
                 });
 
                 let amount_in = $buy_calculation_result;
-
-                //T::Currency::transfer(asset_out, &pair_account, who, amount_out).map_err(|_| ExecutorError::Error(()))?;
-                // T::Currency::transfer(asset_in, who, &pair_account, amount_in).map_err(|_| ExecutorError::Error(()))?;
 
                 Currencies::transfer(Origin::signed(ASSET_PAIR_ACCOUNT), ALICE, asset_out, amount_out)
                     .map_err(|e| ExecutorError::Error(e))?;
@@ -381,15 +380,5 @@ pub fn assert_executed_buy_trades(expected_trades: Vec<(PoolType<AssetId>, Balan
 }
 
 pub fn expect_events(e: Vec<Event>) {
-    let last_events = last_events(e.len());
-    assert_eq!(last_events, e);
-}
-fn last_events(n: usize) -> Vec<Event> {
-    frame_system::Pallet::<Test>::events()
-        .into_iter()
-        .rev()
-        .take(n)
-        .rev()
-        .map(|e| e.event)
-        .collect()
+    test_utils::expect_events::<Event, Test>(e);
 }

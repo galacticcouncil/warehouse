@@ -99,7 +99,6 @@ impl Config for Test {
     type WeightInfo = pallet_nft::weights::BasiliskWeight<Test>;
     type NftCollectionId = CollectionId;
     type NftItemId = ItemId;
-    type ProtocolOrigin = EnsureRoot<AccountId>;
     type CollectionType = CollectionType;
     type Permissions = NftTestPermissions;
     type ReserveCollectionIdUpTo = ReserveCollectionIdUpTo;
@@ -137,7 +136,7 @@ impl pallet_uniques::Config for Test {
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = 1024;
+    pub const MaximumBlockWeight: Weight = Weight::from_ref_time(1024);
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::one();
 }

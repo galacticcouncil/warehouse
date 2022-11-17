@@ -1,6 +1,6 @@
 // This file is part of Basilisk-node.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -87,7 +87,7 @@ pub mod pallet {
         fn on_initialize(_n: T::BlockNumber) -> Weight {
             let native_asset = T::NativeAssetId::get();
 
-            let mut weight: Weight = 0;
+            let mut weight: u64 = 0;
 
             for (asset_id, fallback_price) in <AcceptedCurrencies<T>>::iter() {
                 let maybe_price = T::SpotPriceProvider::spot_price(native_asset, asset_id);
@@ -96,10 +96,10 @@ pub mod pallet {
 
                 AcceptedCurrencyPrice::<T>::insert(asset_id, price);
 
-                weight += T::WeightInfo::get_spot_price();
+                weight += T::WeightInfo::get_spot_price().ref_time();
             }
 
-            weight
+            Weight::from_ref_time(weight)
         }
 
         fn on_finalize(_n: T::BlockNumber) {

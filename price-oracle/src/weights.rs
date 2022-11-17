@@ -1,6 +1,6 @@
 // This file is part of pallet-price-oracle.
 
-// Copyright (C) 2020-2021  Intergalactic, Limited (GIB).
+// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,31 +62,31 @@ pub trait WeightInfo {
 pub struct HydraWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for HydraWeight<T> {
     fn on_finalize_no_entry() -> Weight {
-        0
+        Weight::zero()
     }
     fn on_finalize_one_token() -> Weight {
-        0
+        Weight::zero()
     }
-    fn on_finalize_multiple_tokens_all_bucket_levels(a: u32) -> Weight {
-        (a * 0).into()
+    fn on_finalize_multiple_tokens_all_bucket_levels(_a: u32) -> Weight {
+        Weight::zero()
     }
-    fn on_finalize_multiple_tokens(b: u32) -> Weight {
-        (b * 0).into()
+    fn on_finalize_multiple_tokens(_b: u32) -> Weight {
+        Weight::zero()
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn on_finalize_no_entry() -> Weight {
-        0
+        Weight::zero()
     }
     fn on_finalize_one_token() -> Weight {
-        0
+        Weight::zero()
     }
-    fn on_finalize_multiple_tokens_all_bucket_levels(a: u32) -> Weight {
-        (a * 0).into()
+    fn on_finalize_multiple_tokens_all_bucket_levels(_a: u32) -> Weight {
+        Weight::zero()
     }
-    fn on_finalize_multiple_tokens(b: u32) -> Weight {
-        (b * 0).into()
+    fn on_finalize_multiple_tokens(_b: u32) -> Weight {
+        Weight::zero()
     }
 }

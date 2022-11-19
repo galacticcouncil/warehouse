@@ -519,6 +519,7 @@ impl<T: Config> Create<T::AccountId> for Pallet<T> {
     ///
     /// Emits CollectionCreated event
     fn create_collection(collection: &Self::CollectionId, who: &T::AccountId, _admin: &T::AccountId) -> DispatchResult {
+        ensure!(!Self::is_id_reserved(*collection), Error::<T>::IdReserved);
         Self::do_create_collection(who.clone(), *collection, Default::default(), BoundedVec::default())?;
 
         Ok(())
@@ -552,9 +553,13 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
     fn destroy(
         collection: Self::CollectionId,
         _witness: Self::DestroyWitness,
-        _maybe_check_owner: Option<T::AccountId>,
+        maybe_check_owner: Option<T::AccountId>,
     ) -> Result<Self::DestroyWitness, DispatchError> {
-        let owner = Self::collection_owner(&collection).ok_or(Error::<T>::CollectionUnknown)?;
+        let owner = if let Some(check_owner) = maybe_check_owner {
+            check_owner
+        } else {
+            Self::collection_owner(&collection).ok_or(Error::<T>::CollectionUnknown)?
+        };
 
         Self::do_destroy_collection(owner, collection)?;
 

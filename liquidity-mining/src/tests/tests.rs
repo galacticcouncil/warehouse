@@ -457,7 +457,7 @@ fn update_global_farm_should_work() {
             55_309_798_233_u128,
             71_071_995_u128,
             FixedU128::from_inner(37_740_006_193_817_956_143_u128),
-            3_846_913_3763_u128,
+            38_469_133_763_u128,
         ),
         (
             161_u64,
@@ -1694,9 +1694,7 @@ fn maybe_update_farms_should_work() {
 
             //II. - yield farm has 0 shares and was updated in this period.
             let current_period = 20;
-            let mut yield_farm = YieldFarmData {
-                ..yield_farm_0.clone()
-            };
+            let mut yield_farm = YieldFarmData { ..yield_farm_0.clone() };
             assert_ok!(LiquidityMining::maybe_update_farms(
                 &mut global_farm,
                 &mut yield_farm,

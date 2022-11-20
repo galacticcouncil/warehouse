@@ -821,10 +821,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
                 global_farm_balance_0 + unclaimable_rewards
             );
 
-            pretty_assertions::assert_eq!(
-                Tokens::free_balance(BSX, &pot),
-                pot_balance_0 - unclaimable_rewards
-            );
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), pot_balance_0 - unclaimable_rewards);
 
             //2-nd withdraw
             //_0 - value before act.
@@ -832,7 +829,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
             let pot_balance_0 = Tokens::free_balance(BSX, &pot);
             let global_farm_0 = LiquidityMining::global_farm(GC_FARM).unwrap();
             let yield_farm_0 = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
-            
+
             let unclaimable_rewards = 2_055_086;
             let shares_amount = 486;
             let valued_shares_amount = 38_880;
@@ -868,10 +865,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
                 global_farm_balance_0 + unclaimable_rewards
             );
 
-            pretty_assertions::assert_eq!(
-                Tokens::free_balance(BSX, &pot),
-                pot_balance_0 - unclaimable_rewards
-            );
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), pot_balance_0 - unclaimable_rewards);
 
             //3-th withdraw
             //_0 - value before act.
@@ -914,10 +908,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
                 global_farm_balance_0 + unclaimable_rewards
             );
 
-            pretty_assertions::assert_eq!(
-                Tokens::free_balance(BSX, &pot),
-                pot_balance_0 - unclaimable_rewards
-            );
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), pot_balance_0 - unclaimable_rewards);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

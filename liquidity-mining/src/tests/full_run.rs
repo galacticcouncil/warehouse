@@ -719,7 +719,7 @@ fn yield_farm_should_claim_expected_amount() {
                 LiquidityMining2::yield_farm(yield_farm_a_key)
                     .unwrap()
                     .left_to_distribute,
-                0 * ONE
+                0
             );
             pretty_assertions::assert_eq!(
                 LiquidityMining2::yield_farm(yield_farm_b_key)
@@ -775,7 +775,6 @@ fn yield_farm_should_claim_expected_amount() {
                 0
             );
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 1_000);
-                                                                                                  
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

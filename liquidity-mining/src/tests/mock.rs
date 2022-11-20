@@ -371,9 +371,7 @@ impl DustRemovalAccountWhitelist<AccountId> for Whitelist {
             return Err(sp_runtime::DispatchError::Other("Account is already in the whitelist"));
         }
 
-        DUSTER_WHITELIST.with(|v| {
-            v.borrow_mut().push(*account)
-        });
+        DUSTER_WHITELIST.with(|v| v.borrow_mut().push(*account));
 
         Ok(())
     }
@@ -429,7 +427,7 @@ impl Default for ExtBuilder {
                 (ALICE, BSX_KSM_SHARE_ID, INITIAL_BALANCE),
                 (ALICE, BSX_TKN1_SHARE_ID, 3_000_000),
                 (ALICE, BSX_TKN2_SHARE_ID, 3_000_000),
-                (ALICE, ACA_KSM_SHARE_ID, 3_000_000 ),
+                (ALICE, ACA_KSM_SHARE_ID, 3_000_000),
                 (ALICE, BSX, INITIAL_BALANCE),
                 (ACCOUNT_WITH_1M, BSX, 1_000_000),
                 (BOB, BSX_ACA_SHARE_ID, INITIAL_BALANCE),

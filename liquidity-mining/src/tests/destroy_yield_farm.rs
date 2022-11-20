@@ -63,14 +63,15 @@ fn destroy_yield_farm_with_deposits_should_work() {
             //global-farm's account.
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
-                global_farm_bsx_balance.checked_add(yield_farm_0.left_to_distribute).unwrap()
+                global_farm_bsx_balance
+                    .checked_add(yield_farm_0.left_to_distribute)
+                    .unwrap()
             );
-            
+
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &pot),
                 pot_balance_0.checked_sub(yield_farm_0.left_to_distribute).unwrap()
             );
-
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

@@ -81,8 +81,8 @@
 //!     the storage. Last yield farm removal from storage triggers global farm removal from
 //!     storage.
 //!     Note: deleted global farm CAN'T be resumed.
-//! * Pot - account holding all rewards allocated from all `GlobalFarm`s for all `YieldFarm`s.
-//! `GlobalFarm` transfers allocated rewards to pot account.
+//! * Pot - account holding all rewards allocated for all `YieldFarm`s from all `GlobalFarm`s.
+//!   User's rewards are transferred from `pot`'s account to user's accounts.
 //!
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -113,11 +113,8 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::ArithmeticError;
 
 use hydra_dx_math::liquidity_mining as math;
-use hydradx_traits::{
-    pools::DustRemovalAccountWhitelist,
-    Registry
-};
-use orml_traits::{MultiCurrency, GetByKey};
+use hydradx_traits::{pools::DustRemovalAccountWhitelist, Registry};
+use orml_traits::{GetByKey, MultiCurrency};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
     traits::{CheckedDiv, CheckedSub},
@@ -201,8 +198,7 @@ pub mod pallet {
 
         /// Asset Registry - used to check if asset is correctly registered in asset registry and
         /// provides information about existential deposit of the asset.
-        type AssetRegistry: Registry<Self::AssetId, Vec<u8>, Balance, DispatchError>
-            + GetByKey<Self::AssetId, Balance>;
+        type AssetRegistry: Registry<Self::AssetId, Vec<u8>, Balance, DispatchError> + GetByKey<Self::AssetId, Balance>;
 
         /// Account whitelist manager to exclude pool accounts from dusting mechanism.
         type NonDustableWhitelistHandler: DustRemovalAccountWhitelist<Self::AccountId, Error = DispatchError>;
@@ -264,9 +260,6 @@ pub mod pallet {
 
         /// Planned yielding periods is less than `MinPlannedYieldingPeriods`.
         InvalidPlannedYieldingPeriods,
-
-        /// Insufficient rewards on `Pot` account.
-        InsufficientPotBalance,
 
         /// Provided farm id is not valid. Valid range is [1, u32::MAX)
         InvalidFarmId,
@@ -856,7 +849,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         &global_farm_account,
                         yield_farm.left_to_distribute,
                     )?;
-   
+
                     yield_farm.left_to_distribute = Zero::zero();
                     //Delete yield farm.
                     yield_farm.state = FarmState::Deleted;
@@ -1356,15 +1349,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         let global_farm_account = Self::farm_account_id(global_farm.id)?;
         let reward_currency_ed = T::AssetRegistry::get(&global_farm.reward_currency);
-        //NOTE: This doesn't 100% prevent account dusting if native token is used.
-        //Edge case:
-        // * account is on the edge of actual ED
-        // * ED will change to higher
-        // * user withdraw LP token
-        // * if `unclaimable_rewards` + global_farm_account.blance < ED account will be dusted
         let left_to_distribute = T::MultiCurrency::free_balance(global_farm.reward_currency, &global_farm_account)
-            .checked_sub(reward_currency_ed)
-            .unwrap_or(0);
+            .saturating_sub(reward_currency_ed);
 
         // Calculate reward for all periods since last update capped by balance of `GlobalFarm`
         // account.

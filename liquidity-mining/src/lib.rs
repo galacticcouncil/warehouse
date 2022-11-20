@@ -82,8 +82,7 @@
 //!     storage.
 //!     Note: deleted global farm CAN'T be resumed.
 //! * Pot - account holding all rewards allocated from all `GlobalFarm`s for all `YieldFarm`s.
-//! `GlobalFarm` transfers allocated rewards to pot account and rewards claimed by `YieldFarm` are
-//! transferred from this account.
+//! `GlobalFarm` transfers allocated rewards to pot account.
 //!
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -114,8 +113,11 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::ArithmeticError;
 
 use hydra_dx_math::liquidity_mining as math;
-use hydradx_traits::pools::DustRemovalAccountWhitelist;
-use orml_traits::MultiCurrency;
+use hydradx_traits::{
+    pools::DustRemovalAccountWhitelist,
+    Registry
+};
+use orml_traits::{MultiCurrency, GetByKey};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
     traits::{CheckedDiv, CheckedSub},
@@ -196,6 +198,11 @@ pub mod pallet {
         /// storage(active, stopped, deleted).
         #[pallet::constant]
         type MaxYieldFarmsPerGlobalFarm: Get<u32>;
+
+        /// Asset Registry - used to check if asset is correctly registered in asset registry and
+        /// provides information about existential deposit of the asset.
+        type AssetRegistry: Registry<Self::AssetId, Vec<u8>, Balance, DispatchError>
+            + GetByKey<Self::AssetId, Balance>;
 
         /// Account whitelist manager to exclude pool accounts from dusting mechanism.
         type NonDustableWhitelistHandler: DustRemovalAccountWhitelist<Self::AccountId, Error = DispatchError>;
@@ -285,6 +292,12 @@ pub mod pallet {
 
         /// Account creation from id failed.
         ErrorGetAccountId,
+
+        /// `reward_currency` is not registered in asset registry.
+        RewardCurrencyNotRegistered,
+
+        /// `incentivized_asset` is not registered in asset registry.
+        IncentivizedAssetNotRegistered,
     }
 
     /// Id sequencer for `GlobalFarm` and `YieldFarm`.
@@ -397,6 +410,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             price_adjustment,
         )?;
 
+        ensure!(
+            T::AssetRegistry::exists(reward_currency),
+            Error::<T, I>::RewardCurrencyNotRegistered
+        );
+        ensure!(
+            T::AssetRegistry::exists(incentivized_asset),
+            Error::<T, I>::IncentivizedAssetNotRegistered
+        );
+
         T::MultiCurrency::ensure_can_withdraw(reward_currency, &owner, total_rewards)
             .map_err(|_| Error::<T, I>::InsufficientRewardCurrencyBalance)?;
 
@@ -500,11 +522,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             //Mark for removal from storage on last `YieldFarm` in the farm removed.
             global_farm.state = FarmState::Deleted;
 
+            //NOTE: Nothing can be send to this account because `YieldFarm`'s has to be destroyed
+            //first so it can be dusted.
+            T::NonDustableWhitelistHandler::remove_account(&global_farm_account)?;
+
             let reward_currency = global_farm.reward_currency;
             if global_farm.can_be_removed() {
-                let global_farm_account = Self::farm_account_id(farm_id)?;
-                T::NonDustableWhitelistHandler::remove_account(&global_farm_account)?;
-
                 *maybe_global_farm = None;
             }
 
@@ -577,9 +600,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                     <YieldFarm<T, I>>::insert((amm_pool_id, global_farm_id, yield_farm_id), yield_farm);
                     global_farm.increase_yield_farm_counts()?;
-
-                    let yield_farm_account = Self::farm_account_id(yield_farm_id)?;
-                    T::NonDustableWhitelistHandler::add_account(&yield_farm_account)?;
 
                     *maybe_active_yield_farm = Some(yield_farm_id);
 
@@ -826,19 +846,18 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                     ensure!(yield_farm.state.is_stopped(), Error::<T, I>::LiquidityMiningIsActive);
 
-                    //Transfer unpaid rewards back to global farm.
+                    //Transfer yield-farm's unpaid rewards back to global farm.
                     let global_farm_account = Self::farm_account_id(global_farm.id)?;
-                    let yield_farm_account = Self::farm_account_id(yield_farm.id)?;
+                    let pot = Self::pot_account_id().ok_or(Error::<T, I>::ErrorGetAccountId)?;
 
-                    let unpaid_reward =
-                        T::MultiCurrency::free_balance(global_farm.reward_currency, &yield_farm_account);
                     T::MultiCurrency::transfer(
                         global_farm.reward_currency,
-                        &yield_farm_account,
+                        &pot,
                         &global_farm_account,
-                        unpaid_reward,
+                        yield_farm.left_to_distribute,
                     )?;
-
+   
+                    yield_farm.left_to_distribute = Zero::zero();
                     //Delete yield farm.
                     yield_farm.state = FarmState::Deleted;
                     global_farm.decrease_live_yield_farm_count()?;
@@ -846,9 +865,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     //Cleanup if it's possible
                     if yield_farm.can_be_removed() {
                         global_farm.decrease_total_yield_farm_count()?;
-
-                        let yield_farm_account = Self::farm_account_id(yield_farm_id)?;
-                        T::NonDustableWhitelistHandler::remove_account(&yield_farm_account)?;
 
                         *maybe_yield_farm = None;
                     }
@@ -1008,6 +1024,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         .map_err(|_| ArithmeticError::Overflow)?;
 
                         if !rewards.is_zero() {
+                            yield_farm.left_to_distribute = yield_farm
+                                .left_to_distribute
+                                .checked_sub(rewards)
+                                .ok_or(ArithmeticError::Underflow)?;
+
                             farm_entry.accumulated_claimed_rewards = farm_entry
                                 .accumulated_claimed_rewards
                                 .checked_add(rewards)
@@ -1015,13 +1036,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                             farm_entry.updated_at = current_period;
 
-                            let yield_farm_account = Self::farm_account_id(yield_farm.id)?;
-                            T::MultiCurrency::transfer(
-                                global_farm.reward_currency,
-                                &yield_farm_account,
-                                &who,
-                                rewards,
-                            )?;
+                            let pot = Self::pot_account_id().ok_or(Error::<T, I>::ErrorGetAccountId)?;
+                            T::MultiCurrency::transfer(global_farm.reward_currency, &pot, &who, rewards)?;
                         }
 
                         Ok((
@@ -1097,12 +1113,17 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             }
 
                             if !unclaimable_rewards.is_zero() {
+                                yield_farm.left_to_distribute = yield_farm
+                                    .left_to_distribute
+                                    .checked_sub(unclaimable_rewards)
+                                    .ok_or(ArithmeticError::Underflow)?;
+
                                 let global_farm_account = Self::farm_account_id(global_farm.id)?;
-                                let yield_farm_account = Self::farm_account_id(yield_farm.id)?;
+                                let pot = Self::pot_account_id().ok_or(Error::<T, I>::ErrorGetAccountId)?;
 
                                 T::MultiCurrency::transfer(
                                     global_farm.reward_currency,
-                                    &yield_farm_account,
+                                    &pot,
                                     &global_farm_account,
                                     unclaimable_rewards,
                                 )?;
@@ -1112,9 +1133,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             if yield_farm.can_be_removed() {
                                 global_farm.decrease_total_yield_farm_count()?;
 
-                                let yield_farm_account = Self::farm_account_id(yield_farm.id)?;
-                                T::NonDustableWhitelistHandler::remove_account(&yield_farm_account)?;
-
                                 *maybe_yield_farm = None;
                             }
 
@@ -1123,9 +1141,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     )?;
 
                     if global_farm.can_be_removed() {
-                        let global_farm_account = Self::farm_account_id(global_farm.id)?;
-                        T::NonDustableWhitelistHandler::remove_account(&global_farm_account)?;
-
                         *maybe_global_farm = None;
                     }
 
@@ -1340,7 +1355,16 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         .map_err(|_| ArithmeticError::Overflow)?;
 
         let global_farm_account = Self::farm_account_id(global_farm.id)?;
-        let left_to_distribute = T::MultiCurrency::free_balance(global_farm.reward_currency, &global_farm_account);
+        let reward_currency_ed = T::AssetRegistry::get(&global_farm.reward_currency);
+        //NOTE: This doesn't 100% prevent account dusting if native token is used.
+        //Edge case:
+        // * account is on the edge of actual ED
+        // * ED will change to higher
+        // * user withdraw LP token
+        // * if `unclaimable_rewards` + global_farm_account.blance < ED account will be dusted
+        let left_to_distribute = T::MultiCurrency::free_balance(global_farm.reward_currency, &global_farm_account)
+            .checked_sub(reward_currency_ed)
+            .unwrap_or(0);
 
         // Calculate reward for all periods since last update capped by balance of `GlobalFarm`
         // account.
@@ -1409,7 +1433,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         yield_farm_rewards: Balance,
         current_period: BlockNumberFor<T>,
         global_farm_id: FarmId,
-        reward_currency: T::AssetId,
     ) -> Result<(), DispatchError> {
         if yield_farm.updated_at == current_period {
             return Ok(());
@@ -1427,14 +1450,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         .map_err(|_| ArithmeticError::Overflow)?;
         yield_farm.updated_at = current_period;
 
-        let pot = Self::pot_account_id().ok_or(Error::<T, I>::ErrorGetAccountId)?;
-        let pot_balance = T::MultiCurrency::free_balance(reward_currency, &pot);
-
-        ensure!(pot_balance >= yield_farm_rewards, Error::<T, I>::InsufficientPotBalance);
-
-        let yield_farm_account = Self::farm_account_id(yield_farm.id)?;
-
-        T::MultiCurrency::transfer(reward_currency, &pot, &yield_farm_account, yield_farm_rewards)?;
+        yield_farm.left_to_distribute = yield_farm
+            .left_to_distribute
+            .checked_add(yield_farm_rewards)
+            .ok_or(ArithmeticError::Overflow)?;
 
         Pallet::<T, I>::deposit_event(Event::YieldFarmAccRPVSUpdated {
             global_farm_id,
@@ -1517,13 +1536,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     .map_err(|_| ArithmeticError::Overflow)?;
             let rewards = Self::claim_from_global_farm(global_farm, yield_farm, stake_in_global_farm)?;
 
-            Self::update_yield_farm(
-                yield_farm,
-                rewards,
-                current_period,
-                global_farm.id,
-                global_farm.reward_currency,
-            )?;
+            Self::update_yield_farm(yield_farm, rewards, current_period, global_farm.id)?;
         }
         Ok(())
     }

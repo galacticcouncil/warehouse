@@ -165,7 +165,8 @@ pub struct YieldFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) multiplier: FarmMultiplier,
     pub(super) state: FarmState,
     pub(super) entries_count: u64,
-    pub(super) _phantom: PhantomData<I>, //pub because of tests
+    pub(super) left_to_distribute: Balance,
+    pub(super) _phantom: PhantomData<I>,
 }
 
 impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
@@ -187,6 +188,7 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
             total_valued_shares: Zero::zero(),
             state: FarmState::Active,
             entries_count: Default::default(),
+            left_to_distribute: Default::default(),
             _phantom: PhantomData::default(),
         }
     }

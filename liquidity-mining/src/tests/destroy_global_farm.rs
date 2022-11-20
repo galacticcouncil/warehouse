@@ -104,10 +104,8 @@ fn destroy_global_farm_should_work() {
                 charlie_reward_currency_balance + undistributed_rewards
             );
 
-            //NOTE: farm's account should stay in the non-dustable until farm's is removed from
-            //storage.
-            //Non-dustable check
-            pretty_assertions::assert_eq!(Whitelist::contains(&farm_account), true);
+            //Farm's account should be removed when farm is destroyed.
+            pretty_assertions::assert_eq!(Whitelist::contains(&farm_account), false);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

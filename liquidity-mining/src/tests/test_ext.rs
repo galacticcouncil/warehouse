@@ -233,8 +233,6 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
 
             let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
             let pot_account = LiquidityMining::pot_account_id().unwrap();
-            let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
-            let bsx_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
 
             //DEPOSIT 1:
             set_block_number(1_800); //18-th period
@@ -358,6 +356,9 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                 }
             );
 
+            let bsx_tkn1_yield_farm_left_to_distribute = 116_550;
+            let bsx_tkn2_yield_farm_left_to_distribute = 1_167_000;
+
             let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].id);
             pretty_assertions::assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, yield_farm_id)).unwrap(),
@@ -368,6 +369,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                     total_shares: 616,
                     total_valued_shares: 45_540,
                     entries_count: 3,
+                    left_to_distribute: bsx_tkn1_yield_farm_left_to_distribute,
                     ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
                 },
             );
@@ -382,6 +384,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                     total_shares: 960,
                     total_valued_shares: 47_629,
                     entries_count: 4,
+                    left_to_distribute: bsx_tkn2_yield_farm_left_to_distribute,
                     ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
                 },
             );
@@ -394,11 +397,10 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             );
 
             //Pot account balance check
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot_account), 0);
-
-            //Check of claimed amount from global farm.
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account), 116_550);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 1_167_000);
+            pretty_assertions::assert_eq!(
+                Tokens::free_balance(BSX, &pot_account),
+                bsx_tkn1_yield_farm_left_to_distribute + bsx_tkn2_yield_farm_left_to_distribute
+            );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

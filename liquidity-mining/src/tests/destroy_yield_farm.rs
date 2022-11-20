@@ -23,16 +23,16 @@ fn destroy_yield_farm_with_deposits_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
             let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
-            let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
-
-            let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
             let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
+
+            let pot = LiquidityMining::pot_account_id().unwrap();
+            let pot_balance_0 = Tokens::free_balance(BSX, &pot);
 
             // Cancel yield farm before removing.
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
-            let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
-            let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
+            let global_farm_0 = LiquidityMining::global_farm(GC_FARM).unwrap();
+            let yield_farm_0 = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
 
             assert_ok!(LiquidityMining::destroy_yield_farm(
                 GC,
@@ -44,8 +44,8 @@ fn destroy_yield_farm_with_deposits_should_work() {
             pretty_assertions::assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
-                    live_yield_farms_count: global_farm.live_yield_farms_count.checked_sub(1).unwrap(),
-                    ..global_farm
+                    live_yield_farms_count: global_farm_0.live_yield_farms_count.checked_sub(1).unwrap(),
+                    ..global_farm_0
                 }
             );
 
@@ -54,21 +54,23 @@ fn destroy_yield_farm_with_deposits_should_work() {
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
                 YieldFarmData {
                     state: FarmState::Deleted,
-                    ..yield_farm
+                    left_to_distribute: 0,
+                    ..yield_farm_0
                 }
             );
 
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &yield_farm_account), 0);
-
-            //Unpaid rewards from yield farm account should be transferred back to yield farm account.
+            //Yield-farm's `left_to_distribute`(unpaid rewards) should be transferred from pot to
+            //global-farm's account.
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
-                global_farm_bsx_balance.checked_add(yield_farm_bsx_balance).unwrap()
+                global_farm_bsx_balance.checked_add(yield_farm_0.left_to_distribute).unwrap()
+            );
+            
+            pretty_assertions::assert_eq!(
+                Tokens::free_balance(BSX, &pot),
+                pot_balance_0.checked_sub(yield_farm_0.left_to_distribute).unwrap()
             );
 
-            //NOTE: Farm's account should stay in non-dustable until farm is removed from storage.
-            //Non-dustable check
-            pretty_assertions::assert_eq!(Whitelist::contains(&yield_farm_account), true);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

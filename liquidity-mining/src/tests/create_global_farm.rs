@@ -207,7 +207,7 @@ fn create_global_farm_with_inssufficient_balance_should_not_work() {
         let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::create_global_farm(
-                    1_000_001,
+                    1_000_001 * ONE,
                     1_000,
                     1,
                     BSX,
@@ -218,6 +218,54 @@ fn create_global_farm_with_inssufficient_balance_should_not_work() {
                     One::one(),
                 ),
                 Error::<Test, Instance1>::InsufficientRewardCurrencyBalance
+            );
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    });
+}
+
+#[test]
+fn create_global_farm_should_not_work_when_reward_currency_is_not_registered() {
+    new_test_ext().execute_with(|| {
+        let _ = with_transaction(|| {
+            assert_noop!(
+                LiquidityMining::create_global_farm(
+                    1_000_000 * ONE,
+                    1_000,
+                    1,
+                    BSX,
+                    UNKNOWN_ASSET,
+                    GC,
+                    Perquintill::from_percent(20),
+                    10,
+                    One::one(),
+                ),
+                Error::<Test, Instance1>::RewardCurrencyNotRegistered
+            );
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    });
+}
+
+#[test]
+fn create_global_farm_should_not_work_when_incentivized_asset_is_not_registered() {
+    new_test_ext().execute_with(|| {
+        let _ = with_transaction(|| {
+            assert_noop!(
+                LiquidityMining::create_global_farm(
+                    1_000_000 * ONE,
+                    1_000,
+                    1,
+                    UNKNOWN_ASSET,
+                    BSX,
+                    GC,
+                    Perquintill::from_percent(20),
+                    10,
+                    One::one(),
+                ),
+                Error::<Test, Instance1>::IncentivizedAssetNotRegistered
             );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

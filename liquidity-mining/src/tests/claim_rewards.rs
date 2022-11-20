@@ -26,10 +26,14 @@ fn claim_rewards_should_work() {
             const FAIL_ON_DOUBLECLAIM: bool = true;
             const REWARD_CURRENCY: AssetId = BSX;
             let global_farm_id = GC_FARM;
-            let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
-            let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
-            let bsx_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
-            let bsx_tkn1_yield_farm_reward_balance = Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account);
+            let pot = LiquidityMining::pot_account_id().unwrap();
+
+            //_0 - value before act.
+            let alice_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
+            let bsx_tkn1_yield_farm_key = (BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID);
+            let bsx_tkn2_yield_farm_key = (BSX_TKN2_AMM, GC_FARM, GC_BSX_TKN2_YIELD_FARM_ID);
+            let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
+            let yield_farm_0 = LiquidityMining::yield_farm(bsx_tkn1_yield_farm_key).unwrap();
 
             let expected_claimed_rewards = 23_306;
             let unclaimable_rewards = 20_444;
@@ -71,25 +75,35 @@ fn claim_rewards_should_work() {
                 },
             );
 
+            pretty_assertions::assert_eq!(
+                LiquidityMining::yield_farm(bsx_tkn1_yield_farm_key)
+                    .unwrap()
+                    .left_to_distribute,
+                yield_farm_0.left_to_distribute - expected_claimed_rewards
+            );
+
             //Check if claimed rewards are transferred.
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &ALICE),
-                alice_bsx_balance + expected_claimed_rewards
+                alice_bsx_balance_0 + expected_claimed_rewards
             );
 
-            //Check balance on yield farm account.
             pretty_assertions::assert_eq!(
-                Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account),
-                bsx_tkn1_yield_farm_reward_balance - expected_claimed_rewards
+                Tokens::free_balance(REWARD_CURRENCY, &pot),
+                pot_balance_0 - expected_claimed_rewards
             );
 
             // claim B3.1
             set_block_number(3_056);
-            let bsx_tkn2_yield_farm_reward_balance = Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account);
-            let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
+            //_0 - value before act.
+            let alice_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
+            let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
+            let yield_farm_0 = LiquidityMining::yield_farm(bsx_tkn2_yield_farm_key).unwrap();
 
             let expected_claimed_rewards = 3_417;
             let unclaimable_rewards = 3_108;
+            let reserved_for_both_farms = 1_759_975;
+            let claimed_from_global = 1_190_725;
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::claim_rewards(
@@ -148,31 +162,38 @@ fn claim_rewards_should_work() {
                     total_shares: 960,
                     total_valued_shares: 47_629,
                     entries_count: 4,
-                    ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
+                    left_to_distribute: yield_farm_0.left_to_distribute - expected_claimed_rewards
+                        + claimed_from_global,
+                    ..yield_farm_0
                 },
             );
 
             //Check if claimed rewards are transferred.
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &ALICE),
-                alice_bsx_balance + expected_claimed_rewards
+                alice_bsx_balance_0 + expected_claimed_rewards
             );
 
-            let yield_farm_claim_from_global_farm = 1_190_725;
             pretty_assertions::assert_eq!(
-                Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account),
-                bsx_tkn2_yield_farm_reward_balance + yield_farm_claim_from_global_farm - expected_claimed_rewards
+                Tokens::free_balance(REWARD_CURRENCY, &pot),
+                pot_balance_0 + reserved_for_both_farms - expected_claimed_rewards
             );
 
             //Run for log time(longer than planned_yielding_periods) without interactions with farms.
             //planned_yielding_periods = 500; 100 blocks per period
             //claim A1.2
             set_block_number(125_879);
-            let bst_tkn1_yield_farm_reward_balance = Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account);
-            let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
+            //_0 - value before act.
+            let alice_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
+            let bsx_tkn1_yield_farm_key = (BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID);
+            let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
+            let yield_farm_0 = LiquidityMining::yield_farm(bsx_tkn1_yield_farm_key).unwrap();
 
             let expected_claimed_rewards = 7_437_514;
             let unclaimable_rewards = 289_180;
+
+            let reserved_for_both_farms = 432_249_860;
+            let yield_farm_claim_from_global = 140_377_050;
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::claim_rewards(
@@ -232,33 +253,21 @@ fn claim_rewards_should_work() {
                     total_shares: 616,
                     total_valued_shares: 45_540,
                     entries_count: 3,
-                    ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
-                },
-            );
-
-            pretty_assertions::assert_eq!(
-                LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap(),
-                YieldFarmData {
-                    updated_at: 30,
-                    accumulated_rpvs: FixedU128::from(60),
-                    accumulated_rpz: FixedU128::from(6),
-                    total_shares: 960,
-                    total_valued_shares: 47_629,
-                    entries_count: 4,
-                    ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
+                    left_to_distribute: yield_farm_0.left_to_distribute + yield_farm_claim_from_global
+                        - expected_claimed_rewards,
+                    ..yield_farm_0
                 },
             );
 
             //Check if claimed rewards are transferred.
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &ALICE),
-                alice_bsx_balance + expected_claimed_rewards
+                alice_bsx_balance_0 + expected_claimed_rewards
             );
 
-            let yield_farm_claim_from_global_farm = 140_377_050;
             pretty_assertions::assert_eq!(
-                Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account),
-                bst_tkn1_yield_farm_reward_balance + yield_farm_claim_from_global_farm - expected_claimed_rewards
+                Tokens::free_balance(BSX, &pot),
+                pot_balance_0 + reserved_for_both_farms - expected_claimed_rewards
             );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
@@ -534,8 +543,10 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
             const FAIL_ON_DOUBLECLAIM: bool = true;
             let global_farm_id = GC_FARM;
             let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
-            let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
-            let bsx_tkn1_yield_farm_reward_balance = Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account);
+            let pot = LiquidityMining::pot_account_id().unwrap();
+
+            let yield_farm_0 = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
+            let pot_balance_0 = Tokens::free_balance(BSX, &pot);
 
             //1-th claim should works.
             assert_ok!(LiquidityMining::claim_rewards(
@@ -565,11 +576,15 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &ALICE), alice_bsx_balance + 23_306);
             pretty_assertions::assert_eq!(
-                Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account),
-                bsx_tkn1_yield_farm_reward_balance - 23_306
+                LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
+                    .unwrap()
+                    .left_to_distribute,
+                yield_farm_0.left_to_distribute - 23_306
             );
+
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &ALICE), alice_bsx_balance + 23_306);
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), pot_balance_0 - 23_306);
 
             //Second claim should fail.
             assert_noop!(
@@ -593,9 +608,10 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
         let _ = with_transaction(|| {
             const FAIL_ON_DOUBLECLAIM: bool = true;
             let global_farm_id = GC_FARM;
-            let alice_bsx_balance = Tokens::free_balance(BSX, &ALICE);
-            let bsx_tkn1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
-            let bsx_tkn1_yield_farm_reward_balance = Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account);
+            let alibe_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
+            let pot = LiquidityMining::pot_account_id().unwrap();
+            let pot_balance_0 = Tokens::free_balance(BSX, &pot);
+            let yield_farm_0 = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
 
             //Stop yield farming before claiming.
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
@@ -637,16 +653,22 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                 },
             );
 
+            pretty_assertions::assert_eq!(
+                LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
+                    .unwrap()
+                    .left_to_distribute,
+                yield_farm_0.left_to_distribute - expected_claimed_rewards
+            );
+
             //Check if claimed rewards are transferred.
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &ALICE),
-                alice_bsx_balance + expected_claimed_rewards
+                alibe_bsx_balance_0 + expected_claimed_rewards
             );
 
-            //Check balance on yield farm's account.
             pretty_assertions::assert_eq!(
-                Tokens::free_balance(BSX, &bsx_tkn1_yield_farm_account),
-                bsx_tkn1_yield_farm_reward_balance - expected_claimed_rewards
+                Tokens::free_balance(BSX, &pot),
+                pot_balance_0 - expected_claimed_rewards
             );
 
             //Second claim on same deposit from stopped yield farm.
@@ -760,7 +782,7 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
 
             const PLANNED_PERIODS: u64 = 10_000;
             const BLOCKS_PER_PERIOD: u64 = 10;
-            const TOTAL_REWARDS_TO_DISTRIBUTE: u128 = 1_000_000 * ONE;
+            const TOTAL_REWARDS_TO_DISTRIBUTE: u128 = 1_000_000;
 
             //initialize farms
             set_block_number(1000);
@@ -790,7 +812,7 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 GLOBAL_FARM,
                 YIELD_FARM_A,
                 BSX_TKN1_AMM,
-                100 * ONE,
+                1_000,
                 |_, _, _| { Ok(1_u128) }
             ));
 
@@ -811,7 +833,7 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 GLOBAL_FARM,
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
-                100 * ONE,
+                1_000,
                 |_, _, _| { Ok(1_u128) }
             ));
 
@@ -820,7 +842,7 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 GLOBAL_FARM,
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
-                100 * ONE,
+                1_000,
                 |_, _, _| { Ok(1_u128) }
             ));
 

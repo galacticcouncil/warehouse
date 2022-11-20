@@ -38,6 +38,7 @@ fn create_yield_farm_should_work() {
                 loyalty_curve: Some(LoyaltyCurve::default()),
                 entries_count: 0,
                 state: FarmState::Active,
+                left_to_distribute: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_ACA_AMM,
@@ -66,6 +67,7 @@ fn create_yield_farm_should_work() {
                 loyalty_curve: None,
                 entries_count: 0,
                 state: FarmState::Active,
+                left_to_distribute: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_KSM_AMM,
@@ -97,6 +99,7 @@ fn create_yield_farm_should_work() {
                 }),
                 state: FarmState::Active,
                 entries_count: 0,
+                left_to_distribute: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_ETH_AMM,
@@ -128,6 +131,7 @@ fn create_yield_farm_should_work() {
                 }),
                 state: FarmState::Active,
                 entries_count: 0,
+                left_to_distribute: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_ETH_AMM,
@@ -171,10 +175,6 @@ fn create_yield_farm_should_work() {
                     LiquidityMining::yield_farm((amm_id, global_farm_id, yield_farm.id)).unwrap(),
                     YieldFarmData { ..yield_farm }
                 );
-
-                let yield_farm_account = LiquidityMining::farm_account_id(yield_farm.id).unwrap();
-                //Non-dustable check
-                pretty_assertions::assert_eq!(Whitelist::contains(&yield_farm_account), true);
             }
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

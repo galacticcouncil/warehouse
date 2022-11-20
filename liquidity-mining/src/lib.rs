@@ -140,7 +140,7 @@ pub mod pallet {
         fn integrity_test() {
             assert!(
                 T::MaxFarmEntriesPerDeposit::get().ge(&1_u32),
-                "`T::MaxFarmEntriesPerDeposit` must be greater or eaqual to 1"
+                "`T::MaxFarmEntriesPerDeposit` must be greater or equal to 1"
             );
         }
     }

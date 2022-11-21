@@ -112,13 +112,16 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Creates an NFT collection of the given collection type
-        /// and sets its metadata
+        /// Creates an NFT collection of the given collection type and sets its metadata.
+        /// The collection ID needs to be outside of the range of reserved IDs.
+        /// The creation of a collection needs to be enabled in the permissions
+        /// for the given collection type.
         ///
         /// Parameters:
-        /// - `collection_id`: Identifier of a collection
-        /// - `collection_type`: The collection type determines its purpose and usage
-        /// - `metadata`: Arbitrary data about a collection, e.g. IPFS hash or name
+        /// - `origin`: The owner of the newly created collection.
+        /// - `collection_id`: Identifier of a collection.
+        /// - `collection_type`: The collection type determines its purpose and usage.
+        /// - `metadata`: Arbitrary data about a collection, e.g. IPFS hash or name.
         ///
         /// Emits CollectionCreated event
         #[pallet::weight(<T as Config>::WeightInfo::create_collection())]
@@ -138,13 +141,15 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Mints an NFT in the specified collection
-        /// and sets its metadata
+        /// Mints an NFT in the specified collection and sets its metadata.
+        /// Minting of new items needs to be enabled in the permissions
+        /// for the given collection type.
         ///
         /// Parameters:
+        /// - `origin`: The owner of the newly minted NFT.
         /// - `collection_id`: The collection of the asset to be minted.
         /// - `item_id`: The item of the asset to be minted.
-        /// - `metadata`: Arbitrary data about an item, e.g. IPFS hash or symbol
+        /// - `metadata`: Arbitrary data about an item, e.g. IPFS hash or symbol.
         #[pallet::weight(<T as Config>::WeightInfo::mint())]
         pub fn mint(
             origin: OriginFor<T>,
@@ -165,9 +170,11 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Transfers NFT from account A to account B
+        /// Transfers NFT from account A to account B.
+        /// Transfers need to be enabled in the permissions for the given collection type.
         ///
         /// Parameters:
+        /// - `origin`: The NFT owner
         /// - `collection_id`: The collection of the asset to be transferred.
         /// - `item_id`: The instance of the asset to be transferred.
         /// - `dest`: The account to receive ownership of the asset.
@@ -193,9 +200,11 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Removes a token from existence
+        /// Removes a token from existence.
+        /// Burning needs to be enabled in the permissions for the given collection type.
         ///
         /// Parameters:
+        /// - `origin`: The NFT owner.
         /// - `collection_id`: The collection of the asset to be burned.
         /// - `item_id`: The instance of the asset to be burned.
         #[pallet::weight(<T as Config>::WeightInfo::burn())]
@@ -213,9 +222,13 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Removes a collection from existence
+        /// Removes a collection from existence.
+        /// Destroying of collections need to be enabled in the permissions
+        /// for the given collection type.
+        /// Fails if the collection is not empty.
         ///
         /// Parameters:
+        /// - `origin`: The collection owner.
         /// - `collection_id`: The identifier of the asset collection to be destroyed.
         #[pallet::weight(<T as Config>::WeightInfo::destroy_collection())]
         pub fn destroy_collection(origin: OriginFor<T>, collection_id: T::NftCollectionId) -> DispatchResult {
@@ -438,14 +451,17 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
     type ItemId = T::NftItemId;
     type CollectionId = T::NftCollectionId;
 
+    /// Returns the owner of `item` of `collection`, or `None` if the item doesn't exist.
     fn owner(collection: &Self::CollectionId, item: &Self::ItemId) -> Option<T::AccountId> {
         pallet_uniques::Pallet::<T>::owner((*collection).into(), (*item).into())
     }
 
+    /// Returns the owner of the `collection`, or `None` if the collection doesn't exist.
     fn collection_owner(collection: &Self::CollectionId) -> Option<T::AccountId> {
         pallet_uniques::Pallet::<T>::collection_owner((*collection).into())
     }
 
+    /// Returns `true` if the `item` of `collection` may be transferred.
     fn can_transfer(collection: &Self::CollectionId, _item: &Self::ItemId) -> bool {
         let maybe_collection_type = Self::collections(collection).map(|c| c.collection_type);
 
@@ -457,14 +473,17 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
+    /// Returns an iterator of the collections in existence.
     fn collections() -> Box<dyn Iterator<Item = Self::CollectionId>> {
         Box::new(Collections::<T>::iter_keys())
     }
 
+    /// Returns an iterator of the items of a `collection` in existence.
     fn items(collection: &Self::CollectionId) -> Box<dyn Iterator<Item = Self::ItemId>> {
         Box::new(Items::<T>::iter_key_prefix(collection))
     }
 
+    /// Returns an iterator of the items of all collections owned by `who`.
     fn owned(who: &T::AccountId) -> Box<dyn Iterator<Item = (Self::CollectionId, Self::ItemId)>> {
         Box::new(
             pallet_uniques::Pallet::<T>::owned(who)
@@ -472,6 +491,7 @@ impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
         )
     }
 
+    /// Returns an iterator of the items of `collection` owned by `who`.
     fn owned_in_collection(
         collection: &Self::CollectionId,
         who: &T::AccountId,
@@ -487,7 +507,19 @@ impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> Create<T::AccountId> for Pallet<T> {
+    /// Creates an NFT collection of the given collection type and sets its metadata.
+    /// The collection ID needs to be outside of the range of reserved IDs.
+    /// The permissions for the creation of a collection are not enforced.
+    /// Default collection type and metadata are used.
+    ///
+    /// Parameters:
+    /// - `collection`: Identifier of a collection.
+    /// - `who`: The collection owner.
+    /// - `admin`: This parameter is ignored and is always set to be the same as the collection owner.
+    ///
+    /// Emits CollectionCreated event
     fn create_collection(collection: &Self::CollectionId, who: &T::AccountId, _admin: &T::AccountId) -> DispatchResult {
+        ensure!(!Self::is_id_reserved(*collection), Error::<T>::IdReserved);
         Self::do_create_collection(who.clone(), *collection, Default::default(), BoundedVec::default())?;
 
         Ok(())
@@ -497,18 +529,37 @@ impl<T: Config> Create<T::AccountId> for Pallet<T> {
 impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
     type DestroyWitness = pallet_uniques::DestroyWitness;
 
+    /// The witness data needed to destroy an item.
     fn get_destroy_witness(collection: &Self::CollectionId) -> Option<Self::DestroyWitness> {
         pallet_uniques::Pallet::<T>::get_destroy_witness(
             &(Into::<<T as pallet_uniques::Config>::CollectionId>::into(*collection)),
         )
     }
 
+    /// Removes a collection from existence.
+    /// Destroying of collections is not enforced by the permissions
+    /// for the given collection type.
+    /// Fails if the collection is not empty and contains items.
+    ///
+    /// Parameters:
+    /// - `collection`: The `CollectionId` to be destroyed.
+    /// - `witness`: Empty witness data that needs to be provided to complete the operation
+    ///   successfully.
+    /// - `maybe_check_owner`: An optional account id that can be used to authorize the destroy
+    ///   command. If not provided, we will not do any authorization checks before destroying the
+    ///   item.
+    ///
+    /// If successful, this function will return empty witness data from the destroyed item.
     fn destroy(
         collection: Self::CollectionId,
         _witness: Self::DestroyWitness,
-        _maybe_check_owner: Option<T::AccountId>,
+        maybe_check_owner: Option<T::AccountId>,
     ) -> Result<Self::DestroyWitness, DispatchError> {
-        let owner = Self::collection_owner(&collection).ok_or(Error::<T>::CollectionUnknown)?;
+        let owner = if let Some(check_owner) = maybe_check_owner {
+            check_owner
+        } else {
+            Self::collection_owner(&collection).ok_or(Error::<T>::CollectionUnknown)?
+        };
 
         Self::do_destroy_collection(owner, collection)?;
 
@@ -522,12 +573,27 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> Mutate<T::AccountId> for Pallet<T> {
+    /// Mints an NFT in the specified collection and sets its metadata.
+    /// The minting permissions are not enforced.
+    /// Metadata is set to the default value.
+    ///
+    /// Parameters:
+    /// - `collection`: The collection of the asset to be minted.
+    /// - `item`: The item of the asset to be minted.
+    /// - `who`: The owner of the newly minted NFT.
     fn mint_into(collection: &Self::CollectionId, item: &Self::ItemId, who: &T::AccountId) -> DispatchResult {
         Self::do_mint(who.clone(), *collection, *item, BoundedVec::default())?;
 
         Ok(())
     }
 
+    /// Removes an item from existence.
+    /// The burning permissions are not enforced.
+    ///
+    /// Parameters:
+    /// - `collection`: The collection of the asset to be burned.
+    /// - `item`: The instance of the asset to be burned.
+    /// - `maybe_check_owner`: Optional value.
     fn burn(
         collection: &Self::CollectionId,
         item: &Self::ItemId,
@@ -546,6 +612,7 @@ impl<T: Config> Mutate<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
+    /// Transfer `item` of `collection` into `destination` account.
     fn transfer(collection: &Self::CollectionId, item: &Self::ItemId, destination: &T::AccountId) -> DispatchResult {
         let owner = Self::owner(collection, item).ok_or(Error::<T>::ItemUnknown)?;
 
@@ -554,6 +621,17 @@ impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> CreateTypedCollection<T::AccountId, T::NftCollectionId, T::CollectionType> for Pallet<T> {
+    /// Creates an NFT collection of the given collection type and sets its metadata.
+    /// The collection ID does not need to be outside of the range of reserved IDs.
+    /// The permissions for the creation of a collection are not enforced.
+    /// Metadata is set to the default value.
+    ///
+    /// Parameters:
+    /// - `owner`: The collection owner.
+    /// - `collection_id`: Identifier of a collection.
+    /// - `collection_type`: The collection type.
+    ///
+    /// Emits CollectionCreated event
     fn create_typed_collection(
         owner: T::AccountId,
         collection_id: T::NftCollectionId,
@@ -564,6 +642,7 @@ impl<T: Config> CreateTypedCollection<T::AccountId, T::NftCollectionId, T::Colle
 }
 
 impl<T: Config> ReserveCollectionId<T::NftCollectionId> for Pallet<T> {
+    /// Checks if the provided collection ID is within the range of reserved IDs.
     fn is_id_reserved(id: T::NftCollectionId) -> bool {
         id <= T::ReserveCollectionIdUpTo::get()
     }

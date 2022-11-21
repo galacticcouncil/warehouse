@@ -903,3 +903,68 @@ fn burn_should_work_when_account_has_no_balance() {
         ));
     });
 }
+
+#[test]
+fn do_destroy_collection_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
+            b"metadata".to_vec().try_into().unwrap();
+
+        // collection does not exist
+        assert_noop!(
+            NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_0),
+            Error::<Test>::CollectionUnknown
+        );
+
+        // existing item
+        assert_ok!(NFTPallet::create_collection(
+            Origin::signed(ALICE),
+            COLLECTION_ID_0,
+            Default::default(), // Marketplace
+            metadata.clone()
+        ));
+
+        assert_ok!(NFTPallet::mint(
+            Origin::signed(ALICE),
+            COLLECTION_ID_0,
+            ITEM_ID_0,
+            metadata.clone()
+        ));
+
+        assert_noop!(
+            NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_0),
+            Error::<Test>::TokenCollectionNotEmpty
+        );
+
+        // happy path
+        assert_ok!(NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0));
+
+        let witness = NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_0).unwrap();
+        assert_eq!(
+            witness,
+            DestroyWitness {
+                items: 0,
+                item_metadatas: 0,
+                attributes: 0
+            }
+        );
+
+        assert_eq!(NFTPallet::collections(COLLECTION_ID_0), None);
+
+        expect_events(vec![crate::Event::CollectionDestroyed {
+            owner: ALICE,
+            collection_id: COLLECTION_ID_0,
+        }
+        .into()]);
+
+        // permissions are ignored
+        assert_ok!(NFTPallet::create_collection(
+            Origin::signed(ALICE),
+            COLLECTION_ID_1,
+            CollectionType::Redeemable,
+            metadata
+        ));
+
+        assert_ok!(NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_1));
+    });
+}

@@ -40,7 +40,7 @@ sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
-polkadot-xcm = { package = "xcm", git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.29", default-features = false }
+polkadot-xcm = { package = "xcm", git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.29-1", default-features = false }
 test-utils = { path = "../test-utils", default-features = false }
 
 [features]

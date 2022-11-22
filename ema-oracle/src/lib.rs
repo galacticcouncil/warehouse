@@ -331,9 +331,13 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
     fn on_trade_weight() -> Weight {
         // on_trade + on_finalize / max_trades
         T::WeightInfo::on_trade_multiple_tokens(MAX_TRADES).saturating_add(
-            T::WeightInfo::on_finalize_multiple_tokens(MAX_TRADES)
-                .saturating_sub(T::WeightInfo::on_finalize_no_entry())
-                / Weight::from(MAX_TRADES),
+            // TODO: Can we also divide the proof size weight the same way?
+            Weight::from_ref_time(
+                T::WeightInfo::on_finalize_multiple_tokens(MAX_TRADES)
+                    .saturating_sub(T::WeightInfo::on_finalize_no_entry())
+                    .ref_time()
+                    / (MAX_TRADES as u64),
+            ),
         )
     }
 }
@@ -372,9 +376,13 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
     fn on_liquidity_changed_weight() -> Weight {
         // on_liquidity + on_finalize / max_trades
         T::WeightInfo::on_liquidity_changed_multiple_tokens(MAX_TRADES).saturating_add(
-            T::WeightInfo::on_finalize_multiple_tokens(MAX_TRADES)
-                .saturating_sub(T::WeightInfo::on_finalize_no_entry())
-                / Weight::from(MAX_TRADES),
+            // TODO: Can we also divide the proof size weight the same way?
+            Weight::from_ref_time(
+                T::WeightInfo::on_finalize_multiple_tokens(MAX_TRADES)
+                    .saturating_sub(T::WeightInfo::on_finalize_no_entry())
+                    .ref_time()
+                    / (MAX_TRADES as u64),
+            ),
         )
     }
 }

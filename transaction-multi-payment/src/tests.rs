@@ -34,10 +34,6 @@ use frame_support::{
 use orml_traits::MultiCurrency;
 use pallet_balances::Call as BalancesCall;
 use pallet_transaction_payment::ChargeTransactionPayment;
-use sp_runtime::{
-    traits::{BadOrigin, SignedExtension},
-    transaction_validity::ValidTransaction,
-};
 use sp_std::marker::PhantomData;
 
 const CALL: &<Test as frame_system::Config>::Call = &Call::Balances(BalancesCall::transfer { dest: 2, value: 69 });

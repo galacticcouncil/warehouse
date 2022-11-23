@@ -118,7 +118,7 @@ use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
 use sp_arithmetic::{
     traits::{CheckedDiv, CheckedSub},
-    FixedPointNumber, FixedU128, Perquintill,
+    FixedU128, Perquintill,
 };
 use sp_std::{
     convert::{From, Into, TryInto},
@@ -1264,11 +1264,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             Some(v) => v,
             None => return Ok(FixedU128::one()), //no loyalty curve mean no loyalty multiplier
         };
-
-        //b.is_one() is special case - this case is prevented by loyalty curve parameters validation
-        if FixedPointNumber::is_one(&curve.initial_reward_percentage) {
-            return Ok(FixedU128::one());
-        }
 
         math::calculate_loyalty_multiplier(periods, curve.initial_reward_percentage, curve.scale_coef)
             .map_err(|_| ArithmeticError::Overflow)

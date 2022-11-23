@@ -28,7 +28,7 @@ use mock::{
 
 use frame_support::{assert_noop, assert_ok};
 
-use sp_arithmetic::traits::CheckedSub;
+use sp_arithmetic::{traits::CheckedSub, FixedPointNumber};
 use std::cmp::Ordering;
 
 const ALICE_FARM: u32 = BSX_FARM;

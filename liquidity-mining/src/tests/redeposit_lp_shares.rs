@@ -263,3 +263,22 @@ fn redeposit_lp_shares_same_deposit_should_not_work() {
         });
     });
 }
+
+#[test]
+fn redeposit_lp_shares_should_not_work_when_valued_shares_is_zero() {
+    let _ = predefined_test_ext_with_deposits().execute_with(|| {
+        with_transaction(|| {
+            assert_noop!(
+                LiquidityMining::redeposit_lp_shares(
+                    EVE_FARM,
+                    EVE_BSX_TKN1_YIELD_FARM_ID,
+                    PREDEFINED_DEPOSIT_IDS[0],
+                    |_, _, _| { Ok(0_u128) }
+                ),
+                Error::<Test, Instance1>::ZeroValuedShares
+            );
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        })
+    });
+}

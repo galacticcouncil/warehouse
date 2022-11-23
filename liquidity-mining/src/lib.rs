@@ -261,6 +261,9 @@ pub mod pallet {
 
         /// Account creation from id failed.
         ErrorGetAccountId,
+
+        /// Value of deposited shares amount in reward currency can't be 0.
+        ZeroValuedShares,
     }
 
     /// Id sequencer for `GlobalFarm` and `YieldFarm`.
@@ -1146,6 +1149,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         deposit.amm_pool_id.clone(),
                         deposit.shares,
                     )?;
+
+                    ensure!(valued_shares.gt(&Balance::zero()), Error::<T, I>::ZeroValuedShares);
 
                     let deposit_stake_in_global_farm =
                         math::calculate_global_farm_shares(valued_shares, yield_farm.multiplier)

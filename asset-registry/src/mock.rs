@@ -54,6 +54,7 @@ parameter_types! {
     pub const SS58Prefix: u8 = 63;
     pub const NativeAssetId: AssetId = 0;
     pub const RegistryStringLimit: u32 = 10;
+    pub const SequentailIdStart: u32 = 1_000_000;
 }
 
 impl system::Config for Test {
@@ -102,6 +103,7 @@ impl Config for Test {
     type Balance = Balance;
     type AssetNativeLocation = AssetLocation;
     type StringLimit = RegistryStringLimit;
+    type SequentialIdStartAt = SequentailIdStart;
     type NativeAssetId = NativeAssetId;
     type WeightInfo = ();
 }

@@ -425,9 +425,10 @@ impl<T: Config> Pallet<T> {
         selected_asset_id: Option<T::AssetId>,
     ) -> Result<T::AssetId, DispatchError> {
         let asset_id = if let Some(selected_id) = selected_asset_id {
-            if selected_id >= T::SequentialIdStartAt::get() {
-                return Err(Error::<T>::NotInReservedRange.into());
-            }
+            ensure!(
+                selected_id < T::SequentialIdStartAt::get(),
+                Error::<T>::NotInReservedRange
+            );
 
             ensure!(
                 !Assets::<T>::contains_key(&selected_id),

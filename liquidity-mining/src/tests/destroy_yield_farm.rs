@@ -120,6 +120,56 @@ fn destroy_yield_farm_without_deposits_should_work() {
 }
 
 #[test]
+fn destory_yield_farm_should_work_when_farm_is_stopped_and_active_yield_farm_exists_for_same_amm_pool_id() {
+    predefined_test_ext().execute_with(|| {
+        let _ = with_transaction(|| {
+            let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
+            let yield_farm_acoount = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
+
+            let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_acoount);
+            let global_farm_bsx_balance = Tokens::free_balance(BSX, &global_farm_account);
+
+            //Stop yield farm before removing
+            assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+
+            LiquidityMining::create_yield_farm(GC, GC_FARM, One::one(), None, BSX_TKN1_AMM, vec![BSX, TKN1]).unwrap();
+
+            let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
+
+            assert_ok!(LiquidityMining::destroy_yield_farm(
+                GC,
+                GC_FARM,
+                GC_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM
+            ));
+
+            pretty_assertions::assert_eq!(
+                LiquidityMining::global_farm(GC_FARM).unwrap(),
+                GlobalFarmData {
+                    live_yield_farms_count: global_farm.live_yield_farms_count.checked_sub(1).unwrap(),
+                    //yield farm was removed from storage so this should change
+                    total_yield_farms_count: global_farm.total_yield_farms_count.checked_sub(1).unwrap(),
+                    ..global_farm
+                }
+            );
+
+            //Yield farm without deposits should be flushed.
+            assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).is_none());
+
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &yield_farm_acoount), 0);
+
+            //Unpaid rewards from yield farm account should be transferred back to global farm's account.
+            pretty_assertions::assert_eq!(
+                Tokens::free_balance(BSX, &global_farm_account),
+                global_farm_bsx_balance.checked_add(yield_farm_bsx_balance).unwrap()
+            );
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    });
+}
+
+#[test]
 fn destroy_yield_farm_non_stopped_yield_farming_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {

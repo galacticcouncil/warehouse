@@ -778,7 +778,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
     ) -> Result<(), DispatchError> {
         ensure!(
-            !<ActiveYieldFarm<T, I>>::contains_key(amm_pool_id.clone(), global_farm_id),
+            <ActiveYieldFarm<T, I>>::get(amm_pool_id.clone(), global_farm_id) != Some(yield_farm_id),
             Error::<T, I>::LiquidityMiningIsActive
         );
 

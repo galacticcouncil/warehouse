@@ -670,7 +670,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
 }
 
 #[test]
-fn claim_rewards_from_removed_yield_farm_should_not_work() {
+fn claim_rewards_should_fail_with_liqudity_mining_canceled_when_yield_farm_is_destroyed() {
     const FAIL_ON_DOUBLECLAIM: bool = true;
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
@@ -692,7 +692,7 @@ fn claim_rewards_from_removed_yield_farm_should_not_work() {
                     GC_BSX_TKN1_YIELD_FARM_ID,
                     FAIL_ON_DOUBLECLAIM
                 ),
-                Error::<Test, Instance1>::YieldFarmNotFound
+                Error::<Test, Instance1>::LiquidityMiningCanceled
             );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

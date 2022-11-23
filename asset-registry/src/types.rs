@@ -49,3 +49,9 @@ pub struct AssetMetadata<BoundedString> {
     /// The number of decimals this asset uses to represent one unit.
     pub(super) decimals: u8,
 }
+
+#[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, TypeInfo)]
+pub struct Metadata {
+    pub(super) symbol: Vec<u8>,
+    pub(super) decimals: u8,
+}

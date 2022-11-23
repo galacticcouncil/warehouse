@@ -50,6 +50,7 @@ use hydradx_traits::{Registry, ShareTokenRegistry};
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use crate::types::Metadata;
     use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
 
     pub type AssetDetailsT<T> =
@@ -253,6 +254,8 @@ pub mod pallet {
             asset_type: AssetType<T::AssetId>,
             existential_deposit: T::Balance,
             asset_id: Option<T::AssetId>,
+            metadata: Option<Metadata>,
+            location: Option<T::AssetNativeLocation>,
         ) -> DispatchResult {
             T::RegistryOrigin::ensure_origin(origin)?;
 
@@ -263,7 +266,29 @@ pub mod pallet {
                 Error::<T>::AssetAlreadyRegistered
             );
 
-            Self::register_asset(bounded_name, asset_type, existential_deposit, asset_id)?;
+            let asset_id = Self::register_asset(bounded_name, asset_type, existential_deposit, asset_id)?;
+
+            if let Some(meta) = metadata {
+                let symbol = Self::to_bounded_name(meta.symbol)?;
+                AssetMetadataMap::<T>::insert(
+                    asset_id,
+                    AssetMetadata {
+                        symbol,
+                        decimals: meta.decimals,
+                    },
+                );
+            }
+
+            if let Some(loc) = location {
+                ensure!(asset_id != T::NativeAssetId::get(), Error::<T>::CannotUpdateLocation);
+                AssetLocations::<T>::insert(asset_id, &loc);
+                LocationAssets::<T>::insert(&loc, asset_id);
+
+                Self::deposit_event(Event::LocationSet {
+                    asset_id,
+                    location: loc,
+                });
+            }
 
             Ok(())
         }

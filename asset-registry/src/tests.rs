@@ -33,7 +33,15 @@ fn register_asset_works() {
         let ed = 1_000_000u128;
 
         assert_noop!(
-            AssetRegistryPallet::register(Origin::root(), too_long.to_vec(), AssetType::Token, ed, None),
+            AssetRegistryPallet::register(
+                Origin::root(),
+                too_long.to_vec(),
+                AssetType::Token,
+                ed,
+                None,
+                None,
+                None
+            ),
             Error::<Test>::TooLong
         );
 
@@ -44,6 +52,8 @@ fn register_asset_works() {
             name.clone(),
             AssetType::Token,
             ed,
+            None,
+            None,
             None,
         ));
 
@@ -71,7 +81,7 @@ fn register_asset_works() {
         );
 
         assert_noop!(
-            AssetRegistryPallet::register(Origin::root(), name, AssetType::Token, ed, None),
+            AssetRegistryPallet::register(Origin::root(), name, AssetType::Token, ed, None, None, None),
             Error::<Test>::AssetAlreadyRegistered
         );
     });

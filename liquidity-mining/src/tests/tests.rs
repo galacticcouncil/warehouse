@@ -416,9 +416,9 @@ fn update_global_farm_should_work() {
             32_055_u128,
             326_u64,
             1_712_797_u128,
-            61_424_428_u128,
-            FixedU128::from_inner(523_000_000_001_228_236_953_u128),
-            61_456_483_u128,
+            61_455_483_u128,
+            FixedU128::from_inner(523_000_000_001_189_920_405_u128),
+            61_486_538_u128,
         ),
         (
             181_u64,
@@ -456,8 +456,8 @@ fn update_global_farm_should_work() {
             161_u64,
             55_309_798_233_u128,
             71_071_995_u128,
-            FixedU128::from_inner(37_740_007_072_508_302_485_u128),
-            38_469_134_763_u128,
+            FixedU128::from_inner(37_740_006_193_817_956_143_u128),
+            38_469_133_763_u128,
         ),
         (
             161_u64,
@@ -521,8 +521,8 @@ fn update_global_farm_should_work() {
             131_u64,
             1_081_636_u128,
             75_149_021_u128,
-            FixedU128::from_inner(833_000_000_188_248_661_347_u128),
-            79_001_024_u128,
+            FixedU128::from_inner(833_000_000_188_199_791_016_u128),
+            79_000_024_u128,
         ),
         (
             90_u64,
@@ -638,8 +638,8 @@ fn update_global_farm_should_work() {
             400000_u64,
             886_865_u128,
             52_402_278_u128,
-            FixedU128::from_inner(2_564_373_132_694_355_697_550_585_u128),
-            36_167_851_242_u128,
+            FixedU128::from_inner(2_564_373_061_696_840_610_578_629_u128),
+            36_167_850_242_u128,
         ),
         (
             158_u64,
@@ -697,13 +697,18 @@ fn update_global_farm_should_work() {
         global_farm.paid_accumulated_rewards = 10;
 
         new_test_ext().execute_with(|| {
+            //Add farm's account to whitelist
             let farm_account_id = LiquidityMining::farm_account_id(*id).unwrap();
-            let _ = Tokens::transfer(
+            Whitelist::add_account(&farm_account_id).unwrap();
+
+            Tokens::transfer(
                 Origin::signed(TREASURY),
                 farm_account_id,
                 *reward_currency,
                 *rewards_left_to_distribute,
-            );
+            )
+            .unwrap();
+
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(*reward_currency, &farm_account_id),
                 *rewards_left_to_distribute
@@ -717,8 +722,6 @@ fn update_global_farm_should_work() {
                 ))
             })
             .unwrap();
-
-            //            println!("{}", global_farm.accumulated_rpz);
 
             let mut expected_global_farm = GlobalFarmData::new(
                 *id,
@@ -1152,7 +1155,6 @@ fn update_yield_farm_should_work() {
             299_000_000_000_000_000_000_u128,
             26_u64,
             0_u128,
-            9_000_000_000_000_u128,
         ),
         (
             BSX_FARM,
@@ -1166,7 +1168,6 @@ fn update_yield_farm_should_work() {
             6_188_980_252_477_353_672_176_u128,
             259_u64,
             170_130_593_048_u128,
-            8_829_869_406_952_u128,
         ),
         (
             BSX_FARM,
@@ -1180,7 +1181,6 @@ fn update_yield_farm_should_work() {
             4_053_947_849_148_258_082_137_u128,
             326_u64,
             8_414_312_431_200_u128,
-            585_687_568_800_u128,
         ),
         (
             BSX_FARM,
@@ -1194,7 +1194,6 @@ fn update_yield_farm_should_work() {
             341_317_480_121_125_565_762_u128,
             1856_u64,
             190_581_342_u128,
-            8_999_809_418_658_u128,
         ),
         (
             BSX_FARM,
@@ -1208,7 +1207,6 @@ fn update_yield_farm_should_work() {
             5_738_317_845_151_271_260_056_u128,
             954_u64,
             15_319_968_u128,
-            8_999_984_680_032_u128,
         ),
         (
             BSX_FARM,
@@ -1222,7 +1220,6 @@ fn update_yield_farm_should_work() {
             39_060_859_104_760_294_231_u128,
             161_u64,
             2_345_375_835_u128,
-            8_997_654_624_165_u128,
         ),
         (
             BSX_FARM,
@@ -1236,7 +1233,6 @@ fn update_yield_farm_should_work() {
             1_473_929_331_170_001_802_776_u128,
             448_u64,
             39_735_180_u128,
-            8_999_960_264_820_u128,
         ),
         (
             BSX_FARM,
@@ -1250,7 +1246,6 @@ fn update_yield_farm_should_work() {
             2_530_873_977_086_743_044_189_u128,
             132_u64,
             3_795_224_u128,
-            8_999_996_204_776_u128,
         ),
         (
             BSX_FARM,
@@ -1264,7 +1259,6 @@ fn update_yield_farm_should_work() {
             30_039_394_730_631_530_848_u128,
             146_u64,
             3_249_180_u128,
-            8_999_996_750_820_u128,
         ),
         (
             BSX_FARM,
@@ -1278,7 +1272,6 @@ fn update_yield_farm_should_work() {
             2_134_983_634_885_139_255_946_u128,
             202_u64,
             12_385_881_u128,
-            8_999_987_614_119_u128,
         ),
         (
             BSX_FARM,
@@ -1292,7 +1285,6 @@ fn update_yield_farm_should_work() {
             8_400_705_326_204_672_182_528_u128,
             131_u64,
             56_708_340_909_u128,
-            8_943_291_659_091_u128,
         ),
         (
             BSX_FARM,
@@ -1306,7 +1298,6 @@ fn update_yield_farm_should_work() {
             5_888_827_596_157_395_135_340_u128,
             110_u64,
             1_685_400_u128,
-            8_999_998_314_600_u128,
         ),
         (
             BSX_FARM,
@@ -1320,7 +1311,6 @@ fn update_yield_farm_should_work() {
             2_769_234_905_822_939_172_620_u128,
             582_u64,
             67_232_880_u128,
-            8_999_932_767_120_u128,
         ),
         (
             BSX_FARM,
@@ -1334,7 +1324,6 @@ fn update_yield_farm_should_work() {
             9_756_758_909_090_909_090_909_u128,
             100_u64,
             79_833_261_u128,
-            8_999_920_166_739_u128,
         ),
         (
             BSX_FARM,
@@ -1348,7 +1337,6 @@ fn update_yield_farm_should_work() {
             113_836_422_153_986_125_326_964_u128,
             260_u64,
             3_914_623_276_u128,
-            8_996_085_376_724_u128,
         ),
         (
             BSX_FARM,
@@ -1362,7 +1350,6 @@ fn update_yield_farm_should_work() {
             527_057_655_123_923_360_871_u128,
             229_u64,
             63_144_576_u128,
-            8_999_936_855_424_u128,
         ),
         (
             BSX_FARM,
@@ -1376,7 +1363,6 @@ fn update_yield_farm_should_work() {
             958_332_426_407_246_271_187_u128,
             361_u64,
             179_074_946_u128,
-            8_999_820_925_054_u128,
         ),
         (
             BSX_FARM,
@@ -1390,7 +1376,6 @@ fn update_yield_farm_should_work() {
             128_227_907_000_000_000_000_000_000_u128,
             52_u64,
             256_455_100_u128,
-            8_999_743_544_900_u128,
         ),
         (
             BSX_FARM,
@@ -1404,7 +1389,6 @@ fn update_yield_farm_should_work() {
             13_458_086_594_584_250_310_975_u128,
             132_u64,
             1_119_404_304_u128,
-            8_998_880_595_696_u128,
         ),
         (
             BSX_FARM,
@@ -1418,7 +1402,6 @@ fn update_yield_farm_should_work() {
             2_564_373_000_000_000_000_000_000_u128,
             38_u64,
             0_u128,
-            9_000_000_000_000_u128,
         ),
         (
             BSX_FARM,
@@ -1432,7 +1415,6 @@ fn update_yield_farm_should_work() {
             363_764_930_832_319_503_293_u128,
             159_u64,
             179_074_933_u128,
-            8_999_820_925_067_u128,
         ),
     ];
 
@@ -1448,7 +1430,6 @@ fn update_yield_farm_should_work() {
         expected_yield_farm_accumulated_rpvs,
         expected_updated_at,
         expected_yield_farm_reward_currency_balance,
-        expected_pot_reward_currency_balance,
     ) in testing_values.iter()
     {
         let owner = ALICE;
@@ -1489,14 +1470,15 @@ fn update_yield_farm_should_work() {
             multiplier: FixedU128::from(10_u128),
             state: FarmState::Active,
             entries_count: 0,
+            left_to_distribute: 0,
             _phantom: PhantomData::default(),
         };
 
         let global_farm_account_id = LiquidityMining::farm_account_id(*global_farm_id).unwrap();
         let pot_account_id = LiquidityMining::pot_account_id().unwrap();
-        let yield_farm_account_id = LiquidityMining::farm_account_id(*yield_farm_id).unwrap();
 
         new_test_ext().execute_with(|| {
+            //Arrange
             let _ = Tokens::transfer(
                 Origin::signed(TREASURY),
                 global_farm_account_id,
@@ -1508,23 +1490,24 @@ fn update_yield_farm_should_work() {
                 9_000_000_000_000_u128
             );
 
+            //_0 - value before action
+            let pot_balance_0 = 9_000_000_000_000;
             let _ = Tokens::transfer(
                 Origin::signed(TREASURY),
                 pot_account_id,
                 global_farm.reward_currency,
-                9_000_000_000_000,
+                pot_balance_0,
             );
 
-            pretty_assertions::assert_eq!(Tokens::free_balance(*reward_currency, &yield_farm_account_id), 0);
-
+            //Act
             assert_ok!(LiquidityMining::update_yield_farm(
                 &mut yield_farm,
                 *yield_farm_rewards,
                 *current_period,
                 *global_farm_id,
-                *reward_currency
             ));
 
+            //Assert
             let mut rhs_global_farm = GlobalFarmData::new(
                 *global_farm_id,
                 updated_at,
@@ -1560,18 +1543,15 @@ fn update_yield_farm_should_work() {
                     multiplier: FixedU128::from(10_u128),
                     state: FarmState::Active,
                     entries_count: 0,
+                    left_to_distribute: *expected_yield_farm_reward_currency_balance,
                     _phantom: PhantomData::default(),
                 }
             );
 
-            //rewards for yield farms are tx from pot account
+            //yield-farm's rewards are not transferred from top so it's balance should not change
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(global_farm.reward_currency, &pot_account_id),
-                *expected_pot_reward_currency_balance
-            );
-            pretty_assertions::assert_eq!(
-                Tokens::free_balance(global_farm.reward_currency, &yield_farm_account_id),
-                *expected_yield_farm_reward_currency_balance
+                pot_balance_0
             );
 
             if current_period != yield_farm_updated_at && !yield_farm_total_valued_shares.is_zero() {
@@ -1586,24 +1566,6 @@ fn update_yield_farm_should_work() {
             }
         });
     }
-}
-
-#[test]
-fn update_yield_farm_should_not_work_when_pot_balance_is_not_enough() {
-    new_test_ext().execute_with(|| {
-        let pot = LiquidityMining::pot_account_id().unwrap();
-
-        Tokens::set_balance(Origin::root(), pot, BSX, 1_000 * ONE, Zero::zero()).unwrap();
-
-        let mut yield_farm = YieldFarmData::new(2, 0, None, FixedU128::one());
-        yield_farm.total_shares = ONE;
-        yield_farm.total_valued_shares = ONE;
-
-        assert_noop!(
-            LiquidityMining::update_yield_farm(&mut yield_farm, 2_000 * ONE, 1_000, 1, BSX),
-            Error::<Test, Instance1>::InsufficientPotBalance
-        );
-    });
 }
 
 #[test]
@@ -1664,7 +1626,8 @@ fn maybe_update_farms_should_work() {
     const LEFT_TO_DISTRIBUTE: Balance = 1_000_000_000;
     let reward_currency: AssetId = get_predefined_global_farm_ins1(0).reward_currency;
 
-    let expected_global_farm = GlobalFarmData {
+    //_0 - before action
+    let global_farm_0 = GlobalFarmData {
         updated_at: 20,
         accumulated_rpz: FixedU128::from(20),
         live_yield_farms_count: 1,
@@ -1675,7 +1638,7 @@ fn maybe_update_farms_should_work() {
         ..get_predefined_global_farm_ins1(0)
     };
 
-    let expected_yield_farm = YieldFarmData {
+    let yield_farm_0 = YieldFarmData {
         updated_at: 20,
         total_shares: 200_000,
         total_valued_shares: 400_000,
@@ -1687,6 +1650,8 @@ fn maybe_update_farms_should_work() {
     new_test_ext().execute_with(|| {
         let _ = with_transaction(|| {
             let farm_account_id = LiquidityMining::farm_account_id(get_predefined_global_farm_ins1(0).id).unwrap();
+            Whitelist::add_account(&farm_account_id).unwrap();
+
             Tokens::transfer(
                 Origin::signed(TREASURY),
                 farm_account_id,
@@ -1701,12 +1666,12 @@ fn maybe_update_farms_should_work() {
             );
 
             let mut global_farm = GlobalFarmData {
-                ..expected_global_farm.clone()
+                ..global_farm_0.clone()
             };
 
             let mut yield_farm = YieldFarmData {
                 state: FarmState::Stopped,
-                ..expected_yield_farm.clone()
+                ..yield_farm_0.clone()
             };
 
             let current_period = 30;
@@ -1718,28 +1683,26 @@ fn maybe_update_farms_should_work() {
                 current_period
             ));
 
-            pretty_assertions::assert_eq!(global_farm, expected_global_farm);
+            pretty_assertions::assert_eq!(global_farm, global_farm_0);
             pretty_assertions::assert_eq!(
                 yield_farm,
                 YieldFarmData {
                     state: FarmState::Stopped,
-                    ..expected_yield_farm.clone()
+                    ..yield_farm_0.clone()
                 }
             );
 
             //II. - yield farm has 0 shares and was updated in this period.
             let current_period = 20;
-            let mut yield_farm = YieldFarmData {
-                ..expected_yield_farm.clone()
-            };
+            let mut yield_farm = YieldFarmData { ..yield_farm_0.clone() };
             assert_ok!(LiquidityMining::maybe_update_farms(
                 &mut global_farm,
                 &mut yield_farm,
                 current_period
             ));
 
-            pretty_assertions::assert_eq!(global_farm, expected_global_farm);
-            pretty_assertions::assert_eq!(yield_farm, expected_yield_farm);
+            pretty_assertions::assert_eq!(global_farm, global_farm_0);
+            pretty_assertions::assert_eq!(yield_farm, yield_farm_0);
 
             //III. - global farm has 0 shares and was updated in this period - only yield farm should
             //be updated.
@@ -1747,7 +1710,7 @@ fn maybe_update_farms_should_work() {
             let mut global_farm = GlobalFarmData {
                 total_shares_z: 0,
                 updated_at: 30,
-                ..expected_global_farm.clone()
+                ..global_farm_0.clone()
             };
 
             assert_ok!(LiquidityMining::maybe_update_farms(
@@ -1761,10 +1724,10 @@ fn maybe_update_farms_should_work() {
                 GlobalFarmData {
                     total_shares_z: 0,
                     updated_at: 30,
-                    ..expected_global_farm.clone()
+                    ..global_farm_0.clone()
                 }
             );
-            assert_ne!(yield_farm, expected_yield_farm);
+            assert_ne!(yield_farm, yield_farm_0);
             pretty_assertions::assert_eq!(yield_farm.updated_at, current_period);
 
             //IV. - booth farms met conditions for update
@@ -1775,8 +1738,8 @@ fn maybe_update_farms_should_work() {
                 current_period
             ));
 
-            assert_ne!(global_farm, expected_global_farm);
-            assert_ne!(yield_farm, expected_yield_farm);
+            assert_ne!(global_farm, global_farm_0);
+            assert_ne!(yield_farm, yield_farm_0);
 
             pretty_assertions::assert_eq!(global_farm.updated_at, current_period);
             pretty_assertions::assert_eq!(yield_farm.updated_at, current_period);

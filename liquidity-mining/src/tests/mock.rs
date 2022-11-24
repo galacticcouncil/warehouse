@@ -22,12 +22,13 @@ use crate as liq_mining;
 use crate::Config;
 use frame_support::{
     parameter_types,
-    traits::{Everything, GenesisBuild, Nothing},
+    traits::Contains,
+    traits::{Everything, GenesisBuild},
     PalletId,
 };
 use frame_system as system;
-use hydradx_traits::AMM;
-use orml_traits::parameter_type_with_key;
+use hydradx_traits::{pools::DustRemovalAccountWhitelist, Registry, AMM};
+use orml_traits::GetByKey;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -84,6 +85,7 @@ pub const DOT: AssetId = 5000;
 pub const ETH: AssetId = 6000;
 pub const TKN1: AssetId = 7_001;
 pub const TKN2: AssetId = 7_002;
+pub const UNKNOWN_ASSET: AssetId = 7_003;
 
 pub const BSX_ACA_AMM: AccountId = 11_000;
 pub const BSX_KSM_AMM: AccountId = 11_001;
@@ -174,14 +176,7 @@ pub struct Amm;
 
 thread_local! {
     pub static AMM_POOLS: RefCell<HashMap<String, (AccountId, AssetId)>> = RefCell::new(HashMap::new());
-
-    //This is used to check if `on_accumulated_rpvs_update()` was called with correct values
-    //`(global_farm_id, yield_farm_id, accumulated_rpvs, total_valued_shares)`
-    pub static RPVS_UPDATED: RefCell<(GlobalFarmId, YieldFarmId, Balance, Balance)> = RefCell::new((0,0,0,0));
-
-    //This is used to check if `on_accumulated_rpz_update()` was called with correct values
-    //`(global_farm_id, accumulated_rpz, total_shares_z)`
-    pub static RPZ_UPDATED: RefCell<(GlobalFarmId, Balance, Balance)> = RefCell::new((0,0,0));
+    pub static DUSTER_WHITELIST: RefCell<Vec<AccountId>> = RefCell::new(Vec::new());
 }
 
 impl AMM<AccountId, AssetId, AssetPair, Balance> for Amm {
@@ -295,6 +290,8 @@ impl Config<Instance1> for Test {
     type AmmPoolId = AccountId;
     type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit;
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
+    type NonDustableWhitelistHandler = Whitelist;
+    type AssetRegistry = AssetRegistry;
 }
 
 parameter_types! {
@@ -316,6 +313,8 @@ impl Config<Instance2> for Test {
     type AmmPoolId = AccountId;
     type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit2;
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
+    type NonDustableWhitelistHandler = Whitelist;
+    type AssetRegistry = AssetRegistry;
 }
 
 parameter_types! {
@@ -336,26 +335,83 @@ impl pallet_balances::Config for Test {
     type ReserveIdentifier = ReserveIdentifier;
 }
 
-parameter_type_with_key! {
-    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-        1u128
-    };
-}
-
 impl orml_tokens::Config for Test {
     type Event = Event;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = AssetId;
     type WeightInfo = ();
-    type ExistentialDeposits = ExistentialDeposits;
+    type ExistentialDeposits = AssetRegistry;
     type OnDust = ();
     type MaxLocks = MaxLocks;
-    type DustRemovalWhitelist = Nothing;
+    type DustRemovalWhitelist = Whitelist;
     type OnKilledTokenAccount = ();
     type OnNewTokenAccount = ();
     type MaxReserves = ConstU32<100_000>;
     type ReserveIdentifier = ();
+}
+
+pub struct Whitelist;
+
+impl Contains<AccountId> for Whitelist {
+    fn contains(account: &AccountId) -> bool {
+        if *account == LiquidityMining::pot_account_id().unwrap() {
+            return true;
+        }
+
+        DUSTER_WHITELIST.with(|v| v.borrow().contains(account))
+    }
+}
+
+impl DustRemovalAccountWhitelist<AccountId> for Whitelist {
+    type Error = DispatchError;
+
+    fn add_account(account: &AccountId) -> Result<(), Self::Error> {
+        if Whitelist::contains(account) {
+            return Err(sp_runtime::DispatchError::Other("Account is already in the whitelist"));
+        }
+
+        DUSTER_WHITELIST.with(|v| v.borrow_mut().push(*account));
+
+        Ok(())
+    }
+
+    fn remove_account(account: &AccountId) -> Result<(), Self::Error> {
+        DUSTER_WHITELIST.with(|v| {
+            let mut v = v.borrow_mut();
+
+            let idx = v.iter().position(|x| *x == *account).unwrap();
+            v.remove(idx);
+
+            Ok(())
+        })
+    }
+}
+
+pub struct AssetRegistry;
+
+impl Registry<AssetId, Vec<u8>, Balance, DispatchError> for AssetRegistry {
+    fn exists(name: AssetId) -> bool {
+        name != UNKNOWN_ASSET
+    }
+
+    fn retrieve_asset(_name: &Vec<u8>) -> Result<AssetId, DispatchError> {
+        Err(sp_runtime::DispatchError::Other("NotImplemented"))
+    }
+
+    fn create_asset(_name: &Vec<u8>, _existential_deposit: Balance) -> Result<AssetId, DispatchError> {
+        Err(sp_runtime::DispatchError::Other("NotImplemented"))
+    }
+
+    fn get_or_create_asset(_name: Vec<u8>, _existential_deposit: Balance) -> Result<AssetId, DispatchError> {
+        Err(sp_runtime::DispatchError::Other("NotImplemented"))
+    }
+}
+
+impl GetByKey<AssetId, Balance> for AssetRegistry {
+    fn get(_key: &AssetId) -> Balance {
+        1_000_u128
+    }
 }
 
 pub struct ExtBuilder {
@@ -418,6 +474,9 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
+        AMM_POOLS.with(|v| v.borrow_mut().clear());
+        DUSTER_WHITELIST.with(|v| v.borrow_mut().clear());
+
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
         orml_tokens::GenesisConfig::<Test> {

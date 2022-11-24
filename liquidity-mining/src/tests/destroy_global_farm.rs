@@ -48,6 +48,9 @@ fn destroy_global_farm_should_work() {
                 bob_reward_currency_balance + undistributed_rewards
             );
 
+            //Non-dustable check
+            pretty_assertions::assert_eq!(Whitelist::contains(&farm_account), false);
+
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
     });
@@ -100,6 +103,9 @@ fn destroy_global_farm_should_work() {
                 Tokens::free_balance(predefined_global_farm.reward_currency, &CHARLIE),
                 charlie_reward_currency_balance + undistributed_rewards
             );
+
+            //Farm's account should be removed when farm is destroyed.
+            pretty_assertions::assert_eq!(Whitelist::contains(&farm_account), false);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

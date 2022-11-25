@@ -27,7 +27,7 @@ pub mod router;
 pub use registry::*;
 
 use codec::{Decode, Encode};
-use frame_support::dispatch;
+use frame_support::dispatch::DispatchResult;
 use frame_support::sp_runtime::traits::Zero;
 use frame_support::sp_runtime::RuntimeDebug;
 use frame_support::traits::LockIdentifier;
@@ -78,7 +78,7 @@ pub trait AMM<AccountId, AssetId, AssetPair, Amount: Zero> {
     ) -> Result<AMMTransfer<AccountId, AssetId, AssetPair, Amount>, frame_support::sp_runtime::DispatchError>;
 
     /// Execute buy for given validated transfer.
-    fn execute_sell(transfer: &AMMTransfer<AccountId, AssetId, AssetPair, Amount>) -> dispatch::DispatchResult;
+    fn execute_sell(transfer: &AMMTransfer<AccountId, AssetId, AssetPair, Amount>) -> DispatchResult;
 
     /// Perform asset swap.
     /// Call execute following the validation.
@@ -88,7 +88,7 @@ pub trait AMM<AccountId, AssetId, AssetPair, Amount: Zero> {
         amount: Amount,
         min_bought: Amount,
         discount: bool,
-    ) -> dispatch::DispatchResult {
+    ) -> DispatchResult {
         Self::execute_sell(&Self::validate_sell(origin, assets, amount, min_bought, discount)?)?;
         Ok(())
     }
@@ -104,16 +104,10 @@ pub trait AMM<AccountId, AssetId, AssetPair, Amount: Zero> {
     ) -> Result<AMMTransfer<AccountId, AssetId, AssetPair, Amount>, frame_support::sp_runtime::DispatchError>;
 
     /// Execute buy for given validated transfer.
-    fn execute_buy(transfer: &AMMTransfer<AccountId, AssetId, AssetPair, Amount>) -> dispatch::DispatchResult;
+    fn execute_buy(transfer: &AMMTransfer<AccountId, AssetId, AssetPair, Amount>) -> DispatchResult;
 
     /// Perform asset swap.
-    fn buy(
-        origin: &AccountId,
-        assets: AssetPair,
-        amount: Amount,
-        max_limit: Amount,
-        discount: bool,
-    ) -> dispatch::DispatchResult {
+    fn buy(origin: &AccountId, assets: AssetPair, amount: Amount, max_limit: Amount, discount: bool) -> DispatchResult {
         Self::execute_buy(&Self::validate_buy(origin, assets, amount, max_limit, discount)?)?;
         Ok(())
     }
@@ -143,32 +137,34 @@ pub trait OnCreatePoolHandler<AssetId> {
     /// Register an asset to be handled by price-oracle pallet.
     /// If an asset is not registered, calling `on_trade` results in populating the price buffer in the price oracle pallet,
     /// but the entries are ignored and the average price for the asset is not calculated.
-    fn on_create_pool(asset_a: AssetId, asset_b: AssetId) -> dispatch::DispatchResult;
+    fn on_create_pool(asset_a: AssetId, asset_b: AssetId) -> DispatchResult;
 }
 
 impl<AssetId> OnCreatePoolHandler<AssetId> for () {
-    fn on_create_pool(_asset_a: AssetId, _asset_b: AssetId) -> dispatch::DispatchResult {
+    fn on_create_pool(_asset_a: AssetId, _asset_b: AssetId) -> DispatchResult {
         Ok(())
     }
 }
 
 /// Handler used by AMM pools to perform some tasks when a trade is executed.
 pub trait OnTradeHandler<AssetId, Balance> {
+    fn before_pool_state_change(_asset_id: AssetId, _initial_liquidity: Balance) -> DispatchResult {
+        Ok(())
+    }
+    fn after_pool_state_change(_asset_id: AssetId, _update_liquidity_state: Balance) -> DispatchResult {
+        Ok(())
+    }
     /// Include a trade in the average price calculation of the price-oracle pallet.
-    fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liq_amount: Balance);
+    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {}
     /// Known overhead for a trade in `on_initialize/on_finalize`.
     /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
     /// Add this weight to an extrinsic from which you call `on_trade`.
-    fn on_trade_weight() -> Weight;
-}
-
-impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {
-    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {
-    }
     fn on_trade_weight() -> Weight {
         Weight::zero()
     }
 }
+
+impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {}
 
 pub trait CanCreatePool<AssetId> {
     fn can_create(asset_a: AssetId, asset_b: AssetId) -> bool;

@@ -556,14 +556,14 @@ fn withdraw_with_multiple_entries_and_flush_should_work() {
             assert_ok!(LiquidityMining::stop_yield_farm(EVE, EVE_FARM, BSX_TKN1_AMM));
             //Stop and destroy all yield farms so it can be flushed.
             assert_ok!(LiquidityMining::stop_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM));
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 DAVE,
                 DAVE_FARM,
                 DAVE_BSX_TKN1_YIELD_FARM_ID,
                 BSX_TKN1_AMM
             ));
 
-            assert_ok!(LiquidityMining::destroy_global_farm(DAVE, DAVE_FARM));
+            assert_ok!(LiquidityMining::terminate_global_farm(DAVE, DAVE_FARM));
 
             let unclaimable_rewards = 0;
             let shares_amount = 50;
@@ -660,13 +660,13 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN2_AMM));
 
             //Remove all yield farms from global farm.
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 BSX_TKN1_AMM
             ));
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN2_YIELD_FARM_ID,
@@ -674,21 +674,24 @@ fn withdraw_shares_from_destroyed_farm_should_work() {
             ));
 
             //Destroy farm.
-            assert_ok!(LiquidityMining::destroy_global_farm(GC, GC_FARM));
+            assert_ok!(LiquidityMining::terminate_global_farm(GC, GC_FARM));
 
             assert!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
                     .unwrap()
                     .state
-                    .is_deleted()
+                    .is_terminated()
             );
             assert!(
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, GC_BSX_TKN2_YIELD_FARM_ID))
                     .unwrap()
                     .state
-                    .is_deleted()
+                    .is_terminated()
             );
-            pretty_assertions::assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap().state, FarmState::Deleted);
+            pretty_assertions::assert_eq!(
+                LiquidityMining::global_farm(GC_FARM).unwrap().state,
+                FarmState::Terminated
+            );
 
             let test_data = vec![
                 (
@@ -948,8 +951,8 @@ fn withdraw_shares_from_removed_pool_should_work() {
             //Stop yield farm before removing.
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
-            //Destroy yield farm before test
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            //Terminate yield farm before test
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN1_YIELD_FARM_ID,
@@ -960,7 +963,7 @@ fn withdraw_shares_from_removed_pool_should_work() {
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
                     .unwrap()
                     .state
-                    .is_deleted(),
+                    .is_terminated(),
             );
 
             let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();

@@ -37,10 +37,10 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         price_adjustment: FixedU128,
     ) -> Result<(), Self::Error>;
 
-    /// Destroy existing global farm.
+    /// Terminate existing global farm.
     ///
     /// Returns: `(reward currency, undistributed rewards, destination account)`
-    fn destroy_global_farm(
+    fn terminate_global_farm(
         who: AccountId,
         global_farm_id: GlobalFarmId,
     ) -> Result<(AssetId, Self::Balance, AccountId), Self::Error>;
@@ -85,8 +85,8 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         multiplier: FixedU128,
     ) -> Result<(), Self::Error>;
 
-    /// Destroy existing yield farm.
-    fn destroy_yield_farm(
+    /// Terminate existing yield farm.
+    fn terminate_yield_farm(
         who: AccountId,
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,

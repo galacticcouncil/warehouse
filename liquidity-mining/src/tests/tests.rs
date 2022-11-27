@@ -1960,17 +1960,17 @@ fn yield_farm_data_should_work() {
         //new farm should be created active
         assert!(yield_farm.state.is_active());
         assert!(!yield_farm.state.is_stopped());
-        assert!(!yield_farm.state.is_deleted());
+        assert!(!yield_farm.state.is_terminated());
 
         yield_farm.state = FarmState::Stopped;
         assert!(!yield_farm.state.is_active());
         assert!(yield_farm.state.is_stopped());
-        assert!(!yield_farm.state.is_deleted());
+        assert!(!yield_farm.state.is_terminated());
 
-        yield_farm.state = FarmState::Deleted;
+        yield_farm.state = FarmState::Terminated;
         assert!(!yield_farm.state.is_active());
         assert!(!yield_farm.state.is_stopped());
-        assert!(yield_farm.state.is_deleted());
+        assert!(yield_farm.state.is_terminated());
 
         assert_ok!(yield_farm.increase_entries_count());
         pretty_assertions::assert_eq!(yield_farm.entries_count, 1);
@@ -2003,7 +2003,7 @@ fn yield_farm_data_should_work() {
         assert!(!yield_farm.can_be_removed());
 
         //deleted farm with entries can't be flushed
-        yield_farm.state = FarmState::Deleted;
+        yield_farm.state = FarmState::Terminated;
         yield_farm.entries_count = 1;
         assert!(!yield_farm.can_be_removed());
 
@@ -2031,7 +2031,7 @@ fn global_farm_should_work() {
 
     //new farm should be created active
     assert!(global_farm.state.is_active());
-    global_farm.state = FarmState::Deleted;
+    global_farm.state = FarmState::Terminated;
     assert!(!global_farm.state.is_active());
 
     global_farm.state = FarmState::Active;
@@ -2066,7 +2066,7 @@ fn global_farm_should_work() {
 
     //active farm can't be flushed
     assert!(!global_farm.can_be_removed());
-    global_farm.state = FarmState::Deleted;
+    global_farm.state = FarmState::Terminated;
     //deleted farm with yield farm can't be flushed
     assert!(!global_farm.can_be_removed());
     //deleted farm with no yield farms can be flushed
@@ -2100,9 +2100,9 @@ fn is_yield_farm_clamable_should_work() {
                 BSX_TKN1_AMM
             ));
 
-            //deleted yield farm
+            //termianted yield farm
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN1_YIELD_FARM_ID,
@@ -2160,18 +2160,18 @@ fn get_global_farm_id_should_work() {
 #[test]
 fn farm_state_should_work() {
     let active = FarmState::Active;
-    let deleted = FarmState::Deleted;
+    let deleted = FarmState::Terminated;
     let stopped = FarmState::Stopped;
 
     pretty_assertions::assert_eq!(active.is_active(), true);
     pretty_assertions::assert_eq!(active.is_stopped(), false);
-    pretty_assertions::assert_eq!(active.is_deleted(), false);
+    pretty_assertions::assert_eq!(active.is_terminated(), false);
 
     pretty_assertions::assert_eq!(stopped.is_active(), false);
     pretty_assertions::assert_eq!(stopped.is_stopped(), true);
-    pretty_assertions::assert_eq!(stopped.is_deleted(), false);
+    pretty_assertions::assert_eq!(stopped.is_terminated(), false);
 
     pretty_assertions::assert_eq!(deleted.is_active(), false);
     pretty_assertions::assert_eq!(deleted.is_stopped(), false);
-    pretty_assertions::assert_eq!(deleted.is_deleted(), true);
+    pretty_assertions::assert_eq!(deleted.is_terminated(), true);
 }

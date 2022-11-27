@@ -62,7 +62,7 @@ fn withdraw_shares_should_work() {
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                     total_shares_z: 691_490,
                     accumulated_rewards: 0,
-                    paid_accumulated_rewards: 1_283_550,
+                    paid_accumulated_rewards: 1_283_550_u128 - unclaimable_rewards,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -81,7 +81,7 @@ fn withdraw_shares_should_work() {
                 },
             );
 
-            //Unclaimabe rewards was transferred for pot to global-farm's account.
+            //Unclaimabe rewards was transferred from pot to global-farm's account.
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(REWARD_CURRENCY, &pot),
                 pot_balance_0 - unclaimable_rewards
@@ -110,6 +110,7 @@ fn withdraw_shares_should_work() {
             let bsx_tkn2_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap();
             let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
+            let global_farm_0 = LiquidityMining::global_farm(GC_FARM).unwrap();
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::withdraw_lp_shares(
@@ -127,9 +128,9 @@ fn withdraw_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                     accumulated_rewards: 0,
-                    paid_accumulated_rewards: 1_283_550,
+                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
                     total_shares_z: 688_880,
-                    ..get_predefined_global_farm_ins1(2)
+                    ..global_farm_0
                 }
             );
 
@@ -177,6 +178,7 @@ fn withdraw_shares_should_work() {
             let bsx_tkn1_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
             let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
+            let global_farm_0 = LiquidityMining::global_farm(GC_FARM).unwrap();
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::withdraw_lp_shares(
@@ -194,9 +196,9 @@ fn withdraw_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                     accumulated_rewards: 0,
-                    paid_accumulated_rewards: 1_283_550,
                     total_shares_z: 494480,
-                    ..get_predefined_global_farm_ins1(2)
+                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    ..global_farm_0
                 }
             );
 
@@ -239,6 +241,7 @@ fn withdraw_shares_should_work() {
             let bsx_tkn1_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
             let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
+            let global_farm_0 = LiquidityMining::global_farm(GC_FARM).unwrap();
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::withdraw_lp_shares(
@@ -256,9 +259,9 @@ fn withdraw_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                     accumulated_rewards: 0,
-                    paid_accumulated_rewards: 1_283_550,
                     total_shares_z: 473_680,
-                    ..get_predefined_global_farm_ins1(2)
+                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    ..global_farm_0
                 }
             );
 
@@ -299,6 +302,7 @@ fn withdraw_shares_should_work() {
             let bsx_tkn2_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap();
             let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
+            let global_farm_0 = LiquidityMining::global_farm(GC_FARM).unwrap();
 
             assert_ok!(LiquidityMining::withdraw_lp_shares(
                 PREDEFINED_DEPOSIT_IDS[2],
@@ -312,9 +316,9 @@ fn withdraw_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                     accumulated_rewards: 0,
-                    paid_accumulated_rewards: 1_283_550,
                     total_shares_z: 471_680,
-                    ..get_predefined_global_farm_ins1(2)
+                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    ..global_farm_0
                 }
             );
 
@@ -360,6 +364,7 @@ fn withdraw_shares_should_work() {
             let bsx_tkn2_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap();
             let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
+            let global_farm_0 = LiquidityMining::global_farm(GC_FARM).unwrap();
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::withdraw_lp_shares(
@@ -377,9 +382,9 @@ fn withdraw_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                     accumulated_rewards: 0,
-                    paid_accumulated_rewards: 1_283_550,
+                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
                     total_shares_z: 464_000,
-                    ..get_predefined_global_farm_ins1(2)
+                    ..global_farm_0
                 }
             );
 
@@ -420,6 +425,7 @@ fn withdraw_shares_should_work() {
             let bsx_tkn2_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap();
             let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
+            let global_farm_0 = LiquidityMining::global_farm(GC_FARM).unwrap();
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::withdraw_lp_shares(
@@ -437,9 +443,9 @@ fn withdraw_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                     accumulated_rewards: 0,
-                    paid_accumulated_rewards: 1_283_550,
+                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
                     total_shares_z: 0,
-                    ..get_predefined_global_farm_ins1(2)
+                    ..global_farm_0
                 }
             );
 
@@ -801,7 +807,13 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
                 (GC_FARM, withdrawn_amount, expected_deposit_destroyed)
             );
 
-            pretty_assertions::assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm_0);
+            pretty_assertions::assert_eq!(
+                LiquidityMining::global_farm(GC_FARM).unwrap(),
+                GlobalFarmData {
+                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    ..global_farm_0
+                }
+            );
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
@@ -845,7 +857,13 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
                 (GC_FARM, shares_amount, expected_deposit_destroyed)
             );
 
-            pretty_assertions::assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm_0);
+            pretty_assertions::assert_eq!(
+                LiquidityMining::global_farm(GC_FARM).unwrap(),
+                GlobalFarmData {
+                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    ..global_farm_0
+                }
+            );
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
@@ -888,7 +906,13 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
                 (GC_FARM, shares_amount, expected_deposit_destroyed)
             );
 
-            pretty_assertions::assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm_0);
+            pretty_assertions::assert_eq!(
+                LiquidityMining::global_farm(GC_FARM).unwrap(),
+                GlobalFarmData {
+                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    ..global_farm_0
+                }
+            );
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),

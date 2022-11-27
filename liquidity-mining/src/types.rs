@@ -116,7 +116,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         self.live_yield_farms_count = self
             .live_yield_farms_count
             .checked_sub(1)
-            .ok_or(ArithmeticError::Underflow)?;
+            .ok_or(ArithmeticError::Overflow)?;
 
         Ok(())
     }
@@ -128,7 +128,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         self.total_yield_farms_count = self
             .total_yield_farms_count
             .checked_sub(1)
-            .ok_or(ArithmeticError::Underflow)?;
+            .ok_or(ArithmeticError::Overflow)?;
 
         Ok(())
     }
@@ -201,7 +201,7 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
     /// This function updates entries count in the yield farm. This function should be called if  
     /// entry is removed from the yield farm.
     pub fn decrease_entries_count(&mut self) -> Result<(), ArithmeticError> {
-        self.entries_count = self.entries_count.checked_sub(1).ok_or(ArithmeticError::Underflow)?;
+        self.entries_count = self.entries_count.checked_sub(1).ok_or(ArithmeticError::Overflow)?;
 
         Ok(())
     }

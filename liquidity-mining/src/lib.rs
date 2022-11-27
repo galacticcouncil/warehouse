@@ -843,6 +843,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     let global_farm_account = Self::farm_account_id(global_farm.id)?;
                     let pot = Self::pot_account_id().ok_or(Error::<T, I>::ErrorGetAccountId)?;
 
+                    global_farm.paid_accumulated_rewards = global_farm
+                        .paid_accumulated_rewards
+                        .checked_sub(yield_farm.left_to_distribute)
+                        .ok_or(ArithmeticError::Overflow)?;
+
                     T::MultiCurrency::transfer(
                         global_farm.reward_currency,
                         &pot,
@@ -1020,7 +1025,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             yield_farm.left_to_distribute = yield_farm
                                 .left_to_distribute
                                 .checked_sub(rewards)
-                                .ok_or(ArithmeticError::Underflow)?;
+                                .ok_or(ArithmeticError::Overflow)?;
 
                             farm_entry.accumulated_claimed_rewards = farm_entry
                                 .accumulated_claimed_rewards
@@ -1084,12 +1089,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             yield_farm.total_shares = yield_farm
                                 .total_shares
                                 .checked_sub(deposit.shares)
-                                .ok_or(ArithmeticError::Underflow)?;
+                                .ok_or(ArithmeticError::Overflow)?;
 
                             yield_farm.total_valued_shares = yield_farm
                                 .total_valued_shares
                                 .checked_sub(farm_entry.valued_shares)
-                                .ok_or(ArithmeticError::Underflow)?;
+                                .ok_or(ArithmeticError::Overflow)?;
 
                             // yield farm's stake in global farm is set to `0` when farm is
                             // stopped and yield farm have to be stopped before it's deleted so
@@ -1102,14 +1107,19 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                                 global_farm.total_shares_z = global_farm
                                     .total_shares_z
                                     .checked_sub(shares_in_global_farm_for_deposit)
-                                    .ok_or(ArithmeticError::Underflow)?;
+                                    .ok_or(ArithmeticError::Overflow)?;
                             }
 
                             if !unclaimable_rewards.is_zero() {
                                 yield_farm.left_to_distribute = yield_farm
                                     .left_to_distribute
                                     .checked_sub(unclaimable_rewards)
-                                    .ok_or(ArithmeticError::Underflow)?;
+                                    .ok_or(ArithmeticError::Overflow)?;
+
+                                global_farm.paid_accumulated_rewards = global_farm
+                                    .paid_accumulated_rewards
+                                    .checked_sub(unclaimable_rewards)
+                                    .ok_or(ArithmeticError::Overflow)?;
 
                                 let global_farm_account = Self::farm_account_id(global_farm.id)?;
                                 let pot = Self::pot_account_id().ok_or(Error::<T, I>::ErrorGetAccountId)?;
@@ -1343,7 +1353,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         let periods_since_last_update: Balance = TryInto::<u128>::try_into(
             current_period
                 .checked_sub(&global_farm.updated_at)
-                .ok_or(ArithmeticError::Underflow)?,
+                .ok_or(ArithmeticError::Overflow)?,
         )
         .map_err(|_| ArithmeticError::Overflow)?;
 

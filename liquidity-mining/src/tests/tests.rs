@@ -1985,7 +1985,7 @@ fn yield_farm_data_should_work() {
         assert_ok!(yield_farm.decrease_entries_count());
         assert_ok!(yield_farm.decrease_entries_count());
         pretty_assertions::assert_eq!(yield_farm.entries_count, 0);
-        assert_noop!(yield_farm.decrease_entries_count(), ArithmeticError::Underflow);
+        assert_noop!(yield_farm.decrease_entries_count(), ArithmeticError::Overflow);
 
         //no entries in the farm
         yield_farm.entries_count = 0;

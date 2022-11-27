@@ -25,14 +25,17 @@ fn deposit_lp_shares_should_work() {
         let _ = with_transaction(|| {
             let global_farm_id = GC_FARM;
             let global_farm_account = LiquidityMining::farm_account_id(global_farm_id).unwrap();
-            let bsx_tnk1_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
-            let bsx_tkn2_yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN2_YIELD_FARM_ID).unwrap();
+            let pot = LiquidityMining::pot_account_id().unwrap();
 
             //DEPOSIT 1:
             set_block_number(1_800); //18-th period
 
             let deposited_amount = 50;
             let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
+            //_0 - value berfore act
+            let bsx_tkn1_yield_farm_0 =
+                LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap();
+
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
@@ -61,7 +64,7 @@ fn deposit_lp_shares_should_work() {
                     total_valued_shares: 2_500,
                     updated_at: 18,
                     entries_count: 1,
-                    ..get_predefined_yield_farm_ins1(0)
+                    ..bsx_tkn1_yield_farm_0
                 },
             );
 
@@ -85,6 +88,10 @@ fn deposit_lp_shares_should_work() {
             // DEPOSIT 2 (deposit in the same period):
             let deposited_amount = 80;
             let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
+            //_0 - value berfore act
+            let bsx_tkn1_yield_farm_0 =
+                LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap();
+
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
@@ -112,12 +119,10 @@ fn deposit_lp_shares_should_work() {
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     updated_at: 18,
-                    accumulated_rpvs: Zero::zero(),
-                    accumulated_rpz: Zero::zero(),
                     total_shares: 130,
                     total_valued_shares: 6_660,
                     entries_count: 2,
-                    ..get_predefined_yield_farm_ins1(0)
+                    ..bsx_tkn1_yield_farm_0
                 },
             );
 
@@ -138,15 +143,18 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
+            //Nohtig was claimed by yield-farm so nothings should change.
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000);
-
-            //Check if claim from global farm is transferred to yield farm's account
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 0);
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), 0);
 
             // DEPOSIT 3 (same period, second yield farm):
-
             let deposited_amount = 25;
             let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
+
+            //_0 - value berfore act.
+            let bsx_tkn2_yield_farm_0 =
+                LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap();
+
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
@@ -178,7 +186,7 @@ fn deposit_lp_shares_should_work() {
                     total_shares: 25,
                     total_valued_shares: 200,
                     entries_count: 1,
-                    ..get_predefined_yield_farm_ins1(1)
+                    ..bsx_tkn2_yield_farm_0
                 },
             );
 
@@ -199,20 +207,20 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            //farm wasn't updated in this period so no claim from global farm happened.
+            //Garms wasn't updated in this period so no claim from global farm happened.
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000);
-
-            //No claims happened for this farm so this is same as after previous deposit
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 0);
-            //Check if claim from global farm is transferred to yield farm's account
-            //(there was no claim for this farm)
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 0);
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), 0);
 
             // DEPOSIT 4 (new period):
             set_block_number(2051); //period 20
 
             let deposited_amount = 800;
             let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
+
+            //_0 - value berfore act.
+            let bsx_tkn2_yield_farm_0 =
+                LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap();
+
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
@@ -246,7 +254,8 @@ fn deposit_lp_shares_should_work() {
                     total_shares: 825,
                     total_valued_shares: 46_600,
                     entries_count: 2,
-                    ..get_predefined_yield_farm_ins1(1)
+                    left_to_distribute: 2_000,
+                    ..bsx_tkn2_yield_farm_0
                 },
             );
 
@@ -267,21 +276,24 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
+            let reserved_for_both_farms = 35_300;
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
-                (30_000_000_000 - 35_300)
+                (30_000_000_000 - reserved_for_both_farms)
             );
 
-            //Check if claim from global farm is transferred to yield farm's account.
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 0);
-            //Check if claim from global farm is transferred to yield farm's account.
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 2_000);
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
 
             // DEPOSIT 5 (same period, second liq pool yield farm):
             set_block_number(2_586); //period 20
 
             let deposited_amount = 87;
             let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
+
+            //_0 - value berfore act.
+            let bsx_tkn2_yield_farm_0 =
+                LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap();
+
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
@@ -315,7 +327,8 @@ fn deposit_lp_shares_should_work() {
                     total_shares: 912,
                     total_valued_shares: 46_861,
                     entries_count: 3,
-                    ..get_predefined_yield_farm_ins1(1)
+                    left_to_distribute: 1_167_000,
+                    ..bsx_tkn2_yield_farm_0
                 },
             );
 
@@ -336,20 +349,23 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
+            let reserved_for_both_farms = 1_283_550;
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
-                (30_000_000_000 - 1_283_550)
+                (30_000_000_000 - reserved_for_both_farms)
             );
-
-            //Check if claim from global farm is transferred to yield farm's account.
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 0);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 1_167_000);
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
 
             // DEPOSIT 6 (same period):
             set_block_number(2_596); //period 20
 
             let deposited_amount = 48;
             let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
+
+            //_0 - value berfore act.
+            let bsx_tkn2_yield_farm_0 =
+                LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap();
+
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
@@ -383,7 +399,7 @@ fn deposit_lp_shares_should_work() {
                     total_shares: 960,
                     total_valued_shares: 47_629,
                     entries_count: 4,
-                    ..get_predefined_yield_farm_ins1(1)
+                    ..bsx_tkn2_yield_farm_0 //NOTE: same period so nothing claimed by farm
                 },
             );
 
@@ -404,19 +420,23 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
+            let reserved_for_both_farms = 1_283_550;
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
-                (30_000_000_000 - 1_283_550)
+                (30_000_000_000 - reserved_for_both_farms)
             );
-
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 0);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 1_167_000);
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
 
             // DEPOSIT 7 : (same period different yield farm)
             set_block_number(2_596); //period 20
 
             let deposited_amount = 486;
             let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
+
+            //_0 - value berfore act.
+            let bsx_tkn1_yield_farm_0 =
+                LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap();
+
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
@@ -450,7 +470,8 @@ fn deposit_lp_shares_should_work() {
                     total_shares: 616,
                     total_valued_shares: 45_540,
                     entries_count: 3,
-                    ..get_predefined_yield_farm_ins1(0)
+                    left_to_distribute: 116_550,
+                    ..bsx_tkn1_yield_farm_0
                 },
             );
 
@@ -471,14 +492,12 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
+            let reserved_for_both_farms = 1_283_550;
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
-                (30_000_000_000 - 1_283_550)
+                (30_000_000_000 - reserved_for_both_farms)
             );
-
-            //Check if claim from global farm is transferred to yield farm's account.
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tnk1_yield_farm_account), 116_550);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &bsx_tkn2_yield_farm_account), 1_167_000);
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

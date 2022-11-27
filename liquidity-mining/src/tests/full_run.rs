@@ -137,12 +137,12 @@ fn non_full_farm_running_longer_than_expected() {
 
             let claimed_total = alice_claimed + bob_claimed + charlie_claimed;
 
-            assert_eq!(claimed_total.abs_diff(200_000 * ONE), 1);
+            assert_eq!(claimed_total.abs_diff(200_000 * ONE), 1002);
 
             let yield_farm_a_claimed = alice_claimed;
             let yield_farm_b_claimed = bob_claimed + charlie_claimed;
 
-            const TOLERANCE: u128 = 1;
+            const TOLERANCE: u128 = 10;
             assert!(
                 yield_farm_a_claimed.abs_diff(2 * yield_farm_b_claimed).le(&TOLERANCE),
                 "yield_farm_a_claimed == 2 * yield_farm_b_claimed"
@@ -246,13 +246,13 @@ fn non_full_farm_distribute_everything_and_update_farms() {
 
             assert_eq!(
                 Tokens::free_balance(BSX, &LiquidityMining2::farm_account_id(GLOBAL_FARM).unwrap()),
-                0
+                1_000
             );
 
             //NOTE: 1 because we are not able to claim everything becasue us rounding errors
             assert_eq!(
                 Tokens::free_balance(BSX, &LiquidityMining2::pot_account_id().unwrap()),
-                1
+                2
             );
 
             set_block_number(501);
@@ -426,12 +426,12 @@ fn overcrowded_farm_running_longer_than_expected() {
 
             let claimed_total = alice_claimed + bob_claimed + charlie_claimed;
 
-            assert_eq!((200_000 * ONE) - claimed_total, 20); //0.000_000_000_02
+            assert_eq!((200_000 * ONE) - claimed_total, 1_020); //NOTE: ED = 1_000
 
             let yield_farm_a_claimed = alice_claimed;
             let yield_farm_b_claimed = bob_claimed + charlie_claimed;
 
-            const TOLERANCE: u128 = 1;
+            const TOLERANCE: u128 = 10;
             assert!(
                 yield_farm_a_claimed.abs_diff(2 * yield_farm_b_claimed).le(&TOLERANCE),
                 "yield_farm_a_claimed == 2 * yield_farm_b_claimed"
@@ -608,12 +608,12 @@ fn full_farm_running_planned_time() {
 
             let claimed_total = alice_claimed + bob_claimed + charlie_claimed;
 
-            assert_eq!(TOTAL_REWARDS_TO_DISTRIBUTE - claimed_total, 0);
+            assert_eq!(TOTAL_REWARDS_TO_DISTRIBUTE - claimed_total, 1_000);
 
             let yield_farm_a_claimed = alice_claimed;
             let yield_farm_b_claimed = bob_claimed + charlie_claimed;
 
-            const TOLERANCE: u128 = 1;
+            const TOLERANCE: u128 = 10;
             assert!(
                 yield_farm_a_claimed.abs_diff(yield_farm_b_claimed).le(&TOLERANCE),
                 "yield_farm_a_claimed == yield_farm_b_claimed"
@@ -647,6 +647,9 @@ fn yield_farm_should_claim_expected_amount() {
             const PLANNED_PERIODS: u64 = 10_000;
             const BLOCKS_PER_PERIOD: u64 = 10;
             const TOTAL_REWARDS_TO_DISTRIBUTE: u128 = 1_000_000 * ONE;
+
+            let yield_farm_a_key = (BSX_TKN1_AMM, GLOBAL_FARM, YIELD_FARM_A);
+            let yield_farm_b_key = (BSX_TKN2_AMM, GLOBAL_FARM, YIELD_FARM_B);
 
             //initialize farms
             set_block_number(1000);
@@ -712,13 +715,19 @@ fn yield_farm_should_claim_expected_amount() {
             ));
 
             let pot = LiquidityMining2::pot_account_id().unwrap();
-            let farm_a_account = LiquidityMining2::farm_account_id(YIELD_FARM_A).unwrap();
-            let farm_b_account = LiquidityMining2::farm_account_id(YIELD_FARM_B).unwrap();
-
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &farm_b_account), 5_000 * ONE);
-            //NOTE: this farm never claimed from global farm, all the rewards stayed in the pot.
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &farm_a_account), 0);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), 7_500 * ONE);
+            pretty_assertions::assert_eq!(
+                LiquidityMining2::yield_farm(yield_farm_a_key)
+                    .unwrap()
+                    .left_to_distribute,
+                0
+            );
+            pretty_assertions::assert_eq!(
+                LiquidityMining2::yield_farm(yield_farm_b_key)
+                    .unwrap()
+                    .left_to_distribute,
+                5_000 * ONE
+            );
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), 12_500 * ONE);
 
             //Global farm had rewards for 100_000 blocks.
             set_block_number(120_000);
@@ -753,9 +762,19 @@ fn yield_farm_should_claim_expected_amount() {
             let global_farm_account = LiquidityMining2::farm_account_id(GLOBAL_FARM).unwrap();
             //leftover because of rounding errors
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), 1);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &farm_a_account), 0);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &farm_b_account), 1);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 0);
+            pretty_assertions::assert_eq!(
+                LiquidityMining2::yield_farm(yield_farm_a_key)
+                    .unwrap()
+                    .left_to_distribute,
+                0
+            );
+            pretty_assertions::assert_eq!(
+                LiquidityMining2::yield_farm(yield_farm_b_key)
+                    .unwrap()
+                    .left_to_distribute,
+                0
+            );
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 1_000);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

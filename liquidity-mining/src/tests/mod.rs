@@ -18,15 +18,15 @@
 use super::*;
 use mock::{
     asset_pair_to_map_key, set_block_number, with_transaction, AccountId, AssetId, AssetPair, Balance, BlockNumber,
-    ExtBuilder, LiquidityMining, Origin, Test, Tokens, TransactionOutcome, ACA, ACA_FARM, ACA_KSM_AMM,
+    ExtBuilder, LiquidityMining, Origin, Test, Tokens, TransactionOutcome, Whitelist, ACA, ACA_FARM, ACA_KSM_AMM,
     ACA_KSM_SHARE_ID, ACCOUNT_WITH_1M, ALICE, AMM_POOLS, BOB, BSX, BSX_ACA_AMM, BSX_ACA_SHARE_ID,
     BSX_ACA_YIELD_FARM_ID, BSX_DOT_AMM, BSX_DOT_SHARE_ID, BSX_DOT_YIELD_FARM_ID, BSX_ETH_AMM, BSX_ETH_SHARE_ID,
     BSX_FARM, BSX_HDX_AMM, BSX_HDX_SHARE_ID, BSX_KSM_AMM, BSX_KSM_SHARE_ID, BSX_KSM_YIELD_FARM_ID, BSX_TKN1_AMM,
     BSX_TKN1_SHARE_ID, BSX_TKN2_AMM, BSX_TKN2_SHARE_ID, CHARLIE, DAVE, DOT, ETH, EVE, GC, GC_FARM, HDX,
-    INITIAL_BALANCE, KSM, KSM_DOT_AMM, KSM_DOT_SHARE_ID, KSM_FARM, ONE, TKN1, TKN2, TREASURY,
+    INITIAL_BALANCE, KSM, KSM_DOT_AMM, KSM_DOT_SHARE_ID, KSM_FARM, ONE, TKN1, TKN2, TREASURY, UNKNOWN_ASSET,
 };
 
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::Contains};
 
 use sp_arithmetic::{traits::CheckedSub, FixedPointNumber};
 use std::cmp::Ordering;
@@ -253,7 +253,7 @@ pub mod create_yield_farm;
 pub mod deposit_lp_shares;
 pub mod destroy_global_farm;
 pub mod destroy_yield_farm;
-pub mod full_run;
+pub mod full_run; //
 pub mod invariants;
 pub mod mock;
 pub mod redeposit_lp_shares;

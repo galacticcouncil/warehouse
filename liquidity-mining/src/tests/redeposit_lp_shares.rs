@@ -189,7 +189,7 @@ fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
             );
 
             // Redeposit to deleted farm
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 EVE,
                 EVE_FARM,
                 yield_farm_id,
@@ -199,7 +199,7 @@ fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
             assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, EVE_FARM, yield_farm_id))
                 .unwrap()
                 .state
-                .is_deleted());
+                .is_terminated());
 
             assert_noop!(
                 LiquidityMining::redeposit_lp_shares(EVE_FARM, yield_farm_id, PREDEFINED_DEPOSIT_IDS[0], |_, _, _| {

@@ -425,7 +425,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
 
             //stop and destroy
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN1_YIELD_FARM_ID,
@@ -436,7 +436,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
                     .unwrap()
                     .state,
-                FarmState::Deleted
+                FarmState::Terminated
             );
 
             //This still should now work because deleted yield farms in storage are included in counts.
@@ -453,7 +453,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
             );
 
             //Destroy stopped empty farm(it will be flushed from storage).
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 bsx_dot_yield_farm_id,

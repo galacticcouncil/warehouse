@@ -136,15 +136,15 @@ fn resume_yield_farm_not_owner_should_not_work() {
 }
 
 #[test]
-fn resume_yield_farm_deleted_farm_should_not_work() {
+fn resume_yield_farm_terminated_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
             let new_multiplier = FixedU128::from(7_490_000);
 
             //Farm have to be stopped before delete.
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
-            //Delete farm.
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            //Terminate farm.
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN1_YIELD_FARM_ID,

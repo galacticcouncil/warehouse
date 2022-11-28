@@ -700,7 +700,7 @@ fn claim_rewards_should_fail_with_liqudity_mining_canceled_when_yield_farm_is_de
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
             //Delete yield farm before claim test.
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN1_YIELD_FARM_ID,

@@ -980,7 +980,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                 |maybe_yield_farm| {
                     let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
-                    ensure!(!yield_farm.state.is_terminated(), Error::<T, I>::LiquidityMiningCanceled);
+                    ensure!(
+                        !yield_farm.state.is_terminated(),
+                        Error::<T, I>::LiquidityMiningCanceled
+                    );
 
                     <GlobalFarm<T, I>>::try_mutate(farm_entry.global_farm_id, |maybe_global_farm| {
                         let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;

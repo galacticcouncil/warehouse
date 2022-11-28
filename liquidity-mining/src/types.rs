@@ -116,7 +116,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         self.live_yield_farms_count = self
             .live_yield_farms_count
             .checked_sub(1)
-            .ok_or(ArithmeticError::Underflow)?;
+            .ok_or(ArithmeticError::Overflow)?;
 
         Ok(())
     }
@@ -128,7 +128,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         self.total_yield_farms_count = self
             .total_yield_farms_count
             .checked_sub(1)
-            .ok_or(ArithmeticError::Underflow)?;
+            .ok_or(ArithmeticError::Overflow)?;
 
         Ok(())
     }
@@ -141,7 +141,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     /// Function return `true` if global farm can be removed from storage.
     pub fn can_be_removed(&self) -> bool {
         //farm can be removed from storage only if all yield farms was removed from storage.
-        self.state == FarmState::Deleted && self.total_yield_farms_count.is_zero()
+        self.state == FarmState::Terminated && self.total_yield_farms_count.is_zero()
     }
 
     /// This function returns `true` if farm has no capacity for next yield farm(yield farm can't
@@ -195,13 +195,13 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
 
     /// Returns `true` if yield farm can be removed from storage, `false` otherwise.
     pub fn can_be_removed(&self) -> bool {
-        self.state == FarmState::Deleted && self.entries_count.is_zero()
+        self.state == FarmState::Terminated && self.entries_count.is_zero()
     }
 
     /// This function updates entries count in the yield farm. This function should be called if  
     /// entry is removed from the yield farm.
     pub fn decrease_entries_count(&mut self) -> Result<(), ArithmeticError> {
-        self.entries_count = self.entries_count.checked_sub(1).ok_or(ArithmeticError::Underflow)?;
+        self.entries_count = self.entries_count.checked_sub(1).ok_or(ArithmeticError::Overflow)?;
 
         Ok(())
     }
@@ -360,13 +360,13 @@ impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
 /// - `Active` - farm has full functionality. This state may be used for both farm types.
 /// - `Stopped` - only partial functionality of the farm is available to users. Farm can became
 /// `Active` again or can be `Deleted`. This state can be used only for yield farms.
-/// - `Deleted` - farm is destroyed and it's waiting to be removed from the storage. This state can't be
+/// - `Terminated` - farm is destroyed and it's waiting to be removed from the storage. This state can't be
 /// reverted and is available for both farm types.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum FarmState {
     Active,
     Stopped,
-    Deleted,
+    Terminated,
 }
 
 impl FarmState {
@@ -376,7 +376,7 @@ impl FarmState {
     pub fn is_stopped(&self) -> bool {
         *self == FarmState::Stopped
     }
-    pub fn is_deleted(&self) -> bool {
-        *self == FarmState::Deleted
+    pub fn is_terminated(&self) -> bool {
+        *self == FarmState::Terminated
     }
 }

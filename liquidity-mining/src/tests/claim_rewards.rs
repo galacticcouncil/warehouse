@@ -692,7 +692,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
 }
 
 #[test]
-fn claim_rewards_from_removed_yield_farm_should_not_work() {
+fn claim_rewards_from_terminated_yield_farm_should_not_work() {
     const FAIL_ON_DOUBLECLAIM: bool = true;
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
@@ -700,7 +700,7 @@ fn claim_rewards_from_removed_yield_farm_should_not_work() {
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
             //Delete yield farm before claim test.
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN1_YIELD_FARM_ID,

@@ -170,13 +170,13 @@ fn update_yield_farm_stopped_farm_should_not_work() {
 }
 
 #[test]
-fn update_yield_farm_deleted_farm_should_not_work() {
+fn update_yield_farm_termianted_farm_should_not_work() {
     //NOTE: yield farm is in the storage but it's deleted.
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
 
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN1_YIELD_FARM_ID,

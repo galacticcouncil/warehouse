@@ -118,7 +118,7 @@ use orml_traits::{GetByKey, MultiCurrency};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
     traits::{CheckedDiv, CheckedSub},
-    FixedPointNumber, FixedU128, Perquintill,
+    FixedU128, Perquintill,
 };
 use sp_std::{
     convert::{From, Into, TryInto},
@@ -285,6 +285,9 @@ pub mod pallet {
 
         /// Account creation from id failed.
         ErrorGetAccountId,
+
+        /// Value of deposited shares amount in reward currency can't be 0.
+        ZeroValuedShares,
 
         /// `reward_currency` is not registered in asset registry.
         RewardCurrencyNotRegistered,
@@ -823,7 +826,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
     ) -> Result<(), DispatchError> {
         ensure!(
-            !<ActiveYieldFarm<T, I>>::contains_key(amm_pool_id.clone(), global_farm_id),
+            <ActiveYieldFarm<T, I>>::get(amm_pool_id.clone(), global_farm_id) != Some(yield_farm_id),
             Error::<T, I>::LiquidityMiningIsActive
         );
 
@@ -977,9 +980,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                 |maybe_yield_farm| {
                     let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
-                    //NOTE: claiming from removed yield farm should NOT work. This is same as yield
-                    //farm doesn't exist.
-                    ensure!(!yield_farm.state.is_terminated(), Error::<T, I>::YieldFarmNotFound);
+                    ensure!(
+                        !yield_farm.state.is_terminated(),
+                        Error::<T, I>::LiquidityMiningCanceled
+                    );
 
                     <GlobalFarm<T, I>>::try_mutate(farm_entry.global_farm_id, |maybe_global_farm| {
                         let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
@@ -1206,6 +1210,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         deposit.shares,
                     )?;
 
+                    ensure!(valued_shares.gt(&Balance::zero()), Error::<T, I>::ZeroValuedShares);
+
                     let deposit_stake_in_global_farm =
                         math::calculate_global_farm_shares(valued_shares, yield_farm.multiplier)
                             .map_err(|_| ArithmeticError::Overflow)?;
@@ -1320,11 +1326,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             Some(v) => v,
             None => return Ok(FixedU128::one()), //no loyalty curve mean no loyalty multiplier
         };
-
-        //b.is_one() is special case - this case is prevented by loyalty curve parameters validation
-        if FixedPointNumber::is_one(&curve.initial_reward_percentage) {
-            return Ok(FixedU128::one());
-        }
 
         math::calculate_loyalty_multiplier(periods, curve.initial_reward_percentage, curve.scale_coef)
             .map_err(|_| ArithmeticError::Overflow)

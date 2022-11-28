@@ -109,7 +109,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         Ok(())
     }
 
-    /// This function updates `yield_farms_count` when yield farm is removed from global farm.
+    /// This function updates `yield_farms_count` when yield farm is deleted from global farm.
     /// This function should be called only when yield farm is removed from global farm.
     pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), ArithmeticError> {
         // Note: only live count should change
@@ -145,7 +145,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     }
 
     /// This function returns `true` if farm has no capacity for next yield farm(yield farm can't
-    /// be added into global farm until some yield farm is not removed from storage).
+    /// be added into global farm until some yield farm is removed from storage).
     pub fn is_full(&self) -> bool {
         self.total_yield_farms_count.ge(&<T>::MaxYieldFarmsPerGlobalFarm::get())
     }
@@ -220,7 +220,7 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
     }
 }
 
-/// Loyaty curve to calculate loyalty multiplier.
+/// Loyalty curve to calculate loyalty multiplier.
 ///
 /// `t = t_now - t_added`
 /// `𝞣 = t/[(initial_reward_percentage + 1) * scale_coef]`
@@ -307,7 +307,7 @@ impl<T: Config<I>, I: 'static> DepositData<T, I> {
         None
     }
 
-    /// This function returns `true` if deposit contains yield farm entry with given yield farm id.
+    /// This function returns its index if deposit contains yield farm entry with given yield farm id.
     pub fn search_yield_farm_entry(&self, yield_farm_id: YieldFarmId) -> Option<usize> {
         self.yield_farm_entries
             .iter()

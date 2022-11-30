@@ -146,46 +146,25 @@ impl<AssetId> OnCreatePoolHandler<AssetId> for () {
     }
 }
 
-/// Identifier for oracle data sources.
-pub type Source = [u8; 8];
-
 /// Handler used by AMM pools to perform some tasks when a trade is executed.
-pub trait OnPoolStateChangeHandler<AssetId, Balance> {
-    fn before_pool_state_change(
-        _source: Source,
-        _asset_a: AssetId,
-        _asset_b: AssetId,
-        _amount_in: Balance,
-        _amount_out: Balance,
-        _initial_liq_amount: Balance,
-    ) -> DispatchResult {
+pub trait OnTradeHandler<AssetId, Balance> {
+    fn before_pool_state_change(_asset_id: AssetId, _initial_liquidity: Balance) -> DispatchResult {
         Ok(())
     }
-    /// Known overhead for a trade in `on_initialize/on_finalize`.
-    /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
-    /// Add this weight to an extrinsic from which you call `before_pool_state_change`.
-    fn before_state_change_weight() -> Weight {
-        Weight::zero()
-    }
-    fn after_pool_state_change(
-        _source: Source,
-        _asset_a: AssetId,
-        _asset_b: AssetId,
-        _amount_in: Balance,
-        _amount_out: Balance,
-        _new_liq_amount: Balance,
-    ) -> DispatchResult {
+    fn after_pool_state_change(_asset_id: AssetId, _update_liquidity_state: Balance) -> DispatchResult {
         Ok(())
     }
+    /// Include a trade in the average price calculation of the price-oracle pallet.
+    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {}
     /// Known overhead for a trade in `on_initialize/on_finalize`.
     /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
-    /// Add this weight to an extrinsic from which you call `after_pool_state_change`.
-    fn after_state_change_weight() -> Weight {
+    /// Add this weight to an extrinsic from which you call `on_trade`.
+    fn on_trade_weight() -> Weight {
         Weight::zero()
     }
 }
 
-impl<AssetId, Balance> OnPoolStateChangeHandler<AssetId, Balance> for () {}
+impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {}
 
 pub trait CanCreatePool<AssetId> {
     fn can_create(asset_a: AssetId, asset_b: AssetId) -> bool;

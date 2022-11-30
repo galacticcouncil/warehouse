@@ -21,7 +21,7 @@ use frame_support::ensure;
 use frame_support::pallet_prelude::Weight;
 use frame_support::sp_runtime::traits::{CheckedDiv, Zero};
 use frame_support::sp_runtime::{DispatchResult, FixedPointNumber};
-use hydradx_traits::{OnCreatePoolHandler, OnPoolStateChangeHandler, Source};
+use hydradx_traits::{OnCreatePoolHandler, OnTradeHandler};
 use sp_std::convert::TryInto;
 use sp_std::marker::PhantomData;
 use sp_std::prelude::*;
@@ -317,28 +317,21 @@ impl<T: Config> OnCreatePoolHandler<AssetId> for PriceOracleHandler<T> {
     }
 }
 
-impl<T: Config> OnPoolStateChangeHandler<AssetId, Balance> for PriceOracleHandler<T> {
-    fn after_pool_state_change(
-        _source: Source,
-        asset_a: AssetId,
-        asset_b: AssetId,
-        amount_in: Balance,
-        amount_out: Balance,
-        liq_amount: Balance,
-    ) -> DispatchResult {
+impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
+    fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liq_amount: Balance) {
         let (price, amount) =
             if let Some(price_tuple) = Pallet::<T>::normalize_price(asset_a, asset_b, amount_in, amount_out) {
                 price_tuple
             } else {
                 // We don't want to throw an error here because this method is used in different extrinsics.
                 // Invalid prices are ignored and not added to the queue.
-                return Ok(());
+                return;
             };
 
         // We assume that zero values are not valid.
         // Zero values are ignored and not added to the queue.
         if price.is_zero() || amount.is_zero() || liq_amount.is_zero() {
-            return Ok(());
+            return;
         }
 
         let price_entry = PriceEntry {
@@ -348,10 +341,9 @@ impl<T: Config> OnPoolStateChangeHandler<AssetId, Balance> for PriceOracleHandle
         };
 
         Pallet::<T>::on_trade(asset_a, asset_b, price_entry);
-        Ok(())
     }
 
-    fn after_state_change_weight() -> Weight {
+    fn on_trade_weight() -> Weight {
         T::WeightInfo::on_finalize_one_token() - T::WeightInfo::on_finalize_no_entry()
     }
 }

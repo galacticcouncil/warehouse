@@ -24,7 +24,7 @@ use frame_support::sp_runtime::{
     FixedU128,
 };
 use frame_support::traits::{Everything, GenesisBuild, Get};
-use hydradx_traits::AssetPairAccountIdFor;
+use hydradx_traits::{AssetPairAccountIdFor, Source};
 use price_oracle::PriceEntry;
 use sp_core::H256;
 
@@ -34,6 +34,8 @@ pub type Price = FixedU128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
+pub const SOURCE: Source = [1; 8];
 
 pub const HDX: AssetId = 1_000;
 pub const DOT: AssetId = 2_000;

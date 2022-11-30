@@ -28,7 +28,7 @@ use mock::{
 
 use frame_support::{assert_noop, assert_ok, traits::Contains};
 
-use sp_arithmetic::traits::CheckedSub;
+use sp_arithmetic::{traits::CheckedSub, FixedPointNumber};
 use std::cmp::Ordering;
 
 const ALICE_FARM: u32 = BSX_FARM;
@@ -251,14 +251,14 @@ pub mod claim_rewards;
 pub mod create_global_farm;
 pub mod create_yield_farm;
 pub mod deposit_lp_shares;
-pub mod destroy_global_farm;
-pub mod destroy_yield_farm;
-pub mod full_run; //
+pub mod full_run;
 pub mod invariants;
 pub mod mock;
 pub mod redeposit_lp_shares;
 pub mod resume_yield_farm;
 pub mod stop_yield_farm;
+pub mod terminate_global_farm;
+pub mod terminate_yield_farm;
 pub mod test_ext;
 
 #[allow(clippy::module_inception)]

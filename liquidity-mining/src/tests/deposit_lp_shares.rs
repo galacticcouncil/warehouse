@@ -622,3 +622,23 @@ fn deposit_lp_shares_stop_yield_farm_should_not_work() {
         })
     });
 }
+
+#[test]
+fn deposit_lp_shares_should_not_work_when_valued_shares_is_zero() {
+    let _ = predefined_test_ext_with_deposits().execute_with(|| {
+        with_transaction(|| {
+            assert_noop!(
+                LiquidityMining::deposit_lp_shares(
+                    GC_FARM,
+                    GC_BSX_TKN1_YIELD_FARM_ID,
+                    BSX_TKN1_AMM,
+                    100_000,
+                    |_, _, _| { Ok(0_u128) }
+                ),
+                Error::<Test, Instance1>::ZeroValuedShares
+            );
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        })
+    });
+}

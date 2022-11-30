@@ -19,7 +19,7 @@ use super::*;
 use test_ext::*;
 
 #[test]
-fn destroy_global_farm_should_work() {
+fn terminate_global_farm_should_work() {
     //Test with flushing - global farm should be removed from storage if it has no yield farms.
     predefined_test_ext().execute_with(|| {
         let _ = with_transaction(|| {
@@ -31,7 +31,7 @@ fn destroy_global_farm_should_work() {
                 Tokens::free_balance(get_predefined_global_farm_ins1(1).reward_currency, &farm_account);
 
             pretty_assertions::assert_eq!(
-                LiquidityMining::destroy_global_farm(BOB, BOB_FARM).unwrap(),
+                LiquidityMining::terminate_global_farm(BOB, BOB_FARM).unwrap(),
                 (
                     get_predefined_global_farm_ins1(1).reward_currency,
                     undistributed_rewards,
@@ -78,7 +78,7 @@ fn destroy_global_farm_should_work() {
             assert_ok!(LiquidityMining::stop_yield_farm(CHARLIE, CHARLIE_FARM, ACA_KSM_AMM));
 
             //Destroy yield farm (yield farm is destroyed but not flushed)
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 CHARLIE,
                 CHARLIE_FARM,
                 yield_farm_id,
@@ -86,7 +86,7 @@ fn destroy_global_farm_should_work() {
             ));
 
             //Destroy global farm.
-            assert_ok!(LiquidityMining::destroy_global_farm(CHARLIE, CHARLIE_FARM));
+            assert_ok!(LiquidityMining::terminate_global_farm(CHARLIE, CHARLIE_FARM));
 
             //Global farm with yield farms should NOT be flushed.
             pretty_assertions::assert_eq!(
@@ -94,7 +94,7 @@ fn destroy_global_farm_should_work() {
                 GlobalFarmData {
                     live_yield_farms_count: 0,
                     total_yield_farms_count: 1,
-                    state: FarmState::Deleted,
+                    state: FarmState::Terminated,
                     ..predefined_global_farm
                 }
             );
@@ -113,11 +113,11 @@ fn destroy_global_farm_should_work() {
 }
 
 #[test]
-fn destroy_global_farm_not_owner_should_not_work() {
+fn terminate_global_farm_not_owner_should_not_work() {
     predefined_test_ext().execute_with(|| {
         let _ = with_transaction(|| {
             assert_noop!(
-                LiquidityMining::destroy_global_farm(ALICE, BOB_FARM),
+                LiquidityMining::terminate_global_farm(ALICE, BOB_FARM),
                 Error::<Test, Instance1>::Forbidden
             );
 
@@ -132,12 +132,12 @@ fn destroy_global_farm_not_owner_should_not_work() {
 }
 
 #[test]
-fn destroy_global_farm_farm_not_exists_should_not_work() {
+fn terminate_global_farm_farm_not_exists_should_not_work() {
     predefined_test_ext().execute_with(|| {
         let _ = with_transaction(|| {
             const NON_EXISTING_FARM: u32 = 999_999_999;
             assert_noop!(
-                LiquidityMining::destroy_global_farm(ALICE, NON_EXISTING_FARM),
+                LiquidityMining::terminate_global_farm(ALICE, NON_EXISTING_FARM),
                 Error::<Test, Instance1>::GlobalFarmNotFound
             );
 
@@ -147,7 +147,7 @@ fn destroy_global_farm_farm_not_exists_should_not_work() {
 }
 
 #[test]
-fn destroy_global_farm_with_yield_farms_should_not_work() {
+fn terminate_global_farm_with_yield_farms_should_not_work() {
     //Global farm CAN'T be destroyed if it has active or stopped yield farms.
     predefined_test_ext().execute_with(|| {
         let _ = with_transaction(|| {
@@ -159,7 +159,7 @@ fn destroy_global_farm_with_yield_farms_should_not_work() {
             );
 
             assert_noop!(
-                LiquidityMining::destroy_global_farm(CHARLIE, CHARLIE_FARM),
+                LiquidityMining::terminate_global_farm(CHARLIE, CHARLIE_FARM),
                 Error::<Test, Instance1>::GlobalFarmIsNotEmpty
             );
 
@@ -174,7 +174,7 @@ fn destroy_global_farm_with_yield_farms_should_not_work() {
             assert!(LiquidityMining::active_yield_farm(ACA_KSM_AMM, CHARLIE_FARM).is_none());
 
             assert_noop!(
-                LiquidityMining::destroy_global_farm(CHARLIE, CHARLIE_FARM),
+                LiquidityMining::terminate_global_farm(CHARLIE, CHARLIE_FARM),
                 Error::<Test, Instance1>::GlobalFarmIsNotEmpty
             );
 
@@ -189,7 +189,7 @@ fn destroy_global_farm_with_yield_farms_should_not_work() {
 }
 
 #[test]
-fn destroy_global_farm_healthy_farm_should_not_work() {
+fn terminate_global_farm_healthy_farm_should_not_work() {
     predefined_test_ext().execute_with(|| {
         let _ = with_transaction(|| {
             let farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
@@ -197,7 +197,7 @@ fn destroy_global_farm_healthy_farm_should_not_work() {
             assert!(!Tokens::free_balance(predefined_global_farm.reward_currency, &farm_account).is_zero());
 
             assert_noop!(
-                LiquidityMining::destroy_global_farm(GC, GC_FARM),
+                LiquidityMining::terminate_global_farm(GC, GC_FARM),
                 Error::<Test, Instance1>::GlobalFarmIsNotEmpty
             );
 

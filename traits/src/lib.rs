@@ -155,7 +155,8 @@ pub trait OnTradeHandler<AssetId, Balance> {
         Ok(())
     }
     /// Include a trade in the average price calculation of the price-oracle pallet.
-    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {}
+    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {
+    }
     /// Known overhead for a trade in `on_initialize/on_finalize`.
     /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
     /// Add this weight to an extrinsic from which you call `on_trade`.
@@ -167,8 +168,18 @@ pub trait OnTradeHandler<AssetId, Balance> {
 impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {}
 
 pub trait OnPoolStateChangeHandler<AssetId, Balance> {
-    fn before_pool_state_change(asset_a: AssetId, asset_b: AssetId, initial_liquidity_a: Balance, initial_liquidity_b: Balance) -> DispatchResult;
-    fn after_pool_state_change(asset_a: AssetId, asset_b: AssetId, updated_liquidity_a: Balance, updated_liquidity_b: Balance) -> DispatchResult;
+    fn before_pool_state_change(
+        asset_a: AssetId,
+        asset_b: AssetId,
+        initial_liquidity_a: Balance,
+        initial_liquidity_b: Balance,
+    ) -> DispatchResult;
+    fn after_pool_state_change(
+        asset_a: AssetId,
+        asset_b: AssetId,
+        updated_liquidity_a: Balance,
+        updated_liquidity_b: Balance,
+    ) -> DispatchResult;
 }
 
 pub trait CanCreatePool<AssetId> {

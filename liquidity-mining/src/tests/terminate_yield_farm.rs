@@ -177,7 +177,7 @@ fn terminate_yield_farm_yield_farm_does_not_exists_should_not_work() {
 }
 
 #[test]
-fn destory_yield_farm_should_work_when_farm_is_stopped_and_active_yield_farm_exists_for_same_amm_pool_id() {
+fn terminate_yield_farm_should_work_when_farm_is_stopped_and_active_yield_farm_exists_for_same_amm_pool_id() {
     predefined_test_ext().execute_with(|| {
         let _ = with_transaction(|| {
             let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
@@ -193,7 +193,7 @@ fn destory_yield_farm_should_work_when_farm_is_stopped_and_active_yield_farm_exi
 
             let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
 
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN1_YIELD_FARM_ID,

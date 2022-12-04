@@ -169,16 +169,12 @@ impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {}
 
 pub trait OnPoolStateChangeHandler<AssetId, Balance> {
     fn before_pool_state_change(
-        asset_a: AssetId,
-        asset_b: AssetId,
-        initial_liquidity_a: Balance,
-        initial_liquidity_b: Balance,
+        asset_id: AssetId,
+        initial_liquidity: Balance,
     ) -> DispatchResult;
     fn after_pool_state_change(
-        asset_a: AssetId,
-        asset_b: AssetId,
-        updated_liquidity_a: Balance,
-        updated_liquidity_b: Balance,
+        asset_id: AssetId,
+        updated_liquidity: Balance,
     ) -> DispatchResult;
 }
 

@@ -30,7 +30,7 @@ fn deposit_lp_shares_should_work() {
             //DEPOSIT 1:
             set_block_number(1_800); //18-th period
 
-            let deposited_amount = 50;
+            let deposited_amount = 50 * ONE;
             let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
             //_0 - value berfore act
             let bsx_tkn1_yield_farm_0 =
@@ -42,7 +42,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN1_AMM,
                     deposited_amount,
-                    |_, _, _| { Ok(2_500_u128) }
+                    |_, _, _| { Ok(2_500 * ONE) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[0]
@@ -51,7 +51,7 @@ fn deposit_lp_shares_should_work() {
             pretty_assertions::assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
-                    total_shares_z: 12_500,
+                    total_shares_z: 12_500 * ONE,
                     updated_at: 18,
                     ..get_predefined_global_farm_ins1(2)
                 }
@@ -61,7 +61,7 @@ fn deposit_lp_shares_should_work() {
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     total_shares: deposited_amount,
-                    total_valued_shares: 2_500,
+                    total_valued_shares: 2_500 * ONE,
                     updated_at: 18,
                     entries_count: 1,
                     ..bsx_tkn1_yield_farm_0
@@ -76,7 +76,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_entries: vec![YieldFarmEntry::new(
                         global_farm_id,
                         GC_BSX_TKN1_YIELD_FARM_ID,
-                        2_500,
+                        2_500 * ONE,
                         Zero::zero(),
                         18
                     )]
@@ -86,7 +86,7 @@ fn deposit_lp_shares_should_work() {
             );
 
             // DEPOSIT 2 (deposit in the same period):
-            let deposited_amount = 80;
+            let deposited_amount = 80 * ONE;
             let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
             //_0 - value berfore act
             let bsx_tkn1_yield_farm_0 =
@@ -98,7 +98,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN1_AMM,
                     deposited_amount,
-                    |_, _, _| { Ok(4_160_u128) }
+                    |_, _, _| { Ok(4_160 * ONE) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[1]
@@ -110,7 +110,7 @@ fn deposit_lp_shares_should_work() {
                     accumulated_rpz: Zero::zero(),
                     updated_at: 18,
                     paid_accumulated_rewards: 0,
-                    total_shares_z: 33_300,
+                    total_shares_z: 33_300 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -119,8 +119,8 @@ fn deposit_lp_shares_should_work() {
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     updated_at: 18,
-                    total_shares: 130,
-                    total_valued_shares: 6_660,
+                    total_shares: 130 * ONE,
+                    total_valued_shares: 6_660 * ONE,
                     entries_count: 2,
                     ..bsx_tkn1_yield_farm_0
                 },
@@ -134,7 +134,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_entries: vec![YieldFarmEntry::new(
                         global_farm_id,
                         GC_BSX_TKN1_YIELD_FARM_ID,
-                        4_160,
+                        4_160 * ONE,
                         Zero::zero(),
                         18
                     )]
@@ -144,11 +144,11 @@ fn deposit_lp_shares_should_work() {
             );
 
             //Nohtig was claimed by yield-farm so nothings should change.
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000);
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000 * ONE);
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), 0);
 
             // DEPOSIT 3 (same period, second yield farm):
-            let deposited_amount = 25;
+            let deposited_amount = 25 * ONE;
             let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
 
             //_0 - value berfore act.
@@ -161,7 +161,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN2_AMM,
                     deposited_amount,
-                    |_, _, _| { Ok(200_u128) }
+                    |_, _, _| { Ok(200 * ONE) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[2]
@@ -171,10 +171,9 @@ fn deposit_lp_shares_should_work() {
                 LiquidityMining::global_farm(global_farm_id).unwrap(),
                 GlobalFarmData {
                     updated_at: 18,
-                    max_reward_per_period: 60_000_000,
                     accumulated_rpz: Zero::zero(),
                     paid_accumulated_rewards: 0,
-                    total_shares_z: 35_300,
+                    total_shares_z: 35_300 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -183,8 +182,8 @@ fn deposit_lp_shares_should_work() {
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     updated_at: 18,
-                    total_shares: 25,
-                    total_valued_shares: 200,
+                    total_shares: 25 * ONE,
+                    total_valued_shares: 200 * ONE,
                     entries_count: 1,
                     ..bsx_tkn2_yield_farm_0
                 },
@@ -198,7 +197,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_entries: vec![YieldFarmEntry::new(
                         global_farm_id,
                         GC_BSX_TKN2_YIELD_FARM_ID,
-                        200,
+                        200 * ONE,
                         Zero::zero(),
                         18
                     )]
@@ -208,13 +207,13 @@ fn deposit_lp_shares_should_work() {
             );
 
             //Garms wasn't updated in this period so no claim from global farm happened.
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000);
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000 * ONE);
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), 0);
 
             // DEPOSIT 4 (new period):
             set_block_number(2051); //period 20
 
-            let deposited_amount = 800;
+            let deposited_amount = 800 * ONE;
             let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
 
             //_0 - value berfore act.
@@ -227,7 +226,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN2_AMM,
                     deposited_amount,
-                    |_, _, _| { Ok(46_400_u128) }
+                    |_, _, _| { Ok(46_400 * ONE) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[3]
@@ -238,9 +237,9 @@ fn deposit_lp_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 20,
                     accumulated_rpz: FixedU128::one(),
-                    accumulated_rewards: 33_300,
-                    paid_accumulated_rewards: 2_000,
-                    total_shares_z: 499_300,
+                    accumulated_rewards: 33_300 * ONE,
+                    paid_accumulated_rewards: 2_000 * ONE,
+                    total_shares_z: 499_300 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -251,10 +250,10 @@ fn deposit_lp_shares_should_work() {
                     updated_at: 20,
                     accumulated_rpvs: FixedU128::from(10),
                     accumulated_rpz: FixedU128::one(),
-                    total_shares: 825,
-                    total_valued_shares: 46_600,
+                    total_shares: 825 * ONE,
+                    total_valued_shares: 46_600 * ONE,
                     entries_count: 2,
-                    left_to_distribute: 2_000,
+                    left_to_distribute: 2_000 * ONE,
                     ..bsx_tkn2_yield_farm_0
                 },
             );
@@ -267,7 +266,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_entries: vec![YieldFarmEntry::new(
                         global_farm_id,
                         GC_BSX_TKN2_YIELD_FARM_ID,
-                        46_400,
+                        46_400 * ONE,
                         FixedU128::from(10),
                         20
                     )]
@@ -276,10 +275,10 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            let reserved_for_both_farms = 35_300;
+            let reserved_for_both_farms = 35_300 * ONE;
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
-                (30_000_000_000 - reserved_for_both_farms)
+                (30_000_000_000 * ONE - reserved_for_both_farms)
             );
 
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
@@ -287,7 +286,7 @@ fn deposit_lp_shares_should_work() {
             // DEPOSIT 5 (same period, second liq pool yield farm):
             set_block_number(2_586); //period 20
 
-            let deposited_amount = 87;
+            let deposited_amount = 87 * ONE;
             let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
 
             //_0 - value berfore act.
@@ -300,7 +299,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN2_AMM,
                     deposited_amount,
-                    |_, _, _| { Ok(261_u128) }
+                    |_, _, _| { Ok(261 * ONE) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[4]
@@ -311,9 +310,9 @@ fn deposit_lp_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    total_shares_z: 501_910,
-                    accumulated_rewards: 116_550,
-                    paid_accumulated_rewards: 1_167_000,
+                    total_shares_z: 501_910 * ONE,
+                    accumulated_rewards: 116_550 * ONE,
+                    paid_accumulated_rewards: 1_167_000 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -324,10 +323,10 @@ fn deposit_lp_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpvs: FixedU128::from_inner(35_000_000_000_000_000_000_u128),
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    total_shares: 912,
-                    total_valued_shares: 46_861,
+                    total_shares: 912 * ONE,
+                    total_valued_shares: 46_861 * ONE,
                     entries_count: 3,
-                    left_to_distribute: 1_167_000,
+                    left_to_distribute: 1_167_000 * ONE,
                     ..bsx_tkn2_yield_farm_0
                 },
             );
@@ -340,7 +339,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_entries: vec![YieldFarmEntry::new(
                         global_farm_id,
                         GC_BSX_TKN2_YIELD_FARM_ID,
-                        261,
+                        261 * ONE,
                         FixedU128::from_inner(35_000_000_000_000_000_000_u128),
                         25
                     )]
@@ -349,17 +348,17 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            let reserved_for_both_farms = 1_283_550;
+            let reserved_for_both_farms = 1_283_550 * ONE;
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
-                (30_000_000_000 - reserved_for_both_farms)
+                (30_000_000_000 * ONE - reserved_for_both_farms)
             );
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
 
             // DEPOSIT 6 (same period):
             set_block_number(2_596); //period 20
 
-            let deposited_amount = 48;
+            let deposited_amount = 48 * ONE;
             let yield_farm_id = GC_BSX_TKN2_YIELD_FARM_ID;
 
             //_0 - value berfore act.
@@ -372,7 +371,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN2_AMM,
                     deposited_amount,
-                    |_, _, _| { Ok(768_u128) }
+                    |_, _, _| { Ok(768 * ONE) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[5]
@@ -383,9 +382,9 @@ fn deposit_lp_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    total_shares_z: 509_590,
-                    accumulated_rewards: 116_550,
-                    paid_accumulated_rewards: 1_167_000,
+                    total_shares_z: 509_590 * ONE,
+                    accumulated_rewards: 116_550 * ONE,
+                    paid_accumulated_rewards: 1_167_000 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -396,8 +395,8 @@ fn deposit_lp_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpvs: FixedU128::from_inner(35_000_000_000_000_000_000_u128),
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    total_shares: 960,
-                    total_valued_shares: 47_629,
+                    total_shares: 960 * ONE,
+                    total_valued_shares: 47_629 * ONE,
                     entries_count: 4,
                     ..bsx_tkn2_yield_farm_0 //NOTE: same period so nothing claimed by farm
                 },
@@ -411,7 +410,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_entries: vec![YieldFarmEntry::new(
                         global_farm_id,
                         GC_BSX_TKN2_YIELD_FARM_ID,
-                        768,
+                        768 * ONE,
                         FixedU128::from_inner(35_000_000_000_000_000_000_u128),
                         25
                     )]
@@ -420,17 +419,17 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            let reserved_for_both_farms = 1_283_550;
+            let reserved_for_both_farms = 1_283_550 * ONE;
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
-                (30_000_000_000 - reserved_for_both_farms)
+                (30_000_000_000 * ONE - reserved_for_both_farms)
             );
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
 
             // DEPOSIT 7 : (same period different yield farm)
             set_block_number(2_596); //period 20
 
-            let deposited_amount = 486;
+            let deposited_amount = 486 * ONE;
             let yield_farm_id = GC_BSX_TKN1_YIELD_FARM_ID;
 
             //_0 - value berfore act.
@@ -443,7 +442,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     BSX_TKN1_AMM,
                     deposited_amount,
-                    |_, _, _| { Ok(38_880_u128) }
+                    |_, _, _| { Ok(38_880 * ONE) }
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[6]
@@ -454,9 +453,9 @@ fn deposit_lp_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    total_shares_z: 703_990,
+                    total_shares_z: 703_990 * ONE,
                     accumulated_rewards: 0,
-                    paid_accumulated_rewards: 1_283_550,
+                    paid_accumulated_rewards: 1_283_550 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -467,10 +466,10 @@ fn deposit_lp_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpvs: FixedU128::from_inner(17_500_000_000_000_000_000_u128),
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    total_shares: 616,
-                    total_valued_shares: 45_540,
+                    total_shares: 616 * ONE,
+                    total_valued_shares: 45_540 * ONE,
                     entries_count: 3,
-                    left_to_distribute: 116_550,
+                    left_to_distribute: 116_550 * ONE,
                     ..bsx_tkn1_yield_farm_0
                 },
             );
@@ -483,7 +482,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_entries: vec![YieldFarmEntry::new(
                         global_farm_id,
                         GC_BSX_TKN1_YIELD_FARM_ID,
-                        38_880,
+                        38_880 * ONE,
                         FixedU128::from_inner(17_500_000_000_000_000_000_u128),
                         25
                     )]
@@ -492,10 +491,10 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            let reserved_for_both_farms = 1_283_550;
+            let reserved_for_both_farms = 1_283_550 * ONE;
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
-                (30_000_000_000 - reserved_for_both_farms)
+                (30_000_000_000 * ONE - reserved_for_both_farms)
             );
             pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
 
@@ -511,8 +510,7 @@ fn deposit_lp_shares_should_work() {
         let _ = with_transaction(|| {
             set_block_number(2_596); //period 25
 
-            let ksm_balance_in_amm = 16_u128;
-            let deposited_amount = 1_000_000;
+            let deposited_amount = 1_000_000 * ONE;
             let deposit_id = 1; //1 - because new test ext
             let yield_farm_id = CHARLIE_ACA_KSM_YIELD_FARM_ID;
             pretty_assertions::assert_eq!(
@@ -521,7 +519,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_id,
                     ACA_KSM_AMM,
                     deposited_amount,
-                    |_, _, _| { Ok(16_000_000_u128) }
+                    |_, _, _| { Ok(16_000_000 * ONE) }
                 )
                 .unwrap(),
                 deposit_id
@@ -535,7 +533,7 @@ fn deposit_lp_shares_should_work() {
                     yield_farm_entries: vec![YieldFarmEntry::new(
                         CHARLIE_FARM,
                         CHARLIE_ACA_KSM_YIELD_FARM_ID,
-                        deposited_amount * ksm_balance_in_amm,
+                        16_000_000 * ONE,
                         Zero::zero(),
                         25
                     )]
@@ -576,8 +574,8 @@ fn deposit_lp_shares_bellow_min_deposit_should_not_work() {
                 GC_FARM,
                 yield_farm_id,
                 BSX_TKN1_AMM,
-                10,
-                |_, _, _| { Ok(10_u128) }
+                crate::MIN_DEPOSIT,
+                |_, _, _| { Ok(crate::MIN_DEPOSIT) }
             ));
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

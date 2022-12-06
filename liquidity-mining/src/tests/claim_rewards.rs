@@ -35,8 +35,8 @@ fn claim_rewards_should_work() {
             let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
             let yield_farm_0 = LiquidityMining::yield_farm(bsx_tkn1_yield_farm_key).unwrap();
 
-            let expected_claimed_rewards = 23_306;
-            let unclaimable_rewards = 20_444;
+            let expected_claimed_rewards = 23_306_074_766_355_140;
+            let unclaimable_rewards = 20_443_925_233_644_860;
 
             //claim A1.1  (dep. A1 1-th time)
             pretty_assertions::assert_eq!(
@@ -58,7 +58,7 @@ fn claim_rewards_should_work() {
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap(),
                 DepositData {
-                    shares: 50,
+                    shares: 50 * ONE,
                     amm_pool_id: BSX_TKN1_AMM,
                     yield_farm_entries: vec![YieldFarmEntry {
                         global_farm_id,
@@ -67,7 +67,7 @@ fn claim_rewards_should_work() {
                         accumulated_claimed_rewards: expected_claimed_rewards,
                         entered_at: 18,
                         updated_at: 25,
-                        valued_shares: 2_500,
+                        valued_shares: 2_500 * ONE,
                         _phantom: PhantomData::default(),
                     }]
                     .try_into()
@@ -100,10 +100,10 @@ fn claim_rewards_should_work() {
             let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
             let yield_farm_0 = LiquidityMining::yield_farm(bsx_tkn2_yield_farm_key).unwrap();
 
-            let expected_claimed_rewards = 3_417;
-            let unclaimable_rewards = 3_108;
-            let reserved_for_both_farms = 1_759_975;
-            let claimed_from_global = 1_190_725;
+            let expected_claimed_rewards = 3_417_857_142_857_142;
+            let unclaimable_rewards = 3_107_142_857_142_858;
+            let reserved_for_both_farms = 1_759_975 * ONE;
+            let claimed_from_global = 1_190_725 * ONE;
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::claim_rewards(
@@ -124,12 +124,12 @@ fn claim_rewards_should_work() {
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[4]).unwrap(),
                 DepositData {
-                    shares: 87,
+                    shares: 87 * ONE,
                     amm_pool_id: BSX_TKN2_AMM,
                     yield_farm_entries: vec![YieldFarmEntry {
                         global_farm_id,
                         yield_farm_id: GC_BSX_TKN2_YIELD_FARM_ID,
-                        valued_shares: 261,
+                        valued_shares: 261 * ONE,
                         accumulated_rpvs: FixedU128::from(35),
                         accumulated_claimed_rewards: expected_claimed_rewards,
                         entered_at: 25,
@@ -146,9 +146,9 @@ fn claim_rewards_should_work() {
                 GlobalFarmData {
                     updated_at: 30,
                     accumulated_rpz: FixedU128::from(6),
-                    total_shares_z: 703_990,
-                    accumulated_rewards: 569_250,
-                    paid_accumulated_rewards: 2_474_275,
+                    total_shares_z: 703_990 * ONE,
+                    accumulated_rewards: 569_250 * ONE,
+                    paid_accumulated_rewards: 2_474_275 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -159,8 +159,8 @@ fn claim_rewards_should_work() {
                     updated_at: 30,
                     accumulated_rpvs: FixedU128::from(60),
                     accumulated_rpz: FixedU128::from(6),
-                    total_shares: 960,
-                    total_valued_shares: 47_629,
+                    total_shares: 960 * ONE,
+                    total_valued_shares: 47_629 * ONE,
                     entries_count: 4,
                     left_to_distribute: yield_farm_0.left_to_distribute - expected_claimed_rewards
                         + claimed_from_global,
@@ -189,11 +189,11 @@ fn claim_rewards_should_work() {
             let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
             let yield_farm_0 = LiquidityMining::yield_farm(bsx_tkn1_yield_farm_key).unwrap();
 
-            let expected_claimed_rewards = 7_437_514;
-            let unclaimable_rewards = 289_180;
+            let expected_claimed_rewards = 7_437_514_820_756_032_916;
+            let unclaimable_rewards = 289_179_104_477_611_944;
 
-            let reserved_for_both_farms = 432_249_860;
-            let yield_farm_claim_from_global = 140_377_050;
+            let reserved_for_both_farms = 432_249_860 * ONE;
+            let yield_farm_claim_from_global = 140_377_050 * ONE;
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::claim_rewards(
@@ -214,14 +214,14 @@ fn claim_rewards_should_work() {
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap(),
                 DepositData {
-                    shares: 50,
+                    shares: 50 * ONE,
                     amm_pool_id: BSX_TKN1_AMM,
                     yield_farm_entries: vec![YieldFarmEntry {
                         global_farm_id,
                         yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
-                        valued_shares: 2_500,
+                        valued_shares: 2_500 * ONE,
                         accumulated_rpvs: Zero::zero(),
-                        accumulated_claimed_rewards: 7_460_820,
+                        accumulated_claimed_rewards: 7_460_820_895_522_388_056,
                         entered_at: 18,
                         updated_at: 1_258,
                         _phantom: PhantomData::default(),
@@ -235,11 +235,10 @@ fn claim_rewards_should_work() {
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     updated_at: 1_258,
-                    max_reward_per_period: 60_000_000,
                     accumulated_rpz: FixedU128::from(620),
-                    total_shares_z: 703_990,
-                    accumulated_rewards: 292_442_060,
-                    paid_accumulated_rewards: 142_851_325,
+                    total_shares_z: 703_990 * ONE,
+                    accumulated_rewards: 292_442_060 * ONE,
+                    paid_accumulated_rewards: 142_851_325 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -250,8 +249,8 @@ fn claim_rewards_should_work() {
                     updated_at: 1_258,
                     accumulated_rpvs: FixedU128::from(3_100),
                     accumulated_rpz: FixedU128::from(620),
-                    total_shares: 616,
-                    total_valued_shares: 45_540,
+                    total_shares: 616 * ONE,
+                    total_valued_shares: 45_540 * ONE,
                     entries_count: 3,
                     left_to_distribute: yield_farm_0.left_to_distribute + yield_farm_claim_from_global
                         - expected_claimed_rewards,
@@ -283,22 +282,22 @@ fn claim_rewards_should_work() {
             set_block_number(1_800); //period 18
 
             let global_farm_id = CHARLIE_FARM;
-            let expected_claimed_rewards = 23_306; //ACA
-            let unclaimable_rewards = 20_444;
-            let deposited_amount = 50;
+            let expected_claimed_rewards = 23_306_074_766_355_140; //ACA
+            let unclaimable_rewards = 20_443_925_233_644_860;
+            let deposited_amount = 50 * ONE;
             let deposit_id = 1;
             assert_ok!(LiquidityMining::deposit_lp_shares(
                 CHARLIE_FARM,
                 CHARLIE_ACA_KSM_YIELD_FARM_ID,
                 ACA_KSM_AMM,
                 deposited_amount,
-                |_, _, _| { Ok(2_500_u128) }
+                |_, _, _| { Ok(2_500 * ONE) }
             ));
 
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit(deposit_id).unwrap(),
                 DepositData {
-                    shares: 50,
+                    shares: deposited_amount,
                     amm_pool_id: ACA_KSM_AMM,
                     yield_farm_entries: vec![YieldFarmEntry {
                         global_farm_id,
@@ -307,7 +306,7 @@ fn claim_rewards_should_work() {
                         accumulated_claimed_rewards: 0,
                         entered_at: 18,
                         updated_at: 18,
-                        valued_shares: 2_500,
+                        valued_shares: 2_500 * ONE,
                         _phantom: PhantomData::default(),
                     }]
                     .try_into()
@@ -342,7 +341,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 EVE_FARM,
                 EVE_BSX_TKN1_YIELD_FARM_ID,
                 PREDEFINED_DEPOSIT_IDS[0],
-                |_, _, _| { Ok(4_000_u128) }
+                |_, _, _| { Ok(4_000 * ONE) }
             ));
 
             set_block_number(800_000);
@@ -350,7 +349,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 DAVE_FARM,
                 DAVE_BSX_TKN1_YIELD_FARM_ID,
                 PREDEFINED_DEPOSIT_IDS[0],
-                |_, _, _| { Ok(5_000_u128) }
+                |_, _, _| { Ok(5_000 * ONE) }
             ));
 
             let deposit = LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap();
@@ -360,7 +359,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 vec![
                     YieldFarmEntry {
                         global_farm_id: GC_FARM,
-                        valued_shares: 2_500,
+                        valued_shares: 2_500 * ONE,
                         yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
                         accumulated_claimed_rewards: 0,
                         accumulated_rpvs: Zero::zero(),
@@ -370,7 +369,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     },
                     YieldFarmEntry {
                         global_farm_id: EVE_FARM,
-                        valued_shares: 4_000,
+                        valued_shares: 4_000 * ONE,
                         yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
                         accumulated_claimed_rewards: 0,
                         accumulated_rpvs: Zero::zero(),
@@ -380,7 +379,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     },
                     YieldFarmEntry {
                         global_farm_id: DAVE_FARM,
-                        valued_shares: 5_000,
+                        valued_shares: 5_000 * ONE,
                         yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
                         accumulated_claimed_rewards: 0,
                         accumulated_rpvs: Zero::zero(),
@@ -400,7 +399,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     FAIL_ON_DOUBLECLAIM
                 )
                 .unwrap(),
-                (EVE_FARM, KSM, 7_238_095, 361_905)
+                (EVE_FARM, KSM, 7_238_095_238_095_238_088, 361_904_761_904_761_912)
             );
 
             assert_noop!(
@@ -421,7 +420,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     FAIL_ON_DOUBLECLAIM
                 )
                 .unwrap(),
-                (GC_FARM, BSX, 62_078_099, 309_401)
+                (GC_FARM, BSX, 62_078_099_583_415_988_875, 309_400_416_584_011_125)
             );
 
             let deposit = LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap();
@@ -430,9 +429,9 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 vec![
                     YieldFarmEntry {
                         global_farm_id: GC_FARM,
-                        valued_shares: 2_500,
+                        valued_shares: 2_500 * ONE,
                         yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
-                        accumulated_claimed_rewards: 62_078_099,
+                        accumulated_claimed_rewards: 62_078_099_583_415_988_875,
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 18,
                         updated_at: 10_000,
@@ -440,9 +439,9 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     },
                     YieldFarmEntry {
                         global_farm_id: EVE_FARM,
-                        valued_shares: 4_000,
+                        valued_shares: 4_000 * ONE,
                         yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
-                        accumulated_claimed_rewards: 7_238_095,
+                        accumulated_claimed_rewards: 7_238_095_238_095_238_088,
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 50,
                         updated_at: 1_000,
@@ -450,7 +449,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     },
                     YieldFarmEntry {
                         global_farm_id: DAVE_FARM,
-                        valued_shares: 5_000,
+                        valued_shares: 5_000 * ONE,
                         yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
                         accumulated_claimed_rewards: 0,
                         accumulated_rpvs: Zero::zero(),
@@ -491,7 +490,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     FAIL_ON_DOUBLECLAIM
                 )
                 .unwrap(),
-                (DAVE_FARM, ACA, 1_666_666, 333_334)
+                (DAVE_FARM, ACA, 1_666_666_666_666_666_666, 333_333_333_333_333_334)
             );
 
             let deposit = LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap();
@@ -500,9 +499,9 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 vec![
                     YieldFarmEntry {
                         global_farm_id: GC_FARM,
-                        valued_shares: 2_500,
+                        valued_shares: 2_500 * ONE,
                         yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
-                        accumulated_claimed_rewards: 62_078_099,
+                        accumulated_claimed_rewards: 62_078_099_583_415_988_875,
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 18,
                         updated_at: 10_000,
@@ -510,9 +509,9 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     },
                     YieldFarmEntry {
                         global_farm_id: EVE_FARM,
-                        valued_shares: 4_000,
+                        valued_shares: 4_000 * ONE,
                         yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
-                        accumulated_claimed_rewards: 7_238_095,
+                        accumulated_claimed_rewards: 7_238_095_238_095_238_088,
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 50,
                         updated_at: 1_000,
@@ -520,9 +519,9 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                     },
                     YieldFarmEntry {
                         global_farm_id: DAVE_FARM,
-                        valued_shares: 5_000,
+                        valued_shares: 5_000 * ONE,
                         yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
-                        accumulated_claimed_rewards: 1_666_666,
+                        accumulated_claimed_rewards: 1_666_666_666_666_666_666,
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 800,
                         updated_at: 1_000,
@@ -559,14 +558,14 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap(),
                 DepositData {
-                    shares: 50,
+                    shares: 50 * ONE,
                     amm_pool_id: BSX_TKN1_AMM,
                     yield_farm_entries: vec![YieldFarmEntry {
                         global_farm_id,
                         yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
-                        valued_shares: 2_500,
+                        valued_shares: 2_500 * ONE,
                         accumulated_rpvs: Zero::zero(),
-                        accumulated_claimed_rewards: 23_306,
+                        accumulated_claimed_rewards: 23_306_074_766_355_140,
                         entered_at: 18,
                         updated_at: 25,
                         _phantom: PhantomData::default(),
@@ -580,11 +579,14 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
                     .unwrap()
                     .left_to_distribute,
-                yield_farm_0.left_to_distribute - 23_306
+                yield_farm_0.left_to_distribute - 23_306_074_766_355_140
             );
 
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &ALICE), alice_bsx_balance + 23_306);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), pot_balance_0 - 23_306);
+            pretty_assertions::assert_eq!(
+                Tokens::free_balance(BSX, &ALICE),
+                alice_bsx_balance + 23_306_074_766_355_140
+            );
+            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), pot_balance_0 - 23_306_074_766_355_140);
 
             //Second claim should fail.
             assert_noop!(
@@ -618,8 +620,8 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
 
             set_block_number(20_000);
 
-            let expected_claimed_rewards = 23_306;
-            let unclaimable_rewards = 20_444;
+            let expected_claimed_rewards = 23_306_074_766_355_140;
+            let unclaimable_rewards = 20_443_925_233_644_860;
 
             //claim A1.1  (dep. A1 1-th time)
             pretty_assertions::assert_eq!(
@@ -636,12 +638,12 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap(),
                 DepositData {
-                    shares: 50,
+                    shares: 50 * ONE,
                     amm_pool_id: BSX_TKN1_AMM,
                     yield_farm_entries: vec![YieldFarmEntry {
                         global_farm_id,
                         yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
-                        valued_shares: 2_500,
+                        valued_shares: 2_500 * ONE,
                         accumulated_rpvs: Zero::zero(),
                         accumulated_claimed_rewards: expected_claimed_rewards,
                         entered_at: 18,
@@ -736,8 +738,8 @@ fn claim_rewards_doubleclaim_should_work() {
             )
             .unwrap();
 
-            pretty_assertions::assert_eq!(claimable_rewards, 23_306);
-            pretty_assertions::assert_eq!(unclaimable_rewards, 20_444);
+            pretty_assertions::assert_eq!(claimable_rewards, 23_306_074_766_355_140);
+            pretty_assertions::assert_eq!(unclaimable_rewards, 20_443_925_233_644_860);
 
             //Second claim in the same period should return 0 for `claimable_rewards` and real value for
             //`unclaimable_rewards`
@@ -750,7 +752,7 @@ fn claim_rewards_doubleclaim_should_work() {
             .unwrap();
 
             pretty_assertions::assert_eq!(claimable_rewards, 0);
-            pretty_assertions::assert_eq!(unclaimable_rewards, 20_444);
+            pretty_assertions::assert_eq!(unclaimable_rewards, 20_443_925_233_644_860);
 
             //check if double claim fails
             assert_noop!(

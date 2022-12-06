@@ -570,7 +570,7 @@ fn full_farm_running_planned_time() {
 
                 i += 1;
                 if i % 50_000 == 0 {
-                    println!("periods: {}", i);
+                    println!("periods: {i}");
                 }
             }
 

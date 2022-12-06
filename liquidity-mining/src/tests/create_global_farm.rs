@@ -23,13 +23,14 @@ fn create_global_farm_should_work() {
     new_test_ext().execute_with(|| {
         let _ = with_transaction(|| {
             let global_farm_id = 1;
-            let total_rewards: Balance = 50_000_000_000;
+            let total_rewards: Balance = 50_000_000_000_000;
             let reward_currency = BSX;
             let planned_yielding_periods: BlockNumber = 1_000_000_000_u64;
             let blocks_per_period = 20_000;
             let incentivized_token = BSX;
             let owner = ALICE;
             let yield_per_period = Perquintill::from_percent(20);
+            let min_deposit = 10_000;
             let max_reward_per_period: Balance = total_rewards.checked_div(planned_yielding_periods.into()).unwrap();
 
             let created_at_block = 15_896;
@@ -49,7 +50,7 @@ fn create_global_farm_should_work() {
                     reward_currency,
                     owner,
                     yield_per_period,
-                    10,
+                    min_deposit,
                     One::one(),
                 )
                 .unwrap(),
@@ -63,7 +64,7 @@ fn create_global_farm_should_work() {
             );
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(reward_currency, &ALICE),
-                (INITIAL_BALANCE - total_rewards)
+                (INITIAL_BALANCE * ONE - total_rewards)
             );
 
             let updated_at = created_at_block / blocks_per_period;
@@ -78,7 +79,7 @@ fn create_global_farm_should_work() {
                 owner,
                 incentivized_token,
                 max_reward_per_period,
-                10,
+                min_deposit,
                 One::one(),
             );
 
@@ -109,7 +110,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                     BSX,
                     ALICE,
                     Perquintill::from_percent(20),
-                    10,
+                    1_000,
                     One::one(),
                 ),
                 Error::<Test, Instance1>::InvalidTotalRewards
@@ -125,7 +126,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                     BSX,
                     ALICE,
                     Perquintill::from_percent(20),
-                    10,
+                    1_000,
                     One::one(),
                 ),
                 Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
@@ -141,7 +142,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                     BSX,
                     ALICE,
                     Perquintill::from_percent(20),
-                    10,
+                    1_000,
                     One::one(),
                 ),
                 Error::<Test, Instance1>::InvalidBlocksPerPeriod
@@ -157,13 +158,13 @@ fn create_global_farm_invalid_data_should_not_work() {
                     BSX,
                     ALICE,
                     Perquintill::from_percent(0),
-                    10,
+                    1_000,
                     One::one(),
                 ),
                 Error::<Test, Instance1>::InvalidYieldPerPeriod
             );
 
-            //min. deposit is 0.
+            //min. deposit < crate::MIN_DEPOSIT
             assert_noop!(
                 LiquidityMining::create_global_farm(
                     1_000_000,
@@ -173,7 +174,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                     BSX,
                     ALICE,
                     Perquintill::from_percent(10),
-                    0,
+                    crate::MIN_DEPOSIT - 1,
                     One::one(),
                 ),
                 Error::<Test, Instance1>::InvalidMinDeposit
@@ -189,7 +190,7 @@ fn create_global_farm_invalid_data_should_not_work() {
                     BSX,
                     ALICE,
                     Perquintill::from_percent(10),
-                    10,
+                    1_000,
                     FixedU128::from(0_u128),
                 ),
                 Error::<Test, Instance1>::InvalidPriceAdjustment
@@ -214,7 +215,7 @@ fn create_global_farm_with_inssufficient_balance_should_not_work() {
                     BSX,
                     ACCOUNT_WITH_1M,
                     Perquintill::from_percent(20),
-                    10,
+                    10_000,
                     One::one(),
                 ),
                 Error::<Test, Instance1>::InsufficientRewardCurrencyBalance
@@ -238,7 +239,7 @@ fn create_global_farm_should_not_work_when_reward_currency_is_not_registered() {
                     UNKNOWN_ASSET,
                     GC,
                     Perquintill::from_percent(20),
-                    10,
+                    10_000,
                     One::one(),
                 ),
                 Error::<Test, Instance1>::RewardCurrencyNotRegistered
@@ -262,7 +263,7 @@ fn create_global_farm_should_not_work_when_incentivized_asset_is_not_registered(
                     BSX,
                     GC,
                     Perquintill::from_percent(20),
-                    10,
+                    10_000,
                     One::one(),
                 ),
                 Error::<Test, Instance1>::IncentivizedAssetNotRegistered

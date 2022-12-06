@@ -1083,7 +1083,7 @@ fn withdraw_shares_deposit_not_found_should_not_work() {
         let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::withdraw_lp_shares(72_334_321_125_861_359_621, GC_BSX_TKN1_YIELD_FARM_ID, 0),
-                Error::<Test, Instance1>::DepositNotFound
+                Error::<Test, Instance1>::InconsistentState
             );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

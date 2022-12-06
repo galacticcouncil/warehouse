@@ -113,7 +113,7 @@ fn redeposit_lp_shares_deposit_not_found_should_not_work() {
 
             assert_noop!(
                 LiquidityMining::redeposit_lp_shares(DAVE_FARM, yield_farm_id, 999_999_999, |_, _, _| { Ok(10_u128) }),
-                Error::<Test, Instance1>::DepositNotFound
+                Error::<Test, Instance1>::InconsistentState
             );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

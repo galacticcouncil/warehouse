@@ -159,7 +159,7 @@ fn resume_yield_farm_terminated_farm_should_not_work() {
                     BSX_TKN1_AMM,
                     new_multiplier
                 ),
-                Error::<Test, Instance1>::LiquidityMiningIsActive
+                Error::<Test, Instance1>::LiquidityMiningIsNotStopped
             );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

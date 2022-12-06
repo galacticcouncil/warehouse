@@ -111,12 +111,13 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
 
     /// This function updates `yield_farms_count` when yield farm is deleted from global farm.
     /// This function should be called only when yield farm is removed from global farm.
-    pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), ArithmeticError> {
-        // Note: only live count should change
+    pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), Error<T, I>> {
+        //NOTE: only live count should change
+        //NOTE: this counter is managed only by pallet so this sub should never fail.
         self.live_yield_farms_count = self
             .live_yield_farms_count
             .checked_sub(1)
-            .ok_or(ArithmeticError::Overflow)?;
+            .ok_or(Error::<T, I>::InconsistentState)?;
 
         Ok(())
     }
@@ -124,11 +125,12 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     /// This function updates `yield_farms_count` when yield farm is removed from storage.
     /// This function should be called only if yield farm was removed from storage.
     /// !!! DON'T call this function if yield farm is in stopped or deleted.
-    pub fn decrease_total_yield_farm_count(&mut self) -> Result<(), DispatchError> {
+    pub fn decrease_total_yield_farm_count(&mut self) -> Result<(), Error<T, I>> {
+        //NOTE: this counter is managed only by pallet so this sub should never fail.
         self.total_yield_farms_count = self
             .total_yield_farms_count
             .checked_sub(1)
-            .ok_or(ArithmeticError::Overflow)?;
+            .ok_or(Error::<T, I>::InconsistentState)?;
 
         Ok(())
     }
@@ -200,8 +202,12 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
 
     /// This function updates entries count in the yield farm. This function should be called if  
     /// entry is removed from the yield farm.
-    pub fn decrease_entries_count(&mut self) -> Result<(), ArithmeticError> {
-        self.entries_count = self.entries_count.checked_sub(1).ok_or(ArithmeticError::Overflow)?;
+    pub fn decrease_entries_count(&mut self) -> Result<(), Error<T, I>> {
+        //NOTE: this counter is managed only by pallet so this sub should never fail.
+        self.entries_count = self
+            .entries_count
+            .checked_sub(1)
+            .ok_or(Error::<T, I>::InconsistentState)?;
 
         Ok(())
     }

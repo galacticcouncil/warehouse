@@ -27,7 +27,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
         let _ = with_transaction(|| {
             let expected_farm = get_predefined_global_farm_ins1(0);
             assert_ok!(LiquidityMining::create_global_farm(
-                100_000_000_000,
+                100_000_000_000 * ONE,
                 expected_farm.planned_yielding_periods,
                 expected_farm.blocks_per_period,
                 expected_farm.incentivized_asset,
@@ -40,7 +40,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
 
             let expected_farm = get_predefined_global_farm_ins1(1);
             assert_ok!(LiquidityMining::create_global_farm(
-                1_000_000_000,
+                1_000_000_000 * ONE,
                 expected_farm.planned_yielding_periods,
                 expected_farm.blocks_per_period,
                 expected_farm.incentivized_asset,
@@ -53,7 +53,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
 
             let expected_farm = get_predefined_global_farm_ins1(2);
             assert_ok!(LiquidityMining::create_global_farm(
-                30_000_000_000,
+                30_000_000_000 * ONE,
                 expected_farm.planned_yielding_periods,
                 expected_farm.blocks_per_period,
                 expected_farm.incentivized_asset,
@@ -66,7 +66,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
 
             let expected_farm = get_predefined_global_farm_ins1(3);
             assert_ok!(LiquidityMining::create_global_farm(
-                30_000_000_000,
+                30_000_000_000 * ONE,
                 expected_farm.planned_yielding_periods,
                 expected_farm.blocks_per_period,
                 expected_farm.incentivized_asset,
@@ -79,7 +79,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
 
             let expected_farm = get_predefined_global_farm_ins1(4);
             assert_ok!(LiquidityMining::create_global_farm(
-                30_000_000_000,
+                30_000_000_000 * ONE,
                 expected_farm.planned_yielding_periods,
                 expected_farm.blocks_per_period,
                 expected_farm.incentivized_asset,
@@ -92,7 +92,7 @@ pub fn predefined_test_ext() -> sp_io::TestExternalities {
 
             let expected_farm = get_predefined_global_farm_ins1(5);
             assert_ok!(LiquidityMining::create_global_farm(
-                30_000_000_000,
+                30_000_000_000 * ONE,
                 expected_farm.planned_yielding_periods,
                 expected_farm.blocks_per_period,
                 expected_farm.incentivized_asset,
@@ -237,26 +237,26 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             //DEPOSIT 1:
             set_block_number(1_800); //18-th period
 
-            let deposited_amount = 50;
+            let deposited_amount = 50 * ONE;
             assert_ok!(LiquidityMining::deposit_lp_shares(
                 farm_id,
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 BSX_TKN1_AMM,
                 deposited_amount,
-                |_, _, _| { Ok(2_500_u128) },
+                |_, _, _| { Ok(2_500 * ONE) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).is_some());
 
             // DEPOSIT 2 (deposit in same period):
-            let deposited_amount = 80;
+            let deposited_amount = 80 * ONE;
             pretty_assertions::assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     farm_id,
                     GC_BSX_TKN1_YIELD_FARM_ID,
                     BSX_TKN1_AMM,
                     deposited_amount,
-                    |_, _, _| { Ok(4_160_u128) },
+                    |_, _, _| { Ok(4_160 * ONE) },
                 )
                 .unwrap(),
                 PREDEFINED_DEPOSIT_IDS[1]
@@ -265,13 +265,13 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[1]).is_some());
 
             // DEPOSIT 3 (same period, second yield farm):
-            let deposited_amount = 25;
+            let deposited_amount = 25 * ONE;
             assert_ok!(LiquidityMining::deposit_lp_shares(
                 farm_id,
                 GC_BSX_TKN2_YIELD_FARM_ID,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _, _| { Ok(200_u128) },
+                |_, _, _| { Ok(200 * ONE) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]).is_some());
@@ -279,13 +279,13 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             // DEPOSIT 4 (new period):
             set_block_number(2051); //period 20
 
-            let deposited_amount = 800;
+            let deposited_amount = 800 * ONE;
             assert_ok!(LiquidityMining::deposit_lp_shares(
                 farm_id,
                 GC_BSX_TKN2_YIELD_FARM_ID,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _, _| { Ok(46_400_u128) },
+                |_, _, _| { Ok(46_400 * ONE) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[3]).is_some());
@@ -293,13 +293,13 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             // DEPOSIT 5 (same period, second yield farm):
             set_block_number(2_586); //period 25
 
-            let deposited_amount = 87;
+            let deposited_amount = 87 * ONE;
             assert_ok!(LiquidityMining::deposit_lp_shares(
                 farm_id,
                 GC_BSX_TKN2_YIELD_FARM_ID,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _, _| { Ok(261_u128) },
+                |_, _, _| { Ok(261 * ONE) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[4]).is_some());
@@ -307,13 +307,13 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             // DEPOSIT 6 (same period):
             set_block_number(2_596); //period 25
 
-            let deposited_amount = 48;
+            let deposited_amount = 48 * ONE;
             assert_ok!(LiquidityMining::deposit_lp_shares(
                 farm_id,
                 GC_BSX_TKN2_YIELD_FARM_ID,
                 BSX_TKN2_AMM,
                 deposited_amount,
-                |_, _, _| { Ok(768_u128) },
+                |_, _, _| { Ok(768 * ONE) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[5]).is_some());
@@ -321,13 +321,13 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             // DEPOSIT 7 : (same period different liq poll farm)
             set_block_number(2_596); //period 25
 
-            let deposited_amount = 486;
+            let deposited_amount = 486 * ONE;
             assert_ok!(LiquidityMining::deposit_lp_shares(
                 farm_id,
                 GC_BSX_TKN1_YIELD_FARM_ID,
                 BSX_TKN1_AMM,
                 deposited_amount,
-                |_, _, _| { Ok(38_880_u128) },
+                |_, _, _| { Ok(38_880 * ONE) },
             ));
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[6]).is_some());
@@ -343,21 +343,21 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                     blocks_per_period: 100_u64,
                     owner: GC,
                     incentivized_asset: BSX,
-                    max_reward_per_period: 60_000_000,
+                    max_reward_per_period: 60_000_000 * ONE,
                     accumulated_rpz: FixedU128::from_float(3.5_f64),
                     live_yield_farms_count: 2,
                     total_yield_farms_count: 2,
-                    total_shares_z: 703_990,
+                    total_shares_z: 703_990 * ONE,
                     accumulated_rewards: 0,
-                    paid_accumulated_rewards: 1_283_550,
+                    paid_accumulated_rewards: 1_283_550 * ONE,
                     state: FarmState::Active,
-                    min_deposit: 10,
+                    min_deposit: 1_000,
                     price_adjustment: One::one(),
                 }
             );
 
-            let bsx_tkn1_yield_farm_left_to_distribute = 116_550;
-            let bsx_tkn2_yield_farm_left_to_distribute = 1_167_000;
+            let bsx_tkn1_yield_farm_left_to_distribute = 116_550 * ONE;
+            let bsx_tkn2_yield_farm_left_to_distribute = 1_167_000 * ONE;
 
             let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].id);
             pretty_assertions::assert_eq!(
@@ -366,8 +366,8 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                     updated_at: 25,
                     accumulated_rpvs: FixedU128::from_float(17.5_f64),
                     accumulated_rpz: FixedU128::from_float(3.5_f64),
-                    total_shares: 616,
-                    total_valued_shares: 45_540,
+                    total_shares: 616 * ONE,
+                    total_valued_shares: 45_540 * ONE,
                     entries_count: 3,
                     left_to_distribute: bsx_tkn1_yield_farm_left_to_distribute,
                     ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].clone())
@@ -381,8 +381,8 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
                     updated_at: 25,
                     accumulated_rpvs: FixedU128::from(35),
                     accumulated_rpz: FixedU128::from_float(3.5_f64),
-                    total_shares: 960,
-                    total_valued_shares: 47_629,
+                    total_shares: 960 * ONE,
+                    total_valued_shares: 47_629 * ONE,
                     entries_count: 4,
                     left_to_distribute: bsx_tkn2_yield_farm_left_to_distribute,
                     ..PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].clone())
@@ -393,7 +393,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             //total_rewards - (global_farm_paid_accumulated_rewards + global_farm_accumualted_rewards)
             pretty_assertions::assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
-                (30_000_000_000 - (1_033_900 + 249_650))
+                (30_000_000_000 * ONE - (1_033_900 * ONE + 249_650 * ONE))
             );
 
             //Pot account balance check

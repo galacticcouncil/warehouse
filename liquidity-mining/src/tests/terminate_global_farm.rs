@@ -70,8 +70,8 @@ fn terminate_global_farm_should_work() {
                 CHARLIE_FARM,
                 yield_farm_id,
                 ACA_KSM_AMM,
-                1_000,
-                |_, _, _| { Ok(10_u128) },
+                1_000 * ONE,
+                |_, _, _| { Ok(10 * ONE) },
             ));
 
             //Stop farming.

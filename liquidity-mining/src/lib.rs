@@ -361,6 +361,9 @@ pub mod pallet {
             accumulated_rpvs: FixedU128,
             total_valued_shares: Balance,
         },
+
+        /// Global farm has no more rewards to distribute in the moment.
+        AllRewardsDistributed { global_farm_id: GlobalFarmId },
     }
 
     #[pallet::call]
@@ -1393,6 +1396,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                 .accumulated_rewards
                 .checked_add(reward)
                 .ok_or(ArithmeticError::Overflow)?;
+        } else {
+            Pallet::<T, I>::deposit_event(Event::AllRewardsDistributed {
+                global_farm_id: global_farm.id,
+            });
         }
 
         global_farm.updated_at = current_period;

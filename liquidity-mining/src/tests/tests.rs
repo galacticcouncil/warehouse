@@ -728,7 +728,7 @@ fn update_global_farm_should_work() {
                 *rewards_left_to_distribute
             );
 
-            with_transaction(|| {
+            let r = with_transaction(|| {
                 TransactionOutcome::Commit(LiquidityMining::update_global_farm(
                     &mut global_farm,
                     *current_period,
@@ -736,6 +736,12 @@ fn update_global_farm_should_work() {
                 ))
             })
             .unwrap();
+
+            if r.is_zero() && updated_at != current_period {
+                frame_system::Pallet::<Test>::assert_has_event(mock::Event::LiquidityMining(
+                    Event::AllRewardsDistributed { global_farm_id: *id },
+                ));
+            }
 
             let mut expected_global_farm = GlobalFarmData::new(
                 *id,
@@ -2204,4 +2210,47 @@ fn min_yield_farm_multiplier_should_be_ge_1_when_multiplied_by_min_deposit() {
             .ge(&1_u128),
         true
     );
+}
+
+#[test]
+fn update_global_farm_should_emit_all_rewards_distributed_when_reward_is_zero() {
+    new_test_ext().execute_with(|| {
+        let global_farm_id = 10;
+
+        let mut global_farm = GlobalFarmData::new(
+            global_farm_id,
+            10,
+            BSX,
+            Perquintill::from_percent(1),
+            10_000,
+            1,
+            ALICE,
+            BSX,
+            1_000_000 * ONE,
+            1_000,
+            One::one(),
+        );
+        global_farm.total_shares_z = 1_000 * ONE;
+
+        let farm_account_id = LiquidityMining::farm_account_id(global_farm_id).unwrap();
+        Whitelist::add_account(&farm_account_id).unwrap();
+
+        pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &farm_account_id), Balance::zero());
+
+        pretty_assertions::assert_eq!(
+            with_transaction(|| {
+                TransactionOutcome::Commit(LiquidityMining::update_global_farm(
+                    &mut global_farm,
+                    1_000_000_000,
+                    1_000_000 * ONE,
+                ))
+            })
+            .unwrap(),
+            Balance::zero()
+        );
+
+        frame_system::Pallet::<Test>::assert_has_event(mock::Event::LiquidityMining(Event::AllRewardsDistributed {
+            global_farm_id,
+        }));
+    });
 }

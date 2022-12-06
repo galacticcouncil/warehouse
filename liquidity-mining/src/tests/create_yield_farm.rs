@@ -164,14 +164,14 @@ fn create_yield_farm_should_work() {
                     yield_farm.id
                 );
 
-                pretty_assertions::assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
+                assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
 
-                pretty_assertions::assert_eq!(
+                assert_eq!(
                     LiquidityMining::active_yield_farm(amm_id, global_farm_id).unwrap(),
                     yield_farm.id
                 );
 
-                pretty_assertions::assert_eq!(
+                assert_eq!(
                     LiquidityMining::yield_farm((amm_id, global_farm_id, yield_farm.id)).unwrap(),
                     YieldFarmData { ..yield_farm }
                 );

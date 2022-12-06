@@ -25,7 +25,7 @@ fn validate_create_farm_data_should_work() {
         100,
         1,
         Perquintill::from_percent(50),
-        5_000,
+        5,
         One::one(),
     ));
 
@@ -34,7 +34,7 @@ fn validate_create_farm_data_should_work() {
         2_000_000,
         500,
         Perquintill::from_percent(100),
-        crate::MIN_DEPOSIT,
+        1,
         One::one(),
     ));
 
@@ -57,33 +57,19 @@ fn validate_create_farm_data_should_not_work() {
                 100,
                 1,
                 Perquintill::from_percent(50),
-                10_000,
+                10,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidTotalRewards
         );
 
         assert_noop!(
-            LiquidityMining::validate_create_global_farm_data(
-                9,
-                100,
-                1,
-                Perquintill::from_percent(50),
-                1_500,
-                One::one()
-            ),
+            LiquidityMining::validate_create_global_farm_data(9, 100, 1, Perquintill::from_percent(50), 15, One::one()),
             Error::<Test, Instance1>::InvalidTotalRewards
         );
 
         assert_noop!(
-            LiquidityMining::validate_create_global_farm_data(
-                0,
-                100,
-                1,
-                Perquintill::from_percent(50),
-                1_000,
-                One::one()
-            ),
+            LiquidityMining::validate_create_global_farm_data(0, 100, 1, Perquintill::from_percent(50), 1, One::one()),
             Error::<Test, Instance1>::InvalidTotalRewards
         );
 
@@ -93,7 +79,7 @@ fn validate_create_farm_data_should_not_work() {
                 99,
                 1,
                 Perquintill::from_percent(50),
-                2_000,
+                2,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
@@ -105,7 +91,7 @@ fn validate_create_farm_data_should_not_work() {
                 0,
                 1,
                 Perquintill::from_percent(50),
-                3_000,
+                3,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
@@ -117,7 +103,7 @@ fn validate_create_farm_data_should_not_work() {
                 87,
                 1,
                 Perquintill::from_percent(50),
-                4_000,
+                4,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
@@ -129,7 +115,7 @@ fn validate_create_farm_data_should_not_work() {
                 100,
                 0,
                 Perquintill::from_percent(50),
-                4_000,
+                4,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidBlocksPerPeriod
@@ -141,7 +127,7 @@ fn validate_create_farm_data_should_not_work() {
                 100,
                 10,
                 Perquintill::from_percent(0),
-                10_000,
+                10,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidYieldPerPeriod
@@ -153,7 +139,7 @@ fn validate_create_farm_data_should_not_work() {
                 101,
                 16_986_741,
                 Perquintill::from_perthousand(1),
-                crate::MIN_DEPOSIT - 1,
+                0,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidMinDeposit
@@ -165,7 +151,7 @@ fn validate_create_farm_data_should_not_work() {
                 101,
                 16_986_741,
                 Perquintill::from_perthousand(1),
-                10_000,
+                10,
                 Zero::zero()
             ),
             Error::<Test, Instance1>::InvalidPriceAdjustment
@@ -2188,20 +2174,4 @@ fn farm_state_should_work() {
     pretty_assertions::assert_eq!(deleted.is_active(), false);
     pretty_assertions::assert_eq!(deleted.is_stopped(), false);
     pretty_assertions::assert_eq!(deleted.is_terminated(), true);
-}
-
-#[test]
-fn min_yield_farm_multiplier_should_be_ge_1_when_multiplied_by_min_deposit() {
-    //WARN: don't remove this test. This rule is important.
-    // min_yield_farm_multiplier * min_deposit >=1 otherwise non-zero deposit can result in a zero
-    // stake in global-farm and farm can be falsely indentified as empty.
-    //https://github.com/galacticcouncil/warehouse/issues/127
-
-    pretty_assertions::assert_eq!(
-        crate::MIN_YIELD_FARM_MULTIPLIER
-            .checked_mul_int(crate::MIN_DEPOSIT)
-            .unwrap()
-            .ge(&1_u128),
-        true
-    );
 }

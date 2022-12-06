@@ -29,10 +29,10 @@ fn redeposit_lp_shares_should_work() {
                     EVE_FARM,
                     EVE_BSX_TKN1_YIELD_FARM_ID,
                     PREDEFINED_DEPOSIT_IDS[0],
-                    |_, _, _| { Ok(500 * ONE) }
+                    |_, _, _| { Ok(500_u128) }
                 )
                 .unwrap(),
-                50 * ONE
+                50
             );
 
             pretty_assertions::assert_eq!(
@@ -49,10 +49,10 @@ fn redeposit_lp_shares_should_work() {
                     DAVE_FARM,
                     DAVE_BSX_TKN1_YIELD_FARM_ID,
                     PREDEFINED_DEPOSIT_IDS[0],
-                    |_, _, _| { Ok(5_000 * ONE) }
+                    |_, _, _| { Ok(5_000_u128) }
                 )
                 .unwrap(),
-                50 * ONE
+                50
             );
 
             pretty_assertions::assert_eq!(
@@ -69,7 +69,7 @@ fn redeposit_lp_shares_should_work() {
                 vec![
                     YieldFarmEntry {
                         global_farm_id: GC_FARM,
-                        valued_shares: 2_500 * ONE,
+                        valued_shares: 2_500,
                         yield_farm_id: GC_BSX_TKN1_YIELD_FARM_ID,
                         accumulated_claimed_rewards: 0,
                         accumulated_rpvs: Zero::zero(),
@@ -79,7 +79,7 @@ fn redeposit_lp_shares_should_work() {
                     },
                     YieldFarmEntry {
                         global_farm_id: EVE_FARM,
-                        valued_shares: 500 * ONE,
+                        valued_shares: 500,
                         yield_farm_id: EVE_BSX_TKN1_YIELD_FARM_ID,
                         accumulated_claimed_rewards: 0,
                         accumulated_rpvs: Zero::zero(),
@@ -89,7 +89,7 @@ fn redeposit_lp_shares_should_work() {
                     },
                     YieldFarmEntry {
                         global_farm_id: DAVE_FARM,
-                        valued_shares: 5_000 * ONE,
+                        valued_shares: 5_000,
                         yield_farm_id: DAVE_BSX_TKN1_YIELD_FARM_ID,
                         accumulated_claimed_rewards: 0,
                         accumulated_rpvs: Zero::zero(),

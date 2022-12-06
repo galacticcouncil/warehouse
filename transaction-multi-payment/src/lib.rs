@@ -255,7 +255,7 @@ pub mod pallet {
         pub fn set_currency(origin: OriginFor<T>, currency: AssetIdOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            if currency == T::NativeAssetId::get() || AcceptedCurrencies::<T>::contains_key(currency) {
+            if currency == T::NativeAssetId::get() || AcceptedCurrencies::<T>::contains_key(&currency) {
                 if T::Currencies::free_balance(currency, &who) == BalanceOf::<T>::zero() {
                     return Err(Error::<T>::ZeroBalance.into());
                 }
@@ -758,7 +758,7 @@ pub struct AddTxAssetOnAccount<T>(PhantomData<T>);
 impl<T: Config> Happened<(T::AccountId, AssetIdOf<T>)> for AddTxAssetOnAccount<T> {
     fn happened((who, currency): &(T::AccountId, AssetIdOf<T>)) {
         if !AccountCurrencyMap::<T>::contains_key(who)
-            && AcceptedCurrencies::<T>::contains_key(currency)
+            && AcceptedCurrencies::<T>::contains_key(&currency)
             && T::Currencies::total_balance(T::NativeAssetId::get(), who).is_zero()
         {
             AccountCurrencyMap::<T>::insert(who, currency);

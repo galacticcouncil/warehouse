@@ -79,8 +79,8 @@ fn stop_yield_farm_should_work() {
             let pot_balance_0 = Tokens::free_balance(BSX, &pot);
             let global_balance_0 = Tokens::free_balance(BSX, &global_farm_account);
 
-            let last_yield_farm_rewards = 8_538_750 * ONE;
-            let allocated_for_other_yield_farms = 17_860_875 * ONE;
+            let last_yield_farm_rewards = 8_538_750;
+            let allocated_for_other_yield_farms = 17_860_875;
 
             assert!(yield_farm_0.state.is_active());
 

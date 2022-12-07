@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -25,7 +26,7 @@ fn validate_create_farm_data_should_work() {
         100,
         1,
         Perquintill::from_percent(50),
-        5,
+        5_000,
         One::one(),
     ));
 
@@ -34,7 +35,7 @@ fn validate_create_farm_data_should_work() {
         2_000_000,
         500,
         Perquintill::from_percent(100),
-        1,
+        crate::MIN_DEPOSIT,
         One::one(),
     ));
 
@@ -57,19 +58,33 @@ fn validate_create_farm_data_should_not_work() {
                 100,
                 1,
                 Perquintill::from_percent(50),
-                10,
+                10_000,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidTotalRewards
         );
 
         assert_noop!(
-            LiquidityMining::validate_create_global_farm_data(9, 100, 1, Perquintill::from_percent(50), 15, One::one()),
+            LiquidityMining::validate_create_global_farm_data(
+                9,
+                100,
+                1,
+                Perquintill::from_percent(50),
+                1_500,
+                One::one()
+            ),
             Error::<Test, Instance1>::InvalidTotalRewards
         );
 
         assert_noop!(
-            LiquidityMining::validate_create_global_farm_data(0, 100, 1, Perquintill::from_percent(50), 1, One::one()),
+            LiquidityMining::validate_create_global_farm_data(
+                0,
+                100,
+                1,
+                Perquintill::from_percent(50),
+                1_000,
+                One::one()
+            ),
             Error::<Test, Instance1>::InvalidTotalRewards
         );
 
@@ -79,7 +94,7 @@ fn validate_create_farm_data_should_not_work() {
                 99,
                 1,
                 Perquintill::from_percent(50),
-                2,
+                2_000,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
@@ -91,7 +106,7 @@ fn validate_create_farm_data_should_not_work() {
                 0,
                 1,
                 Perquintill::from_percent(50),
-                3,
+                3_000,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
@@ -103,7 +118,7 @@ fn validate_create_farm_data_should_not_work() {
                 87,
                 1,
                 Perquintill::from_percent(50),
-                4,
+                4_000,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidPlannedYieldingPeriods
@@ -115,7 +130,7 @@ fn validate_create_farm_data_should_not_work() {
                 100,
                 0,
                 Perquintill::from_percent(50),
-                4,
+                4_000,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidBlocksPerPeriod
@@ -127,7 +142,7 @@ fn validate_create_farm_data_should_not_work() {
                 100,
                 10,
                 Perquintill::from_percent(0),
-                10,
+                10_000,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidYieldPerPeriod
@@ -139,7 +154,7 @@ fn validate_create_farm_data_should_not_work() {
                 101,
                 16_986_741,
                 Perquintill::from_perthousand(1),
-                0,
+                crate::MIN_DEPOSIT - 1,
                 One::one()
             ),
             Error::<Test, Instance1>::InvalidMinDeposit
@@ -151,7 +166,7 @@ fn validate_create_farm_data_should_not_work() {
                 101,
                 16_986_741,
                 Perquintill::from_perthousand(1),
-                10,
+                10_000,
                 Zero::zero()
             ),
             Error::<Test, Instance1>::InvalidPriceAdjustment
@@ -162,42 +177,42 @@ fn validate_create_farm_data_should_not_work() {
 fn get_period_number_should_work() {
     let block_num: BlockNumber = 1_u64;
     let blocks_per_period = 1;
-    pretty_assertions::assert_eq!(
+    assert_eq!(
         LiquidityMining::get_period_number(block_num, blocks_per_period).unwrap(),
         1
     );
 
     let block_num: BlockNumber = 1_000_u64;
     let blocks_per_period = 1;
-    pretty_assertions::assert_eq!(
+    assert_eq!(
         LiquidityMining::get_period_number(block_num, blocks_per_period).unwrap(),
         1_000
     );
 
     let block_num: BlockNumber = 23_u64;
     let blocks_per_period = 15;
-    pretty_assertions::assert_eq!(
+    assert_eq!(
         LiquidityMining::get_period_number(block_num, blocks_per_period).unwrap(),
         1
     );
 
     let block_num: BlockNumber = 843_712_398_u64;
     let blocks_per_period = 13_412_341;
-    pretty_assertions::assert_eq!(
+    assert_eq!(
         LiquidityMining::get_period_number(block_num, blocks_per_period).unwrap(),
         62
     );
 
     let block_num: BlockNumber = 843_u64;
     let blocks_per_period = 2_000;
-    pretty_assertions::assert_eq!(
+    assert_eq!(
         LiquidityMining::get_period_number(block_num, blocks_per_period).unwrap(),
         0
     );
 
     let block_num: BlockNumber = 10_u64;
     let blocks_per_period = 10;
-    pretty_assertions::assert_eq!(
+    assert_eq!(
         LiquidityMining::get_period_number(block_num, blocks_per_period).unwrap(),
         1
     );
@@ -339,7 +354,7 @@ fn get_loyalty_multiplier_should_work() {
     ];
 
     //Special case: loyalty curve is None
-    pretty_assertions::assert_eq!(
+    assert_eq!(
         LiquidityMining::get_loyalty_multiplier(10, None).unwrap(),
         FixedU128::one()
     );
@@ -709,7 +724,7 @@ fn update_global_farm_should_work() {
             )
             .unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(*reward_currency, &farm_account_id),
                 *rewards_left_to_distribute
             );
@@ -742,7 +757,7 @@ fn update_global_farm_should_work() {
             expected_global_farm.accumulated_rpz = *expected_accumulated_rpz;
             expected_global_farm.accumulated_rewards = *expected_accumulated_rewards;
 
-            pretty_assertions::assert_eq!(global_farm, expected_global_farm);
+            assert_eq!(global_farm, expected_global_farm);
 
             if updated_at != current_period {
                 frame_system::Pallet::<Test>::assert_has_event(mock::Event::LiquidityMining(
@@ -1102,7 +1117,7 @@ fn claim_from_global_farm_should_work() {
         let mut yield_farm = YieldFarmData::new(yield_farm_id, *updated_at, None, FixedU128::from(10_u128));
         yield_farm.accumulated_rpz = FixedU128::from(*yield_farm_accumulated_rpz);
 
-        pretty_assertions::assert_eq!(
+        assert_eq!(
             LiquidityMining::claim_from_global_farm(
                 &mut global_farm,
                 &mut yield_farm,
@@ -1131,12 +1146,12 @@ fn claim_from_global_farm_should_work() {
         expected_global_farm.accumulated_rewards = *expected_global_farm_accumulated_rewards;
         expected_global_farm.paid_accumulated_rewards = *expected_global_farm_pair_accumulated_rewards;
 
-        pretty_assertions::assert_eq!(global_farm, expected_global_farm);
+        assert_eq!(global_farm, expected_global_farm);
 
         let mut expected_yield_farm = YieldFarmData::new(yield_farm_id, *updated_at, None, FixedU128::from(10_u128));
         expected_yield_farm.accumulated_rpz = FixedU128::from(*expected_yield_farm_accumulated_rpz);
 
-        pretty_assertions::assert_eq!(yield_farm, expected_yield_farm);
+        assert_eq!(yield_farm, expected_yield_farm);
     }
 }
 
@@ -1485,7 +1500,7 @@ fn update_yield_farm_should_work() {
                 global_farm.reward_currency,
                 9_000_000_000_000,
             );
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(global_farm.reward_currency, &global_farm_account_id),
                 9_000_000_000_000_u128
             );
@@ -1528,9 +1543,9 @@ fn update_yield_farm_should_work() {
             rhs_global_farm.accumulated_rewards = 1_000_000_u128;
             rhs_global_farm.paid_accumulated_rewards = 1_000_000_u128;
 
-            pretty_assertions::assert_eq!(global_farm, rhs_global_farm);
+            assert_eq!(global_farm, rhs_global_farm);
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 yield_farm,
                 YieldFarmData {
                     id: *yield_farm_id,
@@ -1549,7 +1564,7 @@ fn update_yield_farm_should_work() {
             );
 
             //yield-farm's rewards are not transferred from top so it's balance should not change
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(global_farm.reward_currency, &pot_account_id),
                 pot_balance_0
             );
@@ -1571,17 +1586,17 @@ fn update_yield_farm_should_work() {
 #[test]
 fn get_next_farm_id_should_work() {
     new_test_ext().execute_with(|| {
-        pretty_assertions::assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 1);
-        pretty_assertions::assert_eq!(LiquidityMining::last_farm_id(), 1);
+        assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 1);
+        assert_eq!(LiquidityMining::last_farm_id(), 1);
 
-        pretty_assertions::assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 2);
-        pretty_assertions::assert_eq!(LiquidityMining::last_farm_id(), 2);
+        assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 2);
+        assert_eq!(LiquidityMining::last_farm_id(), 2);
 
-        pretty_assertions::assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 3);
-        pretty_assertions::assert_eq!(LiquidityMining::last_farm_id(), 3);
+        assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 3);
+        assert_eq!(LiquidityMining::last_farm_id(), 3);
 
-        pretty_assertions::assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 4);
-        pretty_assertions::assert_eq!(LiquidityMining::last_farm_id(), 4);
+        assert_eq!(LiquidityMining::get_next_farm_id().unwrap(), 4);
+        assert_eq!(LiquidityMining::last_farm_id(), 4);
     });
 }
 
@@ -1613,7 +1628,7 @@ fn get_next_deposit_id_should_work() {
         let test_data = vec![1, 2, 3, 4, 5];
 
         for expected_deposit_id in test_data {
-            pretty_assertions::assert_eq!(LiquidityMining::get_next_deposit_id().unwrap(), expected_deposit_id);
+            assert_eq!(LiquidityMining::get_next_deposit_id().unwrap(), expected_deposit_id);
         }
     });
 }
@@ -1660,7 +1675,7 @@ fn maybe_update_farms_should_work() {
             )
             .unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(reward_currency, &farm_account_id),
                 LEFT_TO_DISTRIBUTE
             );
@@ -1683,8 +1698,8 @@ fn maybe_update_farms_should_work() {
                 current_period
             ));
 
-            pretty_assertions::assert_eq!(global_farm, global_farm_0);
-            pretty_assertions::assert_eq!(
+            assert_eq!(global_farm, global_farm_0);
+            assert_eq!(
                 yield_farm,
                 YieldFarmData {
                     state: FarmState::Stopped,
@@ -1701,8 +1716,8 @@ fn maybe_update_farms_should_work() {
                 current_period
             ));
 
-            pretty_assertions::assert_eq!(global_farm, global_farm_0);
-            pretty_assertions::assert_eq!(yield_farm, yield_farm_0);
+            assert_eq!(global_farm, global_farm_0);
+            assert_eq!(yield_farm, yield_farm_0);
 
             //III. - global farm has 0 shares and was updated in this period - only yield farm should
             //be updated.
@@ -1719,7 +1734,7 @@ fn maybe_update_farms_should_work() {
                 current_period
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 global_farm,
                 GlobalFarmData {
                     total_shares_z: 0,
@@ -1728,7 +1743,7 @@ fn maybe_update_farms_should_work() {
                 }
             );
             assert_ne!(yield_farm, yield_farm_0);
-            pretty_assertions::assert_eq!(yield_farm.updated_at, current_period);
+            assert_eq!(yield_farm.updated_at, current_period);
 
             //IV. - booth farms met conditions for update
             let current_period = 30;
@@ -1741,8 +1756,8 @@ fn maybe_update_farms_should_work() {
             assert_ne!(global_farm, global_farm_0);
             assert_ne!(yield_farm, yield_farm_0);
 
-            pretty_assertions::assert_eq!(global_farm.updated_at, current_period);
-            pretty_assertions::assert_eq!(yield_farm.updated_at, current_period);
+            assert_eq!(global_farm.updated_at, current_period);
+            assert_eq!(yield_farm.updated_at, current_period);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
@@ -1788,7 +1803,7 @@ fn depositdata_add_farm_entry_to_should_work() {
 
         assert_ok!(deposit.add_yield_farm_entry(test_farm_entries[6].clone()));
 
-        pretty_assertions::assert_eq!(
+        assert_eq!(
             deposit,
             DepositData::<Test, Instance1> {
                 shares: 10,
@@ -1844,7 +1859,7 @@ fn deposit_remove_yield_farm_entry_should_work() {
 
         //This state should never happen, deposit should be flushed from storage when have no more
         //entries.
-        pretty_assertions::assert_eq!(
+        assert_eq!(
             deposit.yield_farm_entries,
             TryInto::<BoundedVec<YieldFarmEntry<Test, Instance1>, ConstU32<5>>>::try_into(vec![]).unwrap()
         );
@@ -1872,7 +1887,7 @@ fn deposit_get_yield_farm_entry_should_work() {
         .unwrap(),
     };
 
-    pretty_assertions::assert_eq!(
+    assert_eq!(
         deposit.get_yield_farm_entry(18).unwrap(),
         &mut YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18)
     );
@@ -1973,18 +1988,18 @@ fn yield_farm_data_should_work() {
         assert!(yield_farm.state.is_terminated());
 
         assert_ok!(yield_farm.increase_entries_count());
-        pretty_assertions::assert_eq!(yield_farm.entries_count, 1);
+        assert_eq!(yield_farm.entries_count, 1);
         assert_ok!(yield_farm.increase_entries_count());
         assert_ok!(yield_farm.increase_entries_count());
         assert_ok!(yield_farm.increase_entries_count());
-        pretty_assertions::assert_eq!(yield_farm.entries_count, 4);
+        assert_eq!(yield_farm.entries_count, 4);
 
         assert_ok!(yield_farm.decrease_entries_count());
-        pretty_assertions::assert_eq!(yield_farm.entries_count, 3);
+        assert_eq!(yield_farm.entries_count, 3);
         assert_ok!(yield_farm.decrease_entries_count());
         assert_ok!(yield_farm.decrease_entries_count());
         assert_ok!(yield_farm.decrease_entries_count());
-        pretty_assertions::assert_eq!(yield_farm.entries_count, 0);
+        assert_eq!(yield_farm.entries_count, 0);
         assert_noop!(yield_farm.decrease_entries_count(), ArithmeticError::Overflow);
 
         //no entries in the farm
@@ -2038,26 +2053,26 @@ fn global_farm_should_work() {
 
     assert_ok!(global_farm.increase_yield_farm_counts());
     assert_ok!(global_farm.increase_yield_farm_counts());
-    pretty_assertions::assert_eq!(global_farm.live_yield_farms_count, 2);
-    pretty_assertions::assert_eq!(global_farm.total_yield_farms_count, 2);
+    assert_eq!(global_farm.live_yield_farms_count, 2);
+    assert_eq!(global_farm.total_yield_farms_count, 2);
     assert_ok!(global_farm.increase_yield_farm_counts());
     assert_ok!(global_farm.increase_yield_farm_counts());
-    pretty_assertions::assert_eq!(global_farm.live_yield_farms_count, 4);
-    pretty_assertions::assert_eq!(global_farm.total_yield_farms_count, 4);
+    assert_eq!(global_farm.live_yield_farms_count, 4);
+    assert_eq!(global_farm.total_yield_farms_count, 4);
     assert_ok!(global_farm.decrease_live_yield_farm_count());
     assert_ok!(global_farm.decrease_live_yield_farm_count());
     //removing farm changes only live farms, total count is not changed
-    pretty_assertions::assert_eq!(global_farm.live_yield_farms_count, 2);
-    pretty_assertions::assert_eq!(global_farm.total_yield_farms_count, 4);
+    assert_eq!(global_farm.live_yield_farms_count, 2);
+    assert_eq!(global_farm.total_yield_farms_count, 4);
     assert_ok!(global_farm.increase_yield_farm_counts());
-    pretty_assertions::assert_eq!(global_farm.live_yield_farms_count, 3);
-    pretty_assertions::assert_eq!(global_farm.total_yield_farms_count, 5);
+    assert_eq!(global_farm.live_yield_farms_count, 3);
+    assert_eq!(global_farm.total_yield_farms_count, 5);
     assert_ok!(global_farm.decrease_total_yield_farm_count());
     assert_ok!(global_farm.decrease_total_yield_farm_count());
     //removing farm changes only total count(farm has to removed and deleted before it can be
     //flushed)
-    pretty_assertions::assert_eq!(global_farm.live_yield_farms_count, 3);
-    pretty_assertions::assert_eq!(global_farm.total_yield_farms_count, 3);
+    assert_eq!(global_farm.live_yield_farms_count, 3);
+    assert_eq!(global_farm.total_yield_farms_count, 3);
 
     assert!(global_farm.has_live_farms());
     global_farm.live_yield_farms_count = 0;
@@ -2125,7 +2140,7 @@ fn get_global_farm_id_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
             //happy path
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], GC_BSX_TKN1_YIELD_FARM_ID),
                 Some(GC_FARM)
             );
@@ -2139,7 +2154,7 @@ fn get_global_farm_id_should_work() {
                 |_, _, _| { Ok(10_u128) }
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::get_global_farm_id(PREDEFINED_DEPOSIT_IDS[0], EVE_BSX_TKN1_YIELD_FARM_ID),
                 Some(EVE_FARM)
             );
@@ -2163,15 +2178,31 @@ fn farm_state_should_work() {
     let deleted = FarmState::Terminated;
     let stopped = FarmState::Stopped;
 
-    pretty_assertions::assert_eq!(active.is_active(), true);
-    pretty_assertions::assert_eq!(active.is_stopped(), false);
-    pretty_assertions::assert_eq!(active.is_terminated(), false);
+    assert_eq!(active.is_active(), true);
+    assert_eq!(active.is_stopped(), false);
+    assert_eq!(active.is_terminated(), false);
 
-    pretty_assertions::assert_eq!(stopped.is_active(), false);
-    pretty_assertions::assert_eq!(stopped.is_stopped(), true);
-    pretty_assertions::assert_eq!(stopped.is_terminated(), false);
+    assert_eq!(stopped.is_active(), false);
+    assert_eq!(stopped.is_stopped(), true);
+    assert_eq!(stopped.is_terminated(), false);
 
-    pretty_assertions::assert_eq!(deleted.is_active(), false);
-    pretty_assertions::assert_eq!(deleted.is_stopped(), false);
-    pretty_assertions::assert_eq!(deleted.is_terminated(), true);
+    assert_eq!(deleted.is_active(), false);
+    assert_eq!(deleted.is_stopped(), false);
+    assert_eq!(deleted.is_terminated(), true);
+}
+
+#[test]
+fn min_yield_farm_multiplier_should_be_ge_1_when_multiplied_by_min_deposit() {
+    //WARN: don't remove this test. This rule is important.
+    // min_yield_farm_multiplier * min_deposit >=1 otherwise non-zero deposit can result in a zero
+    // stake in global-farm and farm can be falsely identified as empty.
+    //https://github.com/galacticcouncil/warehouse/issues/127
+
+    assert_eq!(
+        crate::MIN_YIELD_FARM_MULTIPLIER
+            .checked_mul_int(crate::MIN_DEPOSIT)
+            .unwrap()
+            .ge(&1_u128),
+        true
+    );
 }

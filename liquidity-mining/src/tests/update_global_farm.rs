@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -33,13 +34,13 @@ fn update_global_farm_price_adjustment_should_work() {
                 new_price_adjustment
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     updated_at: 1_000,
                     accumulated_rpz: FixedU128::from_inner(491_000_000_000_000_000_000_u128),
                     price_adjustment: new_price_adjustment,
-                    accumulated_rewards: 343_195_125_u128,
+                    accumulated_rewards: 343_195_125_u128 * ONE,
                     ..global_farm_0
                 },
             );
@@ -74,7 +75,7 @@ fn update_global_farm_price_adjustment_in_same_period_should_work() {
                 Event::GlobalFarmAccRPZUpdated {
                     global_farm_id: GC_FARM,
                     accumulated_rpz: FixedU128::from_inner(41_000_000_000_000_000_000_u128),
-                    total_shares_z: 703_990_u128,
+                    total_shares_z: 703_990_u128 * ONE,
                 },
             ));
 
@@ -86,7 +87,7 @@ fn update_global_farm_price_adjustment_in_same_period_should_work() {
                 new_price_adjustment
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     price_adjustment: new_price_adjustment,

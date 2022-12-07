@@ -48,7 +48,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 1_000_u64,
         owner: ALICE,
         incentivized_asset: BSX,
-        max_reward_per_period: 333_333_333,
+        max_reward_per_period: 333_333_333_333_333_333_333,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: Zero::zero(),
         total_yield_farms_count: Zero::zero(),
@@ -56,7 +56,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         total_shares_z: 0,
         accumulated_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: One::one(),
     },
     GlobalFarmData {
@@ -68,7 +68,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 10_000_u64,
         owner: BOB,
         incentivized_asset: BSX,
-        max_reward_per_period: 200_000,
+        max_reward_per_period: 200_000 * ONE,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: Zero::zero(),
         total_yield_farms_count: Zero::zero(),
@@ -76,7 +76,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         total_shares_z: 0,
         accumulated_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: One::one(),
     },
     GlobalFarmData {
@@ -88,7 +88,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 100_u64,
         owner: GC,
         incentivized_asset: BSX,
-        max_reward_per_period: 60_000_000,
+        max_reward_per_period: 60_000_000 * ONE,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: 2,
         total_yield_farms_count: 2,
@@ -96,7 +96,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         total_shares_z: 0,
         accumulated_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: One::one(),
     },
     GlobalFarmData {
@@ -108,7 +108,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 100_u64,
         owner: CHARLIE,
         incentivized_asset: KSM,
-        max_reward_per_period: 60_000_000,
+        max_reward_per_period: 60_000_000 * ONE,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: 1,
         total_yield_farms_count: 1,
@@ -116,7 +116,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         total_shares_z: 0,
         accumulated_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: FixedU128::from_float(0.5),
     },
     GlobalFarmData {
@@ -128,7 +128,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 1_000_u64,
         owner: DAVE,
         incentivized_asset: TKN1,
-        max_reward_per_period: 333_333_333,
+        max_reward_per_period: 333_333_333_333,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: Zero::zero(),
         total_yield_farms_count: Zero::zero(),
@@ -136,7 +136,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         total_shares_z: 0,
         accumulated_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: One::one(),
     },
     GlobalFarmData {
@@ -148,7 +148,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 1_000_u64,
         owner: EVE,
         incentivized_asset: BSX,
-        max_reward_per_period: 333_333_333,
+        max_reward_per_period: 333_333_333_333,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: Zero::zero(),
         total_yield_farms_count: Zero::zero(),
@@ -156,7 +156,7 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         total_shares_z: 0,
         accumulated_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: One::one(),
     },
 ]
@@ -221,7 +221,7 @@ fn is_approx_eq_fixedu128(num_1: FixedU128, num_2: FixedU128, delta: FixedU128) 
     };
 
     if diff.cmp(&delta) == Ordering::Greater {
-        println!("diff: {:?}; delta: {:?}; n1: {:?}; n2: {:?}", diff, delta, num_1, num_2);
+        println!("diff: {diff:?}; delta: {delta:?}; n1: {num_1:?}; n2: {num_2:?}");
 
         false
     } else {

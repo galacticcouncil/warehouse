@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -30,7 +31,7 @@ fn terminate_global_farm_should_work() {
             let undistributed_rewards =
                 Tokens::free_balance(get_predefined_global_farm_ins1(1).reward_currency, &farm_account);
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::terminate_global_farm(BOB, BOB_FARM).unwrap(),
                 (
                     get_predefined_global_farm_ins1(1).reward_currency,
@@ -43,13 +44,13 @@ fn terminate_global_farm_should_work() {
             assert!(LiquidityMining::global_farm(BOB_FARM).is_none());
 
             //Undistributed rewards should be transferred to owner.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(predefined_global_farm.reward_currency, &BOB),
                 bob_reward_currency_balance + undistributed_rewards
             );
 
             //Non-dustable check
-            pretty_assertions::assert_eq!(Whitelist::contains(&farm_account), false);
+            assert_eq!(Whitelist::contains(&farm_account), false);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
@@ -70,8 +71,8 @@ fn terminate_global_farm_should_work() {
                 CHARLIE_FARM,
                 yield_farm_id,
                 ACA_KSM_AMM,
-                1_000,
-                |_, _, _| { Ok(10_u128) },
+                1_000 * ONE,
+                |_, _, _| { Ok(10 * ONE) },
             ));
 
             //Stop farming.
@@ -89,7 +90,7 @@ fn terminate_global_farm_should_work() {
             assert_ok!(LiquidityMining::terminate_global_farm(CHARLIE, CHARLIE_FARM));
 
             //Global farm with yield farms should NOT be flushed.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(CHARLIE_FARM).unwrap(),
                 GlobalFarmData {
                     live_yield_farms_count: 0,
@@ -99,13 +100,13 @@ fn terminate_global_farm_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(predefined_global_farm.reward_currency, &CHARLIE),
                 charlie_reward_currency_balance + undistributed_rewards
             );
 
             //Farm's account should be removed when farm is destroyed.
-            pretty_assertions::assert_eq!(Whitelist::contains(&farm_account), false);
+            assert_eq!(Whitelist::contains(&farm_account), false);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
@@ -121,7 +122,7 @@ fn terminate_global_farm_not_owner_should_not_work() {
                 Error::<Test, Instance1>::Forbidden
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(BOB_FARM).unwrap(),
                 get_predefined_global_farm_ins1(1)
             );
@@ -153,7 +154,7 @@ fn terminate_global_farm_with_yield_farms_should_not_work() {
         let _ = with_transaction(|| {
             //Destroy farm with active yield farms should not work.
             let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[2].id);
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::active_yield_farm(ACA_KSM_AMM, CHARLIE_FARM).unwrap(),
                 yield_farm_id
             );
@@ -163,7 +164,7 @@ fn terminate_global_farm_with_yield_farms_should_not_work() {
                 Error::<Test, Instance1>::GlobalFarmIsNotEmpty
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(CHARLIE_FARM).unwrap(),
                 get_predefined_global_farm_ins1(3)
             );
@@ -178,7 +179,7 @@ fn terminate_global_farm_with_yield_farms_should_not_work() {
                 Error::<Test, Instance1>::GlobalFarmIsNotEmpty
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(CHARLIE_FARM).unwrap(),
                 get_predefined_global_farm_ins1(3)
             );
@@ -201,7 +202,7 @@ fn terminate_global_farm_healthy_farm_should_not_work() {
                 Error::<Test, Instance1>::GlobalFarmIsNotEmpty
             );
 
-            pretty_assertions::assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), predefined_global_farm);
+            assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), predefined_global_farm);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

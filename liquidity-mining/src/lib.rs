@@ -127,6 +127,14 @@ use sp_std::{
 
 type PeriodOf<T> = <T as frame_system::Config>::BlockNumber;
 
+//WARN: MIN_YIELD_FARM_MULTIPLIER.check_mul_int(MIN_DEPOSIT) >= 1. This rule is important otherwise
+//non-zero deposit can result in a zero stake in global-farm and farm can be falsely identified as
+//empty. https://github.com/galacticcouncil/warehouse/issues/127
+/// Min value farm's owner can set as `min_deposit`
+pub(crate) const MIN_DEPOSIT: Balance = 1_000;
+/// Min value farm's owner can set as yield-farm's `multiplier`
+pub(crate) const MIN_YIELD_FARM_MULTIPLIER: FixedU128 = FixedU128::from_inner(1_000_000_000_000_000);
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -440,7 +448,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             price_adjustment,
         );
 
-        <GlobalFarm<T, I>>::insert(&global_farm.id, &global_farm);
+        <GlobalFarm<T, I>>::insert(global_farm.id, &global_farm);
 
         let global_farm_account = Self::farm_account_id(global_farm.id)?;
 
@@ -557,7 +565,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
         assets: Vec<T::AssetId>,
     ) -> Result<YieldFarmId, DispatchError> {
-        ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
+        ensure!(
+            multiplier.ge(&MIN_YIELD_FARM_MULTIPLIER),
+            Error::<T, I>::InvalidMultiplier
+        );
 
         if let Some(ref curve) = loyalty_curve {
             ensure!(
@@ -583,7 +594,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     Error::<T, I>::MissingIncentivizedAsset
                 );
 
-                <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id.clone(), &global_farm_id, |maybe_active_yield_farm| {
+                <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id.clone(), global_farm_id, |maybe_active_yield_farm| {
                     ensure!(maybe_active_yield_farm.is_none(), Error::<T, I>::YieldFarmAlreadyExists);
 
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
@@ -1480,7 +1491,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         min_deposit: Balance,
         price_adjustment: FixedU128,
     ) -> DispatchResult {
-        ensure!(min_deposit.ge(&1), Error::<T, I>::InvalidMinDeposit);
+        ensure!(min_deposit.ge(&MIN_DEPOSIT), Error::<T, I>::InvalidMinDeposit);
 
         ensure!(!price_adjustment.is_zero(), Error::<T, I>::InvalidPriceAdjustment);
 

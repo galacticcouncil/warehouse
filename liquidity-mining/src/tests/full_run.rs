@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 use crate::tests::mock::LiquidityMining2;
@@ -570,7 +571,7 @@ fn full_farm_running_planned_time() {
 
                 i += 1;
                 if i % 50_000 == 0 {
-                    println!("periods: {}", i);
+                    println!("periods: {i}");
                 }
             }
 
@@ -715,19 +716,19 @@ fn yield_farm_should_claim_expected_amount() {
             ));
 
             let pot = LiquidityMining2::pot_account_id().unwrap();
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining2::yield_farm(yield_farm_a_key)
                     .unwrap()
                     .left_to_distribute,
                 0
             );
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining2::yield_farm(yield_farm_b_key)
                     .unwrap()
                     .left_to_distribute,
                 5_000 * ONE
             );
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), 12_500 * ONE);
+            assert_eq!(Tokens::free_balance(BSX, &pot), 12_500 * ONE);
 
             //Global farm had rewards for 100_000 blocks.
             set_block_number(120_000);
@@ -761,20 +762,20 @@ fn yield_farm_should_claim_expected_amount() {
 
             let global_farm_account = LiquidityMining2::farm_account_id(GLOBAL_FARM).unwrap();
             //leftover because of rounding errors
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), 1);
-            pretty_assertions::assert_eq!(
+            assert_eq!(Tokens::free_balance(BSX, &pot), 1);
+            assert_eq!(
                 LiquidityMining2::yield_farm(yield_farm_a_key)
                     .unwrap()
                     .left_to_distribute,
                 0
             );
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining2::yield_farm(yield_farm_b_key)
                     .unwrap()
                     .left_to_distribute,
                 0
             );
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 1_000);
+            assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 1_000);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

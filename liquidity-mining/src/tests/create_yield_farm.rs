@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -295,7 +296,7 @@ fn add_yield_farm_invalid_multiplier_should_not_work() {
                 LiquidityMining::create_yield_farm(
                     ALICE,
                     ALICE_FARM,
-                    FixedU128::from(0_u128),
+                    FixedU128::from_inner(1_000_000_000_000_000 - 1),
                     Some(LoyaltyCurve::default()),
                     BSX_HDX_AMM,
                     vec![BSX, HDX],

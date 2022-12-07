@@ -106,22 +106,6 @@ fn redeposit_lp_shares_should_work() {
 }
 
 #[test]
-fn redeposit_lp_shares_deposit_not_found_should_not_work() {
-    predefined_test_ext_with_deposits().execute_with(|| {
-        let _ = with_transaction(|| {
-            let yield_farm_id = DAVE_BSX_TKN1_YIELD_FARM_ID;
-
-            assert_noop!(
-                LiquidityMining::redeposit_lp_shares(DAVE_FARM, yield_farm_id, 999_999_999, |_, _, _| { Ok(10_u128) }),
-                Error::<Test, Instance1>::InconsistentState(InconsistentStateError::DepositNotFound)
-            );
-
-            TransactionOutcome::Commit(DispatchResult::Ok(()))
-        });
-    });
-}
-
-#[test]
 fn redeposit_lp_shares_to_wrong_yield_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {

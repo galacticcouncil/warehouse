@@ -1076,17 +1076,3 @@ fn withdraw_shares_yield_farm_entry_not_found_should_not_work() {
         });
     });
 }
-
-#[test]
-fn withdraw_shares_deposit_not_found_should_not_work() {
-    predefined_test_ext_with_deposits().execute_with(|| {
-        let _ = with_transaction(|| {
-            assert_noop!(
-                LiquidityMining::withdraw_lp_shares(72_334_321_125_861_359_621, GC_BSX_TKN1_YIELD_FARM_ID, 0),
-                Error::<Test, Instance1>::InconsistentState(InconsistentStateError::DepositNotFound)
-            );
-
-            TransactionOutcome::Commit(DispatchResult::Ok(()))
-        });
-    });
-}

@@ -100,13 +100,14 @@ pub use crate::types::{
 };
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
+    defensive,
     pallet_prelude::*,
     require_transactional,
     sp_runtime::{
         traits::{AccountIdConversion, BlockNumberProvider, MaybeSerializeDeserialize, One, Zero},
         RuntimeDebug,
     },
-    traits::DefensiveOption,
+    traits::{Defensive, DefensiveOption},
     PalletId,
 };
 
@@ -784,16 +785,16 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             .defensive_ok_or::<Error<T, I>>(InconsistentStateError::YieldFarmNotFound.into())?;
 
                         //NOTE: inactive yield-farm can't be in the active_yield_farm storage.
-                        ensure!(
-                            yield_farm.state.is_active(),
+                        ensure!(yield_farm.state.is_active(), {
+                            defensive!();
                             Error::<T, I>::InconsistentState(InconsistentStateError::LiquidityIsNotActive)
-                        );
+                        });
 
                         <GlobalFarm<T, I>>::try_mutate(global_farm_id, |maybe_global_farm| {
                             //NOTE: global-farm must exist when yield-farm exists.
                             let global_farm = maybe_global_farm
                                 .as_mut()
-                                .ok_or::<Error<T, I>>(InconsistentStateError::GlobalFarmNotFound.into())?;
+                                .defensive_ok_or::<Error<T, I>>(InconsistentStateError::GlobalFarmNotFound.into())?;
 
                             ensure!(global_farm.owner == who, Error::<T, I>::Forbidden);
 
@@ -872,7 +873,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     //NOTE: global-farm must exist if yield-farm exists.
                     let global_farm = maybe_global_farm
                         .as_mut()
-                        .ok_or::<Error<T, I>>(InconsistentStateError::GlobalFarmNotFound.into())?;
+                        .defensive_ok_or::<Error<T, I>>(InconsistentStateError::GlobalFarmNotFound.into())?;
 
                     ensure!(global_farm.owner == who, Error::<T, I>::Forbidden);
 
@@ -1043,7 +1044,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             //function so this should never happen.
             let deposit = maybe_deposit
                 .as_mut()
-                .ok_or::<Error<T, I>>(InconsistentStateError::DepositNotFound.into())?;
+                .defensive_ok_or::<Error<T, I>>(InconsistentStateError::DepositNotFound.into())?;
 
             Self::do_deposit_lp_shares(deposit, global_farm_id, yield_farm_id, get_token_value_of_lp_shares)?;
 
@@ -1079,7 +1080,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             //function so this should never happen.
             let deposit = maybe_deposit
                 .as_mut()
-                .ok_or::<Error<T, I>>(InconsistentStateError::DepositNotFound.into())?;
+                .defensive_ok_or::<Error<T, I>>(InconsistentStateError::DepositNotFound.into())?;
 
             let amm_pool_id = deposit.amm_pool_id.clone();
             let farm_entry = deposit
@@ -1092,7 +1093,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     //NOTE: yield-farm must exist if yield-farm-entry exists.
                     let yield_farm = maybe_yield_farm
                         .as_mut()
-                        .ok_or::<Error<T, I>>(InconsistentStateError::YieldFarmNotFound.into())?;
+                        .defensive_ok_or::<Error<T, I>>(InconsistentStateError::YieldFarmNotFound.into())?;
 
                     ensure!(
                         !yield_farm.state.is_terminated(),
@@ -1103,7 +1104,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         //NOTE: global-farm must exist if yield-farm exists.
                         let global_farm = maybe_global_farm
                             .as_mut()
-                            .ok_or::<Error<T, I>>(InconsistentStateError::GlobalFarmNotFound.into())?;
+                            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::GlobalFarmNotFound.into())?;
 
                         let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
                         //Double claim should be allowed in some case e.g withdraw_lp_shares need
@@ -1117,7 +1118,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                         let mut periods = current_period
                             .checked_sub(&farm_entry.entered_at)
-                            .ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?;
+                            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?;
 
                         if yield_farm.state.is_stopped() {
                             //Stop loyalty factor for all users at the point when yield farm was last
@@ -1125,7 +1126,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             periods = yield_farm
                                 .updated_at
                                 .checked_sub(&farm_entry.entered_at)
-                                .ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?;
+                                .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?;
                         } else {
                             Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
                         }
@@ -1146,7 +1147,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             yield_farm.left_to_distribute = yield_farm
                                 .left_to_distribute
                                 .checked_sub(rewards)
-                                .ok_or::<Error<T, I>>(InconsistentStateError::NotEnoughRewardsInYieldFarm.into())?;
+                                .defensive_ok_or::<Error<T, I>>(
+                                    InconsistentStateError::NotEnoughRewardsInYieldFarm.into(),
+                                )?;
 
                             farm_entry.accumulated_claimed_rewards = farm_entry
                                 .accumulated_claimed_rewards
@@ -1197,7 +1200,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             //function so this should never fail.
             let deposit = maybe_deposit
                 .as_mut()
-                .ok_or::<Error<T, I>>(InconsistentStateError::DepositNotFound.into())?;
+                .defensive_ok_or::<Error<T, I>>(InconsistentStateError::DepositNotFound.into())?;
 
             let farm_entry = deposit.remove_yield_farm_entry(yield_farm_id)?;
             let amm_pool_id = deposit.amm_pool_id.clone();
@@ -1208,7 +1211,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     //NOTE: global-farm must exist if yield-farm-entry exists.
                     let global_farm = maybe_global_farm
                         .as_mut()
-                        .ok_or::<Error<T, I>>(InconsistentStateError::GlobalFarmNotFound.into())?;
+                        .defensive_ok_or::<Error<T, I>>(InconsistentStateError::GlobalFarmNotFound.into())?;
 
                     <YieldFarm<T, I>>::try_mutate_exists(
                         (&amm_pool_id, farm_entry.global_farm_id, yield_farm_id),
@@ -1216,17 +1219,17 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             //NOTE: yield-farm must exist if yield-farm-entry exists.
                             let yield_farm = maybe_yield_farm
                                 .as_mut()
-                                .ok_or::<Error<T, I>>(InconsistentStateError::YieldFarmNotFound.into())?;
+                                .defensive_ok_or::<Error<T, I>>(InconsistentStateError::YieldFarmNotFound.into())?;
 
                             yield_farm.total_shares = yield_farm
                                 .total_shares
                                 .checked_sub(deposit.shares)
-                                .ok_or::<Error<T, I>>(InconsistentStateError::InvalidTotalShares.into())?;
+                                .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidTotalShares.into())?;
 
                             yield_farm.total_valued_shares = yield_farm
                                 .total_valued_shares
                                 .checked_sub(farm_entry.valued_shares)
-                                .ok_or::<Error<T, I>>(InconsistentStateError::InvalidValuedShares.into())?;
+                                .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidValuedShares.into())?;
 
                             // yield farm's stake in global farm is set to `0` when farm is
                             // stopped and yield farm have to be stopped before it's deleted so
@@ -1239,19 +1242,23 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                                 global_farm.total_shares_z = global_farm
                                     .total_shares_z
                                     .checked_sub(shares_in_global_farm_for_deposit)
-                                    .ok_or::<Error<T, I>>(InconsistentStateError::InvslidTotalSharesZ.into())?;
+                                    .defensive_ok_or::<Error<T, I>>(
+                                        InconsistentStateError::InvslidTotalSharesZ.into(),
+                                    )?;
                             }
 
                             if !unclaimable_rewards.is_zero() {
                                 yield_farm.left_to_distribute = yield_farm
                                     .left_to_distribute
                                     .checked_sub(unclaimable_rewards)
-                                    .ok_or::<Error<T, I>>(InconsistentStateError::NotEnoughRewardsInYieldFarm.into())?;
+                                    .defensive_ok_or::<Error<T, I>>(
+                                        InconsistentStateError::NotEnoughRewardsInYieldFarm.into(),
+                                    )?;
 
                                 global_farm.paid_accumulated_rewards = global_farm
                                     .paid_accumulated_rewards
                                     .checked_sub(unclaimable_rewards)
-                                    .ok_or::<Error<T, I>>(
+                                    .defensive_ok_or::<Error<T, I>>(
                                         InconsistentStateError::InvalidPaidAccumulatedRewards.into(),
                                     )?;
 
@@ -1322,7 +1329,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     //NOTE: global-farm must exists if yield-farm exists.
                     let global_farm = maybe_global_farm
                         .as_mut()
-                        .ok_or::<Error<T, I>>(InconsistentStateError::GlobalFarmNotFound.into())?;
+                        .defensive_ok_or::<Error<T, I>>(InconsistentStateError::GlobalFarmNotFound.into())?;
 
                     ensure!(
                         deposit.shares.ge(&global_farm.min_deposit),
@@ -1330,10 +1337,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     );
 
                     //NOTE: If yield-farm is active also global-farm MUST be active.
-                    ensure!(
-                        global_farm.state.is_active(),
+                    ensure!(global_farm.state.is_active(), {
+                        defensive!();
                         Error::<T, I>::InconsistentState(InconsistentStateError::GlobalFarmNotFound)
-                    );
+                    });
 
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
 
@@ -1452,7 +1459,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     ) -> Result<PeriodOf<T>, Error<T, I>> {
         block
             .checked_div(&blocks_per_period)
-            .ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())
+            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())
     }
 
     /// This function returns loyalty multiplier or error.
@@ -1604,7 +1611,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// This function returns an error if `farm_id` is not valid.
     fn validate_farm_id(farm_id: FarmId) -> Result<(), Error<T, I>> {
         if farm_id.is_zero() {
-            return Err(InconsistentStateError::ZeroFarmId.into());
+            return Err(InconsistentStateError::ZeroFarmId.into()).defensive();
         }
 
         Ok(())

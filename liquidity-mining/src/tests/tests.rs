@@ -218,17 +218,6 @@ fn get_period_number_should_work() {
 }
 
 #[test]
-fn get_period_number_should_not_work_when_block_per_period_is_zero() {
-    new_test_ext().execute_with(|| {
-        let block_num: BlockNumber = 10_u64;
-        assert_noop!(
-            LiquidityMining::get_period_number(block_num, 0),
-            Error::InconsistentState(InconsistentStateError::InvalidPeriod)
-        );
-    });
-}
-
-#[test]
 fn get_loyalty_multiplier_should_work() {
     let loyalty_curve_1 = LoyaltyCurve::default();
     let loyalty_curve_2 = LoyaltyCurve {
@@ -1615,19 +1604,6 @@ fn farm_account_id_should_work() {
 }
 
 #[test]
-fn farm_account_id_should_fail_when_farm_id_is_zero() {
-    let ids: Vec<FarmId> = vec![0];
-    new_test_ext().execute_with(|| {
-        for id in ids {
-            assert_noop!(
-                LiquidityMining::farm_account_id(id),
-                Error::<Test, Instance1>::InconsistentState(InconsistentStateError::ZeroFarmId)
-            );
-        }
-    });
-}
-
-#[test]
 fn get_next_deposit_id_should_work() {
     new_test_ext().execute_with(|| {
         let test_data = vec![1, 2, 3, 4, 5];
@@ -2005,10 +1981,6 @@ fn yield_farm_data_should_work() {
         assert_ok!(yield_farm.decrease_entries_count());
         assert_ok!(yield_farm.decrease_entries_count());
         pretty_assertions::assert_eq!(yield_farm.entries_count, 0);
-        assert_noop!(
-            yield_farm.decrease_entries_count(),
-            Error::<Test, Instance1>::InconsistentState(InconsistentStateError::InvalidYieldFarmEntriesCount)
-        );
 
         //no entries in the farm
         yield_farm.entries_count = 0;

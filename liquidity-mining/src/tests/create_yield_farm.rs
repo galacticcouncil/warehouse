@@ -296,7 +296,7 @@ fn add_yield_farm_invalid_multiplier_should_not_work() {
                 LiquidityMining::create_yield_farm(
                     ALICE,
                     ALICE_FARM,
-                    crate::MIN_YIELD_FARM_MULTIPLIER - FixedU128::from_inner(1),
+                    FixedU128::from_inner(1_000_000_000_000_000 - 1),
                     Some(LoyaltyCurve::default()),
                     BSX_HDX_AMM,
                     vec![BSX, HDX],

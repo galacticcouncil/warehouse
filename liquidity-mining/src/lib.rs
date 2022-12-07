@@ -577,6 +577,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
             ensure!(who == global_farm.owner, Error::<T, I>::Forbidden);
 
+            ensure!(global_farm.state.is_active(), Error::<T, I>::GlobalFarmNotFound);
+
             ensure!(!global_farm.has_live_farms(), Error::<T, I>::GlobalFarmIsNotEmpty);
 
             let global_farm_account = Self::farm_account_id(global_farm.id)?;

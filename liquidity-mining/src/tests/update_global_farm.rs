@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -33,7 +34,7 @@ fn update_global_farm_price_adjustment_should_work() {
                 new_price_adjustment
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     updated_at: 1_000,
@@ -86,7 +87,7 @@ fn update_global_farm_price_adjustment_in_same_period_should_work() {
                 new_price_adjustment
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     price_adjustment: new_price_adjustment,

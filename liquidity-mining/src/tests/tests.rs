@@ -223,7 +223,7 @@ fn get_period_number_should_not_work_when_block_per_period_is_zero() {
         let block_num: BlockNumber = 10_u64;
         assert_noop!(
             LiquidityMining::get_period_number(block_num, 0),
-            Error::InconsistentState
+            Error::InconsistentState(InconsistentStateError::InvalidPeriod)
         );
     });
 }
@@ -1615,13 +1615,13 @@ fn farm_account_id_should_work() {
 }
 
 #[test]
-fn farm_account_id_should_not_work() {
+fn farm_account_id_should_fail_when_farm_id_is_zero() {
     let ids: Vec<FarmId> = vec![0];
     new_test_ext().execute_with(|| {
         for id in ids {
             assert_noop!(
                 LiquidityMining::farm_account_id(id),
-                Error::<Test, Instance1>::InconsistentState
+                Error::<Test, Instance1>::InconsistentState(InconsistentStateError::ZeroFarmId)
             );
         }
     });
@@ -2007,7 +2007,7 @@ fn yield_farm_data_should_work() {
         pretty_assertions::assert_eq!(yield_farm.entries_count, 0);
         assert_noop!(
             yield_farm.decrease_entries_count(),
-            Error::<Test, Instance1>::InconsistentState
+            Error::<Test, Instance1>::InconsistentState(InconsistentStateError::InvalidYieldFarmEntriesCount)
         );
 
         //no entries in the farm

@@ -117,7 +117,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         self.live_yield_farms_count = self
             .live_yield_farms_count
             .checked_sub(1)
-            .ok_or(Error::<T, I>::InconsistentState)?;
+            .ok_or::<Error<T, I>>(InconsistentStateError::InvalidLiveYielFarmsCount.into())?;
 
         Ok(())
     }
@@ -130,7 +130,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         self.total_yield_farms_count = self
             .total_yield_farms_count
             .checked_sub(1)
-            .ok_or(Error::<T, I>::InconsistentState)?;
+            .ok_or::<Error<T, I>>(InconsistentStateError::InvalidTotalYieldFarmsCount.into())?;
 
         Ok(())
     }
@@ -207,7 +207,7 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
         self.entries_count = self
             .entries_count
             .checked_sub(1)
-            .ok_or(Error::<T, I>::InconsistentState)?;
+            .ok_or::<Error<T, I>>(InconsistentStateError::InvalidYieldFarmEntriesCount.into())?;
 
         Ok(())
     }

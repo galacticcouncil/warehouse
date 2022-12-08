@@ -360,6 +360,9 @@ pub mod pallet {
 
         /// FarmId can't be 0.
         ZeroFarmId,
+
+        /// Unclaimable rewards must be zero when withdrawing from inactive farm.
+        NoRewardsInInactiveYieldFarm,
     }
 
     impl<T, I> From<InconsistentStateError> for Error<T, I> {
@@ -787,10 +790,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             .defensive_ok_or::<Error<T, I>>(InconsistentStateError::YieldFarmNotFound.into())?;
 
                         //NOTE: inactive yield-farm can't be in the active_yield_farm storage.
-                        ensure!(yield_farm.state.is_active(), {
-                            defensive!();
-                            Error::<T, I>::InconsistentState(InconsistentStateError::LiquidityIsNotActive)
-                        });
+                        ensure!(
+                            yield_farm.state.is_active(),
+                            Self::defensive_err(Error::<T, I>::InconsistentState(
+                                InconsistentStateError::LiquidityIsNotActive
+                            ))
+                        );
 
                         <GlobalFarm<T, I>>::try_mutate(global_farm_id, |maybe_global_farm| {
                             //NOTE: global-farm must exist when yield-farm exists.
@@ -1249,6 +1254,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                                     )?;
                             }
 
+                            //NOTE: this should never happen. It's the responsibility of a pallet
+                            //which is using this function to provide `unclaimable_rewards == 0`
+                            //if yield-farm is not claimable.
+                            ensure!(
+                                unclaimable_rewards.is_zero() || !yield_farm.state.is_terminated(),
+                                Self::defensive_err(Error::<T, I>::InconsistentState(
+                                    InconsistentStateError::NoRewardsInInactiveYieldFarm.into(),
+                                ))
+                            );
                             if !unclaimable_rewards.is_zero() {
                                 yield_farm.left_to_distribute = yield_farm
                                     .left_to_distribute
@@ -1339,10 +1353,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     );
 
                     //NOTE: If yield-farm is active also global-farm MUST be active.
-                    ensure!(global_farm.state.is_active(), {
-                        defensive!();
-                        Error::<T, I>::InconsistentState(InconsistentStateError::GlobalFarmNotFound)
-                    });
+                    ensure!(
+                        global_farm.state.is_active(),
+                        Self::defensive_err(Error::<T, I>::InconsistentState(
+                            InconsistentStateError::GlobalFarmNotFound
+                        ))
+                    );
 
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
 
@@ -1733,6 +1749,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         }
 
         Ok(())
+    }
+
+    #[inline(always)]
+    fn defensive_err(e: Error<T, I>) -> Error<T, I> {
+        defensive!(e);
+        e
     }
 }
 

@@ -223,9 +223,6 @@ pub mod pallet {
         /// Yield farm does not exist.
         YieldFarmNotFound,
 
-        /// Deposit does not exist.
-        DepositNotFound,
-
         /// Multiple claims in the same period is not allowed.
         DoubleClaimInPeriod,
 
@@ -273,9 +270,6 @@ pub mod pallet {
 
         /// Planned yielding periods is less than `MinPlannedYieldingPeriods`.
         InvalidPlannedYieldingPeriods,
-
-        /// Provided farm id is not valid. Valid range is [1, u32::MAX)
-        InvalidFarmId,
 
         /// Maximum number of locks reached for deposit.
         MaxEntriesPerDeposit,

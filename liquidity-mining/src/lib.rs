@@ -1254,7 +1254,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             ensure!(
                                 unclaimable_rewards.is_zero() || !yield_farm.state.is_terminated(),
                                 Self::defensive_err(Error::<T, I>::InconsistentState(
-                                    InconsistentStateError::NoRewardsInInactiveYieldFarm.into(),
+                                    InconsistentStateError::NoRewardsInInactiveYieldFarm,
                                 ))
                             );
                             if !unclaimable_rewards.is_zero() {

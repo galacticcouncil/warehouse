@@ -137,3 +137,47 @@ fn update_global_farm_price_adjustment_not_existing_farm_should_not_work() {
         });
     });
 }
+
+#[test]
+fn update_global_farm_price_adjustment_should_fail_when_farm_is_already_terminated() {
+    predefined_test_ext().execute_with(|| {
+        let _ = with_transaction(|| {
+            //Arrange
+            let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[2].id);
+
+            //Add deposit to yield farm so it won't be removed from storage on destroy.
+            assert_ok!(LiquidityMining::deposit_lp_shares(
+                CHARLIE_FARM,
+                yield_farm_id,
+                ACA_KSM_AMM,
+                1_000 * ONE,
+                |_, _, _| { Ok(10 * ONE) },
+            ));
+
+            //Stop farming.
+            assert_ok!(LiquidityMining::stop_yield_farm(CHARLIE, CHARLIE_FARM, ACA_KSM_AMM));
+
+            //Destroy yield farm (yield farm is destroyed but not flushed)
+            assert_ok!(LiquidityMining::terminate_yield_farm(
+                CHARLIE,
+                CHARLIE_FARM,
+                yield_farm_id,
+                ACA_KSM_AMM
+            ));
+
+            //Destroy global farm.
+            assert_ok!(LiquidityMining::terminate_global_farm(CHARLIE, CHARLIE_FARM));
+
+            //Global farm with yield farms should NOT be flushed.
+            pretty_assertions::assert_eq!(LiquidityMining::global_farm(CHARLIE_FARM).is_some(), true);
+
+            //Act & assert
+            assert_noop!(
+                LiquidityMining::update_global_farm_price_adjustment(CHARLIE, CHARLIE_FARM, FixedU128::one()),
+                Error::<Test, Instance1>::GlobalFarmNotFound
+            );
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    })
+}

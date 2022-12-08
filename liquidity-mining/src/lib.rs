@@ -535,10 +535,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         global_farm_id: GlobalFarmId,
         price_adjustment: FixedU128,
     ) -> Result<(), DispatchError> {
-        <GlobalFarm<T, I>>::try_mutate(global_farm_id, |maybe_global_farm| {
-            ensure!(!price_adjustment.is_zero(), Error::<T, I>::InvalidPriceAdjustment);
+        ensure!(!price_adjustment.is_zero(), Error::<T, I>::InvalidPriceAdjustment);
 
+        <GlobalFarm<T, I>>::try_mutate(global_farm_id, |maybe_global_farm| {
             let global_farm = maybe_global_farm.as_mut().ok_or(Error::<T, I>::GlobalFarmNotFound)?;
+
+            ensure!(global_farm.state.is_active(), Error::<T, I>::GlobalFarmNotFound);
 
             ensure!(who == global_farm.owner, Error::<T, I>::Forbidden);
 

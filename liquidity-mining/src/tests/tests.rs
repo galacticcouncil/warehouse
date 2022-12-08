@@ -218,7 +218,7 @@ fn get_period_number_should_work() {
 }
 
 #[test]
-#[cfg_attr(debug_assertions, should_panic(expected="Defensive failure has been triggered!"))]
+#[cfg_attr(debug_assertions, should_panic(expected = "Defensive failure has been triggered!"))]
 fn get_period_number_should_not_work_when_block_per_period_is_zero() {
     new_test_ext().execute_with(|| {
         let block_num: BlockNumber = 10_u64;
@@ -1616,7 +1616,7 @@ fn farm_account_id_should_work() {
 }
 
 #[test]
-#[cfg_attr(debug_assertions, should_panic(expected="Defensive failure has been triggered!"))]
+#[cfg_attr(debug_assertions, should_panic(expected = "Defensive failure has been triggered!"))]
 fn farm_account_id_should_fail_when_farm_id_is_zero() {
     let ids: Vec<FarmId> = vec![0];
     new_test_ext().execute_with(|| {
@@ -1974,7 +1974,7 @@ fn deposit_can_be_flushed_should_work() {
 }
 
 #[test]
-#[cfg_attr(debug_assertions, should_panic(expected="Defensive failure has been triggered!"))]
+#[cfg_attr(debug_assertions, should_panic(expected = "Defensive failure has been triggered!"))]
 fn yield_farm_data_should_work() {
     new_test_ext().execute_with(|| {
         let mut yield_farm =

@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -41,7 +42,7 @@ fn terminate_yield_farm_with_deposits_should_work() {
                 BSX_TKN1_AMM
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     live_yield_farms_count: global_farm_0.live_yield_farms_count.checked_sub(1).unwrap(),
@@ -51,7 +52,7 @@ fn terminate_yield_farm_with_deposits_should_work() {
             );
 
             //Yield farm is removed from storage only if there are no more farm entries.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
                 YieldFarmData {
                     state: FarmState::Terminated,
@@ -62,14 +63,14 @@ fn terminate_yield_farm_with_deposits_should_work() {
 
             //Yield-farm's `left_to_distribute`(unpaid rewards) should be transferred from pot to
             //global-farm's account.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
                 global_farm_bsx_balance
                     .checked_add(yield_farm_0.left_to_distribute)
                     .unwrap()
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &pot),
                 pot_balance_0.checked_sub(yield_farm_0.left_to_distribute).unwrap()
             );
@@ -101,7 +102,7 @@ fn terminate_yield_farm_without_deposits_should_work() {
                 BSX_TKN1_AMM
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     live_yield_farms_count: global_farm.live_yield_farms_count.checked_sub(1).unwrap(),
@@ -114,16 +115,16 @@ fn terminate_yield_farm_without_deposits_should_work() {
             //Yield farm without deposits should be flushed.
             assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).is_none());
 
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &yield_farm_account), 0);
+            assert_eq!(Tokens::free_balance(BSX, &yield_farm_account), 0);
 
             //Unpaid rewards from yield farm account should be transferred back to global farm's account.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
                 global_farm_bsx_balance.checked_add(yield_farm_bsx_balance).unwrap()
             );
 
             //Non-dustable check
-            pretty_assertions::assert_eq!(Whitelist::contains(&yield_farm_account), false);
+            assert_eq!(Whitelist::contains(&yield_farm_account), false);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
@@ -200,7 +201,7 @@ fn terminate_yield_farm_should_work_when_farm_is_stopped_and_active_yield_farm_e
                 BSX_TKN1_AMM
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     live_yield_farms_count: global_farm.live_yield_farms_count.checked_sub(1).unwrap(),
@@ -213,10 +214,10 @@ fn terminate_yield_farm_should_work_when_farm_is_stopped_and_active_yield_farm_e
             //Yield farm without deposits should be flushed.
             assert!(LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).is_none());
 
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &yield_farm_acoount), 0);
+            assert_eq!(Tokens::free_balance(BSX, &yield_farm_acoount), 0);
 
             //Unpaid rewards from yield farm account should be transferred back to global farm's account.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
                 global_farm_bsx_balance.checked_add(yield_farm_bsx_balance).unwrap()
             );

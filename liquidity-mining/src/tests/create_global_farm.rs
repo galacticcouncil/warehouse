@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -39,9 +40,9 @@ fn create_global_farm_should_work() {
 
             let global_farm_account = LiquidityMining::farm_account_id(global_farm_id).unwrap();
 
-            pretty_assertions::assert_eq!(Tokens::free_balance(reward_currency, &global_farm_account), 0);
+            assert_eq!(Tokens::free_balance(reward_currency, &global_farm_account), 0);
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::create_global_farm(
                     total_rewards,
                     planned_yielding_periods,
@@ -58,11 +59,11 @@ fn create_global_farm_should_work() {
             );
 
             //Check if total_rewards are transferred to farm's account.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(reward_currency, &global_farm_account),
                 total_rewards
             );
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(reward_currency, &ALICE),
                 (INITIAL_BALANCE * ONE - total_rewards)
             );
@@ -83,9 +84,9 @@ fn create_global_farm_should_work() {
                 One::one(),
             );
 
-            pretty_assertions::assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
+            assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
             //Non-dustable check
-            pretty_assertions::assert_eq!(Whitelist::contains(&global_farm_account), true);
+            assert_eq!(Whitelist::contains(&global_farm_account), true);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

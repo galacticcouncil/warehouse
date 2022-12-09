@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -164,14 +165,14 @@ fn create_yield_farm_should_work() {
                     yield_farm.id
                 );
 
-                pretty_assertions::assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
+                assert_eq!(LiquidityMining::global_farm(global_farm_id).unwrap(), global_farm);
 
-                pretty_assertions::assert_eq!(
+                assert_eq!(
                     LiquidityMining::active_yield_farm(amm_id, global_farm_id).unwrap(),
                     yield_farm.id
                 );
 
-                pretty_assertions::assert_eq!(
+                assert_eq!(
                     LiquidityMining::yield_farm((amm_id, global_farm_id, yield_farm.id)).unwrap(),
                     YieldFarmData { ..yield_farm }
                 );
@@ -295,7 +296,7 @@ fn add_yield_farm_invalid_multiplier_should_not_work() {
                 LiquidityMining::create_yield_farm(
                     ALICE,
                     ALICE_FARM,
-                    FixedU128::from(0_u128),
+                    FixedU128::from_inner(1_000_000_000_000_000 - 1),
                     Some(LoyaltyCurve::default()),
                     BSX_HDX_AMM,
                     vec![BSX, HDX],

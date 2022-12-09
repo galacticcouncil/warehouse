@@ -17,6 +17,7 @@
 
 use super::*;
 use crate::tests::test_ext::new_test_ext;
+use pretty_assertions::assert_eq;
 use proptest::prelude::*;
 use sp_arithmetic::traits::{CheckedAdd, CheckedMul};
 
@@ -219,7 +220,7 @@ proptest! {
             let sum_accumulated_rewards_1 = global_farm.accumulated_rewards
                 .checked_add(global_farm.paid_accumulated_rewards).unwrap();
 
-            pretty_assertions::assert_eq!(sum_accumulated_rewards_0, sum_accumulated_rewards_1);
+            assert_eq!(sum_accumulated_rewards_0, sum_accumulated_rewards_1);
         });
     }
 }
@@ -253,7 +254,7 @@ proptest! {
             let s_0 = global_farm_balance_0 + pot_balance_0;
             let s_1 = global_farm_balance_1 + pot_balance_1;
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 s_0,
                 s_1,
                 "invariant: `global_farm_balance + yield_farm_balance` is always constant"
@@ -328,7 +329,7 @@ proptest! {
                 let s_0 = (left_to_distribute_0 - reward).max(0);
                 let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
 
-                pretty_assertions::assert_eq!(
+                assert_eq!(
                     s_0,
                     s_1,
                     "left_to_distribute[1] = max(0, left_to_distribute[0] - reward)"
@@ -337,7 +338,7 @@ proptest! {
                 let s_0 = left_to_distribute_0 + pot_balance_0;
                 let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account) + Tokens::free_balance(REWARD_CURRENCY, &pot);
 
-                pretty_assertions::assert_eq!(
+                assert_eq!(
                     s_0,
                     s_1,
                     "global_farm_account[0] + pot[0] = global_farm_account[1] + pot[1]"

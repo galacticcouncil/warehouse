@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -27,12 +28,12 @@ fn update_yield_farm_should_work() {
             let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
             let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, BSX_TKN1_AMM, new_multiplier).unwrap(),
                 GC_BSX_TKN1_YIELD_FARM_ID
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
                 YieldFarmData {
                     multiplier: new_multiplier,
@@ -40,7 +41,7 @@ fn update_yield_farm_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm);
+            assert_eq!(LiquidityMining::global_farm(GC_FARM).unwrap(), global_farm);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
@@ -61,7 +62,7 @@ fn update_yield_farm_should_work() {
                 new_multiplier,
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
                 YieldFarmData {
                     multiplier: new_multiplier,
@@ -69,7 +70,7 @@ fn update_yield_farm_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     total_shares_z: 455_876_290 * ONE,
@@ -99,7 +100,7 @@ fn update_yield_farm_should_work() {
                 new_multiplier,
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
                 YieldFarmData {
                     updated_at: 50,
@@ -111,7 +112,7 @@ fn update_yield_farm_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     updated_at: 50,
@@ -124,11 +125,11 @@ fn update_yield_farm_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
                 global_farm_balance_0 - expected_claimed_from_global_farm - expected_allocated_for_other_yield_farms
             );
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &pot),
                 pot_balance_0 + expected_claimed_from_global_farm + expected_allocated_for_other_yield_farms
             );

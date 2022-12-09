@@ -129,7 +129,7 @@ use sp_std::{
 
 type PeriodOf<T> = <T as frame_system::Config>::BlockNumber;
 
-//WARN: MIN_YIELD_FARM_MULTIPLIER.check_mul_int(MIN_DEPOSIT) => 1. This rule is important otherwise
+//WARN: MIN_YIELD_FARM_MULTIPLIER.check_mul_int(MIN_DEPOSIT) >= 1. This rule is important otherwise
 //non-zero deposit can result in a zero stake in global-farm and farm can be falsely identified as
 //empty. https://github.com/galacticcouncil/warehouse/issues/127
 /// Min value farm's owner can set as `min_deposit`

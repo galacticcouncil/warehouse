@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -46,7 +47,7 @@ fn resume_yield_farm_should_work() {
 
             let yield_farm_stake_in_global_farm = new_multiplier.checked_mul_int(45_540 * ONE).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
                 YieldFarmData {
                     state: FarmState::Active,
@@ -57,7 +58,7 @@ fn resume_yield_farm_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     total_shares_z: global_farm.total_shares_z + yield_farm_stake_in_global_farm,

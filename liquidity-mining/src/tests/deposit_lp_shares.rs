@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -36,7 +37,7 @@ fn deposit_lp_shares_should_work() {
             let bsx_tkn1_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
                     yield_farm_id,
@@ -48,7 +49,7 @@ fn deposit_lp_shares_should_work() {
                 PREDEFINED_DEPOSIT_IDS[0]
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     total_shares_z: 12_500 * ONE,
@@ -57,7 +58,7 @@ fn deposit_lp_shares_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     total_shares: deposited_amount,
@@ -68,7 +69,7 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap(),
                 DepositData {
                     shares: deposited_amount,
@@ -92,7 +93,7 @@ fn deposit_lp_shares_should_work() {
             let bsx_tkn1_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
                     yield_farm_id,
@@ -104,7 +105,7 @@ fn deposit_lp_shares_should_work() {
                 PREDEFINED_DEPOSIT_IDS[1]
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(global_farm_id).unwrap(),
                 GlobalFarmData {
                     accumulated_rpz: Zero::zero(),
@@ -115,7 +116,7 @@ fn deposit_lp_shares_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     updated_at: 18,
@@ -126,7 +127,7 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[1]).unwrap(),
                 DepositData {
                     shares: deposited_amount,
@@ -144,8 +145,8 @@ fn deposit_lp_shares_should_work() {
             );
 
             //Nohtig was claimed by yield-farm so nothings should change.
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000 * ONE);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), 0);
+            assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000 * ONE);
+            assert_eq!(Tokens::free_balance(BSX, &pot), 0);
 
             // DEPOSIT 3 (same period, second yield farm):
             let deposited_amount = 25 * ONE;
@@ -155,7 +156,7 @@ fn deposit_lp_shares_should_work() {
             let bsx_tkn2_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
                     yield_farm_id,
@@ -167,7 +168,7 @@ fn deposit_lp_shares_should_work() {
                 PREDEFINED_DEPOSIT_IDS[2]
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(global_farm_id).unwrap(),
                 GlobalFarmData {
                     updated_at: 18,
@@ -178,7 +179,7 @@ fn deposit_lp_shares_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     updated_at: 18,
@@ -189,7 +190,7 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]).unwrap(),
                 DepositData {
                     shares: deposited_amount,
@@ -207,8 +208,8 @@ fn deposit_lp_shares_should_work() {
             );
 
             //Garms wasn't updated in this period so no claim from global farm happened.
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000 * ONE);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), 0);
+            assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 30_000_000_000 * ONE);
+            assert_eq!(Tokens::free_balance(BSX, &pot), 0);
 
             // DEPOSIT 4 (new period):
             set_block_number(2051); //period 20
@@ -220,7 +221,7 @@ fn deposit_lp_shares_should_work() {
             let bsx_tkn2_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
                     yield_farm_id,
@@ -232,7 +233,7 @@ fn deposit_lp_shares_should_work() {
                 PREDEFINED_DEPOSIT_IDS[3]
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(global_farm_id).unwrap(),
                 GlobalFarmData {
                     updated_at: 20,
@@ -244,7 +245,7 @@ fn deposit_lp_shares_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     updated_at: 20,
@@ -258,7 +259,7 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[3]).unwrap(),
                 DepositData {
                     shares: deposited_amount,
@@ -276,12 +277,12 @@ fn deposit_lp_shares_should_work() {
             );
 
             let reserved_for_both_farms = 35_300 * ONE;
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
                 (30_000_000_000 * ONE - reserved_for_both_farms)
             );
 
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
+            assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
 
             // DEPOSIT 5 (same period, second liq pool yield farm):
             set_block_number(2_586); //period 20
@@ -293,7 +294,7 @@ fn deposit_lp_shares_should_work() {
             let bsx_tkn2_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
                     yield_farm_id,
@@ -305,7 +306,7 @@ fn deposit_lp_shares_should_work() {
                 PREDEFINED_DEPOSIT_IDS[4]
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(global_farm_id).unwrap(),
                 GlobalFarmData {
                     updated_at: 25,
@@ -317,7 +318,7 @@ fn deposit_lp_shares_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     updated_at: 25,
@@ -331,7 +332,7 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[4]).unwrap(),
                 DepositData {
                     shares: deposited_amount,
@@ -349,11 +350,11 @@ fn deposit_lp_shares_should_work() {
             );
 
             let reserved_for_both_farms = 1_283_550 * ONE;
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
                 (30_000_000_000 * ONE - reserved_for_both_farms)
             );
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
+            assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
 
             // DEPOSIT 6 (same period):
             set_block_number(2_596); //period 20
@@ -365,7 +366,7 @@ fn deposit_lp_shares_should_work() {
             let bsx_tkn2_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
                     yield_farm_id,
@@ -377,7 +378,7 @@ fn deposit_lp_shares_should_work() {
                 PREDEFINED_DEPOSIT_IDS[5]
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(global_farm_id).unwrap(),
                 GlobalFarmData {
                     updated_at: 25,
@@ -389,7 +390,7 @@ fn deposit_lp_shares_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     updated_at: 25,
@@ -402,7 +403,7 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[5]).unwrap(),
                 DepositData {
                     shares: deposited_amount,
@@ -420,11 +421,11 @@ fn deposit_lp_shares_should_work() {
             );
 
             let reserved_for_both_farms = 1_283_550 * ONE;
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
                 (30_000_000_000 * ONE - reserved_for_both_farms)
             );
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
+            assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
 
             // DEPOSIT 7 : (same period different yield farm)
             set_block_number(2_596); //period 20
@@ -436,7 +437,7 @@ fn deposit_lp_shares_should_work() {
             let bsx_tkn1_yield_farm_0 =
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     global_farm_id,
                     yield_farm_id,
@@ -448,7 +449,7 @@ fn deposit_lp_shares_should_work() {
                 PREDEFINED_DEPOSIT_IDS[6]
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(global_farm_id).unwrap(),
                 GlobalFarmData {
                     updated_at: 25,
@@ -460,7 +461,7 @@ fn deposit_lp_shares_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     updated_at: 25,
@@ -474,7 +475,7 @@ fn deposit_lp_shares_should_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[6]).unwrap(),
                 DepositData {
                     shares: deposited_amount,
@@ -492,11 +493,11 @@ fn deposit_lp_shares_should_work() {
             );
 
             let reserved_for_both_farms = 1_283_550 * ONE;
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
                 (30_000_000_000 * ONE - reserved_for_both_farms)
             );
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
+            assert_eq!(Tokens::free_balance(BSX, &pot), reserved_for_both_farms);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
@@ -513,7 +514,7 @@ fn deposit_lp_shares_should_work() {
             let deposited_amount = 1_000_000 * ONE;
             let deposit_id = 1; //1 - because new test ext
             let yield_farm_id = CHARLIE_ACA_KSM_YIELD_FARM_ID;
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     CHARLIE_FARM,
                     yield_farm_id,
@@ -525,7 +526,7 @@ fn deposit_lp_shares_should_work() {
                 deposit_id
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(deposit_id).unwrap(),
                 DepositData {
                     shares: deposited_amount,

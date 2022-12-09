@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut ext = ExtBuilder::default().build();
@@ -218,7 +219,7 @@ fn init_yield_farm_ins1(
         vec![asset_a, asset_b],
     ));
 
-    pretty_assertions::assert_eq!(
+    assert_eq!(
         LiquidityMining::yield_farm((amm_id, farm_id, yield_farm.id)).unwrap(),
         yield_farm
     );
@@ -250,7 +251,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
 
             // DEPOSIT 2 (deposit in same period):
             let deposited_amount = 80 * ONE;
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit_lp_shares(
                     farm_id,
                     GC_BSX_TKN1_YIELD_FARM_ID,
@@ -332,7 +333,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[6]).is_some());
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     id: GC_FARM,
@@ -360,7 +361,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             let bsx_tkn2_yield_farm_left_to_distribute = 1_167_000 * ONE;
 
             let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[0].id);
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     updated_at: 25,
@@ -375,7 +376,7 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
             );
 
             let yield_farm_id = PREDEFINED_YIELD_FARMS_INS1.with(|v| v[1].id);
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, GC_FARM, yield_farm_id)).unwrap(),
                 YieldFarmData {
                     updated_at: 25,
@@ -391,13 +392,13 @@ pub fn predefined_test_ext_with_deposits() -> sp_io::TestExternalities {
 
             //Reward currency balance check.
             //total_rewards - (global_farm_paid_accumulated_rewards + global_farm_accumualted_rewards)
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &global_farm_account),
                 (30_000_000_000 * ONE - (1_033_900 * ONE + 249_650 * ONE))
             );
 
             //Pot account balance check
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &pot_account),
                 bsx_tkn1_yield_farm_left_to_distribute + bsx_tkn2_yield_farm_left_to_distribute
             );

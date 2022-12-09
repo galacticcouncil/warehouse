@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -24,7 +25,7 @@ fn redeposit_lp_shares_should_work() {
         let _ = with_transaction(|| {
             //predefined_deposit[0] - GC_FARM, BSX_TKN1_AMM
             set_block_number(50_000);
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::redeposit_lp_shares(
                     EVE_FARM,
                     EVE_BSX_TKN1_YIELD_FARM_ID,
@@ -35,7 +36,7 @@ fn redeposit_lp_shares_should_work() {
                 50 * ONE
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, EVE_FARM, EVE_BSX_TKN1_YIELD_FARM_ID))
                     .unwrap()
                     .entries_count,
@@ -44,7 +45,7 @@ fn redeposit_lp_shares_should_work() {
 
             set_block_number(800_000);
             //Dave's farm incentivize TKN1 - some balance must be set so `valued_shares` will not be `0`.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::redeposit_lp_shares(
                     DAVE_FARM,
                     DAVE_BSX_TKN1_YIELD_FARM_ID,
@@ -55,7 +56,7 @@ fn redeposit_lp_shares_should_work() {
                 50 * ONE
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, DAVE_FARM, DAVE_BSX_TKN1_YIELD_FARM_ID))
                     .unwrap()
                     .entries_count,
@@ -64,7 +65,7 @@ fn redeposit_lp_shares_should_work() {
 
             let deposit = LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 deposit.yield_farm_entries,
                 vec![
                     YieldFarmEntry {

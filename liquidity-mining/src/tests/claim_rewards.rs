@@ -17,6 +17,7 @@
 
 use super::*;
 use crate::tests::mock::LiquidityMining2;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -41,7 +42,7 @@ fn claim_rewards_should_work() {
             let unclaimable_rewards = 20_443_925_233_644_860;
 
             //claim A1.1  (dep. A1 1-th time)
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::claim_rewards(
                     ALICE,
                     PREDEFINED_DEPOSIT_IDS[0],
@@ -57,7 +58,7 @@ fn claim_rewards_should_work() {
                 )
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap(),
                 DepositData {
                     shares: 50 * ONE,
@@ -77,7 +78,7 @@ fn claim_rewards_should_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm(bsx_tkn1_yield_farm_key)
                     .unwrap()
                     .left_to_distribute,
@@ -85,12 +86,12 @@ fn claim_rewards_should_work() {
             );
 
             //Check if claimed rewards are transferred.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &ALICE),
                 alice_bsx_balance_0 + expected_claimed_rewards
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(REWARD_CURRENCY, &pot),
                 pot_balance_0 - expected_claimed_rewards
             );
@@ -107,7 +108,7 @@ fn claim_rewards_should_work() {
             let reserved_for_both_farms = 1_759_975 * ONE;
             let claimed_from_global = 1_190_725 * ONE;
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::claim_rewards(
                     ALICE,
                     PREDEFINED_DEPOSIT_IDS[4],
@@ -123,7 +124,7 @@ fn claim_rewards_should_work() {
                 )
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[4]).unwrap(),
                 DepositData {
                     shares: 87 * ONE,
@@ -143,7 +144,7 @@ fn claim_rewards_should_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     updated_at: 30,
@@ -155,7 +156,7 @@ fn claim_rewards_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN2_AMM, global_farm_id, GC_BSX_TKN2_YIELD_FARM_ID)).unwrap(),
                 YieldFarmData {
                     updated_at: 30,
@@ -171,12 +172,12 @@ fn claim_rewards_should_work() {
             );
 
             //Check if claimed rewards are transferred.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &ALICE),
                 alice_bsx_balance_0 + expected_claimed_rewards
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(REWARD_CURRENCY, &pot),
                 pot_balance_0 + reserved_for_both_farms - expected_claimed_rewards
             );
@@ -197,7 +198,7 @@ fn claim_rewards_should_work() {
             let reserved_for_both_farms = 432_249_860 * ONE;
             let yield_farm_claim_from_global = 140_377_050 * ONE;
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::claim_rewards(
                     ALICE,
                     PREDEFINED_DEPOSIT_IDS[0],
@@ -213,7 +214,7 @@ fn claim_rewards_should_work() {
                 )
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap(),
                 DepositData {
                     shares: 50 * ONE,
@@ -246,7 +247,7 @@ fn claim_rewards_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, global_farm_id, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
                 YieldFarmData {
                     updated_at: 1_258,
@@ -262,12 +263,12 @@ fn claim_rewards_should_work() {
             );
 
             //Check if claimed rewards are transferred.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &ALICE),
                 alice_bsx_balance_0 + expected_claimed_rewards
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &pot),
                 pot_balance_0 + reserved_for_both_farms - expected_claimed_rewards
             );
@@ -305,7 +306,7 @@ fn claim_rewards_should_work() {
                 |_, _, _| { Ok(2_500 * ONE) }
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(deposit_id).unwrap(),
                 DepositData {
                     shares: deposited_amount,
@@ -327,14 +328,14 @@ fn claim_rewards_should_work() {
 
             set_block_number(2_596); //period 25
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::claim_rewards(ALICE, deposit_id, CHARLIE_ACA_KSM_YIELD_FARM_ID, FAIL_ON_DOUBLECLAIM)
                     .unwrap(),
                 (CHARLIE_FARM, ACA, expected_claimed_rewards, unclaimable_rewards)
             );
 
             //Alice had 0 ACA before claim.
-            pretty_assertions::assert_eq!(Tokens::free_balance(ACA, &ALICE), expected_claimed_rewards);
+            assert_eq!(Tokens::free_balance(ACA, &ALICE), expected_claimed_rewards);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
@@ -365,7 +366,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
 
             let deposit = LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 deposit.yield_farm_entries,
                 vec![
                     YieldFarmEntry {
@@ -402,7 +403,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
             );
 
             set_block_number(1_000_000);
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::claim_rewards(
                     ALICE,
                     PREDEFINED_DEPOSIT_IDS[0],
@@ -423,7 +424,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 Error::<Test, Instance1>::DoubleClaimInPeriod
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::claim_rewards(
                     ALICE,
                     PREDEFINED_DEPOSIT_IDS[0],
@@ -435,7 +436,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
             );
 
             let deposit = LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap();
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 deposit.yield_farm_entries,
                 vec![
                     YieldFarmEntry {
@@ -493,7 +494,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                 Error::<Test, Instance1>::DoubleClaimInPeriod
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::claim_rewards(
                     ALICE,
                     PREDEFINED_DEPOSIT_IDS[0],
@@ -505,7 +506,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
             );
 
             let deposit = LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap();
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 deposit.yield_farm_entries,
                 vec![
                     YieldFarmEntry {
@@ -566,7 +567,7 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
                 FAIL_ON_DOUBLECLAIM
             ));
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap(),
                 DepositData {
                     shares: 50 * ONE,
@@ -586,18 +587,18 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
                     .unwrap()
                     .left_to_distribute,
                 yield_farm_0.left_to_distribute - 23_306_074_766_355_140
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &ALICE),
                 alice_bsx_balance + 23_306_074_766_355_140
             );
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &pot), pot_balance_0 - 23_306_074_766_355_140);
+            assert_eq!(Tokens::free_balance(BSX, &pot), pot_balance_0 - 23_306_074_766_355_140);
 
             //Second claim should fail.
             assert_noop!(
@@ -635,7 +636,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
             let unclaimable_rewards = 20_443_925_233_644_860;
 
             //claim A1.1  (dep. A1 1-th time)
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::claim_rewards(
                     ALICE,
                     PREDEFINED_DEPOSIT_IDS[0],
@@ -646,7 +647,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                 (global_farm_id, BSX, expected_claimed_rewards, unclaimable_rewards)
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[0]).unwrap(),
                 DepositData {
                     shares: 50 * ONE,
@@ -666,7 +667,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                 },
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
                     .unwrap()
                     .left_to_distribute,
@@ -674,12 +675,12 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
             );
 
             //Check if claimed rewards are transferred.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &ALICE),
                 alibe_bsx_balance_0 + expected_claimed_rewards
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 Tokens::free_balance(BSX, &pot),
                 pot_balance_0 - expected_claimed_rewards
             );
@@ -688,7 +689,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
             //This should claim 0 rewards.
             set_block_number(300_000);
             //claim A1.1  (dep. A1 1-th time)
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::claim_rewards(
                     ALICE,
                     PREDEFINED_DEPOSIT_IDS[0],
@@ -749,8 +750,8 @@ fn claim_rewards_doubleclaim_should_work() {
             )
             .unwrap();
 
-            pretty_assertions::assert_eq!(claimable_rewards, 23_306_074_766_355_140);
-            pretty_assertions::assert_eq!(unclaimable_rewards, 20_443_925_233_644_860);
+            assert_eq!(claimable_rewards, 23_306_074_766_355_140);
+            assert_eq!(unclaimable_rewards, 20_443_925_233_644_860);
 
             //Second claim in the same period should return 0 for `claimable_rewards` and real value for
             //`unclaimable_rewards`
@@ -762,8 +763,8 @@ fn claim_rewards_doubleclaim_should_work() {
             )
             .unwrap();
 
-            pretty_assertions::assert_eq!(claimable_rewards, 0);
-            pretty_assertions::assert_eq!(unclaimable_rewards, 20_443_925_233_644_860);
+            assert_eq!(claimable_rewards, 0);
+            assert_eq!(unclaimable_rewards, 20_443_925_233_644_860);
 
             //check if double claim fails
             assert_noop!(

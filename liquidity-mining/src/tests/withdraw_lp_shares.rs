@@ -27,6 +27,8 @@ fn withdraw_shares_should_work() {
             const GLOBAL_FARM_ID: GlobalFarmId = GC_FARM;
 
             let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
+            let global_farm_total_rewards_start = 30_000_000_000 * ONE;
+
             let pot = LiquidityMining::pot_account_id().unwrap();
             let pot_initial_balance = 1_000_000_000 * ONE;
 
@@ -438,8 +440,9 @@ fn withdraw_shares_should_work() {
                 (GLOBAL_FARM_ID, withdrawn_shares, expected_deposit_destroyed)
             );
 
-            assert_eq!(
-                LiquidityMining::global_farm(GC_FARM).unwrap(),
+            let global_farm_1 = LiquidityMining::global_farm(GC_FARM).unwrap();
+            pretty_assertions::assert_eq!(
+                global_farm_1,
                 GlobalFarmData {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
@@ -475,6 +478,14 @@ fn withdraw_shares_should_work() {
             );
 
             assert!(LiquidityMining::deposit(PREDEFINED_DEPOSIT_IDS[2]).is_none());
+
+            let distributed_from_global =
+                global_farm_total_rewards_start - Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
+
+            let tracked_distributed_rewards =
+                global_farm_1.paid_accumulated_rewards + global_farm_1.accumulated_rewards;
+
+            pretty_assertions::assert_eq!(distributed_from_global, tracked_distributed_rewards);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
@@ -1079,12 +1090,13 @@ fn withdraw_shares_yield_farm_entry_not_found_should_not_work() {
 }
 
 #[test]
-fn withdraw_shares_deposit_not_found_should_not_work() {
+#[cfg_attr(debug_assertions, should_panic(expected = "Defensive failure has been triggered!"))]
+fn withdraw_shares_should_fail_when_deposit_not_found() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
             assert_noop!(
                 LiquidityMining::withdraw_lp_shares(72_334_321_125_861_359_621, GC_BSX_TKN1_YIELD_FARM_ID, 0),
-                Error::<Test, Instance1>::DepositNotFound
+                Error::<Test, Instance1>::InconsistentState(InconsistentStateError::DepositNotFound)
             );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

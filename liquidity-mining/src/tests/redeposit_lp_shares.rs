@@ -107,6 +107,7 @@ fn redeposit_lp_shares_should_work() {
 }
 
 #[test]
+#[cfg_attr(debug_assertions, should_panic(expected = "Defensive failure has been triggered!"))]
 fn redeposit_lp_shares_deposit_not_found_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
@@ -114,7 +115,7 @@ fn redeposit_lp_shares_deposit_not_found_should_not_work() {
 
             assert_noop!(
                 LiquidityMining::redeposit_lp_shares(DAVE_FARM, yield_farm_id, 999_999_999, |_, _, _| { Ok(10_u128) }),
-                Error::<Test, Instance1>::DepositNotFound
+                Error::<Test, Instance1>::InconsistentState(InconsistentStateError::DepositNotFound)
             );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

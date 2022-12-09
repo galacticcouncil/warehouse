@@ -313,7 +313,7 @@ pub mod pallet {
                 T::MinPoolLiquidity::get(),
             )?;
 
-            Pools::<T>::try_mutate(&share_asset, |maybe_pool| -> DispatchResult {
+            Pools::<T>::try_mutate(share_asset, |maybe_pool| -> DispatchResult {
                 ensure!(maybe_pool.is_none(), Error::<T>::PoolExists);
 
                 *maybe_pool = Some(pool);
@@ -364,7 +364,7 @@ pub mod pallet {
                 Error::<T>::NothingToUpdate
             );
 
-            Pools::<T>::try_mutate(&pool_id, |maybe_pool| -> DispatchResult {
+            Pools::<T>::try_mutate(pool_id, |maybe_pool| -> DispatchResult {
                 let mut pool = maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound)?;
 
                 pool.amplification = amplification.unwrap_or(pool.amplification);

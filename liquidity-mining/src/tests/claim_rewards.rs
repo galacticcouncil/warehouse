@@ -28,6 +28,8 @@ fn claim_rewards_should_work() {
             const REWARD_CURRENCY: AssetId = BSX;
             let global_farm_id = GC_FARM;
             let pot = LiquidityMining::pot_account_id().unwrap();
+            let global_farm_account = LiquidityMining::farm_account_id(global_farm_id).unwrap();
+            let global_farm_total_rewards_start = 30_000_000_000 * ONE;
 
             //_0 - value before act.
             let alice_bsx_balance_0 = Tokens::free_balance(BSX, &ALICE);
@@ -232,8 +234,9 @@ fn claim_rewards_should_work() {
                 },
             );
 
-            assert_eq!(
-                LiquidityMining::global_farm(GC_FARM).unwrap(),
+            let global_farm_1 = LiquidityMining::global_farm(GC_FARM).unwrap();
+            pretty_assertions::assert_eq!(
+                global_farm_1,
                 GlobalFarmData {
                     updated_at: 1_258,
                     accumulated_rpz: FixedU128::from(620),
@@ -269,6 +272,14 @@ fn claim_rewards_should_work() {
                 Tokens::free_balance(BSX, &pot),
                 pot_balance_0 + reserved_for_both_farms - expected_claimed_rewards
             );
+
+            let distributed_from_global =
+                global_farm_total_rewards_start - Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
+
+            let tracked_distributed_rewards =
+                global_farm_1.paid_accumulated_rewards + global_farm_1.accumulated_rewards;
+
+            pretty_assertions::assert_eq!(distributed_from_global, tracked_distributed_rewards);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
@@ -785,7 +796,7 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
 
             const PLANNED_PERIODS: u64 = 10_000;
             const BLOCKS_PER_PERIOD: u64 = 10;
-            const TOTAL_REWARDS_TO_DISTRIBUTE: u128 = 1_000_000;
+            const TOTAL_REWARDS_TO_DISTRIBUTE: u128 = 1_000_000 * ONE;
 
             //initialize farms
             set_block_number(1000);
@@ -815,8 +826,8 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 GLOBAL_FARM,
                 YIELD_FARM_A,
                 BSX_TKN1_AMM,
-                1_000,
-                |_, _, _| { Ok(1_u128) }
+                1_000 * ONE,
+                |_, _, _| { Ok(ONE) }
             ));
 
             set_block_number(1_500);
@@ -836,8 +847,8 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 GLOBAL_FARM,
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
-                1_000,
-                |_, _, _| { Ok(1_u128) }
+                1_000 * ONE,
+                |_, _, _| { Ok(ONE) }
             ));
 
             //charlie
@@ -845,8 +856,8 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 GLOBAL_FARM,
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
-                1_000,
-                |_, _, _| { Ok(1_u128) }
+                1_000 * ONE,
+                |_, _, _| { Ok(ONE) }
             ));
 
             let bob_bsx_balance_0 = Tokens::free_balance(BSX, &BOB);
@@ -860,7 +871,7 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
             let bob_rewards = Tokens::free_balance(BSX, &BOB) - bob_bsx_balance_0;
             let charlie_rewards = Tokens::free_balance(BSX, &CHARLIE) - charlie_bsx_balance_0;
 
-            assert_eq!(bob_rewards, charlie_rewards);
+            pretty_assertions::assert_eq!(bob_rewards, charlie_rewards);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

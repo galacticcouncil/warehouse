@@ -148,28 +148,46 @@ impl<AssetId> OnCreatePoolHandler<AssetId> for () {
 
 /// Handler used by AMM pools to perform some tasks when a trade is executed.
 pub trait OnTradeHandler<AssetId, Balance> {
-    fn before_pool_state_change(_asset_id: AssetId, _initial_liquidity: Balance) -> DispatchResult {
-        Ok(())
-    }
-    fn after_pool_state_change(_asset_id: AssetId, _update_liquidity_state: Balance) -> DispatchResult {
-        Ok(())
-    }
     /// Include a trade in the average price calculation of the price-oracle pallet.
-    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {
-    }
+    fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liq_amount: Balance);
     /// Known overhead for a trade in `on_initialize/on_finalize`.
     /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
     /// Add this weight to an extrinsic from which you call `on_trade`.
+    fn on_trade_weight() -> Weight;
+}
+
+impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {
+    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {
+    }
     fn on_trade_weight() -> Weight {
         Weight::zero()
     }
 }
 
-impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {}
-
 pub trait OnPoolStateChangeHandler<AssetId, Balance> {
-    fn before_pool_state_change(asset_id: AssetId, initial_liquidity: Balance) -> DispatchResult;
-    fn after_pool_state_change(asset_id: AssetId, updated_liquidity: Balance) -> DispatchResult;
+    fn before_pool_state_change(asset_id: AssetId, asset_reserve: Balance) -> DispatchResult;
+    fn after_pool_state_change(asset_id: AssetId, asset_reserve: Balance) -> DispatchResult;
+}
+
+impl<AssetId, Balance> OnPoolStateChangeHandler<AssetId, Balance> for () {
+    fn before_pool_state_change(_asset_id: AssetId, _asset_reserve: Balance) -> DispatchResult {
+        Ok(())
+    }
+    fn after_pool_state_change(_asset_id: AssetId, _asset_reserve: Balance) -> DispatchResult {
+        Ok(())
+    }
+}
+
+/// Handler used by AMM pools to perform some tasks when liquidity changes outside of trades.
+pub trait OnLiquidityChangeHandler<AssetId, Balance> {
+    /// Notify that the liquidity for a pair of asset has changed.
+    fn on_add_liquidity(asset_id: AssetId, amount: Balance) -> DispatchResult;
+}
+
+impl<AssetId, Balance> OnLiquidityChangeHandler<AssetId, Balance> for () {
+    fn on_add_liquidity(_asset_id: AssetId, _amount: Balance) -> DispatchResult {
+        Ok(())
+    }
 }
 
 pub trait CanCreatePool<AssetId> {

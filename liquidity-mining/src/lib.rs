@@ -316,7 +316,7 @@ pub mod pallet {
         /// Global farm does not exist.
         GlobalFarmNotFound,
 
-        /// Liqudity mining is `stopped` or `terminated`.
+        /// Liquidity mining is `stopped` or `terminated`.
         LiquidityIsNotActive,
 
         /// Global farm is terminated.
@@ -325,10 +325,10 @@ pub mod pallet {
         /// Deposit does not exist.
         DepositNotFound,
 
-        /// Owerflow
+        /// Overflow
         InvalidPeriod,
 
-        /// Rewards allocated for yield farm are lower then reqested rewards.
+        /// Rewards allocated for yield-farm are lower then calculated rewards.
         NotEnoughRewardsInYieldFarm,
 
         /// Overflow
@@ -347,16 +347,13 @@ pub mod pallet {
         InvalidValuedShares,
 
         /// Overflow
-        InvslidTotalSharesZ,
+        InvalidTotalSharesZ,
 
         /// Overflow
         InvalidPaidAccumulatedRewards,
 
-        /// FarmId can't be 0.
-        ZeroFarmId,
-
-        /// Unclaimable rewards must be zero when withdrawing from inactive farm.
-        NoRewardsInInactiveYieldFarm,
+        /// `FarmId` can't be 0.
+        InvalidFarmId,
 
         /// Loyalty multiplier can't be greater than one.
         InvalidLoyaltyMultiplier,
@@ -626,7 +623,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `loyalty_curve`: curve to calculate loyalty multiplier to distribute rewards to users
     /// with time incentive. `None` means no loyalty multiplier.
     /// - `amm_pool_id`: identifier of the AMM pool.
-    /// - `assets`: list of assets in the AMM pool. One of this assets must be incentivied asset
+    /// - `assets`: list of assets in the AMM pool. One of this assets must be incentivized asset
     #[require_transactional]
     fn create_yield_farm(
         who: T::AccountId,
@@ -869,7 +866,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             <YieldFarm<T, I>>::try_mutate((amm_pool_id, global_farm_id, yield_farm_id), |maybe_yield_farm| {
                 let yield_farm = maybe_yield_farm.as_mut().ok_or(Error::<T, I>::YieldFarmNotFound)?;
 
-                //Active or termiated yield farms can't be resumed.
+                //Active or terminated yield farms can't be resumed.
                 ensure!(
                     yield_farm.state.is_stopped(),
                     Error::<T, I>::LiquidityMiningIsNotStopped
@@ -1046,7 +1043,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         get_token_value_of_lp_shares: fn(T::AssetId, T::AmmPoolId, Balance) -> Result<Balance, DispatchError>,
     ) -> Result<Balance, DispatchError> {
         <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
-            //NOTE: At this point deposit existance and owner must be cheked by pallet calling this
+            //NOTE: At this point deposit existence and owner must be checked by pallet calling this
             //function so this should never happen.
             let deposit = maybe_deposit
                 .as_mut()
@@ -1082,7 +1079,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         fail_on_doubleclaim: bool,
     ) -> Result<(GlobalFarmId, T::AssetId, Balance, Balance), DispatchError> {
         <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
-            //NOTE: At this point deposit existance and owner must be cheked by pallet calling this
+            //NOTE: At this point deposit existence and owner must be checked by pallet calling this
             //function so this should never happen.
             let deposit = maybe_deposit
                 .as_mut()
@@ -1202,7 +1199,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         unclaimable_rewards: Balance,
     ) -> Result<(GlobalFarmId, Balance, bool), DispatchError> {
         <Deposit<T, I>>::try_mutate_exists(deposit_id, |maybe_deposit| {
-            //NOTE: At this point deposit existance and owner must be cheked by pallet calling this
+            //NOTE: At this point deposit existence and owner must be checked by pallet calling this
             //function so this should never fail.
             let deposit = maybe_deposit
                 .as_mut()
@@ -1249,7 +1246,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                                     .total_shares_z
                                     .checked_sub(shares_in_global_farm_for_deposit)
                                     .defensive_ok_or::<Error<T, I>>(
-                                        InconsistentStateError::InvslidTotalSharesZ.into(),
+                                        InconsistentStateError::InvalidTotalSharesZ.into(),
                                     )?;
                             }
 
@@ -1259,7 +1256,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             ensure!(
                                 unclaimable_rewards.is_zero() || !yield_farm.state.is_terminated(),
                                 Self::defensive_err(Error::<T, I>::InconsistentState(
-                                    InconsistentStateError::NoRewardsInInactiveYieldFarm,
+                                    InconsistentStateError::NotEnoughRewardsInYieldFarm,
                                 ))
                             );
                             if !unclaimable_rewards.is_zero() {
@@ -1438,7 +1435,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         })
     }
 
-    /// This function returns new unused `DepositId`or error.
+    /// This function returns new unused `DepositId` or error.
     fn get_next_deposit_id() -> Result<DepositId, ArithmeticError> {
         DepositSequencer::<T, I>::try_mutate(|current_id| {
             *current_id = current_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
@@ -1501,7 +1498,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
     /// This function calculates and updates `accumulated_rpz` and all associated properties of
     /// `global_farm` if conditions are met.
-    /// Returns the reward transfered to the pot.
+    /// Returns the reward transferred to the pot.
     #[require_transactional]
     fn update_global_farm(
         global_farm: &mut GlobalFarmData<T, I>,
@@ -1637,7 +1634,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// This function returns an error if `farm_id` is not valid.
     fn validate_farm_id(farm_id: FarmId) -> Result<(), Error<T, I>> {
         if farm_id.is_zero() {
-            return Err(InconsistentStateError::ZeroFarmId.into()).defensive();
+            return Err(InconsistentStateError::InvalidFarmId.into()).defensive();
         }
 
         Ok(())

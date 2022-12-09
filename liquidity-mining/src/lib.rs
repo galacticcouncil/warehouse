@@ -325,7 +325,7 @@ pub mod pallet {
         /// Deposit does not exist.
         DepositNotFound,
 
-        /// Overflow
+        /// Period calculation overflow.
         InvalidPeriod,
 
         /// Rewards allocated for yield-farm are lower then calculated rewards.
@@ -337,19 +337,19 @@ pub mod pallet {
         /// Overflow
         InvalidTotalYieldFarmsCount,
 
-        /// Overflow
+        /// Yield-farm's entries count calculation overflow.
         InvalidYieldFarmEntriesCount,
 
-        /// Overflow
+        /// Yield-farm's `total_shares` calculation overflow.
         InvalidTotalShares,
 
-        /// Overflow
+        /// Yield-farm's `valued_shares` calculation overflow.
         InvalidValuedShares,
 
-        /// Overflow
+        /// Global-farm's `total_shares_z` calculation overflow.
         InvalidTotalSharesZ,
 
-        /// Overflow
+        /// Global-farm's `paid_accumulated_rewards` calculation overflow.
         InvalidPaidAccumulatedRewards,
 
         /// `FarmId` can't be 0.

@@ -795,7 +795,7 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
 
             const PLANNED_PERIODS: u64 = 10_000;
             const BLOCKS_PER_PERIOD: u64 = 10;
-            const TOTAL_REWARDS_TO_DISTRIBUTE: u128 = 1_000_000;
+            const TOTAL_REWARDS_TO_DISTRIBUTE: u128 = 1_000_000 * ONE;
 
             //initialize farms
             set_block_number(1000);
@@ -825,8 +825,8 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 GLOBAL_FARM,
                 YIELD_FARM_A,
                 BSX_TKN1_AMM,
-                1_000,
-                |_, _, _| { Ok(1_u128) }
+                1_000 * ONE,
+                |_, _, _| { Ok(ONE) }
             ));
 
             set_block_number(1_500);
@@ -846,8 +846,8 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 GLOBAL_FARM,
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
-                1_000,
-                |_, _, _| { Ok(1_u128) }
+                1_000 * ONE,
+                |_, _, _| { Ok(ONE) }
             ));
 
             //charlie
@@ -855,8 +855,8 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
                 GLOBAL_FARM,
                 YIELD_FARM_B,
                 BSX_TKN2_AMM,
-                1_000,
-                |_, _, _| { Ok(1_u128) }
+                1_000 * ONE,
+                |_, _, _| { Ok(ONE) }
             ));
 
             let bob_bsx_balance_0 = Tokens::free_balance(BSX, &BOB);

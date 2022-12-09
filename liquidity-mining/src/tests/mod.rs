@@ -252,7 +252,7 @@ pub mod create_global_farm;
 pub mod create_yield_farm;
 pub mod deposit_lp_shares;
 pub mod full_run;
-pub mod invariants;
+//pub mod invariants;
 pub mod mock;
 pub mod redeposit_lp_shares;
 pub mod resume_yield_farm;

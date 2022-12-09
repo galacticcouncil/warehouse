@@ -733,7 +733,7 @@ fn update_global_farm_should_work() {
                 TransactionOutcome::Commit(LiquidityMining::update_global_farm(
                     &mut global_farm,
                     *current_period,
-                    *reward_per_period,
+                    FixedU128::from(*reward_per_period),
                 ))
             })
             .unwrap();
@@ -2248,7 +2248,7 @@ fn update_global_farm_should_emit_all_rewards_distributed_when_reward_is_zero() 
                 TransactionOutcome::Commit(LiquidityMining::update_global_farm(
                     &mut global_farm,
                     1_000_000_000,
-                    1_000_000 * ONE,
+                    FixedU128::from(1_000_000),
                 ))
             })
             .unwrap(),

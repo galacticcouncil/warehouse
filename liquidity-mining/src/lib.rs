@@ -120,7 +120,7 @@ use orml_traits::{GetByKey, MultiCurrency};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
     traits::{CheckedDiv, CheckedSub},
-    FixedU128, Perquintill,
+    FixedPointNumber, FixedU128, Perquintill,
 };
 use sp_std::{
     convert::{From, Into, TryInto},
@@ -357,6 +357,9 @@ pub mod pallet {
 
         /// Unclaimable rewards must be zero when withdrawing from inactive farm.
         NoRewardsInInactiveYieldFarm,
+
+        /// Loyalty multiplier can't be greater than one.
+        InvalidLoyaltyMultiplier,
     }
 
     impl<T, I> From<InconsistentStateError> for Error<T, I> {
@@ -1477,14 +1480,23 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     }
 
     /// This function returns loyalty multiplier or error.
-    fn get_loyalty_multiplier(periods: PeriodOf<T>, curve: Option<LoyaltyCurve>) -> Result<FixedU128, ArithmeticError> {
+    fn get_loyalty_multiplier(periods: PeriodOf<T>, curve: Option<LoyaltyCurve>) -> Result<FixedU128, DispatchError> {
         let curve = match curve {
             Some(v) => v,
             None => return Ok(FixedU128::one()), //no loyalty curve mean no loyalty multiplier
         };
 
-        math::calculate_loyalty_multiplier(periods, curve.initial_reward_percentage, curve.scale_coef)
-            .map_err(|_| ArithmeticError::Overflow)
+        let m = math::calculate_loyalty_multiplier(periods, curve.initial_reward_percentage, curve.scale_coef)
+            .map_err(|_| ArithmeticError::Overflow)?;
+
+        ensure!(
+            m.le(&FixedU128::one()),
+            Self::defensive_err(Error::<T, I>::InconsistentState(
+                InconsistentStateError::InvalidLoyaltyMultiplier
+            ))
+        );
+
+        Ok(m)
     }
 
     /// This function calculates and updates `accumulated_rpz` and all associated properties of
@@ -1494,7 +1506,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     fn update_global_farm(
         global_farm: &mut GlobalFarmData<T, I>,
         current_period: PeriodOf<T>,
-        reward_per_period: Balance,
+        reward_per_period: FixedU128,
     ) -> Result<Balance, DispatchError> {
         // Farm should be updated only once in the same period.
         if global_farm.updated_at == current_period {
@@ -1521,8 +1533,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         // Calculate reward for all periods since last update capped by balance of `GlobalFarm`
         // account.
-        let reward = periods_since_last_update
-            .checked_mul(reward_per_period)
+        let reward = reward_per_period
+            .checked_mul_int(periods_since_last_update)
             .ok_or(ArithmeticError::Overflow)?
             .min(left_to_distribute);
 

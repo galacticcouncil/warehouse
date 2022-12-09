@@ -331,10 +331,10 @@ pub mod pallet {
         /// Rewards allocated for yield-farm are lower then calculated rewards.
         NotEnoughRewardsInYieldFarm,
 
-        /// Overflow
+        /// Global-farm's `live_yield_farms_count` calculation overflow.
         InvalidLiveYielFarmsCount,
 
-        /// Overflow
+        /// Global-farm's `total_yield_farms_count` calculation overflow.
         InvalidTotalYieldFarmsCount,
 
         /// Yield-farm's entries count calculation overflow.

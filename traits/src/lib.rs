@@ -166,7 +166,7 @@ impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {
 
 pub trait OnPoolStateChangeHandler<AssetId, Balance> {
     fn before_pool_state_change(asset_id: AssetId, asset_reserve: Balance) -> DispatchResult;
-    fn on_pool_state_change(
+    fn after_pool_state_change(
         asset_in: AssetId,
         amount_in: Balance,
         asset_out: AssetId,
@@ -178,7 +178,7 @@ impl<AssetId, Balance> OnPoolStateChangeHandler<AssetId, Balance> for () {
     fn before_pool_state_change(_asset_id: AssetId, _asset_reserve: Balance) -> DispatchResult {
         Ok(())
     }
-    fn on_pool_state_change(
+    fn after_pool_state_change(
         _asset_in: AssetId,
         _amount_in: Balance,
         _asset_out: AssetId,

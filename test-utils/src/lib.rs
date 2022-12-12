@@ -39,3 +39,22 @@ macro_rules! assert_balance {
 		assert_eq!(Tokens::free_balance($user, &$asset_id), $expected_balance);
 	}};
 }
+
+#[macro_export]
+macro_rules! assert_balance_approx {
+	( $who:expr, $asset:expr, $expected_balance:expr, $delta:expr) => {{
+		let balance = Tokens::free_balance($asset, &$who);
+
+		let diff = if balance >= $expected_balance {
+			balance - $expected_balance
+		} else {
+			$expected_balance - balance
+		};
+		if diff > $delta {
+			panic!(
+				"\n{} not equal\nleft: {:?}\nright: {:?}\n",
+				"The balances are not equal", balance, $expected_balance
+			);
+		}
+	}};
+}

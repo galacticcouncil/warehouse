@@ -32,3 +32,10 @@ macro_rules! assert_eq_approx {
         }
     }};
 }
+
+#[macro_export]
+macro_rules! assert_balance {
+	( $x:expr, $y:expr, $z:expr) => {{
+		assert_eq!(Tokens::free_balance($y, &$x), $z);
+	}};
+}

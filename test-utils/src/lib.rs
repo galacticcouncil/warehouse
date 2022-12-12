@@ -36,6 +36,6 @@ macro_rules! assert_eq_approx {
 #[macro_export]
 macro_rules! assert_balance {
 	( $asset_id:expr, $user:expr, $expected_balance:expr) => {{
-		assert_eq!(Tokens::free_balance(&$user.try_into().unwrap(), $asset_id.try_into().unwrap()), $expected_balance);
+		assert_eq!(Tokens::free_balance($user.try_into().unwrap(), &$asset_id.try_into().unwrap()), $expected_balance);
 	}};
 }

@@ -76,6 +76,7 @@ fn redeposit_lp_shares_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 18,
                         updated_at: 18,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                     YieldFarmEntry {
@@ -86,6 +87,7 @@ fn redeposit_lp_shares_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 50,
                         updated_at: 50,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                     YieldFarmEntry {
@@ -96,6 +98,7 @@ fn redeposit_lp_shares_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 800,
                         updated_at: 800,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                 ]

@@ -108,6 +108,7 @@ prop_compose! {
             state: FarmState::Active,
             entries_count: Default::default(),
             left_to_distribute: Default::default(),
+            total_stopped: Default::default(),
             _phantom: Default::default(),
         };
 

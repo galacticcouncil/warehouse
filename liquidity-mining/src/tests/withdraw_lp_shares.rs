@@ -522,6 +522,7 @@ fn withdraw_shares_should_work() {
                         entered_at: 18,
                         updated_at: 18,
                         valued_shares: 2_500 * ONE,
+                        stopped_at_creation: Zero::zero(),
                         _phantom: PhantomData::default(),
                     }]
                     .try_into()

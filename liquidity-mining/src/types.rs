@@ -168,6 +168,7 @@ pub struct YieldFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) state: FarmState,
     pub(super) entries_count: u64,
     pub(super) left_to_distribute: Balance,
+    pub(super) total_stopped: PeriodOf<T>,
     pub(super) _phantom: PhantomData<I>,
 }
 
@@ -191,6 +192,7 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
             state: FarmState::Active,
             entries_count: Default::default(),
             left_to_distribute: Default::default(),
+            total_stopped: Default::default(),
             _phantom: PhantomData::default(),
         }
     }
@@ -229,9 +231,8 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
 /// Loyalty curve to calculate loyalty multiplier.
 ///
 /// `t = t_now - t_added`
-/// `𝞣 = t/[(initial_reward_percentage + 1) * scale_coef]`
-/// `num = [𝞣 + (𝞣 * initial_reward_percentage) + initial_reward_percentage]`
-/// `denom = [𝞣 + (𝞣 * initial_reward_percentage) + 1]`
+/// `num = t + initial_reward_percentage * scale_coef`
+/// `denom = t + scale_coef`
 ///
 /// `loyalty_multiplier = num/denom`
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -338,7 +339,9 @@ pub struct YieldFarmEntry<T: Config<I>, I: 'static = ()> {
     pub(super) accumulated_claimed_rewards: Balance,
     pub(super) entered_at: PeriodOf<T>,
     pub(super) updated_at: PeriodOf<T>,
-    pub(super) _phantom: PhantomData<I>, //pub because of tests
+    // Number of periods yield-farm experienced before creation of this entry.
+    pub(super) stopped_at_creation: PeriodOf<T>,
+    pub(super) _phantom: PhantomData<I>,
 }
 
 impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
@@ -348,6 +351,7 @@ impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
         valued_shares: Balance,
         accumulated_rpvs: FixedU128,
         entered_at: PeriodOf<T>,
+        stopped_at_creation: PeriodOf<T>,
     ) -> Self {
         Self {
             global_farm_id,
@@ -357,6 +361,7 @@ impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
             accumulated_claimed_rewards: Zero::zero(),
             entered_at,
             updated_at: entered_at,
+            stopped_at_creation,
             _phantom: PhantomData,
         }
     }

@@ -54,6 +54,7 @@ fn resume_yield_farm_should_work() {
                     accumulated_rpz: FixedU128::from_inner(62_987_640_859_560_351_884_356_u128),
                     multiplier: new_multiplier,
                     updated_at: 134_200,
+                    total_stopped: 134_175,
                     ..yield_farm
                 }
             );

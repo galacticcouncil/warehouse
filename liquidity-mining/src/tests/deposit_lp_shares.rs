@@ -79,7 +79,8 @@ fn deposit_lp_shares_should_work() {
                         GC_BSX_TKN1_YIELD_FARM_ID,
                         2_500 * ONE,
                         Zero::zero(),
-                        18
+                        18,
+                        0
                     )]
                     .try_into()
                     .unwrap(),
@@ -137,7 +138,8 @@ fn deposit_lp_shares_should_work() {
                         GC_BSX_TKN1_YIELD_FARM_ID,
                         4_160 * ONE,
                         Zero::zero(),
-                        18
+                        18,
+                        0
                     )]
                     .try_into()
                     .unwrap(),
@@ -200,7 +202,8 @@ fn deposit_lp_shares_should_work() {
                         GC_BSX_TKN2_YIELD_FARM_ID,
                         200 * ONE,
                         Zero::zero(),
-                        18
+                        18,
+                        0
                     )]
                     .try_into()
                     .unwrap(),
@@ -269,7 +272,8 @@ fn deposit_lp_shares_should_work() {
                         GC_BSX_TKN2_YIELD_FARM_ID,
                         46_400 * ONE,
                         FixedU128::from(10),
-                        20
+                        20,
+                        0
                     )]
                     .try_into()
                     .unwrap(),
@@ -342,7 +346,8 @@ fn deposit_lp_shares_should_work() {
                         GC_BSX_TKN2_YIELD_FARM_ID,
                         261 * ONE,
                         FixedU128::from_inner(35_000_000_000_000_000_000_u128),
-                        25
+                        25,
+                        0
                     )]
                     .try_into()
                     .unwrap(),
@@ -413,7 +418,8 @@ fn deposit_lp_shares_should_work() {
                         GC_BSX_TKN2_YIELD_FARM_ID,
                         768 * ONE,
                         FixedU128::from_inner(35_000_000_000_000_000_000_u128),
-                        25
+                        25,
+                        0
                     )]
                     .try_into()
                     .unwrap(),
@@ -485,7 +491,8 @@ fn deposit_lp_shares_should_work() {
                         GC_BSX_TKN1_YIELD_FARM_ID,
                         38_880 * ONE,
                         FixedU128::from_inner(17_500_000_000_000_000_000_u128),
-                        25
+                        25,
+                        0
                     )]
                     .try_into()
                     .unwrap(),
@@ -536,7 +543,8 @@ fn deposit_lp_shares_should_work() {
                         CHARLIE_ACA_KSM_YIELD_FARM_ID,
                         16_000_000 * ONE,
                         Zero::zero(),
-                        25
+                        25,
+                        0
                     )]
                     .try_into()
                     .unwrap(),

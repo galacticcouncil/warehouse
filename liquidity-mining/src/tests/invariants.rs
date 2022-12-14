@@ -48,12 +48,12 @@ prop_compose! {
     fn get_global_farm()
         (
             total_shares_z in total_shares_z(),
-            (accumulated_rewards, paid_accumulated_rewards) in global_farm_accumulated_rewards(),
+            (pending_rewards, accumulated_paid_rewards) in global_farm_accumulated_rewards(),
             reward_per_period in reward_per_period(),
         )(
-            accumulated_rpz in 0..accumulated_rewards.checked_div(total_shares_z).unwrap(),
-            accumulated_rewards in Just(accumulated_rewards),
-            paid_accumulated_rewards in Just(paid_accumulated_rewards),
+            accumulated_rpz in 0..pending_rewards.checked_div(total_shares_z).unwrap(),
+            pending_rewards in Just(pending_rewards),
+            accumulated_paid_rewards in Just(accumulated_paid_rewards),
             reward_per_period in Just(reward_per_period),
             total_shares_z in Just(total_shares_z),
             updated_at in 1_000_000..(BLOCK_PER_YEAR + 1_000_000),
@@ -66,8 +66,8 @@ prop_compose! {
             total_shares_z,
             accumulated_rpz: FixedU128::from(accumulated_rpz),
             reward_currency: REWARD_CURRENCY,
-            accumulated_rewards,
-            paid_accumulated_rewards,
+            pending_rewards,
+            accumulated_paid_rewards,
             yield_per_period: Perquintill::from_float(0.002),
             planned_yielding_periods: 1_000,
             blocks_per_period: 1_000,
@@ -176,10 +176,9 @@ proptest! {
                 Tokens::set_balance(Origin::root(), farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
                 //NOTE: _0 - before action, _1 - after action
-                let accumulated_rewards_0 = farm.accumulated_rewards;
+                let pending_rewards_0 = farm.pending_rewards;
                 let accumulated_rpz_0 = farm.accumulated_rpz;
-                let reward_per_period = FixedU128::from(farm.max_reward_per_period);
-                let reward = LiquidityMining::update_global_farm(&mut farm, current_period, reward_per_period).unwrap();
+                let reward = LiquidityMining::update_global_farm(&mut farm, current_period).unwrap();
 
                 let s_0 = accumulated_rpz_0
                     .checked_mul(&FixedU128::from((farm.total_shares_z, ONE))).unwrap()
@@ -194,7 +193,7 @@ proptest! {
                 );
 
                 assert!(
-                    farm.accumulated_rewards == accumulated_rewards_0.checked_add(reward).unwrap(),
+                    farm.pending_rewards == pending_rewards_0.checked_add(reward).unwrap(),
                     "acc_rewards[1] = acc_rewards[0] + reward"
                 );
 
@@ -212,14 +211,14 @@ proptest! {
     ) {
         new_test_ext().execute_with(|| {
             //NOTE: _0 - before action, _1 - after action
-            let sum_accumulated_rewards_0 = global_farm.accumulated_rewards
-                .checked_add(global_farm.paid_accumulated_rewards).unwrap();
+            let sum_accumulated_rewards_0 = global_farm.pending_rewards
+                .checked_add(global_farm.accumulated_paid_rewards).unwrap();
 
             let stake_in_global_farm = yield_farm.total_valued_shares;  //multiplier == 1 => valued_share == z
             let _ = LiquidityMining::claim_from_global_farm(&mut global_farm, &mut yield_farm, stake_in_global_farm).unwrap();
 
-            let sum_accumulated_rewards_1 = global_farm.accumulated_rewards
-                .checked_add(global_farm.paid_accumulated_rewards).unwrap();
+            let sum_accumulated_rewards_1 = global_farm.pending_rewards
+                .checked_add(global_farm.accumulated_paid_rewards).unwrap();
 
             assert_eq!(sum_accumulated_rewards_0, sum_accumulated_rewards_1);
         });
@@ -321,11 +320,10 @@ proptest! {
                 Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
                 let left_to_distribute_0 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
-                let reward_per_period = FixedU128::from(global_farm.max_reward_per_period);
                 let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
 
                 let reward =
-                    LiquidityMining::update_global_farm(&mut global_farm, current_period, reward_per_period).unwrap();
+                    LiquidityMining::update_global_farm(&mut global_farm, current_period).unwrap();
 
                 let s_0 = (left_to_distribute_0 - reward).max(0);
                 let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);

@@ -37,8 +37,8 @@ pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) total_shares_z: Balance,
     pub(super) accumulated_rpz: FixedU128,
     pub(super) reward_currency: T::AssetId,
-    pub(super) accumulated_rewards: Balance,
-    pub(super) paid_accumulated_rewards: Balance,
+    pub(super) pending_rewards: Balance,
+    pub(super) accumulated_paid_rewards: Balance,
     pub(super) yield_per_period: Perquintill,
     pub(super) planned_yielding_periods: PeriodOf<T>,
     pub(super) blocks_per_period: BlockNumberFor<T>,
@@ -71,9 +71,9 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         price_adjustment: FixedU128,
     ) -> Self {
         Self {
-            accumulated_rewards: Zero::zero(),
+            pending_rewards: Zero::zero(),
             accumulated_rpz: Zero::zero(),
-            paid_accumulated_rewards: Zero::zero(),
+            accumulated_paid_rewards: Zero::zero(),
             total_shares_z: Zero::zero(),
             live_yield_farms_count: Zero::zero(),
             total_yield_farms_count: Zero::zero(),

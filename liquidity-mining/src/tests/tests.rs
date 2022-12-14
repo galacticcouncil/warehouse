@@ -398,276 +398,255 @@ fn update_global_farm_should_work() {
     let testing_values = vec![
         (
             26_u64,
-            2_501_944_769_u128,
-            FixedU128::from_inner(259_000_000_000_000_000_000_u128),
+            2501944769_u128,
+            FixedU128::from_float(259.000000_f64),
             HDX,
-            BSX_FARM,
+            ACA_FARM,
             0_u128,
             206_u64,
-            65_192_006_u128,
-            55_563_662_u128,
-            FixedU128::from_inner(259_000_000_000_000_000_000_u128),
-            55_563_662_u128,
+            55563662_u128,
+            FixedU128::from_float(259.000000000_f64),
+            55563662_u128,
         ),
         (
             188_u64,
-            33_769_603_u128,
-            FixedU128::from_inner(1_148_000_000_000_000_000_000_u128),
+            33769604_u128,
+            FixedU128::from_float(1148.000000_f64),
             BSX,
             ACA_FARM,
-            30_080_406_306_u128,
+            30080406306_u128,
             259_u64,
-            1_548_635_u128,
-            56_710_169_u128,
-            FixedU128::from_inner(1_151_255_978_016_679_674_913_u128),
-            166_663_254_u128,
+            56710169_u128,
+            FixedU128::from_inner(1_183_500_000_000_000_000_000_u128),
+            1255531111_u128,
         ),
         (
             195_u64,
-            26_098_384_286_056_u128,
-            FixedU128::from_inner(523_000_000_000_000_000_000_u128),
+            26098384286056_u128,
+            FixedU128::from_float(523.000000_f64),
             ACA,
-            KSM_FARM,
-            32_055_u128,
+            ACA_FARM,
+            32055_u128,
             326_u64,
-            1_712_797_u128,
-            61_455_483_u128,
-            FixedU128::from_inner(523_000_000_001_189_920_405_u128),
-            61_486_538_u128,
+            61424428_u128,
+            FixedU128::from_inner(523_000_000_001_189_920_405),
+            61455483_u128,
         ),
         (
             181_u64,
-            9_894_090_144_u128,
-            FixedU128::from_inner(317_000_000_000_000_000_000_u128),
+            9894090144_u128,
+            FixedU128::from_float(317.000000_f64),
             KSM,
             ACA_FARM,
-            36_806_694_280_u128,
+            36806694280_u128,
             1856_u64,
-            19_009_156_u128,
-            52_711_084_u128,
-            FixedU128::from_inner(320_218_116_657_175_263_350_u128),
-            31_893_047_384_u128,
+            52711084_u128,
+            FixedU128::from_inner(320_720_068_520_127_685_628_u128),
+            36859404364_u128,
         ),
         (
             196_u64,
-            26_886_423_482_043_u128,
-            FixedU128::from_inner(596_000_000_000_000_000_000_u128),
+            26886423482043_u128,
+            FixedU128::from_float(596.000000_f64),
             ACA,
-            ACA_FARM,
-            30_560_755_872_u128,
+            BSX_FARM,
+            30560755872_u128,
             954_u64,
-            78_355_u128,
-            34_013_971_u128,
-            FixedU128::from_inner(596_000_002_209_036_469_267_u128),
-            93_407_061_u128,
+            34013971_u128,
+            FixedU128::from_inner(596_001_136_661_218_343_563_u128),
+            30594768843_u128,
         ),
         (
             68_u64,
-            1_138_057_342_u128,
-            FixedU128::from_inner(4_000_000_000_000_000_000_u128),
+            1138057342_u128,
+            FixedU128::from_float(4.000000_f64),
             ACA,
             ACA_FARM,
-            38_398_062_768_u128,
+            38398062768_u128,
             161_u64,
-            55_309_798_233_u128,
-            71_071_995_u128,
+            71071995_u128,
             FixedU128::from_inner(37_740_006_193_817_956_143_u128),
-            38_469_133_763_u128,
+            38469133763_u128,
         ),
         (
             161_u64,
-            24_495_534_649_923_u128,
-            FixedU128::from_inner(213_000_000_000_000_000_000_u128),
+            24495534649923_u128,
+            FixedU128::from_float(213.000000_f64),
             KSM,
-            ACA_FARM,
-            11_116_735_745_u128,
+            BSX_FARM,
+            11116735745_u128,
             448_u64,
-            326_u128,
-            85_963_452_u128,
-            FixedU128::from_inner(213_000_000_003_819_553_291_u128),
-            86_057_014_u128,
+            85963452_u128,
+            FixedU128::from_inner(213_000_453_826_989_444_173_u128),
+            11202698197_u128,
         ),
         (
             27_u64,
-            22_108_444_u128,
-            FixedU128::from_inner(970_000_000_000_000_000_000_u128),
+            22108444_u128,
+            FixedU128::from_float(970.000000_f64),
             KSM,
-            ACA_FARM,
-            8_572_779_460_u128,
+            BSX_FARM,
+            8572779460_u128,
             132_u64,
-            1_874_081_u128,
-            43_974_403_u128,
-            FixedU128::from_inner(978_900_603_995_468_880_577_u128),
-            240_752_908_u128,
+            43974403_u128,
+            FixedU128::from_float(1022.500000000_f64),
+            1204667713_u128,
         ),
         (
             97_u64,
-            1_593_208_u128,
-            FixedU128::from_inner(6_000_000_000_000_000_000_u128),
+            1593208_u128,
+            FixedU128::from_float(6.000000_f64),
             HDX,
             BSX_FARM,
-            18_440_792_496_u128,
+            18440792496_u128,
             146_u64,
-            741_803_u128,
-            14_437_690_u128,
-            FixedU128::from_inner(28_814_564_702_160_672_052_u128),
-            50_786_037_u128,
+            14437690_u128,
+            FixedU128::from_float(30.500000000_f64),
+            53471286_u128,
         ),
         (
             154_u64,
-            27_279_119_649_838_u128,
-            FixedU128::from_inner(713_000_000_000_000_000_000_u128),
+            27279119649838_u128,
+            FixedU128::from_float(713.000000_f64),
             BSX,
             KSM_FARM,
-            28_318_566_664_u128,
+            28318566664_u128,
             202_u64,
-            508_869_u128,
-            7_533_987_u128,
-            FixedU128::from_inner(713_000_000_895_399_569_837_u128),
-            31_959_699_u128,
+            7533987_u128,
+            FixedU128::from_inner(713_001_038_104_089_409_944_u128),
+            28326099651_u128,
         ),
         (
             104_u64,
-            20_462_312_838_954_u128,
-            FixedU128::from_inner(833_000_000_000_000_000_000_u128),
+            20462312838954_u128,
+            FixedU128::from_float(833.000000_f64),
             BSX,
-            ACA_FARM,
-            3_852_003_u128,
+            BSX_FARM,
+            3852003_u128,
             131_u64,
-            1_081_636_u128,
-            75_149_021_u128,
+            75149021_u128,
             FixedU128::from_inner(833_000_000_188_199_791_016_u128),
-            79_000_024_u128,
+            79000024_u128,
         ),
         (
             90_u64,
-            37_650_830_596_054_u128,
-            FixedU128::from_inner(586_000_000_000_000_000_000_u128),
+            37650830596054_u128,
+            FixedU128::from_float(586.000000_f64),
             HDX,
-            ACA_FARM,
-            27_990_338_179_u128,
+            KSM_FARM,
+            27990338179_u128,
             110_u64,
-            758_482_u128,
-            36_765_518_u128,
-            FixedU128::from_inner(586_000_000_402_903_196_552_u128),
-            51_935_158_u128,
+            36765518_u128,
+            FixedU128::from_inner(586_000_743_418_849_886_767_u128),
+            28027102697_u128,
         ),
         (
             198_u64,
-            318_777_215_u128,
-            FixedU128::from_inner(251_000_000_000_000_000_000_u128),
+            318777214_u128,
+            FixedU128::from_float(251.000000_f64),
             ACA,
             ACA_FARM,
-            3_615_346_492_u128,
+            3615346492_u128,
             582_u64,
-            69_329_u128,
-            12_876_432_u128,
-            FixedU128::from_inner(251_083_513_923_666_093_889_u128),
-            39_498_768_u128,
+            12876432_u128,
+            FixedU128::from_inner(262_341_292_078_674_104_981_u128),
+            3628221924_u128,
         ),
         (
             29_u64,
-            33_478_250_u128,
-            FixedU128::from_inner(77_000_000_000_000_000_000_u128),
+            33478250_u128,
+            FixedU128::from_float(77.000000_f64),
             BSX,
-            BSX_FARM,
-            39_174_031_245_u128,
+            ACA_FARM,
+            39174031245_u128,
             100_u64,
-            1_845_620_u128,
-            26_611_087_u128,
-            FixedU128::from_inner(80_914_153_816_283_706_585_u128),
-            157_650_107_u128,
+            26611087_u128,
+            FixedU128::from_float(112.500000000_f64),
+            1215088962_u128,
         ),
         (
             91_u64,
-            393_922_835_172_u128,
-            FixedU128::from_inner(2_491_000_000_000_000_000_000_u128),
+            393922835172_u128,
+            FixedU128::from_float(2491.000000_f64),
             ACA,
-            ACA_FARM,
-            63_486_975_129_400_u128,
+            KSM_FARM,
+            63486975129400_u128,
             260_u64,
-            109_118_678_233_u128,
-            85_100_506_u128,
-            FixedU128::from_inner(2_537_813_880_726_983_020_710_u128),
-            18_441_141_721_883_u128,
+            85100506_u128,
+            FixedU128::from_inner(2_575_500_000_000_000_262_144_u128),
+            33286564672540_u128,
         ),
         (
             67_u64,
-            1_126_422_u128,
-            FixedU128::from_inner(295_000_000_000_000_000_000_u128),
+            1126422_u128,
+            FixedU128::from_float(295.000000_f64),
             HDX,
             BSX_FARM,
-            7_492_177_402_u128,
+            7492177402_u128,
             229_u64,
-            1_227_791_u128,
-            35_844_776_u128,
-            FixedU128::from_inner(471_578_708_512_440_275_491_u128),
-            234_746_918_u128,
+            35844776_u128,
+            FixedU128::from_float(376.000000000_f64),
+            127084958_u128,
         ),
         (
             168_u64,
-            28_351_324_279_041_u128,
-            FixedU128::from_inner(450_000_000_000_000_000_000_u128),
+            28351324279041_u128,
+            FixedU128::from_float(450.000000_f64),
             ACA,
-            BSX_FARM,
-            38_796_364_068_u128,
+            KSM_FARM,
+            38796364068_u128,
             361_u64,
-            1_015_284_u128,
-            35_695_723_u128,
-            FixedU128::from_inner(450_000_006_911_487_099_206_u128),
-            231_645_535_u128,
+            35695723_u128,
+            FixedU128::from_inner(450_001_368_414_494_016_443_u128),
+            38832058791_u128,
         ),
         (
             3_u64,
-            17_631_376_575_792_u128,
-            FixedU128::from_inner(82_000_000_000_000_000_000_u128),
+            17631376575792_u128,
+            FixedU128::from_float(82.000000_f64),
             HDX,
-            ACA_FARM,
-            20_473_946_880_u128,
+            KSM_FARM,
+            20473946880_u128,
             52_u64,
-            1_836_345_u128,
-            93_293_564_u128,
-            FixedU128::from_inner(82_000_005_103_453_188_308_u128),
-            183_274_469_u128,
+            93293564_u128,
+            FixedU128::from_inner(82_001_161_222_199_071_561_u128),
+            20567239444_u128,
         ),
         (
             49_u64,
-            94_059_u128,
-            FixedU128::from_inner(81_000_000_000_000_000_000_u128),
+            94060_u128,
+            FixedU128::from_float(81.000000_f64),
             HDX,
-            KSM_FARM,
-            11_126_653_978_u128,
+            ACA_FARM,
+            11126653978_u128,
             132_u64,
-            1_672_829_u128,
-            75_841_904_u128,
-            FixedU128::from_inner(1_557_145_897_787_558_872_622_u128),
-            214_686_711_u128,
+            75841904_u128,
+            FixedU128::from_float(122.500000000_f64),
+            79745394_u128,
         ),
         (
             38_u64,
-            14_085_u128,
-            FixedU128::from_inner(266_000_000_000_000_000_000_u128),
+            14086_u128,
+            FixedU128::from_float(266.000000_f64),
             KSM,
-            KSM_FARM,
-            36_115_448_964_u128,
+            BSX_FARM,
+            36115448964_u128,
             400000_u64,
-            886_865_u128,
-            52_402_278_u128,
-            FixedU128::from_inner(2_564_373_061_696_840_610_578_629_u128),
-            36_167_850_242_u128,
+            52402278_u128,
+            FixedU128::from_inner(200_247_000_000_000_000_000_000_u128),
+            2869334644_u128,
         ),
         (
             158_u64,
-            762_784_u128,
-            FixedU128::from_inner(129_000_000_000_000_000_000_u128),
+            762784_u128,
+            FixedU128::from_float(129.000000_f64),
             BSX,
-            KSM_FARM,
-            21_814_882_774_u128,
+            ACA_FARM,
+            21814882774_u128,
             158_u64,
-            789_730_u128,
-            86_085_676_u128,
-            FixedU128::from_inner(129_000_000_000_000_000_000_u128),
-            86_085_676_u128,
+            86085676_u128,
+            FixedU128::from_float(129.000000000_f64),
+            86085676_u128,
         ),
     ];
 
@@ -679,37 +658,40 @@ fn update_global_farm_should_work() {
         id,
         rewards_left_to_distribute,
         current_period,
-        reward_per_period,
         accumulated_rewards,
         expected_accumulated_rpz,
-        expected_accumulated_rewards,
+        expected_pending_rewards,
     ) in testing_values.iter()
     {
         let yield_per_period = Perquintill::from_percent(50);
         let planned_yielding_periods = 100;
         let blocks_per_period = 0;
         let owner = ALICE;
-        let incentivized_token = BSX;
-        let max_reward_per_period = 10_000_u128;
+        let incentivized_asset = BSX;
+        let max_reward_per_period = 10_000 * ONE;
 
-        let mut global_farm = GlobalFarmData::new(
-            *id,
-            *updated_at,
-            *reward_currency,
+        let global_farm_0 = GlobalFarmData {
+            id: *id,
+            owner,
+            updated_at: *updated_at,
+            total_shares_z: *total_shares_z,
+            accumulated_rpz: *accumulated_rpz,
+            reward_currency: *reward_currency,
+            pending_rewards: *accumulated_rewards,
+            accumulated_paid_rewards: 10,
             yield_per_period,
             planned_yielding_periods,
             blocks_per_period,
-            owner,
-            incentivized_token,
             max_reward_per_period,
-            10,
-            One::one(),
-        );
+            incentivized_asset,
+            min_deposit: crate::MIN_DEPOSIT,
+            live_yield_farms_count: Default::default(),
+            total_yield_farms_count: Default::default(),
+            price_adjustment: FixedU128::one(),
+            state: FarmState::Active,
+        };
 
-        global_farm.total_shares_z = *total_shares_z;
-        global_farm.accumulated_rewards = *accumulated_rewards;
-        global_farm.accumulated_rpz = *accumulated_rpz;
-        global_farm.paid_accumulated_rewards = 10;
+        let mut global_farm = global_farm_0.clone();
 
         new_test_ext().execute_with(|| {
             //Add farm's account to whitelist
@@ -730,11 +712,7 @@ fn update_global_farm_should_work() {
             );
 
             let r = with_transaction(|| {
-                TransactionOutcome::Commit(LiquidityMining::update_global_farm(
-                    &mut global_farm,
-                    *current_period,
-                    FixedU128::from(*reward_per_period),
-                ))
+                TransactionOutcome::Commit(LiquidityMining::update_global_farm(&mut global_farm, *current_period))
             })
             .unwrap();
 
@@ -744,24 +722,12 @@ fn update_global_farm_should_work() {
                 ));
             }
 
-            let mut expected_global_farm = GlobalFarmData::new(
-                *id,
-                *current_period,
-                *reward_currency,
-                yield_per_period,
-                planned_yielding_periods,
-                blocks_per_period,
-                owner,
-                incentivized_token,
-                max_reward_per_period,
-                10,
-                One::one(),
-            );
-
-            expected_global_farm.total_shares_z = *total_shares_z;
-            expected_global_farm.paid_accumulated_rewards = 10;
-            expected_global_farm.accumulated_rpz = *expected_accumulated_rpz;
-            expected_global_farm.accumulated_rewards = *expected_accumulated_rewards;
+            let expected_global_farm = GlobalFarmData {
+                accumulated_rpz: *expected_accumulated_rpz,
+                pending_rewards: *expected_pending_rewards,
+                updated_at: *current_period,
+                ..global_farm_0.clone()
+            };
 
             pretty_assertions::assert_eq!(global_farm, expected_global_farm);
 
@@ -1117,8 +1083,8 @@ fn claim_from_global_farm_should_work() {
 
         global_farm.total_shares_z = *total_shares_z;
         global_farm.accumulated_rpz = FixedU128::from(*global_farm_accumuated_rpz);
-        global_farm.accumulated_rewards = *accumulated_rewards;
-        global_farm.paid_accumulated_rewards = *paid_accumulated_rewards;
+        global_farm.pending_rewards = *accumulated_rewards;
+        global_farm.accumulated_paid_rewards = *paid_accumulated_rewards;
 
         let mut yield_farm = YieldFarmData::new(yield_farm_id, *updated_at, None, FixedU128::from(10_u128));
         yield_farm.accumulated_rpz = FixedU128::from(*yield_farm_accumulated_rpz);
@@ -1149,8 +1115,8 @@ fn claim_from_global_farm_should_work() {
 
         expected_global_farm.total_shares_z = *total_shares_z;
         expected_global_farm.accumulated_rpz = FixedU128::from(*global_farm_accumuated_rpz);
-        expected_global_farm.accumulated_rewards = *expected_global_farm_accumulated_rewards;
-        expected_global_farm.paid_accumulated_rewards = *expected_global_farm_pair_accumulated_rewards;
+        expected_global_farm.pending_rewards = *expected_global_farm_accumulated_rewards;
+        expected_global_farm.accumulated_paid_rewards = *expected_global_farm_pair_accumulated_rewards;
 
         pretty_assertions::assert_eq!(global_farm, expected_global_farm);
 
@@ -1477,8 +1443,8 @@ fn update_yield_farm_should_work() {
 
         global_farm.total_shares_z = 1_000_000_u128;
         global_farm.accumulated_rpz = FixedU128::from(200_u128);
-        global_farm.accumulated_rewards = 1_000_000_u128;
-        global_farm.paid_accumulated_rewards = 1_000_000_u128;
+        global_farm.pending_rewards = 1_000_000_u128;
+        global_farm.accumulated_paid_rewards = 1_000_000_u128;
 
         let mut yield_farm = YieldFarmData {
             id: *yield_farm_id,
@@ -1547,8 +1513,8 @@ fn update_yield_farm_should_work() {
             rhs_global_farm.updated_at = 200_u64;
             rhs_global_farm.total_shares_z = 1_000_000_u128;
             rhs_global_farm.accumulated_rpz = FixedU128::from(200_u128);
-            rhs_global_farm.accumulated_rewards = 1_000_000_u128;
-            rhs_global_farm.paid_accumulated_rewards = 1_000_000_u128;
+            rhs_global_farm.pending_rewards = 1_000_000_u128;
+            rhs_global_farm.accumulated_paid_rewards = 1_000_000_u128;
 
             pretty_assertions::assert_eq!(global_farm, rhs_global_farm);
 
@@ -1656,9 +1622,9 @@ fn maybe_update_farms_should_work() {
         accumulated_rpz: FixedU128::from(20),
         live_yield_farms_count: 1,
         total_yield_farms_count: 1,
-        paid_accumulated_rewards: 1_000_000,
+        accumulated_paid_rewards: 1_000_000,
         total_shares_z: 1_000_000,
-        accumulated_rewards: 20_000,
+        pending_rewards: 20_000,
         ..get_predefined_global_farm_ins1(0)
     };
 
@@ -2255,11 +2221,7 @@ fn update_global_farm_should_emit_all_rewards_distributed_when_reward_is_zero() 
 
         pretty_assertions::assert_eq!(
             with_transaction(|| {
-                TransactionOutcome::Commit(LiquidityMining::update_global_farm(
-                    &mut global_farm,
-                    1_000_000_000,
-                    FixedU128::from(1_000_000),
-                ))
+                TransactionOutcome::Commit(LiquidityMining::update_global_farm(&mut global_farm, 1_000_000_000))
             })
             .unwrap(),
             Balance::zero()

@@ -64,8 +64,8 @@ fn withdraw_shares_should_work() {
                     reward_currency: BSX,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                     total_shares_z: 691_490 * ONE,
-                    accumulated_rewards: 0,
-                    paid_accumulated_rewards: 1_283_550 * ONE - unclaimable_rewards,
+                    pending_rewards: 0,
+                    accumulated_paid_rewards: 1_283_550 * ONE - unclaimable_rewards,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -130,8 +130,8 @@ fn withdraw_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    accumulated_rewards: 0,
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    pending_rewards: 0,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards - unclaimable_rewards,
                     total_shares_z: 688_880 * ONE,
                     ..global_farm_0
                 }
@@ -198,9 +198,9 @@ fn withdraw_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    accumulated_rewards: 0,
+                    pending_rewards: 0,
                     total_shares_z: 494480 * ONE,
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards - unclaimable_rewards,
                     ..global_farm_0
                 }
             );
@@ -261,9 +261,9 @@ fn withdraw_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    accumulated_rewards: 0,
+                    pending_rewards: 0,
                     total_shares_z: 473_680 * ONE,
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards - unclaimable_rewards,
                     ..global_farm_0
                 }
             );
@@ -318,9 +318,9 @@ fn withdraw_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    accumulated_rewards: 0,
+                    pending_rewards: 0,
                     total_shares_z: 471_680 * ONE,
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards - unclaimable_rewards,
                     ..global_farm_0
                 }
             );
@@ -384,8 +384,8 @@ fn withdraw_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    accumulated_rewards: 0,
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    pending_rewards: 0,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards - unclaimable_rewards,
                     total_shares_z: 464_000 * ONE,
                     ..global_farm_0
                 }
@@ -446,8 +446,8 @@ fn withdraw_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
-                    accumulated_rewards: 0,
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    pending_rewards: 0,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards - unclaimable_rewards,
                     total_shares_z: 0,
                     ..global_farm_0
                 }
@@ -482,8 +482,7 @@ fn withdraw_shares_should_work() {
             let distributed_from_global =
                 global_farm_total_rewards_start - Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
 
-            let tracked_distributed_rewards =
-                global_farm_1.paid_accumulated_rewards + global_farm_1.accumulated_rewards;
+            let tracked_distributed_rewards = global_farm_1.accumulated_paid_rewards + global_farm_1.pending_rewards;
 
             pretty_assertions::assert_eq!(distributed_from_global, tracked_distributed_rewards);
 
@@ -826,7 +825,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
             assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards - unclaimable_rewards,
                     ..global_farm_0
                 }
             );
@@ -876,7 +875,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
             assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards - unclaimable_rewards,
                     ..global_farm_0
                 }
             );
@@ -925,7 +924,7 @@ fn withdraw_shares_from_canceled_yield_farm_should_work() {
             assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - unclaimable_rewards,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards - unclaimable_rewards,
                     ..global_farm_0
                 }
             );

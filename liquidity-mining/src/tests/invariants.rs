@@ -229,7 +229,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
     fn update_yield_farm(
-        (_, mut yield_farm, current_period, yield_farm_rewards, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),
+        (mut global_farm, mut yield_farm, current_period, _, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
             const GLOBAL_FARM_ID: GlobalFarmId = 1;
@@ -244,7 +244,7 @@ proptest! {
             let global_farm_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
 
             LiquidityMining::update_yield_farm(
-                &mut yield_farm, yield_farm_rewards, current_period, GLOBAL_FARM_ID).unwrap();
+                &mut yield_farm, &mut global_farm, current_period).unwrap();
 
             let global_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
 

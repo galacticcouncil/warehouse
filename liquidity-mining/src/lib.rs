@@ -1203,6 +1203,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// farm entry in the deposit or to destroy deposit and return LP shares if deposit has no more
     /// farm entries.
     ///
+    /// WARNING: This function doesn't automatically claim rewards for user. Caller of this
+    /// function must call `claim_rewards()` first if claiming is desirable.
+    ///
     /// !!!LP shares are transferred back to user only when deposit is destroyed.
     ///
     /// This function transfer user's unclaimable rewards back to global farm.
@@ -1614,6 +1617,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             stake_in_global_farm,
         )
         .map_err(|_| ArithmeticError::Overflow)?;
+
         yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
 
         global_farm.accumulated_paid_rewards = global_farm
@@ -1634,10 +1638,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// account to `YieldFarm` account.
     fn update_yield_farm(
         yield_farm: &mut YieldFarmData<T, I>,
-        yield_farm_rewards: Balance,
+        global_farm: &mut GlobalFarmData<T, I>,
         current_period: BlockNumberFor<T>,
-        global_farm_id: FarmId,
     ) -> Result<(), DispatchError> {
+        if !yield_farm.state.is_active() {
+            return Ok(());
+        }
+
         if yield_farm.updated_at == current_period {
             return Ok(());
         }
@@ -1645,6 +1652,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         if yield_farm.total_valued_shares.is_zero() {
             return Ok(());
         }
+
+        let stake_in_global_farm =
+            math::calculate_global_farm_shares(yield_farm.total_valued_shares, yield_farm.multiplier)
+                .map_err(|_| ArithmeticError::Overflow)?;
+
+        let yield_farm_rewards = Self::claim_from_global_farm(global_farm, yield_farm, stake_in_global_farm)?;
 
         yield_farm.accumulated_rpvs = math::calculate_accumulated_rps(
             yield_farm.accumulated_rpvs,
@@ -1660,7 +1673,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             .ok_or(ArithmeticError::Overflow)?;
 
         Pallet::<T, I>::deposit_event(Event::YieldFarmAccRPVSUpdated {
-            global_farm_id,
+            global_farm_id: global_farm.id,
             yield_farm_id: yield_farm.id,
             accumulated_rpvs: yield_farm.accumulated_rpvs,
             total_valued_shares: yield_farm.total_valued_shares,
@@ -1720,14 +1733,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         }
 
         if !yield_farm.total_shares.is_zero() && yield_farm.updated_at != current_period {
-                Self::update_global_farm(global_farm, current_period)?;
-
-            let stake_in_global_farm =
-                math::calculate_global_farm_shares(yield_farm.total_valued_shares, yield_farm.multiplier)
-                    .map_err(|_| ArithmeticError::Overflow)?;
-            let rewards = Self::claim_from_global_farm(global_farm, yield_farm, stake_in_global_farm)?;
-
-            Self::update_yield_farm(yield_farm, rewards, current_period, global_farm.id)?;
+            Self::update_global_farm(global_farm, current_period)?;
+            Self::update_yield_farm(yield_farm, global_farm, current_period)?;
         }
         Ok(())
     }

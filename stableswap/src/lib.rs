@@ -356,7 +356,7 @@ pub mod pallet {
                 Error::<T>::NothingToUpdate
             );
 
-            Pools::<T>::try_mutate(&pool_id, |maybe_pool| -> DispatchResult {
+            Pools::<T>::try_mutate(pool_id, |maybe_pool| -> DispatchResult {
                 let mut pool = maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound)?;
 
                 pool.amplification = amplification.unwrap_or(pool.amplification);
@@ -710,7 +710,7 @@ impl<T: Config> Pallet<T> {
         trade_fee: Permill,
         withdraw_fee: Permill,
     ) -> Result<T::AssetId, DispatchError> {
-        ensure!(!Pools::<T>::contains_key(&share_asset), Error::<T>::PoolExists);
+        ensure!(!Pools::<T>::contains_key(share_asset), Error::<T>::PoolExists);
         ensure!(
             T::AssetRegistry::exists(share_asset),
             Error::<T>::ShareAssetNotRegistered
@@ -739,7 +739,7 @@ impl<T: Config> Pallet<T> {
             ensure!(T::AssetRegistry::exists(*asset), Error::<T>::AssetNotRegistered);
         }
 
-        Pools::<T>::insert(&share_asset, pool);
+        Pools::<T>::insert(share_asset, pool);
 
         Ok(share_asset)
     }
@@ -747,7 +747,7 @@ impl<T: Config> Pallet<T> {
     pub fn add_asset_to_existing_pool(pool_id: T::AssetId, asset_id: T::AssetId) -> DispatchResult {
         ensure!(T::AssetRegistry::exists(asset_id), Error::<T>::AssetNotRegistered);
 
-        Pools::<T>::try_mutate(&pool_id, |maybe_pool| -> DispatchResult {
+        Pools::<T>::try_mutate(pool_id, |maybe_pool| -> DispatchResult {
             let pool = maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound)?;
 
             let orig_account = pool.pool_account::<T>();
@@ -860,7 +860,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn set_asset_tradability_state(pool_id: T::AssetId, asset_id: T::AssetId, state: Tradability) {
-        AssetTradability::<T>::mutate(&pool_id, &asset_id, |current_state| {
+        AssetTradability::<T>::mutate(pool_id, asset_id, |current_state| {
             *current_state = state;
         });
     }

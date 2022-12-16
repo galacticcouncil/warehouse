@@ -84,7 +84,7 @@ benchmarks! {
         let ed = T::Balance::from(1_000_000u32);
         let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name, AssetType::Token, ed, None, None, None);
 
-        let asset_id = crate::Pallet::<T>::asset_ids(&bname).unwrap();
+        let asset_id = crate::Pallet::<T>::asset_ids(bname).unwrap();
 
         let max_symbol = vec![1; T::StringLimit::get() as usize];
 

@@ -109,14 +109,15 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         Ok(())
     }
 
-    /// This function updates `yield_farms_count` when yield farm is removed from global farm.
+    /// This function updates `yield_farms_count` when yield farm is deleted from global farm.
     /// This function should be called only when yield farm is removed from global farm.
-    pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), ArithmeticError> {
-        // Note: only live count should change
+    pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), Error<T, I>> {
+        //NOTE: only live count should change
+        //NOTE: this counter is managed only by pallet so this sub should never fail.
         self.live_yield_farms_count = self
             .live_yield_farms_count
             .checked_sub(1)
-            .ok_or(ArithmeticError::Underflow)?;
+            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidLiveYielFarmsCount.into())?;
 
         Ok(())
     }
@@ -124,11 +125,12 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     /// This function updates `yield_farms_count` when yield farm is removed from storage.
     /// This function should be called only if yield farm was removed from storage.
     /// !!! DON'T call this function if yield farm is in stopped or deleted.
-    pub fn decrease_total_yield_farm_count(&mut self) -> Result<(), DispatchError> {
+    pub fn decrease_total_yield_farm_count(&mut self) -> Result<(), Error<T, I>> {
+        //NOTE: this counter is managed only by pallet so this sub should never fail.
         self.total_yield_farms_count = self
             .total_yield_farms_count
             .checked_sub(1)
-            .ok_or(ArithmeticError::Underflow)?;
+            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidTotalYieldFarmsCount.into())?;
 
         Ok(())
     }
@@ -141,11 +143,11 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     /// Function return `true` if global farm can be removed from storage.
     pub fn can_be_removed(&self) -> bool {
         //farm can be removed from storage only if all yield farms was removed from storage.
-        self.state == FarmState::Deleted && self.total_yield_farms_count.is_zero()
+        self.state == FarmState::Terminated && self.total_yield_farms_count.is_zero()
     }
 
     /// This function returns `true` if farm has no capacity for next yield farm(yield farm can't
-    /// be added into global farm until some yield farm is not removed from storage).
+    /// be added into global farm until some yield farm is removed from storage).
     pub fn is_full(&self) -> bool {
         self.total_yield_farms_count.ge(&<T>::MaxYieldFarmsPerGlobalFarm::get())
     }
@@ -165,7 +167,8 @@ pub struct YieldFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) multiplier: FarmMultiplier,
     pub(super) state: FarmState,
     pub(super) entries_count: u64,
-    pub(super) _phantom: PhantomData<I>, //pub because of tests
+    pub(super) left_to_distribute: Balance,
+    pub(super) _phantom: PhantomData<I>,
 }
 
 impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
@@ -187,19 +190,24 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
             total_valued_shares: Zero::zero(),
             state: FarmState::Active,
             entries_count: Default::default(),
+            left_to_distribute: Default::default(),
             _phantom: PhantomData::default(),
         }
     }
 
     /// Returns `true` if yield farm can be removed from storage, `false` otherwise.
     pub fn can_be_removed(&self) -> bool {
-        self.state == FarmState::Deleted && self.entries_count.is_zero()
+        self.state == FarmState::Terminated && self.entries_count.is_zero()
     }
 
     /// This function updates entries count in the yield farm. This function should be called if  
     /// entry is removed from the yield farm.
-    pub fn decrease_entries_count(&mut self) -> Result<(), ArithmeticError> {
-        self.entries_count = self.entries_count.checked_sub(1).ok_or(ArithmeticError::Underflow)?;
+    pub fn decrease_entries_count(&mut self) -> Result<(), Error<T, I>> {
+        //NOTE: this counter is managed only by pallet so this sub should never fail.
+        self.entries_count = self
+            .entries_count
+            .checked_sub(1)
+            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidYieldFarmEntriesCount.into())?;
 
         Ok(())
     }
@@ -218,7 +226,7 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
     }
 }
 
-/// Loyaty curve to calculate loyalty multiplier.
+/// Loyalty curve to calculate loyalty multiplier.
 ///
 /// `t = t_now - t_added`
 /// `𝞣 = t/[(initial_reward_percentage + 1) * scale_coef]`
@@ -305,7 +313,7 @@ impl<T: Config<I>, I: 'static> DepositData<T, I> {
         None
     }
 
-    /// This function returns `true` if deposit contains yield farm entry with given yield farm id.
+    /// This function returns its index if deposit contains yield farm entry with given yield farm id.
     pub fn search_yield_farm_entry(&self, yield_farm_id: YieldFarmId) -> Option<usize> {
         self.yield_farm_entries
             .iter()
@@ -358,13 +366,13 @@ impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
 /// - `Active` - farm has full functionality. This state may be used for both farm types.
 /// - `Stopped` - only partial functionality of the farm is available to users. Farm can became
 /// `Active` again or can be `Deleted`. This state can be used only for yield farms.
-/// - `Deleted` - farm is destroyed and it's waiting to be removed from the storage. This state can't be
+/// - `Terminated` - farm is destroyed and it's waiting to be removed from the storage. This state can't be
 /// reverted and is available for both farm types.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum FarmState {
     Active,
     Stopped,
-    Deleted,
+    Terminated,
 }
 
 impl FarmState {
@@ -374,7 +382,7 @@ impl FarmState {
     pub fn is_stopped(&self) -> bool {
         *self == FarmState::Stopped
     }
-    pub fn is_deleted(&self) -> bool {
-        *self == FarmState::Deleted
+    pub fn is_terminated(&self) -> bool {
+        *self == FarmState::Terminated
     }
 }

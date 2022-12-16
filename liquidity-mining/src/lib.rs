@@ -545,7 +545,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             ensure!(who == global_farm.owner, Error::<T, I>::Forbidden);
 
             let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
-            Self::maybe_update_global_farm_rpz(global_farm, current_period)?;
+            Self::update_global_farm(global_farm, current_period)?;
 
             global_farm.price_adjustment = price_adjustment;
 
@@ -666,7 +666,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     ensure!(maybe_active_yield_farm.is_none(), Error::<T, I>::YieldFarmAlreadyExists);
 
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
-                    Self::maybe_update_global_farm_rpz(global_farm, current_period)?;
+                    Self::update_global_farm(global_farm, current_period)?;
 
                     let yield_farm_id = Self::get_next_farm_id()?;
 
@@ -728,7 +728,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         .map_err(|_| ArithmeticError::Overflow)?;
 
                 let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
-                Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
+                Self::update_global_farm(global_farm, current_period)?;
+                Self::update_yield_farm(yield_farm, global_farm, current_period)?;
 
                 let new_stake_in_global_farm =
                     math::calculate_global_farm_shares(yield_farm.total_valued_shares, multiplier)
@@ -802,7 +803,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             ensure!(global_farm.owner == who, Error::<T, I>::Forbidden);
 
                             let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
-                            Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
+                            Self::update_global_farm(global_farm, current_period)?;
+                            Self::update_yield_farm(yield_farm, global_farm, current_period)?;
 
                             let old_stake_in_global_pool = math::calculate_global_farm_shares(
                                 yield_farm.total_valued_shares,
@@ -881,13 +883,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     ensure!(global_farm.owner == who, Error::<T, I>::Forbidden);
 
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
+                    Self::update_global_farm(global_farm, current_period)?;
 
                     //NOTE: this should never fail.
                     let stopped_periods = current_period
                         .checked_sub(&yield_farm.updated_at)
                         .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?;
-
-                    Self::maybe_update_global_farm_rpz(global_farm, current_period)?;
 
                     //NOTE: this is special case. Without this if global-farm has only 1 stopped
                     //yield-farm and resume_yield_farm() is called, global-farm's update won't happen because it
@@ -1137,7 +1138,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             );
                         }
 
-                        Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
+                        if yield_farm.state.is_active() {
+                            Self::update_global_farm(global_farm, current_period)?;
+                            Self::update_yield_farm(yield_farm, global_farm, current_period)?;
+                        }
 
                         //NOTE: this should never fail yield-farm's stopped must be >= entry's
                         //stopped
@@ -1383,7 +1387,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
 
-                    Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
+                    Self::update_global_farm(global_farm, current_period)?;
+                    if !yield_farm.total_shares.is_zero() && yield_farm.updated_at != current_period {
+                        Self::update_yield_farm(yield_farm, global_farm, current_period)?;
+                    }
 
                     let valued_shares = get_token_value_of_lp_shares(
                         global_farm.incentivized_asset,
@@ -1770,9 +1777,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         global_farm: &mut GlobalFarmData<T, I>,
         current_period: PeriodOf<T>,
     ) -> Result<(), DispatchError> {
-        if !global_farm.total_shares_z.is_zero() && global_farm.updated_at != current_period {
-            Self::update_global_farm(global_farm, current_period)?;
-        }
+        Self::update_global_farm(global_farm, current_period)?;
 
         Ok(())
     }

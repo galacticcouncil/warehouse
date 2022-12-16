@@ -17,6 +17,7 @@
 
 use super::*;
 use crate::tests::test_ext::new_test_ext;
+use pretty_assertions::assert_eq;
 use proptest::prelude::*;
 use sp_arithmetic::traits::{CheckedAdd, CheckedMul};
 
@@ -106,6 +107,8 @@ prop_compose! {
             multiplier: One::one(),
             state: FarmState::Active,
             entries_count: Default::default(),
+            left_to_distribute: Default::default(),
+            total_stopped: Default::default(),
             _phantom: Default::default(),
         };
 
@@ -175,7 +178,7 @@ proptest! {
                 //NOTE: _0 - before action, _1 - after action
                 let accumulated_rewards_0 = farm.accumulated_rewards;
                 let accumulated_rpz_0 = farm.accumulated_rpz;
-                let reward_per_period = farm.max_reward_per_period;
+                let reward_per_period = FixedU128::from(farm.max_reward_per_period);
                 let reward = LiquidityMining::update_global_farm(&mut farm, current_period, reward_per_period).unwrap();
 
                 let s_0 = accumulated_rpz_0
@@ -218,7 +221,7 @@ proptest! {
             let sum_accumulated_rewards_1 = global_farm.accumulated_rewards
                 .checked_add(global_farm.paid_accumulated_rewards).unwrap();
 
-            pretty_assertions::assert_eq!(sum_accumulated_rewards_0, sum_accumulated_rewards_1);
+            assert_eq!(sum_accumulated_rewards_0, sum_accumulated_rewards_1);
         });
     }
 }
@@ -231,47 +234,75 @@ proptest! {
     ) {
         new_test_ext().execute_with(|| {
             const GLOBAL_FARM_ID: GlobalFarmId = 1;
-            let yield_farm_account = LiquidityMining::farm_account_id(yield_farm.id).unwrap();
 
-            //rewads for yield farm are paid from pot account
-            let pot_account = LiquidityMining::pot_account_id().unwrap();
-            Tokens::set_balance(Origin::root(), pot_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
+            let pot = LiquidityMining::pot_account_id().unwrap();
+            let global_farm_account = LiquidityMining::farm_account_id(GLOBAL_FARM_ID).unwrap();
+            //rewads for yield farm are paid from global-farm's account to pot
+            Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
             //NOTE: _0 - before action, _1 - after action
-            let pot_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &pot_account);
-            let yield_farm_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &yield_farm_account);
-
-            let accumulated_rpvs_0 = yield_farm.accumulated_rpvs;
+            let pot_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &pot);
+            let global_farm_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
 
             LiquidityMining::update_yield_farm(
-                &mut yield_farm, yield_farm_rewards, current_period, GLOBAL_FARM_ID, REWARD_CURRENCY).unwrap();
+                &mut yield_farm, yield_farm_rewards, current_period, GLOBAL_FARM_ID).unwrap();
+
+            let global_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
 
             //invariant 1
-            let pot_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &pot_account);
-            let yield_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &yield_farm_account);
-            let s_0 = pot_balance_0 + yield_farm_balance_0;
-            let s_1 = pot_balance_1 + yield_farm_balance_1;
+            //NOTE: yield-farm's rewards are left in the pot until user claims.
+            let pot_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &pot);
+            let s_0 = global_farm_balance_0 + pot_balance_0;
+            let s_1 = global_farm_balance_1 + pot_balance_1;
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 s_0,
                 s_1,
                 "invariant: `global_farm_balance + yield_farm_balance` is always constant"
-            );
+           );
+        });
+    }
+}
 
-            //invariant 2
-            let s_0 = accumulated_rpvs_0
-                .checked_mul(&FixedU128::from((yield_farm.total_valued_shares, ONE))).unwrap()
-                .checked_add(&FixedU128::from((pot_balance_0, ONE))).unwrap();
-            let s_1 = yield_farm.accumulated_rpvs
-                .checked_mul(&FixedU128::from((yield_farm.total_valued_shares, ONE))).unwrap()
-                .checked_add(&FixedU128::from((pot_balance_1, ONE))).unwrap();
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(1_000))]
+    #[test]
+    fn maybe_update_farms(
+        (mut global_farm, mut yield_farm, current_period, _, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),
+    ) {
+        new_test_ext().execute_with(|| {
+            let _ = with_transaction(|| {
+                const GLOBAL_FARM_ID: GlobalFarmId = 1;
 
-            assert_eq_approx!(
-                s_0,
-                s_1,
-                FixedU128::from((TOLERANCE, ONE)),
-                "invariant: global_farm_balance + acc_rpvs * total_valued_shares"
-            );
+                let global_farm_account = LiquidityMining::farm_account_id(GLOBAL_FARM_ID).unwrap();
+                //rewads for yield farm are paid from global-farm's account to pot
+                Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
+
+                //NOTE: _0 - before action, _1 - after action
+                let global_farm_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
+                let accumulated_rpvs_0 = yield_farm.accumulated_rpvs;
+
+                LiquidityMining::maybe_update_farms(&mut global_farm, &mut yield_farm, current_period).unwrap();
+
+                let global_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
+
+                //invariant 2
+                let s_0 = accumulated_rpvs_0
+                    .checked_mul(&FixedU128::from((yield_farm.total_valued_shares, ONE))).unwrap()
+                    .checked_add(&FixedU128::from((global_farm_balance_0, ONE))).unwrap();
+                let s_1 = yield_farm.accumulated_rpvs
+                    .checked_mul(&FixedU128::from((yield_farm.total_valued_shares, ONE))).unwrap()
+                    .checked_add(&FixedU128::from((global_farm_balance_1, ONE))).unwrap();
+
+                assert_eq_approx!(
+                    s_0,
+                    s_1,
+                    FixedU128::from((TOLERANCE, ONE)),
+                    "invariant: global_farm_balance + acc_rpvs * total_valued_shares"
+                );
+
+                TransactionOutcome::Commit(DispatchResult::Ok(()))
+            });
         });
     }
 }
@@ -290,7 +321,7 @@ proptest! {
                 Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
                 let left_to_distribute_0 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
-                let reward_per_period = global_farm.max_reward_per_period;
+                let reward_per_period = FixedU128::from(global_farm.max_reward_per_period);
                 let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
 
                 let reward =
@@ -299,7 +330,7 @@ proptest! {
                 let s_0 = (left_to_distribute_0 - reward).max(0);
                 let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
 
-                pretty_assertions::assert_eq!(
+                assert_eq!(
                     s_0,
                     s_1,
                     "left_to_distribute[1] = max(0, left_to_distribute[0] - reward)"
@@ -308,7 +339,7 @@ proptest! {
                 let s_0 = left_to_distribute_0 + pot_balance_0;
                 let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account) + Tokens::free_balance(REWARD_CURRENCY, &pot);
 
-                pretty_assertions::assert_eq!(
+                assert_eq!(
                     s_0,
                     s_1,
                     "global_farm_account[0] + pot[0] = global_farm_account[1] + pot[1]"

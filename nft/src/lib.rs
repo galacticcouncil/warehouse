@@ -443,17 +443,21 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    fn do_destroy_collection(owner: T::AccountId, collection_id: T::NftCollectionId) -> DispatchResult {
+    fn do_destroy_collection(
+        owner: T::AccountId,
+        collection_id: T::NftCollectionId,
+    ) -> Result<DestroyWitness, DispatchError> {
         let witness = Self::get_destroy_witness(&collection_id).ok_or(Error::<T>::CollectionUnknown)?;
 
         // witness struct is empty because we don't allow destroying a collection with existing items
         ensure!(witness.items == 0u32, Error::<T>::TokenCollectionNotEmpty);
 
-        pallet_uniques::Pallet::<T>::do_destroy_collection(collection_id.into(), witness, Some(owner.clone()))?;
+        let witness =
+            pallet_uniques::Pallet::<T>::do_destroy_collection(collection_id.into(), witness, Some(owner.clone()))?;
         Collections::<T>::remove(collection_id);
 
         Self::deposit_event(Event::CollectionDestroyed { owner, collection_id });
-        Ok(())
+        Ok(witness)
     }
 }
 
@@ -529,6 +533,7 @@ impl<T: Config> Create<T::AccountId> for Pallet<T> {
     ///
     /// Emits CollectionCreated event
     fn create_collection(collection: &Self::CollectionId, who: &T::AccountId, _admin: &T::AccountId) -> DispatchResult {
+        ensure!(!Self::is_id_reserved(*collection), Error::<T>::IdReserved);
         Self::do_create_collection(who.clone(), *collection, Default::default(), BoundedVec::default())?;
 
         Ok(())
@@ -570,14 +575,7 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
             Self::collection_owner(&collection).ok_or(Error::<T>::CollectionUnknown)?
         };
 
-        Self::do_destroy_collection(owner, collection)?;
-
-        // We can return empty struct here because we don't allow destroying a collection with existing items
-        Ok(DestroyWitness {
-            items: 0,
-            item_metadatas: 0,
-            attributes: 0,
-        })
+        Self::do_destroy_collection(owner, collection)
     }
 }
 

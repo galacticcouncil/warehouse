@@ -456,12 +456,12 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> Registry<T::AssetId, Vec<u8>, T::Balance, DispatchError> for Pallet<T> {
     fn exists(asset_id: T::AssetId) -> bool {
-        Assets::<T>::contains_key(&asset_id)
+        Assets::<T>::contains_key(asset_id)
     }
 
     fn retrieve_asset(name: &Vec<u8>) -> Result<T::AssetId, DispatchError> {
         let bounded_name = Self::to_bounded_name(name.clone())?;
-        if let Some(asset_id) = AssetIds::<T>::get(&bounded_name) {
+        if let Some(asset_id) = AssetIds::<T>::get(bounded_name) {
             Ok(asset_id)
         } else {
             Err(Error::<T>::AssetNotFound.into())

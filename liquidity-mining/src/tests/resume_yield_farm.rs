@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -44,26 +45,27 @@ fn resume_yield_farm_should_work() {
                 new_multiplier
             ));
 
-            let yield_farm_stake_in_global_farm = new_multiplier.checked_mul_int(45_540).unwrap();
+            let yield_farm_stake_in_global_farm = new_multiplier.checked_mul_int(45_540 * ONE).unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
                 YieldFarmData {
                     state: FarmState::Active,
-                    accumulated_rpz: FixedU128::from_inner(62_987_640_859_560_351_886_455_u128),
+                    accumulated_rpz: FixedU128::from_inner(62_987_640_859_560_351_884_356_u128),
                     multiplier: new_multiplier,
                     updated_at: 134_200,
+                    total_stopped: 134_175,
                     ..yield_farm
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     total_shares_z: global_farm.total_shares_z + yield_farm_stake_in_global_farm,
                     updated_at: 134_200,
-                    accumulated_rpz: FixedU128::from_inner(62_987_640_859_560_351_886_455_u128),
-                    accumulated_rewards: 29_998_716_450,
+                    accumulated_rpz: FixedU128::from_inner(62_987_640_859_560_351_884_356_u128),
+                    accumulated_rewards: 29_998_716_449_999_999_999_000,
                     ..global_farm
                 }
             );
@@ -136,15 +138,15 @@ fn resume_yield_farm_not_owner_should_not_work() {
 }
 
 #[test]
-fn resume_yield_farm_deleted_farm_should_not_work() {
+fn resume_yield_farm_terminated_farm_should_not_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
             let new_multiplier = FixedU128::from(7_490_000);
 
             //Farm have to be stopped before delete.
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
-            //Delete farm.
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            //Terminate farm.
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN1_YIELD_FARM_ID,
@@ -159,7 +161,7 @@ fn resume_yield_farm_deleted_farm_should_not_work() {
                     BSX_TKN1_AMM,
                     new_multiplier
                 ),
-                Error::<Test, Instance1>::LiquidityMiningIsActive
+                Error::<Test, Instance1>::LiquidityMiningIsNotStopped
             );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

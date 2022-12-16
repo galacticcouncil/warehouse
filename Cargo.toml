@@ -15,6 +15,7 @@ members = [
 	"transaction-pause",
 	"liquidity-mining",
 	"currencies",
+	"stableswap",
 	"test-utils"
 ]
 

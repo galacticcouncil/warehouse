@@ -451,7 +451,7 @@ fn overcrowded_farm_running_longer_than_expected() {
 }
 
 //Note: This test is running for like 4 min. and run it with `--nocapture` to see progress.
-#[ignore = "This test take too much time."]
+#[ignore = "This test takes too much time."]
 #[test]
 fn full_farm_running_planned_time() {
     new_test_ext().execute_with(|| {
@@ -550,20 +550,26 @@ fn full_farm_running_planned_time() {
                 match rng.gen_range(1..=3) {
                     1 => {
                         //alice
-                        let _ = LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
+                        let (_, _, _, unclaimable) =
+                            LiquidityMining2::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
                         assert!(Tokens::free_balance(BSX, &ALICE).gt(&last_alice_balance));
+                        assert_eq!(unclaimable, 0);
                         last_alice_balance = Tokens::free_balance(BSX, &ALICE);
                     }
                     2 => {
                         //Bob
-                        let _ = LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
+                        let (_, _, _, unclaimable) =
+                            LiquidityMining2::claim_rewards(BOB, BOB_DEPOSIT, YIELD_FARM_B, false).unwrap();
                         assert!(Tokens::free_balance(BSX, &BOB).gt(&last_bob_balance));
+                        assert_eq!(unclaimable, 0);
                         last_bob_balance = Tokens::free_balance(BSX, &BOB);
                     }
                     x => {
                         //charlie
-                        let _ = LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
+                        let (_, _, _, unclaimable) =
+                            LiquidityMining2::claim_rewards(CHARLIE, CHARLIE_DEPOSIT, YIELD_FARM_B, false).unwrap();
                         assert!(Tokens::free_balance(BSX, &CHARLIE).gt(&last_charlie_balance));
+                        assert_eq!(unclaimable, 0);
                         last_charlie_balance = Tokens::free_balance(BSX, &CHARLIE);
                         assert!(x == 3);
                     }

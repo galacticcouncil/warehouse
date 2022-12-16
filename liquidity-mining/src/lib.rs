@@ -119,7 +119,7 @@ use hydradx_traits::{pools::DustRemovalAccountWhitelist, Registry};
 use orml_traits::{GetByKey, MultiCurrency};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
-    traits::{CheckedDiv, CheckedSub},
+    traits::{CheckedAdd, CheckedDiv, CheckedSub},
     FixedPointNumber, FixedU128, Perquintill,
 };
 use sp_std::{
@@ -881,7 +881,19 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     ensure!(global_farm.owner == who, Error::<T, I>::Forbidden);
 
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
+
+                    //NOTE: this should never fail.
+                    let stopped_periods = current_period
+                        .checked_sub(&yield_farm.updated_at)
+                        .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?;
+
                     Self::maybe_update_global_farm_rpz(global_farm, current_period)?;
+
+                    //NOTE: this is special case. Without this if global-farm has only 1 stopped
+                    //yield-farm and resume_yield_farm() is called, global-farm's update won't happen because it
+                    //has zero shares Z and next global-farm's update will calulate rewards for
+                    //"empty"/stopped periods.
+                    global_farm.updated_at = current_period;
 
                     let new_stake_in_global_farm =
                         math::calculate_global_farm_shares(yield_farm.total_valued_shares, multiplier)
@@ -896,6 +908,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     yield_farm.updated_at = current_period;
                     yield_farm.state = FarmState::Active;
                     yield_farm.multiplier = multiplier;
+                    yield_farm.total_stopped = yield_farm
+                        .total_stopped
+                        .checked_add(&stopped_periods)
+                        .ok_or(ArithmeticError::Overflow)?;
 
                     //add yield farm to active farms.
                     *maybe_active_yield_farm_id = Some(yield_farm.id);
@@ -1119,20 +1135,24 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             );
                         }
 
-                        let mut periods = current_period
-                            .checked_sub(&farm_entry.entered_at)
-                            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?;
+                        Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
 
-                        if yield_farm.state.is_stopped() {
-                            //Stop loyalty factor for all users at the point when yield farm was last
-                            //time rewarded(stopped).
-                            periods = yield_farm
-                                .updated_at
-                                .checked_sub(&farm_entry.entered_at)
+                        //NOTE: this should never fail yield-farm's stopped must be >= entry's
+                        //stopped
+                        let delta_stopped =
+                            yield_farm
+                                .total_stopped
+                                .checked_sub(&farm_entry.stopped_at_creation)
                                 .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?;
-                        } else {
-                            Self::maybe_update_farms(global_farm, yield_farm, current_period)?;
-                        }
+
+                        //NOTE: yield-farm's `updated_at` is updated to current period if it's
+                        //possible so this should be ok.
+                        let periods = yield_farm
+                            .updated_at
+                            .checked_sub(&farm_entry.entered_at)
+                            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?
+                            .checked_sub(&delta_stopped)
+                            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?;
 
                         let loyalty_multiplier =
                             Self::get_loyalty_multiplier(periods, yield_farm.loyalty_curve.clone())?;
@@ -1413,6 +1433,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         valued_shares,
                         yield_farm.accumulated_rpvs,
                         current_period,
+                        yield_farm.total_stopped,
                     );
 
                     deposit.add_yield_farm_entry(farm_entry)?;

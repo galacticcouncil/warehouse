@@ -71,6 +71,7 @@ fn claim_rewards_should_work() {
                         entered_at: 18,
                         updated_at: 25,
                         valued_shares: 2_500 * ONE,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     }]
                     .try_into()
@@ -137,6 +138,7 @@ fn claim_rewards_should_work() {
                         accumulated_claimed_rewards: expected_claimed_rewards,
                         entered_at: 25,
                         updated_at: 30,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     }]
                     .try_into()
@@ -227,6 +229,7 @@ fn claim_rewards_should_work() {
                         accumulated_claimed_rewards: 7_460_820_895_522_388_056,
                         entered_at: 18,
                         updated_at: 1_258,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     }]
                     .try_into()
@@ -319,6 +322,7 @@ fn claim_rewards_should_work() {
                         entered_at: 18,
                         updated_at: 18,
                         valued_shares: 2_500 * ONE,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     }]
                     .try_into()
@@ -377,6 +381,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 18,
                         updated_at: 18,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                     YieldFarmEntry {
@@ -387,6 +392,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 50,
                         updated_at: 50,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                     YieldFarmEntry {
@@ -397,6 +403,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 800,
                         updated_at: 800,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                 ]
@@ -447,6 +454,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 18,
                         updated_at: 10_000,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                     YieldFarmEntry {
@@ -457,6 +465,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 50,
                         updated_at: 1_000,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                     YieldFarmEntry {
@@ -467,6 +476,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 800,
                         updated_at: 800,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                 ]
@@ -517,6 +527,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 18,
                         updated_at: 10_000,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                     YieldFarmEntry {
@@ -527,6 +538,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 50,
                         updated_at: 1_000,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                     YieldFarmEntry {
@@ -537,6 +549,7 @@ fn claim_rewards_deposit_with_multiple_entries_should_work() {
                         accumulated_rpvs: Zero::zero(),
                         entered_at: 800,
                         updated_at: 1_000,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     },
                 ]
@@ -580,6 +593,7 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
                         accumulated_claimed_rewards: 23_306_074_766_355_140,
                         entered_at: 18,
                         updated_at: 25,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     }]
                     .try_into()
@@ -617,7 +631,7 @@ fn claim_rewards_doubleclaim_in_the_same_period_should_not_work() {
 }
 
 #[test]
-fn claim_rewards_from_canceled_yield_farm_should_work() {
+fn claim_rewards_should_claim_correct_amount_when_yield_farm_is_stopped() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
             const FAIL_ON_DOUBLECLAIM: bool = true;
@@ -660,6 +674,7 @@ fn claim_rewards_from_canceled_yield_farm_should_work() {
                         accumulated_claimed_rewards: expected_claimed_rewards,
                         entered_at: 18,
                         updated_at: 200,
+                        stopped_at_creation: 0,
                         _phantom: PhantomData::default(),
                     }]
                     .try_into()
@@ -737,7 +752,7 @@ fn claim_rewards_should_fail_with_liqudity_mining_canceled_when_yield_farm_is_de
 }
 
 #[test]
-fn claim_rewards_doubleclaim_should_work() {
+fn second_claim_rewards_should_work_when_doubleclaim_is_allowed() {
     const FAIL_ON_DOUBLECLAIM: bool = true;
 
     predefined_test_ext_with_deposits().execute_with(|| {
@@ -872,6 +887,367 @@ fn deposits_should_claim_same_amount_when_created_in_the_same_period() {
             let charlie_rewards = Tokens::free_balance(BSX, &CHARLIE) - charlie_bsx_balance_0;
 
             pretty_assertions::assert_eq!(bob_rewards, charlie_rewards);
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    });
+}
+
+#[test]
+fn claim_rewards_should_claim_correct_amount_when_yield_farm_was_resumed() {
+    predefined_test_ext_with_deposits().execute_with(|| {
+        let _ = with_transaction(|| {
+            const FAIL_ON_DOUBLECLAIM: bool = true;
+            const REWARD_CURRENCY: AssetId = ACA;
+
+            //Arrange
+            //periods timeline:
+            // |--- 10 active ---|--- 20 stopped ---|--- 10 active ---|claim_rewards()
+            //
+            set_block_number(20_000);
+
+            let first_deposit_id = LiquidityMining::deposit_lp_shares(
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                1_000_000 * ONE,
+                |_, _, _| Ok(10_000_000 * ONE),
+            )
+            .unwrap();
+
+            let second_deposit_id = LiquidityMining::deposit_lp_shares(
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                2_000_000 * ONE,
+                |_, _, _| Ok(20_000_000 * ONE),
+            )
+            .unwrap();
+
+            set_block_number(30_000);
+
+            // stop yield-farm
+            assert_ok!(LiquidityMining::stop_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM));
+            // resume yield-farm after 20 stopped periods.
+            set_block_number(50_000);
+            assert_ok!(LiquidityMining::resume_yield_farm(
+                DAVE,
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                FixedU128::from(10)
+            ));
+
+            //Act & assert
+            // claim rewards after 10 periods so deposit should claim in total for 20(active)
+            // periods.
+            set_block_number(60_000);
+
+            assert_eq!(
+                LiquidityMining::claim_rewards(ALICE, first_deposit_id, DAVE_BSX_TKN1_YIELD_FARM_ID, true,).unwrap(),
+                (
+                    DAVE_FARM,
+                    REWARD_CURRENCY,
+                    233_333_333_333_333_333_200,
+                    166_666_666_666_666_666_800,
+                )
+            );
+
+            assert_eq!(
+                LiquidityMining::claim_rewards(ALICE, second_deposit_id, DAVE_BSX_TKN1_YIELD_FARM_ID, true,).unwrap(),
+                (
+                    DAVE_FARM,
+                    REWARD_CURRENCY,
+                    466_666_666_666_666_666_400,
+                    333_333_333_333_333_333_600,
+                )
+            );
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    });
+}
+
+#[test]
+fn claim_rewards_should_claim_correct_amount_when_deposit_is_created_after_yield_farm_was_resumed() {
+    predefined_test_ext_with_deposits().execute_with(|| {
+        let _ = with_transaction(|| {
+            const FAIL_ON_DOUBLECLAIM: bool = true;
+            const REWARD_CURRENCY: AssetId = ACA;
+
+            //Arrange
+            set_block_number(20_000);
+
+            let first_deposit_id = LiquidityMining::deposit_lp_shares(
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                1_000_000 * ONE,
+                |_, _, _| Ok(10_000_000 * ONE),
+            )
+            .unwrap();
+
+            set_block_number(30_000);
+
+            // stop yield-farm
+            assert_ok!(LiquidityMining::stop_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM));
+
+            // resume yield-farm after 20 stopped periods.
+            set_block_number(50_000);
+            assert_ok!(LiquidityMining::resume_yield_farm(
+                DAVE,
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                FixedU128::from(10)
+            ));
+
+            let second_deposit_id = LiquidityMining::deposit_lp_shares(
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                2_000_000 * ONE,
+                |_, _, _| Ok(20_000_000 * ONE),
+            )
+            .unwrap();
+
+            //Act & assert
+            //dp 1 = total periods: 40, mining periods: 20
+            //dp 2 = total periods: 10, mining periods: 10, (this dp was created after yield-farm
+            //was resumed
+            set_block_number(60_000);
+
+            assert_eq!(
+                LiquidityMining::claim_rewards(ALICE, first_deposit_id, DAVE_BSX_TKN1_YIELD_FARM_ID, true,).unwrap(),
+                (
+                    DAVE_FARM,
+                    REWARD_CURRENCY,
+                    233_333_333_333_333_333_200,
+                    166_666_666_666_666_666_800,
+                )
+            );
+
+            assert_eq!(
+                LiquidityMining::claim_rewards(ALICE, second_deposit_id, DAVE_BSX_TKN1_YIELD_FARM_ID, true,).unwrap(),
+                (
+                    DAVE_FARM,
+                    REWARD_CURRENCY,
+                    218_181_818_181_818_181_600,
+                    181_818_181_818_181_818_400,
+                )
+            );
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    });
+}
+
+#[test]
+fn claim_rewards_should_claim_correct_amount_when_yield_was_resumed_multiple_times() {
+    predefined_test_ext_with_deposits().execute_with(|| {
+        let _ = with_transaction(|| {
+            const FAIL_ON_DOUBLECLAIM: bool = true;
+            const REWARD_CURRENCY: AssetId = ACA;
+
+            //Arrange
+            set_block_number(20_000);
+
+            let first_deposit_id = LiquidityMining::deposit_lp_shares(
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                1_000_000 * ONE,
+                |_, _, _| Ok(10_000_000 * ONE),
+            )
+            .unwrap();
+
+            // stop yield-farm
+            set_block_number(30_000);
+            assert_ok!(LiquidityMining::stop_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM));
+
+            // resume yield-farm
+            set_block_number(50_000);
+            assert_ok!(LiquidityMining::resume_yield_farm(
+                DAVE,
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                FixedU128::from(10)
+            ));
+
+            // create second deposit
+            set_block_number(60_000);
+            let second_deposit_id = LiquidityMining::deposit_lp_shares(
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                2_000_000 * ONE,
+                |_, _, _| Ok(20_000_000 * ONE),
+            )
+            .unwrap();
+
+            // stop yield-farm
+            set_block_number(80_000);
+            assert_ok!(LiquidityMining::stop_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM));
+
+            // resume yield-farm
+            set_block_number(90_000);
+            assert_ok!(LiquidityMining::resume_yield_farm(
+                DAVE,
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                FixedU128::from(10)
+            ));
+
+            // stop yield-farm
+            set_block_number(100_000);
+            assert_ok!(LiquidityMining::stop_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM));
+
+            // resume yield-farm
+            set_block_number(120_000);
+            assert_ok!(LiquidityMining::resume_yield_farm(
+                DAVE,
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                FixedU128::from(10)
+            ));
+
+            //Act & assert
+            //claim rewards
+            set_block_number(140_000);
+            //dp 1 = total periods: 120, mining periods: 70
+            //dp 2 = total periods: 80, mining periods: 50
+
+            assert_eq!(
+                LiquidityMining::claim_rewards(ALICE, first_deposit_id, DAVE_BSX_TKN1_YIELD_FARM_ID, true,).unwrap(),
+                (
+                    DAVE_FARM,
+                    REWARD_CURRENCY,
+                    988_235_294_117_647_058_000,
+                    411_764_705_882_352_942_000,
+                )
+            );
+
+            assert_eq!(
+                LiquidityMining::claim_rewards(ALICE, second_deposit_id, DAVE_BSX_TKN1_YIELD_FARM_ID, true,).unwrap(),
+                (
+                    DAVE_FARM,
+                    REWARD_CURRENCY,
+                    1_333_333_333_333_333_332_000,
+                    666_666_666_666_666_668_000,
+                )
+            );
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    });
+}
+
+#[test]
+fn claim_rewards_should_claim_correct_amount_when_yield_was_resumed_multiple_times_and_is_stopped_now() {
+    predefined_test_ext_with_deposits().execute_with(|| {
+        let _ = with_transaction(|| {
+            const FAIL_ON_DOUBLECLAIM: bool = true;
+            const REWARD_CURRENCY: AssetId = ACA;
+
+            //Arrange
+            set_block_number(20_000);
+
+            let first_deposit_id = LiquidityMining::deposit_lp_shares(
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                1_000_000 * ONE,
+                |_, _, _| Ok(10_000_000 * ONE),
+            )
+            .unwrap();
+
+            // stop yield-farm
+            set_block_number(30_000);
+            assert_ok!(LiquidityMining::stop_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM));
+
+            // resume yield-farm
+            set_block_number(50_000);
+            assert_ok!(LiquidityMining::resume_yield_farm(
+                DAVE,
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                FixedU128::from(10)
+            ));
+
+            // create second deposit
+            set_block_number(60_000);
+            let second_deposit_id = LiquidityMining::deposit_lp_shares(
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                2_000_000 * ONE,
+                |_, _, _| Ok(20_000_000 * ONE),
+            )
+            .unwrap();
+
+            // stop yield-farm
+            set_block_number(80_000);
+            assert_ok!(LiquidityMining::stop_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM));
+
+            // resume yield-farm
+            set_block_number(90_000);
+            assert_ok!(LiquidityMining::resume_yield_farm(
+                DAVE,
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                FixedU128::from(10)
+            ));
+
+            // stop yield-farm
+            set_block_number(100_000);
+            assert_ok!(LiquidityMining::stop_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM));
+
+            // resume yield-farm
+            set_block_number(120_000);
+            assert_ok!(LiquidityMining::resume_yield_farm(
+                DAVE,
+                DAVE_FARM,
+                DAVE_BSX_TKN1_YIELD_FARM_ID,
+                BSX_TKN1_AMM,
+                FixedU128::from(10)
+            ));
+
+            // stop yield-farm
+            set_block_number(140_000);
+            assert_ok!(LiquidityMining::stop_yield_farm(DAVE, DAVE_FARM, BSX_TKN1_AMM));
+
+            //Act & assert
+            //claim rewards
+
+            set_block_number(200_000);
+
+            //dp 1 = total periods: 120, mining periods: 70
+            //dp 2 = total periods: 80, mining periods: 50
+
+            assert_eq!(
+                LiquidityMining::claim_rewards(ALICE, first_deposit_id, DAVE_BSX_TKN1_YIELD_FARM_ID, true,).unwrap(),
+                (
+                    DAVE_FARM,
+                    REWARD_CURRENCY,
+                    988_235_294_117_647_058_000,
+                    411_764_705_882_352_942_000,
+                )
+            );
+
+            assert_eq!(
+                LiquidityMining::claim_rewards(ALICE, second_deposit_id, DAVE_BSX_TKN1_YIELD_FARM_ID, true,).unwrap(),
+                (
+                    DAVE_FARM,
+                    REWARD_CURRENCY,
+                    1_333_333_333_333_333_332_000,
+                    666_666_666_666_666_668_000,
+                )
+            );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });

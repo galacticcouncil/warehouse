@@ -108,6 +108,7 @@ prop_compose! {
             state: FarmState::Active,
             entries_count: Default::default(),
             left_to_distribute: Default::default(),
+            total_stopped: Default::default(),
             _phantom: Default::default(),
         };
 
@@ -177,7 +178,7 @@ proptest! {
                 //NOTE: _0 - before action, _1 - after action
                 let accumulated_rewards_0 = farm.accumulated_rewards;
                 let accumulated_rpz_0 = farm.accumulated_rpz;
-                let reward_per_period = farm.max_reward_per_period;
+                let reward_per_period = FixedU128::from(farm.max_reward_per_period);
                 let reward = LiquidityMining::update_global_farm(&mut farm, current_period, reward_per_period).unwrap();
 
                 let s_0 = accumulated_rpz_0
@@ -320,7 +321,7 @@ proptest! {
                 Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
                 let left_to_distribute_0 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);
-                let reward_per_period = global_farm.max_reward_per_period;
+                let reward_per_period = FixedU128::from(global_farm.max_reward_per_period);
                 let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
 
                 let reward =

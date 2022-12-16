@@ -1492,6 +1492,7 @@ fn update_yield_farm_should_work() {
             state: FarmState::Active,
             entries_count: 0,
             left_to_distribute: 0,
+            total_stopped: 0,
             _phantom: PhantomData::default(),
         };
 
@@ -1565,6 +1566,7 @@ fn update_yield_farm_should_work() {
                     state: FarmState::Active,
                     entries_count: 0,
                     left_to_distribute: *expected_yield_farm_reward_currency_balance,
+                    total_stopped: 0,
                     _phantom: PhantomData::default(),
                 }
             );
@@ -1781,13 +1783,13 @@ fn depositdata_add_farm_entry_to_should_work() {
         };
 
         let test_farm_entries = vec![
-            YieldFarmEntry::<Test, Instance1>::new(1, 50, 20, FixedU128::from(12), 2),
-            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18),
-            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, FixedU128::from(1), 1),
-            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, FixedU128::from(10), 13),
-            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, FixedU128::from(10), 13),
-            YieldFarmEntry::<Test, Instance1>::new(5, 100, 20, FixedU128::from(10), 13),
-            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, FixedU128::from(10), 13),
+            YieldFarmEntry::<Test, Instance1>::new(1, 50, 20, FixedU128::from(12), 2, 1),
+            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18, 1),
+            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, FixedU128::from(1), 1, 1),
+            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, FixedU128::from(10), 13, 1),
+            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, FixedU128::from(10), 13, 1),
+            YieldFarmEntry::<Test, Instance1>::new(5, 100, 20, FixedU128::from(10), 13, 1),
+            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, FixedU128::from(10), 13, 1),
         ];
 
         assert_ok!(deposit.add_yield_farm_entry(test_farm_entries[0].clone()));
@@ -1802,7 +1804,14 @@ fn depositdata_add_farm_entry_to_should_work() {
             Error::<Test, Instance1>::DoubleLock
         );
         assert_noop!(
-            deposit.add_yield_farm_entry(YieldFarmEntry::<Test, Instance1>::new(1, 50, 10, FixedU128::from(1), 1)),
+            deposit.add_yield_farm_entry(YieldFarmEntry::<Test, Instance1>::new(
+                1,
+                50,
+                10,
+                FixedU128::from(1),
+                1,
+                0
+            )),
             Error::<Test, Instance1>::DoubleLock
         );
 
@@ -1842,11 +1851,11 @@ fn deposit_remove_yield_farm_entry_should_work() {
             shares: 10,
             amm_pool_id: BSX_TKN1_AMM,
             yield_farm_entries: vec![
-                YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, FixedU128::from(10), 13),
-                YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, FixedU128::from(1), 13),
-                YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, FixedU128::from(10), 13),
-                YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18),
-                YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, FixedU128::from(1), 1),
+                YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, FixedU128::from(10), 13, 0),
+                YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, FixedU128::from(1), 13, 0),
+                YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, FixedU128::from(10), 13, 0),
+                YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18, 0),
+                YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, FixedU128::from(1), 1, 0),
             ]
             .try_into()
             .unwrap(),
@@ -1884,11 +1893,11 @@ fn deposit_get_yield_farm_entry_should_work() {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
         yield_farm_entries: vec![
-            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, FixedU128::from(10), 13),
-            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, FixedU128::from(1), 13),
-            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, FixedU128::from(10), 13),
-            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18),
-            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, FixedU128::from(1), 1),
+            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, FixedU128::from(10), 13, 0),
+            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, FixedU128::from(1), 13, 0),
+            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, FixedU128::from(10), 13, 0),
+            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18, 0),
+            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, FixedU128::from(1), 1, 0),
         ]
         .try_into()
         .unwrap(),
@@ -1896,7 +1905,7 @@ fn deposit_get_yield_farm_entry_should_work() {
 
     pretty_assertions::assert_eq!(
         deposit.get_yield_farm_entry(18).unwrap(),
-        &mut YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18)
+        &mut YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18, 0)
     );
 
     const NON_EXISTING_YIELD_FARM_ID: YieldFarmId = 98_908;
@@ -1909,11 +1918,11 @@ fn deposit_search_yield_farm_entry_should_work() {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
         yield_farm_entries: vec![
-            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, FixedU128::from(10), 13),
-            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, FixedU128::from(1), 13),
-            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, FixedU128::from(10), 13),
-            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18),
-            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, FixedU128::from(1), 1),
+            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, FixedU128::from(10), 13, 0),
+            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, FixedU128::from(1), 13, 0),
+            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, FixedU128::from(10), 13, 0),
+            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18, 0),
+            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, FixedU128::from(1), 1, 0),
         ]
         .try_into()
         .unwrap(),
@@ -1935,11 +1944,11 @@ fn deposit_can_be_flushed_should_work() {
         shares: 10,
         amm_pool_id: BSX_TKN1_AMM,
         yield_farm_entries: vec![
-            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, FixedU128::from(10), 13),
-            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, FixedU128::from(1), 13),
-            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, FixedU128::from(10), 13),
-            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18),
-            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, FixedU128::from(1), 1),
+            YieldFarmEntry::<Test, Instance1>::new(4, 1, 20, FixedU128::from(10), 13, 0),
+            YieldFarmEntry::<Test, Instance1>::new(7, 2, 20, FixedU128::from(1), 13, 0),
+            YieldFarmEntry::<Test, Instance1>::new(6, 4, 20, FixedU128::from(10), 13, 0),
+            YieldFarmEntry::<Test, Instance1>::new(2, 18, 20, FixedU128::from(14), 18, 0),
+            YieldFarmEntry::<Test, Instance1>::new(3, 60, 20, FixedU128::from(1), 1, 0),
         ]
         .try_into()
         .unwrap(),
@@ -1956,6 +1965,7 @@ fn deposit_can_be_flushed_should_work() {
             20,
             FixedU128::from(10),
             13,
+            0,
         )]
         .try_into()
         .unwrap(),

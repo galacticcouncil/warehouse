@@ -431,7 +431,7 @@ impl<T: Config> Pallet<T> {
             );
 
             ensure!(
-                !Assets::<T>::contains_key(&selected_id),
+                !Assets::<T>::contains_key(selected_id),
                 Error::<T>::AssetAlreadyRegistered
             );
 

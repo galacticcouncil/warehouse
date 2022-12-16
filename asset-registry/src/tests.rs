@@ -577,7 +577,7 @@ fn register_asset_should_work_when_metadata_is_provided() {
             AssetRegistryPallet::asset_metadata(asset_id).unwrap(),
             AssetMetadata {
                 decimals: 18u8,
-                symbol: b_symbol.clone(),
+                symbol: b_symbol,
             }
         );
     });
@@ -618,10 +618,7 @@ fn register_asset_should_work_when_location_is_provided() {
             AssetRegistryPallet::location_to_asset(asset_location.clone()),
             Some(asset_id)
         );
-        assert_eq!(
-            AssetRegistryPallet::asset_to_location(asset_id),
-            Some(asset_location.clone())
-        );
+        assert_eq!(AssetRegistryPallet::asset_to_location(asset_id), Some(asset_location));
 
         assert!(AssetRegistryPallet::asset_metadata(asset_id).is_none(),);
     });
@@ -665,16 +662,13 @@ fn register_asset_should_work_when_all_optional_are_provided() {
             AssetRegistryPallet::location_to_asset(asset_location.clone()),
             Some(asset_id)
         );
-        assert_eq!(
-            AssetRegistryPallet::asset_to_location(asset_id),
-            Some(asset_location.clone())
-        );
+        assert_eq!(AssetRegistryPallet::asset_to_location(asset_id), Some(asset_location));
         let b_symbol: BoundedVec<u8, <Test as crate::Config>::StringLimit> = b"SYM".to_vec().try_into().unwrap();
         assert_eq!(
             AssetRegistryPallet::asset_metadata(asset_id).unwrap(),
             AssetMetadata {
                 decimals: 18u8,
-                symbol: b_symbol.clone(),
+                symbol: b_symbol,
             }
         );
     });

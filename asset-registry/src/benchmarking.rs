@@ -41,7 +41,7 @@ benchmarks! {
     }: _(RawOrigin::Root, name.clone(), AssetType::Token, ed, None, Some(metadata), Some(Default::default()))
     verify {
         let bname = crate::Pallet::<T>::to_bounded_name(name).unwrap();
-        assert!(crate::Pallet::<T>::asset_ids(&bname).is_some());
+        assert!(crate::Pallet::<T>::asset_ids(bname).is_some());
     }
 
     update{

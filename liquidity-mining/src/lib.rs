@@ -891,11 +891,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
                     //NOTE: this is special case. Without this if global-farm has only 1 stopped
                     //yield-farm and resume_yield_farm() is called, global-farm's update won't happen because it
-                    //has zero shares Z and next global-farm update will calulate rewards for
-                    //"empty" periods.
-                    if global_farm.updated_at != current_period {
-                        global_farm.updated_at = current_period;
-                    }
+                    //has zero shares Z and next global-farm's update will calulate rewards for
+                    //"empty"/stopped periods.
+                    global_farm.updated_at = current_period;
 
                     let new_stake_in_global_farm =
                         math::calculate_global_farm_shares(yield_farm.total_valued_shares, multiplier)

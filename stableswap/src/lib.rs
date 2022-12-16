@@ -27,7 +27,7 @@
 //!
 //! Maximum number of assets in pool is 5.
 //!
-//! A pool can be created only by allowed `PoolMasterOrigin`.
+//! A pool can be created only by allowed `AuthorityOrigin`.
 //!
 //! First LP to provided liquidity must add initial liquidity of all pool assets. Subsequent calls to add_liquidity, LP can provide only 1 asset.
 //!
@@ -44,8 +44,9 @@ extern crate core;
 
 use frame_support::pallet_prelude::{DispatchResult, Get};
 use frame_support::{ensure, transactional};
+use hydradx_traits::{AccountIdFor, Registry};
 use sp_runtime::traits::Zero;
-use sp_runtime::{ArithmeticError, DispatchError};
+use sp_runtime::{ArithmeticError, DispatchError, Permill};
 use sp_std::prelude::*;
 
 pub use pallet::*;
@@ -56,7 +57,9 @@ pub mod weights;
 
 pub use trade_execution::*;
 
-use crate::types::Balance;
+use crate::types::{AssetLiquidity, Balance, PoolInfo, Tradability};
+use orml_traits::MultiCurrency;
+use sp_std::collections::btree_map::BTreeMap;
 use weights::WeightInfo;
 
 #[cfg(test)]
@@ -77,17 +80,13 @@ const Y_ITERATIONS: u8 = hydra_dx_math::stableswap::MAX_Y_ITERATIONS;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use crate::types::{AssetLiquidity, Balance, PoolInfo};
     use codec::HasCompact;
     use core::ops::RangeInclusive;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
-    use hydradx_traits::{AccountIdFor, Registry, ShareTokenRegistry};
-    use orml_traits::MultiCurrency;
     use sp_runtime::traits::Zero;
     use sp_runtime::ArithmeticError;
     use sp_runtime::Permill;
-    use sp_std::collections::btree_map::BTreeMap;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
@@ -116,10 +115,10 @@ pub mod pallet {
         type ShareAccountId: AccountIdFor<Vec<Self::AssetId>, AccountId = Self::AccountId>;
 
         /// Asset registry mechanism
-        type AssetRegistry: ShareTokenRegistry<Self::AssetId, Vec<u8>, Balance, DispatchError>;
+        type AssetRegistry: Registry<Self::AssetId, Vec<u8>, Balance, DispatchError>;
 
         /// The origin which can create a new pool
-        type PoolMasterOrigin: EnsureOrigin<Self::Origin>;
+        type AuthorityOrigin: EnsureOrigin<Self::Origin>;
 
         /// Minimum pool liquidity
         #[pallet::constant]
@@ -141,6 +140,12 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn pools)]
     pub type Pools<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, PoolInfo<T::AssetId>>;
+
+    /// Tradability state of pool assets.
+    #[pallet::storage]
+    #[pallet::getter(fn asset_tradability)]
+    pub type AssetTradability<T: Config> =
+        StorageDoubleMap<_, Blake2_128Concat, T::AssetId, Blake2_128Concat, T::AssetId, Tradability, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
@@ -196,6 +201,13 @@ pub mod pallet {
             amount_out: Balance,
             fee: Balance,
         },
+
+        /// Aseet's tradable state has been updated.
+        TradableStateUpdated {
+            pool_id: T::AssetId,
+            asset_id: T::AssetId,
+            state: Tradability,
+        },
     }
 
     #[pallet::error]
@@ -215,6 +227,15 @@ pub mod pallet {
 
         /// Asset is not in the pool.
         AssetNotInPool,
+
+        /// Asset is already in the pool.
+        AssetInPool,
+
+        /// Share asset is not registered in Registry.
+        ShareAssetNotRegistered,
+
+        /// Share asset is amount assets when creating a pool.
+        ShareAssetInPoolAssets,
 
         /// One or more assets are not registered in AssetRegistry
         AssetNotRegistered,
@@ -257,6 +278,9 @@ pub mod pallet {
 
         /// No pool parameters to update are provided.
         NothingToUpdate,
+
+        /// Not allowed to perform an operation on given asset.
+        NotAllowed,
     }
 
     #[pallet::call]
@@ -268,7 +292,7 @@ pub mod pallet {
         /// initial liquidity.
         ///
         /// Parameters:
-        /// - `origin`: Must be T::PoolMasterOrigin
+        /// - `origin`: Must be T::AuthorityOrigin
         /// - `assets`: List of Asset ids
         /// - `amplification`: Pool amplification
         /// - `trade_fee`: trade fee to be applied in sell/buy trades
@@ -279,51 +303,19 @@ pub mod pallet {
         #[transactional]
         pub fn create_pool(
             origin: OriginFor<T>,
+            share_asset: T::AssetId,
             assets: Vec<T::AssetId>,
             amplification: u16,
             trade_fee: Permill,
             withdraw_fee: Permill,
         ) -> DispatchResult {
-            T::PoolMasterOrigin::ensure_origin(origin)?;
+            T::AuthorityOrigin::ensure_origin(origin)?;
 
-            let mut pool_assets = assets;
-            pool_assets.sort();
-
-            let pool = PoolInfo {
-                assets: pool_assets
-                    .clone()
-                    .try_into()
-                    .map_err(|_| Error::<T>::MaxAssetsExceeded)?,
-                amplification,
-                trade_fee,
-                withdraw_fee,
-            };
-            ensure!(pool.is_valid(), Error::<T>::SameAssets);
-            ensure!(
-                T::AmplificationRange::get().contains(&amplification),
-                Error::<T>::InvalidAmplification
-            );
-            for asset in pool.assets.iter() {
-                ensure!(T::AssetRegistry::exists(*asset), Error::<T>::AssetNotRegistered);
-            }
-            let share_asset_ident = T::ShareAccountId::name(&pool.assets, Some(POOL_IDENTIFIER));
-            let share_asset = T::AssetRegistry::get_or_create_shared_asset(
-                share_asset_ident,
-                pool.assets.clone().into(),
-                T::MinPoolLiquidity::get(),
-            )?;
-
-            Pools::<T>::try_mutate(share_asset, |maybe_pool| -> DispatchResult {
-                ensure!(maybe_pool.is_none(), Error::<T>::PoolExists);
-
-                *maybe_pool = Some(pool);
-
-                Ok(())
-            })?;
+            let pool_id = Self::do_create_pool(share_asset, &assets, amplification, trade_fee, withdraw_fee)?;
 
             Self::deposit_event(Event::PoolCreated {
-                pool_id: share_asset,
-                assets: pool_assets,
+                pool_id,
+                assets,
                 amplification,
                 trade_fee,
                 withdraw_fee,
@@ -341,7 +333,7 @@ pub mod pallet {
         /// if pool does not exist, `PoolNotFound` is returned.
         ///
         /// Parameters:
-        /// - `origin`: Must be T::PoolMasterOrigin
+        /// - `origin`: Must be T::AuthorityOrigin
         /// - `pool_id`: pool to update
         /// - `amplification`: new pool amplification or None
         /// - `trade_fee`: new trade fee or None
@@ -357,14 +349,14 @@ pub mod pallet {
             trade_fee: Option<Permill>,
             withdraw_fee: Option<Permill>,
         ) -> DispatchResult {
-            T::PoolMasterOrigin::ensure_origin(origin)?;
+            T::AuthorityOrigin::ensure_origin(origin)?;
 
             ensure!(
                 amplification.is_some() || trade_fee.is_some() || withdraw_fee.is_some(),
                 Error::<T>::NothingToUpdate
             );
 
-            Pools::<T>::try_mutate(pool_id, |maybe_pool| -> DispatchResult {
+            Pools::<T>::try_mutate(&pool_id, |maybe_pool| -> DispatchResult {
                 let mut pool = maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound)?;
 
                 pool.amplification = amplification.unwrap_or(pool.amplification);
@@ -409,60 +401,12 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
-            ensure!(assets.len() <= pool.assets.len(), Error::<T>::MaxAssetsExceeded);
-            let mut added_assets = BTreeMap::<T::AssetId, Balance>::new();
-            for asset in assets.iter() {
-                ensure!(
-                    asset.amount >= T::MinTradingLimit::get(),
-                    Error::<T>::InsufficientTradingAmount
-                );
-                ensure!(
-                    T::Currency::free_balance(asset.asset_id, &who) >= asset.amount,
-                    Error::<T>::InsufficientBalance
-                );
-                ensure!(pool.find_asset(asset.asset_id).is_some(), Error::<T>::AssetNotInPool);
-                added_assets.insert(asset.asset_id, asset.amount);
-            }
-
-            let pool_account = pool.pool_account::<T>();
-            let mut initial_reserves = Vec::new();
-            let mut updated_reserves = Vec::new();
-            for pool_asset in pool.assets.iter() {
-                let reserve = T::Currency::free_balance(*pool_asset, &pool_account);
-                initial_reserves.push(reserve);
-                if let Some(liq_added) = added_assets.get(pool_asset) {
-                    updated_reserves.push(reserve.checked_add(*liq_added).ok_or(ArithmeticError::Overflow)?);
-                } else {
-                    ensure!(!reserve.is_zero(), Error::<T>::InvalidInitialLiquidity);
-                    updated_reserves.push(reserve);
-                }
-            }
-
-            let share_issuance = T::Currency::total_issuance(pool_id);
-            let share_amount = hydra_dx_math::stableswap::calculate_shares::<D_ITERATIONS>(
-                &initial_reserves,
-                &updated_reserves,
-                pool.amplification.into(),
-                share_issuance,
-            )
-            .ok_or(ArithmeticError::Overflow)?;
-            ensure!(!share_amount.is_zero(), Error::<T>::InvalidAssetAmount);
-            let current_share_balance = T::Currency::free_balance(pool_id, &who);
-            ensure!(
-                current_share_balance.saturating_add(share_amount) >= T::MinPoolLiquidity::get(),
-                Error::<T>::InsufficientShareBalance
-            );
-
-            T::Currency::deposit(pool_id, &who, share_amount)?;
-            for asset in assets.iter() {
-                T::Currency::transfer(asset.asset_id, &who, &pool_account, asset.amount)?;
-            }
+            let shares = Self::do_add_liquidity(&who, pool_id, &assets)?;
 
             Self::deposit_event(Event::LiquidityAdded {
                 pool_id,
                 who,
-                shares: share_amount,
+                shares,
                 assets,
             });
 
@@ -493,6 +437,11 @@ pub mod pallet {
             share_amount: Balance,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+
+            ensure!(
+                Self::is_asset_allowed(pool_id, asset_id, Tradability::REMOVE_LIQUIDITY),
+                Error::<T>::NotAllowed
+            );
 
             ensure!(share_amount > Balance::zero(), Error::<T>::InvalidAssetAmount);
 
@@ -568,6 +517,12 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             ensure!(
+                Self::is_asset_allowed(pool_id, asset_in, Tradability::SELL)
+                    && Self::is_asset_allowed(pool_id, asset_out, Tradability::BUY),
+                Error::<T>::NotAllowed
+            );
+
+            ensure!(
                 amount_in >= T::MinTradingLimit::get(),
                 Error::<T>::InsufficientTradingAmount
             );
@@ -625,6 +580,12 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             ensure!(
+                Self::is_asset_allowed(pool_id, asset_in, Tradability::SELL)
+                    && Self::is_asset_allowed(pool_id, asset_out, Tradability::BUY),
+                Error::<T>::NotAllowed
+            );
+
+            ensure!(
                 amount_out >= T::MinTradingLimit::get(),
                 Error::<T>::InsufficientTradingAmount
             );
@@ -652,6 +613,27 @@ pub mod pallet {
                 amount_in,
                 amount_out,
                 fee: fee_amount,
+            });
+
+            Ok(())
+        }
+
+        #[pallet::weight(<T as Config>::WeightInfo::set_asset_tradable_state())]
+        #[transactional]
+        pub fn set_asset_tradable_state(
+            origin: OriginFor<T>,
+            pool_id: T::AssetId,
+            asset_id: T::AssetId,
+            state: Tradability,
+        ) -> DispatchResult {
+            T::AuthorityOrigin::ensure_origin(origin)?;
+
+            Self::set_asset_tradability_state(pool_id, asset_id, state);
+
+            Self::deposit_event(Event::TradableStateUpdated {
+                pool_id,
+                asset_id,
+                state,
             });
 
             Ok(())
@@ -715,5 +697,175 @@ impl<T: Config> Pallet<T> {
             pool.trade_fee,
         )
         .ok_or_else(|| ArithmeticError::Overflow.into())
+    }
+
+    pub fn get_pool(pool_id: T::AssetId) -> Result<PoolInfo<T::AssetId>, DispatchError> {
+        Pools::<T>::get(pool_id).ok_or_else(|| Error::<T>::PoolNotFound.into())
+    }
+
+    pub fn do_create_pool(
+        share_asset: T::AssetId,
+        assets: &[T::AssetId],
+        amplification: u16,
+        trade_fee: Permill,
+        withdraw_fee: Permill,
+    ) -> Result<T::AssetId, DispatchError> {
+        ensure!(!Pools::<T>::contains_key(&share_asset), Error::<T>::PoolExists);
+        ensure!(
+            T::AssetRegistry::exists(share_asset),
+            Error::<T>::ShareAssetNotRegistered
+        );
+
+        ensure!(!assets.contains(&share_asset), Error::<T>::ShareAssetInPoolAssets);
+
+        let mut pool_assets = assets.to_vec();
+        pool_assets.sort();
+
+        let pool = PoolInfo {
+            assets: pool_assets
+                .clone()
+                .try_into()
+                .map_err(|_| Error::<T>::MaxAssetsExceeded)?,
+            amplification,
+            trade_fee,
+            withdraw_fee,
+        };
+        ensure!(pool.is_valid(), Error::<T>::SameAssets);
+        ensure!(
+            T::AmplificationRange::get().contains(&amplification),
+            Error::<T>::InvalidAmplification
+        );
+        for asset in pool.assets.iter() {
+            ensure!(T::AssetRegistry::exists(*asset), Error::<T>::AssetNotRegistered);
+        }
+
+        Pools::<T>::insert(&share_asset, pool);
+
+        Ok(share_asset)
+    }
+
+    pub fn add_asset_to_existing_pool(pool_id: T::AssetId, asset_id: T::AssetId) -> DispatchResult {
+        ensure!(T::AssetRegistry::exists(asset_id), Error::<T>::AssetNotRegistered);
+
+        Pools::<T>::try_mutate(&pool_id, |maybe_pool| -> DispatchResult {
+            let pool = maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound)?;
+
+            let orig_account = pool.pool_account::<T>();
+
+            ensure!(pool.find_asset(asset_id).is_none(), Error::<T>::AssetInPool);
+
+            let mut assets = pool.assets.to_vec();
+
+            assets.push(asset_id);
+            assets.sort();
+
+            pool.assets = assets.try_into().map_err(|_| Error::<T>::MaxAssetsExceeded)?;
+
+            let pool_account = pool.pool_account::<T>();
+
+            if orig_account != pool_account {
+                // we need to transfer reserves to new account
+                for asset in pool.assets.iter() {
+                    let balance = T::Currency::free_balance(*asset, &orig_account);
+                    T::Currency::transfer(*asset, &orig_account, &pool_account, balance)?;
+                }
+            }
+
+            Ok(())
+        })
+    }
+
+    pub fn move_liquidity_to_pool(
+        from: &T::AccountId,
+        pool_id: T::AssetId,
+        assets: &[AssetLiquidity<T::AssetId>],
+    ) -> DispatchResult {
+        let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+
+        let pool_account = pool.pool_account::<T>();
+
+        for asset in assets.iter() {
+            ensure!(pool.find_asset(asset.asset_id).is_some(), Error::<T>::AssetNotInPool);
+            T::Currency::transfer(asset.asset_id, from, &pool_account, asset.amount)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn deposit_shares(who: &T::AccountId, pool_id: T::AssetId, amount: Balance) -> DispatchResult {
+        ensure!(!amount.is_zero(), Error::<T>::InvalidAssetAmount);
+        let current_share_balance = T::Currency::free_balance(pool_id, who);
+
+        ensure!(
+            current_share_balance.saturating_add(amount) >= T::MinPoolLiquidity::get(),
+            Error::<T>::InsufficientShareBalance
+        );
+
+        T::Currency::deposit(pool_id, who, amount)
+    }
+
+    pub fn do_add_liquidity(
+        who: &T::AccountId,
+        pool_id: T::AssetId,
+        assets: &[AssetLiquidity<T::AssetId>],
+    ) -> Result<Balance, DispatchError> {
+        let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+        ensure!(assets.len() <= pool.assets.len(), Error::<T>::MaxAssetsExceeded);
+        let mut added_assets = BTreeMap::<T::AssetId, Balance>::new();
+        for asset in assets.iter() {
+            ensure!(
+                Self::is_asset_allowed(pool_id, asset.asset_id, Tradability::ADD_LIQUIDITY),
+                Error::<T>::NotAllowed
+            );
+            ensure!(
+                asset.amount >= T::MinTradingLimit::get(),
+                Error::<T>::InsufficientTradingAmount
+            );
+            ensure!(
+                T::Currency::free_balance(asset.asset_id, who) >= asset.amount,
+                Error::<T>::InsufficientBalance
+            );
+            ensure!(pool.find_asset(asset.asset_id).is_some(), Error::<T>::AssetNotInPool);
+            added_assets.insert(asset.asset_id, asset.amount);
+        }
+
+        let pool_account = pool.pool_account::<T>();
+        let mut initial_reserves = Vec::new();
+        let mut updated_reserves = Vec::new();
+        for pool_asset in pool.assets.iter() {
+            let reserve = T::Currency::free_balance(*pool_asset, &pool_account);
+            initial_reserves.push(reserve);
+            if let Some(liq_added) = added_assets.get(pool_asset) {
+                updated_reserves.push(reserve.checked_add(*liq_added).ok_or(ArithmeticError::Overflow)?);
+            } else {
+                ensure!(!reserve.is_zero(), Error::<T>::InvalidInitialLiquidity);
+                updated_reserves.push(reserve);
+            }
+        }
+
+        let share_issuance = T::Currency::total_issuance(pool_id);
+        let share_amount = hydra_dx_math::stableswap::calculate_shares::<D_ITERATIONS>(
+            &initial_reserves,
+            &updated_reserves,
+            pool.amplification.into(),
+            share_issuance,
+        )
+        .ok_or(ArithmeticError::Overflow)?;
+
+        Self::deposit_shares(who, pool_id, share_amount)?;
+
+        Self::move_liquidity_to_pool(who, pool_id, assets)?;
+
+        Ok(share_amount)
+    }
+
+    pub fn set_asset_tradability_state(pool_id: T::AssetId, asset_id: T::AssetId, state: Tradability) {
+        AssetTradability::<T>::mutate(&pool_id, &asset_id, |current_state| {
+            *current_state = state;
+        });
+    }
+
+    pub fn is_asset_allowed(pool_id: T::AssetId, asset_id: T::AssetId, operation: Tradability) -> bool {
+        AssetTradability::<T>::get(pool_id, asset_id).contains(operation)
     }
 }

@@ -2806,8 +2806,8 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "hydra-dx-math"
-version = "4.9.0"
-source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=54fe636a19f283de9afbd5b5015a951b25e11a6b#54fe636a19f283de9afbd5b5015a951b25e11a6b"
+version = "5.0.0"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=230120e7d5d7496350e9bd2190145e7947903b3d#230120e7d5d7496350e9bd2190145e7947903b3d"
 dependencies = [
  "fixed",
  "num-traits",
@@ -5402,12 +5402,13 @@ dependencies = [
 
 [[package]]
 name = "pallet-stableswap"
-version = "1.0.1"
+version = "2.0.0"
 dependencies = [
+ "bitflags",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hydra-dx-math 4.9.0",
+ "hydra-dx-math 5.0.0",
  "hydradx-traits 1.0.0",
  "orml-tokens",
  "orml-traits",

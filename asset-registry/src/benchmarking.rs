@@ -22,32 +22,35 @@ use super::*;
 use frame_benchmarking::benchmarks;
 use frame_system::RawOrigin;
 
+use crate::types::Metadata;
+
 use sp_std::vec;
 
 benchmarks! {
     register{
         let name = vec![1; T::StringLimit::get() as usize];
         let ed = T::Balance::from(1_000_000u32);
-        let next_asset_id = crate::Pallet::<T>::next_asset_id();
 
-    }: _(RawOrigin::Root, name.clone(), AssetType::Token, ed)
+        let symbol = vec![1; T::StringLimit::get() as usize];
+
+        let metadata = Metadata {
+            symbol,
+            decimals: 100,
+        };
+
+    }: _(RawOrigin::Root, name.clone(), AssetType::Token, ed, None, Some(metadata), Some(Default::default()))
     verify {
         let bname = crate::Pallet::<T>::to_bounded_name(name).unwrap();
-        if next_asset_id == T::NativeAssetId::get() {
-            assert_eq!(crate::Pallet::<T>::asset_ids(&bname), next_asset_id.checked_add(&T::AssetId::from(1u8)));
-        } else {
-            assert_eq!(crate::Pallet::<T>::asset_ids(&bname), Some(next_asset_id));
-        }
+        assert!(crate::Pallet::<T>::asset_ids(bname).is_some());
     }
 
     update{
         let name = b"NAME".to_vec();
         let ed = T::Balance::from(1_000_000u32);
-        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name, AssetType::Token, ed);
+        let asset_id = T::AssetId::from(10u8);
+        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name, AssetType::Token, ed, Some(asset_id),None,None);
 
         let new_name= vec![1; T::StringLimit::get() as usize];
-
-        let asset_id = T::AssetId::from(1u8);
 
         let new_ed = T::Balance::from(2_000_000u32);
 
@@ -77,7 +80,7 @@ benchmarks! {
         let name = b"NAME".to_vec();
         let bname = crate::Pallet::<T>::to_bounded_name(name.clone()).unwrap();
         let ed = T::Balance::from(1_000_000u32);
-        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name, AssetType::Token, ed);
+        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name, AssetType::Token, ed, None, None, None);
 
         let asset_id = crate::Pallet::<T>::asset_ids(bname).unwrap();
 
@@ -105,9 +108,8 @@ benchmarks! {
     set_location{
         let name = b"NAME".to_vec();
         let ed = T::Balance::from(1_000_000u32);
-        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name.clone(), AssetType::Token, ed);
-
-        let asset_id = T::AssetId::from(1u8);
+        let asset_id = T::AssetId::from(10u8);
+        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name.clone(), AssetType::Token, ed, Some(asset_id), None, None);
 
     }: _(RawOrigin::Root, asset_id, Default::default())
     verify {

@@ -154,20 +154,23 @@ pub mod pallet {
             Schedules::<T>::insert(next_schedule_id, schedule);
             ScheduleOwnership::<T>::insert(who, next_schedule_id);
 
-            let next_block_number = Self::get_next_block_mumber();
+            let blocknumber_for_schedule = next_execution_block.unwrap_or_else(|| Self::get_next_block_mumber());
 
-            if !ScheduleIdsPerBlock::<T>::contains_key(next_block_number) {
+            if !ScheduleIdsPerBlock::<T>::contains_key(blocknumber_for_schedule) {
                 let vec_with_first_schedule_id = Self::create_bounded_vec(next_schedule_id);
-                ScheduleIdsPerBlock::<T>::insert(next_block_number, vec_with_first_schedule_id);
+                ScheduleIdsPerBlock::<T>::insert(blocknumber_for_schedule, vec_with_first_schedule_id);
             } else {
-                ScheduleIdsPerBlock::<T>::try_mutate_exists(next_block_number, |schedule_ids| -> DispatchResult {
-                    let mut schedule_ids = schedule_ids.as_mut().ok_or(Error::<T>::DummyError)?;
+                ScheduleIdsPerBlock::<T>::try_mutate_exists(
+                    blocknumber_for_schedule,
+                    |schedule_ids| -> DispatchResult {
+                        let mut schedule_ids = schedule_ids.as_mut().ok_or(Error::<T>::DummyError)?;
 
-                    schedule_ids
-                        .try_push(next_schedule_id)
-                        .map_err(|_| Error::<T>::DummyError)?;
-                    Ok(())
-                });
+                        schedule_ids
+                            .try_push(next_schedule_id)
+                            .map_err(|_| Error::<T>::DummyError)?;
+                        Ok(())
+                    },
+                );
             }
 
             Ok(())

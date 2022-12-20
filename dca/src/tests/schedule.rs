@@ -127,6 +127,67 @@ fn schedule_should_work_when_multiple_schedules_stored() {
 }
 
 #[test]
+fn schedule_should_work_when_block_is_specified_by_user() {
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let trades = create_bounded_vec(vec![Trade {
+            asset_in: 3,
+            asset_out: 4,
+            pool: PoolType::XYK,
+        }]);
+
+        let schedule = Schedule {
+            period: 10,
+            order: Order {
+                asset_in: 3,
+                asset_out: 4,
+                amount_in: 1000,
+                amount_out: 2000,
+                limit: 0,
+                route: trades,
+            },
+            recurrence: Recurrence::Fixed,
+        };
+
+        //Act
+        set_block_number(500);
+        assert_ok!(Dca::schedule(Origin::signed(ALICE), schedule, Option::Some(600)));
+
+        //Assert
+        let stored_schedule = Dca::schedules(1).unwrap();
+        assert_eq!(
+            stored_schedule,
+            Schedule {
+                period: 10,
+                order: Order {
+                    asset_in: 3,
+                    asset_out: 4,
+                    amount_in: 1000,
+                    amount_out: 2000,
+                    limit: 0,
+                    route: create_bounded_vec(vec![Trade {
+                        asset_in: 3,
+                        asset_out: 4,
+                        pool: PoolType::XYK
+                    }])
+                },
+                recurrence: Recurrence::Fixed
+            }
+        );
+
+        //Check if schedule ids are stored
+        let schedule_ids = Dca::schedule_ids_per_block(600);
+        assert!(Dca::schedule_ids_per_block(600).is_some());
+        let expected_scheduled_ids_for_next_block = create_bounded_vec_with_schedule_ids(vec![1]);
+        assert_eq!(schedule_ids.unwrap(), expected_scheduled_ids_for_next_block);
+
+        //Check if schedule ownership is created
+        assert!(Dca::schedule_ownership(ALICE).is_some());
+        assert_eq!(Dca::schedule_ownership(ALICE).unwrap(), 1);
+    });
+}
+
+#[test]
 fn schedule_should_fail_when_not_called_by_user() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange

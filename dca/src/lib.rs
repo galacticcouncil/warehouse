@@ -1,3 +1,4 @@
+#![allow(warnings)]
 // This file is part of pallet-dca.
 
 // Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
@@ -34,11 +35,13 @@ use sp_std::vec::Vec;
 mod tests;
 
 pub mod weights;
+pub mod types;
 
 use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
+use crate::types::Balance;
 
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
@@ -49,11 +52,11 @@ pub enum Recurrence{
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
 pub struct Order {
-    pub asset_in: u128,
-    pub asset_out: u128,
-    pub amount_in: u128,
-    pub amount_out: u128,
-    pub limit: u128,
+    pub asset_in: Balance,
+    pub asset_out: Balance,
+    pub amount_in: Balance,
+    pub amount_out: Balance,
+    pub limit: Balance,
     pub route: Vec<Trade<u128>>
 }
 

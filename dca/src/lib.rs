@@ -41,7 +41,7 @@ use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
-use crate::types::Balance;
+use crate::types::{Balance, AssetId};
 
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
@@ -57,19 +57,19 @@ pub struct Order {
     pub amount_in: Balance,
     pub amount_out: Balance,
     pub limit: Balance,
-    pub route: Vec<Trade<u128>>
+    pub route: Vec<Trade>
 }
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
 pub struct Schedule {
-    pub period: u128,
+    pub period: u32, //TODO: use proper block number
     pub recurrence: Recurrence,
     pub order: Order
 }
 
 ///A single trade for buy/sell, describing the asset pair and the pool type in which the trade is executed
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
-pub struct Trade<AssetId> {
+pub struct Trade { //TODO: consider using the same type as in route executor
     pub pool: PoolType<AssetId>,
     pub asset_in: AssetId,
     pub asset_out: AssetId,

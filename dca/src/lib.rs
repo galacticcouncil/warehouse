@@ -25,8 +25,8 @@ use frame_support::transactional;
 use frame_system::ensure_signed;
 use orml_traits::arithmetic::{CheckedAdd, CheckedSub};
 use scale_info::TypeInfo;
-use sp_runtime::traits::BlockNumberProvider;
 use sp_runtime::traits::Saturating;
+use sp_runtime::traits::{BlockNumberProvider, ConstU32};
 use sp_runtime::ArithmeticError;
 use sp_runtime::{BoundedVec, DispatchError};
 use sp_std::vec::Vec;
@@ -129,7 +129,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn schedule_ids_per_block)]
     pub type ScheduleIdsPerBlock<T: Config> =
-        StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedVec<ScheduleId, ConstU32<5>>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedVec<ScheduleId, ConstU32<20>>, OptionQuery>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -149,8 +149,7 @@ pub mod pallet {
             let next_block_number = Self::get_next_block_mumber();
 
             if !ScheduleIdsPerBlock::<T>::contains_key(next_block_number) {
-                let ids = vec![next_schedule_id];
-                let bounded_vec: BoundedVec<ScheduleId, ConstU32<5>> = ids.try_into().unwrap();
+                let bounded_vec = Self::create_bounded_vec(next_schedule_id);
                 ScheduleIdsPerBlock::<T>::insert(next_block_number, bounded_vec);
             } else {
                 ScheduleIdsPerBlock::<T>::try_mutate_exists(next_block_number, |schedule_ids| -> DispatchResult {
@@ -182,5 +181,11 @@ impl<T: Config> Pallet<T> {
         current_block_number.saturating_inc();
 
         current_block_number
+    }
+
+    fn create_bounded_vec(next_schedule_id: ScheduleId) -> BoundedVec<ScheduleId, ConstU32<20>> {
+        let schedule_id = vec![next_schedule_id];
+        let bounded_vec: BoundedVec<ScheduleId, ConstU32<20>> = schedule_id.try_into().unwrap(); //TODO: here use constant instead of hardcoded value
+        bounded_vec
     }
 }

@@ -41,6 +41,37 @@ use weights::WeightInfo;
 pub use pallet::*;
 
 
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
+pub enum Recurrence{
+    Fixed,
+    Perpetual
+}
+
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
+pub struct Order {
+    pub asset_in: u128,
+    pub asset_out: u128,
+    pub amount_in: u128,
+    pub amount_out: u128,
+    pub limit: u128,
+    pub route: Vec<Trade<u128>>
+}
+
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
+pub struct Schedule {
+    pub period: u128,
+    pub recurrence: Recurrence,
+    pub order: Order
+}
+
+///A single trade for buy/sell, describing the asset pair and the pool type in which the trade is executed
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
+pub struct Trade<AssetId> {
+    pub pool: PoolType<AssetId>,
+    pub asset_in: AssetId,
+    pub asset_out: AssetId,
+}
+
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -82,6 +113,7 @@ pub mod pallet {
         #[transactional]
         pub fn schedule(
             origin: OriginFor<T>,
+            schedule: Schedule
         ) -> DispatchResult {
             let who = ensure_signed(origin.clone())?;
             Ok(())

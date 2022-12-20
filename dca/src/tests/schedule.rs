@@ -16,8 +16,9 @@
 // limitations under the License.
 
 use crate::tests::mock::*;
-use crate::{Error, Event};
+use crate::{Error, Event, Order, Recurrence, Schedule};
 use frame_support::{assert_noop, assert_ok};
+use frame_system::pallet_prelude::BlockNumberFor;
 use hydradx_traits::router::PoolType;
 use pretty_assertions::assert_eq;
 use sp_runtime::DispatchError;
@@ -27,8 +28,24 @@ use sp_runtime::DispatchError::BadOrigin;
 fn schedule() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
+        let schedule = Schedule {
+            period: 1,
+            order: Order {
+                asset_in: 3,
+                asset_out: 4,
+                amount_in: 1000,
+                amount_out: 2000,
+                limit: 0,
+                route: vec![]
+            },
+            recurrence: Recurrence::Fixed
+        };
 
         //Act
+        assert_ok!(Dca::schedule(
+            Origin::signed(ALICE),
+            schedule
+        ));
 
         //Assert
     });

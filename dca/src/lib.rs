@@ -86,6 +86,12 @@ pub enum PoolType {
     XYK,
 }
 
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
+pub struct Bond {
+    pub asset: AssetId,
+    pub amount: Balance,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;

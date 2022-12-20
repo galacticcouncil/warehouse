@@ -1670,7 +1670,7 @@ fn sync_yield_farm_should_work() {
 }
 
 #[test]
-fn sync_yield_farm_should_now_update_when_yield_farm_is_not_acitve() {
+fn sync_yield_farm_should_not_update_when_yield_farm_is_not_acitve() {
     let global_farm_0 = GlobalFarmData {
         id: 1,
         owner: ALICE,

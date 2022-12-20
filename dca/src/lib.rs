@@ -133,6 +133,7 @@ pub mod pallet {
     #[pallet::getter(fn schedule_ownership)]
     pub type ScheduleOwnership<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, ScheduleId, OptionQuery>;
 
+    //TODO: the number of recurrences can not be 0, so remove item once there - https://www.notion.so/DCA-061a93f912fd43b3a8e3e413abb8afdf#24dc5396cce542f681862ec7b1e54c15
     #[pallet::storage]
     #[pallet::getter(fn remaining_recurrences)]
     pub type RemainingRecurrences<T: Config> = StorageMap<_, Blake2_128Concat, ScheduleId, u128, OptionQuery>;
@@ -155,13 +156,10 @@ pub mod pallet {
             let who = ensure_signed(origin.clone())?;
 
             let next_schedule_id = Self::get_next_schedule_id()?;
-            let recurrence = schedule.recurrence.clone();
-            Schedules::<T>::insert(next_schedule_id, schedule);
-            Self::store_recurrence_in_case_of_fixed_schedule(next_schedule_id, recurrence);
-            ScheduleOwnership::<T>::insert(who, next_schedule_id);
+
+            Self::store_schedule(who, schedule, next_schedule_id)?;
 
             let blocknumber_for_schedule = next_execution_block.unwrap_or_else(|| Self::get_next_block_mumber());
-
             if !ScheduleIdsPerBlock::<T>::contains_key(blocknumber_for_schedule) {
                 let vec_with_first_schedule_id = Self::create_bounded_vec(next_schedule_id);
                 ScheduleIdsPerBlock::<T>::insert(blocknumber_for_schedule, vec_with_first_schedule_id);
@@ -169,12 +167,27 @@ pub mod pallet {
                 Self::add_schedule_id_to_existing_ids_per_block(next_schedule_id, blocknumber_for_schedule)?;
             }
 
+            //TODO: emit events
+
             Ok(())
         }
     }
 }
 
 impl<T: Config> Pallet<T> {
+    fn store_schedule(
+        who: <T as frame_system::Config>::AccountId,
+        schedule: Schedule,
+        next_schedule_id: ScheduleId,
+    ) -> DispatchResult {
+        let recurrence = schedule.recurrence.clone();
+        Schedules::<T>::insert(next_schedule_id, schedule);
+        Self::store_recurrence_in_case_of_fixed_schedule(next_schedule_id, recurrence);
+        ScheduleOwnership::<T>::insert(who, next_schedule_id);
+
+        Ok(())
+    }
+
     fn get_next_schedule_id() -> Result<ScheduleId, ArithmeticError> {
         ScheduleIdSequencer::<T>::try_mutate(|current_id| {
             *current_id = current_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;

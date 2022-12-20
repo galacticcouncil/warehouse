@@ -18,14 +18,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::ensure;
 use frame_support::traits::fungibles::Inspect;
 use frame_support::traits::Get;
 use frame_support::transactional;
 use frame_system::ensure_signed;
-use hydradx_traits::router::TradeExecution;
-use hydradx_traits::router::{ExecutorError, PoolType};
 use orml_traits::arithmetic::{CheckedAdd, CheckedSub};
 use scale_info::TypeInfo;
 use sp_runtime::DispatchError;
@@ -41,16 +39,16 @@ use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
-use crate::types::{Balance, AssetId};
+use crate::types::{Balance, AssetId, BlockNumber};
 
 
-#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 pub enum Recurrence{
     Fixed,
     Perpetual
 }
 
-#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 pub struct Order {
     pub asset_in: Balance,
     pub asset_out: Balance,
@@ -60,19 +58,24 @@ pub struct Order {
     pub route: Vec<Trade>
 }
 
-#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 pub struct Schedule {
-    pub period: u32, //TODO: use proper block number
+    pub period: BlockNumber, //TODO: use proper block number
     pub recurrence: Recurrence,
     pub order: Order
 }
 
 ///A single trade for buy/sell, describing the asset pair and the pool type in which the trade is executed
-#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo)]
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 pub struct Trade { //TODO: consider using the same type as in route executor
-    pub pool: PoolType<AssetId>,
+    pub pool: PoolType,
     pub asset_in: AssetId,
     pub asset_out: AssetId,
+}
+
+#[derive(Encode, Decode, Clone, Copy, Debug, Eq, PartialEq, TypeInfo, MaxEncodedLen)]
+pub enum PoolType {
+    XYK,
 }
 
 
@@ -84,6 +87,7 @@ pub mod pallet {
     use hydradx_traits::router::ExecutorError;
 
     #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -109,6 +113,17 @@ pub mod pallet {
 
     }
 
+    /*/// Id sequencer schedules
+    #[pallet::storage]
+    #[pallet::getter(fn last_farm_id)]
+    pub type FarmSequencer<T: Config> = StorageValue<_, FarmId, ValueQuery>;*/
+
+
+    #[pallet::storage]
+    #[pallet::getter(fn schedules)]
+    pub type Schedules<T: Config> =
+        StorageMap<_, Blake2_128Concat, BlockNumber, Schedule, OptionQuery>;
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         ///Schedule
@@ -116,7 +131,8 @@ pub mod pallet {
         #[transactional]
         pub fn schedule(
             origin: OriginFor<T>,
-            schedule: Schedule
+            schedule: Schedule,
+            next_execution_block: Option<BlockNumber>
         ) -> DispatchResult {
             let who = ensure_signed(origin.clone())?;
             Ok(())

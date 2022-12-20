@@ -126,6 +126,34 @@ fn schedule_should_work_when_multiple_schedules_stored() {
     });
 }
 
+#[test]
+fn schedule_should_fail_when_not_called_by_user() {
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let trades = create_bounded_vec(vec![Trade {
+            asset_in: 3,
+            asset_out: 4,
+            pool: PoolType::XYK,
+        }]);
+
+        let schedule = Schedule {
+            period: 10,
+            order: Order {
+                asset_in: 3,
+                asset_out: 4,
+                amount_in: 1000,
+                amount_out: 2000,
+                limit: 0,
+                route: trades,
+            },
+            recurrence: Recurrence::Fixed,
+        };
+
+        //Act and assert
+        assert_noop!(Dca::schedule(Origin::none(), schedule, Option::None), BadOrigin);
+    });
+}
+
 fn create_bounded_vec(trades: Vec<Trade>) -> BoundedVec<Trade, ConstU32<5>> {
     let bounded_vec: BoundedVec<Trade, sp_runtime::traits::ConstU32<5>> = trades.try_into().unwrap();
     bounded_vec

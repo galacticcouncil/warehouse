@@ -176,7 +176,7 @@ pub mod pallet {
                             .map_err(|_| Error::<T>::UnexpectedError)?;
                         Ok(())
                     },
-                );
+                )?;
             }
 
             Ok(())

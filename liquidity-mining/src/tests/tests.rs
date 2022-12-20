@@ -395,7 +395,7 @@ fn get_loyalty_multiplier_should_work() {
 }
 
 #[test]
-fn update_global_farm_should_work() {
+fn sync_global_farm_should_work() {
     let testing_values = vec![
         (
             26_u64,
@@ -713,7 +713,7 @@ fn update_global_farm_should_work() {
             );
 
             let r = with_transaction(|| {
-                TransactionOutcome::Commit(LiquidityMining::update_global_farm(&mut global_farm, *current_period))
+                TransactionOutcome::Commit(LiquidityMining::sync_global_farm(&mut global_farm, *current_period))
             })
             .unwrap();
 
@@ -746,7 +746,7 @@ fn update_global_farm_should_work() {
 }
 
 #[test]
-fn update_global_farm_should_not_update_farm_when_farm_is_not_active() {
+fn sync_global_farm_should_not_update_farm_when_farm_is_not_active() {
     {
         let global_farm_0 = GlobalFarmData {
             id: 1,
@@ -774,7 +774,7 @@ fn update_global_farm_should_not_update_farm_when_farm_is_not_active() {
         new_test_ext().execute_with(|| {
             let current_period = global_farm_0.updated_at + 100;
             let r = with_transaction(|| {
-                TransactionOutcome::Commit(LiquidityMining::update_global_farm(&mut global_farm, current_period))
+                TransactionOutcome::Commit(LiquidityMining::sync_global_farm(&mut global_farm, current_period))
             })
             .unwrap();
 
@@ -785,7 +785,7 @@ fn update_global_farm_should_not_update_farm_when_farm_is_not_active() {
 }
 
 #[test]
-fn update_global_farm_should_not_update_farm_when_farm_has_no_shares() {
+fn sync_global_farm_should_not_update_farm_when_farm_has_no_shares() {
     {
         let global_farm_0 = GlobalFarmData {
             id: 1,
@@ -813,7 +813,7 @@ fn update_global_farm_should_not_update_farm_when_farm_has_no_shares() {
         new_test_ext().execute_with(|| {
             let current_period = global_farm_0.updated_at + 100;
             let r = with_transaction(|| {
-                TransactionOutcome::Commit(LiquidityMining::update_global_farm(&mut global_farm, current_period))
+                TransactionOutcome::Commit(LiquidityMining::sync_global_farm(&mut global_farm, current_period))
             })
             .unwrap();
 
@@ -824,7 +824,7 @@ fn update_global_farm_should_not_update_farm_when_farm_has_no_shares() {
 }
 
 #[test]
-fn update_global_farm_should_not_update_farm_when_farm_was_already_updated_in_this_period() {
+fn sync_global_farm_should_not_update_farm_when_farm_was_already_updated_in_this_period() {
     {
         let global_farm_0 = GlobalFarmData {
             id: 1,
@@ -852,7 +852,7 @@ fn update_global_farm_should_not_update_farm_when_farm_was_already_updated_in_th
         new_test_ext().execute_with(|| {
             let current_period = global_farm_0.updated_at;
             let r = with_transaction(|| {
-                TransactionOutcome::Commit(LiquidityMining::update_global_farm(&mut global_farm, current_period))
+                TransactionOutcome::Commit(LiquidityMining::sync_global_farm(&mut global_farm, current_period))
             })
             .unwrap();
 
@@ -1208,7 +1208,7 @@ fn claim_from_global_farm_should_work() {
         yield_farm.accumulated_rpz = FixedU128::from(*yield_farm_accumulated_rpz);
 
         assert_eq!(
-            LiquidityMining::claim_from_global_farm(
+            LiquidityMining::calculate_rewards_from_pot(
                 &mut global_farm,
                 &mut yield_farm,
                 *yield_farm_stake_in_global_farm
@@ -1246,7 +1246,7 @@ fn claim_from_global_farm_should_work() {
 }
 
 #[test]
-fn update_yield_farm_should_work() {
+fn sync_yield_farm_should_work() {
     let testing_values = vec![
         (
             BSX_FARM,
@@ -1612,7 +1612,7 @@ fn update_yield_farm_should_work() {
 
             //Act
             assert_ok!(with_transaction(|| {
-                TransactionOutcome::Commit(LiquidityMining::update_yield_farm(
+                TransactionOutcome::Commit(LiquidityMining::sync_yield_farm(
                     &mut yield_farm,
                     &mut global_farm,
                     current_period,
@@ -1671,7 +1671,7 @@ fn update_yield_farm_should_work() {
 }
 
 #[test]
-fn update_yield_farm_should_now_update_when_yield_farm_is_not_acitve() {
+fn sync_yield_farm_should_now_update_when_yield_farm_is_not_acitve() {
     let global_farm_0 = GlobalFarmData {
         id: 1,
         owner: ALICE,
@@ -1719,7 +1719,7 @@ fn update_yield_farm_should_now_update_when_yield_farm_is_not_acitve() {
         let current_period = yield_farm_0.updated_at + global_farm_0.updated_at;
         //Stopped yield-farm
         assert_ok!(with_transaction(|| {
-            TransactionOutcome::Commit(LiquidityMining::update_yield_farm(
+            TransactionOutcome::Commit(LiquidityMining::sync_yield_farm(
                 &mut stopped_yield_farm,
                 &mut global_farm,
                 current_period,
@@ -1737,7 +1737,7 @@ fn update_yield_farm_should_now_update_when_yield_farm_is_not_acitve() {
 
         //Terminated yield-farm
         assert_ok!(with_transaction(|| {
-            TransactionOutcome::Commit(LiquidityMining::update_yield_farm(
+            TransactionOutcome::Commit(LiquidityMining::sync_yield_farm(
                 &mut terminated_yield_farm,
                 &mut global_farm,
                 current_period,
@@ -1756,7 +1756,7 @@ fn update_yield_farm_should_now_update_when_yield_farm_is_not_acitve() {
 }
 
 #[test]
-fn update_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
+fn sync_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
     let global_farm_0 = GlobalFarmData {
         id: 1,
         owner: ALICE,
@@ -1800,7 +1800,7 @@ fn update_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
     new_test_ext().execute_with(|| {
         let current_period = yield_farm_0.updated_at + global_farm_0.updated_at;
         assert_ok!(with_transaction(|| {
-            TransactionOutcome::Commit(LiquidityMining::update_yield_farm(
+            TransactionOutcome::Commit(LiquidityMining::sync_yield_farm(
                 &mut yield_farm,
                 &mut global_farm,
                 current_period,
@@ -1813,7 +1813,7 @@ fn update_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
 }
 
 #[test]
-fn update_yield_farm_should_now_update_when_yield_farm_was_already_updated_in_this_period() {
+fn sync_yield_farm_should_now_update_when_yield_farm_was_already_updated_in_this_period() {
     let global_farm_0 = GlobalFarmData {
         id: 1,
         owner: ALICE,
@@ -1857,7 +1857,7 @@ fn update_yield_farm_should_now_update_when_yield_farm_was_already_updated_in_th
     new_test_ext().execute_with(|| {
         let current_period = global_farm_0.updated_at;
         assert_ok!(with_transaction(|| {
-            TransactionOutcome::Commit(LiquidityMining::update_yield_farm(
+            TransactionOutcome::Commit(LiquidityMining::sync_yield_farm(
                 &mut yield_farm,
                 &mut global_farm,
                 current_period,
@@ -2259,6 +2259,113 @@ fn global_farm_should_work() {
 }
 
 #[test]
+fn global_farm_add_stake_should_work_when_amount_is_provided() {
+    let global_farm_0 = GlobalFarmData::<Test, Instance1>::new(
+        1,
+        10,
+        BSX,
+        Perquintill::from_float(0.2),
+        1_000,
+        100,
+        GC,
+        BSX,
+        1_000_000,
+        1_000,
+        One::one(),
+    );
+
+    let mut global_farm = global_farm_0.clone();
+
+    assert_ok!(global_farm.add_stake(1));
+    assert_eq!(
+        global_farm,
+        GlobalFarmData {
+            total_shares_z: 1,
+            ..global_farm_0.clone()
+        }
+    );
+
+    assert_ok!(global_farm.add_stake(1_000_000 * ONE));
+    assert_eq!(
+        global_farm,
+        GlobalFarmData {
+            total_shares_z: 1_000_000 * ONE + 1, //+1 from previous add_stake
+            ..global_farm_0
+        }
+    );
+}
+
+#[test]
+fn global_farm_remove_stake_should_work_when_amount_is_provided() {
+    new_test_ext().execute_with(|| {
+        let mut global_farm_0 = GlobalFarmData::<Test, Instance1>::new(
+            1,
+            10,
+            BSX,
+            Perquintill::from_float(0.2),
+            1_000,
+            100,
+            GC,
+            BSX,
+            1_000_000,
+            1_000,
+            One::one(),
+        );
+
+        global_farm_0.total_shares_z = 1_000_000 * ONE;
+
+        let mut global_farm = global_farm_0.clone();
+
+        assert_ok!(global_farm.remove_stake(1));
+        assert_eq!(
+            global_farm,
+            GlobalFarmData {
+                total_shares_z: 1_000_000 * ONE - 1,
+                ..global_farm_0.clone()
+            }
+        );
+
+        assert_ok!(global_farm.remove_stake(1_000_000 * ONE - 1)); //-1 from previous remove_stake
+        assert_eq!(
+            global_farm,
+            GlobalFarmData {
+                total_shares_z: 0,
+                ..global_farm_0
+            }
+        );
+    });
+}
+
+#[test]
+#[cfg_attr(debug_assertions, should_panic(expected = "Defensive failure has been triggered!"))]
+fn global_farm_remove_stake_should_not_work_when_math_overflow() {
+    new_test_ext().execute_with(|| {
+        let mut global_farm_0 = GlobalFarmData::<Test, Instance1>::new(
+            1,
+            10,
+            BSX,
+            Perquintill::from_float(0.2),
+            1_000,
+            100,
+            GC,
+            BSX,
+            1_000_000,
+            1_000,
+            One::one(),
+        );
+
+        global_farm_0.total_shares_z = 1_000_000 * ONE;
+        let mut global_farm = global_farm_0;
+
+        //sub with overflow
+        assert_noop!(
+            global_farm.remove_stake(1 + 1_000_000 * ONE),
+            Error::InconsistentState(InconsistentStateError::InvalidTotalSharesZ)
+        );
+    });
+}
+
+#[test]
 fn is_yield_farm_clamable_should_work() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
@@ -2376,7 +2483,7 @@ fn min_yield_farm_multiplier_should_be_ge_1_when_multiplied_by_min_deposit() {
 }
 
 #[test]
-fn update_global_farm_should_emit_all_rewards_distributed_when_reward_is_zero() {
+fn sync_global_farm_should_emit_all_rewards_distributed_when_reward_is_zero() {
     new_test_ext().execute_with(|| {
         let global_farm_id = 10;
 
@@ -2402,7 +2509,7 @@ fn update_global_farm_should_emit_all_rewards_distributed_when_reward_is_zero() 
 
         assert_eq!(
             with_transaction(|| {
-                TransactionOutcome::Commit(LiquidityMining::update_global_farm(&mut global_farm, 1_000_000_000))
+                TransactionOutcome::Commit(LiquidityMining::sync_global_farm(&mut global_farm, 1_000_000_000))
             })
             .unwrap(),
             Balance::zero()

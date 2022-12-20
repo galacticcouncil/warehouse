@@ -151,6 +151,27 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     pub fn is_full(&self) -> bool {
         self.total_yield_farms_count.ge(&<T>::MaxYieldFarmsPerGlobalFarm::get())
     }
+
+    /// Function adds `amount` to `total_shares_z`.
+    pub fn add_stake(&mut self, amount: Balance) -> Result<(), ArithmeticError> {
+        self.total_shares_z = self
+            .total_shares_z
+            .checked_add(amount)
+            .ok_or(ArithmeticError::Overflow)?;
+
+        Ok(())
+    }
+
+    /// Function removes `amount` from `total_shares_z`.
+    pub fn remove_stake(&mut self, amount: Balance) -> Result<(), Error<T, I>> {
+        //NOTE: This should never fail, we should never sub more than current state.
+        self.total_shares_z = self
+            .total_shares_z
+            .checked_sub(amount)
+            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidTotalSharesZ.into())?;
+
+        Ok(())
+    }
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]

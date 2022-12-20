@@ -166,7 +166,7 @@ prop_compose! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
-    fn update_global_farm(
+    fn sync_global_farm(
         (mut farm, current_period) in get_global_farm_and_current_period(),
         left_to_distribute in left_to_distribute(),
     ) {
@@ -178,7 +178,7 @@ proptest! {
                 //NOTE: _0 - before action, _1 - after action
                 let pending_rewards_0 = farm.pending_rewards;
                 let accumulated_rpz_0 = farm.accumulated_rpz;
-                let reward = LiquidityMining::update_global_farm(&mut farm, current_period).unwrap();
+                let reward = LiquidityMining::sync_global_farm(&mut farm, current_period).unwrap();
 
                 let s_0 = accumulated_rpz_0
                     .checked_mul(&FixedU128::from((farm.total_shares_z, ONE))).unwrap()
@@ -215,7 +215,7 @@ proptest! {
                 .checked_add(global_farm.accumulated_paid_rewards).unwrap();
 
             let stake_in_global_farm = yield_farm.total_valued_shares;  //multiplier == 1 => valued_share == z
-            let _ = LiquidityMining::claim_from_global_farm(&mut global_farm, &mut yield_farm, stake_in_global_farm).unwrap();
+            let _ = LiquidityMining::calculate_rewards_from_pot(&mut global_farm, &mut yield_farm, stake_in_global_farm).unwrap();
 
             let sum_accumulated_rewards_1 = global_farm.pending_rewards
                 .checked_add(global_farm.accumulated_paid_rewards).unwrap();
@@ -228,7 +228,7 @@ proptest! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
-    fn update_yield_farm(
+    fn sync_yield_farm(
         (mut global_farm, mut yield_farm, current_period, _, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
@@ -246,7 +246,7 @@ proptest! {
                 let pending_rewards_0 = global_farm.pending_rewards;
                 let accumulated_rpvs_0 = yield_farm.accumulated_rpvs;
 
-                LiquidityMining::update_yield_farm(
+                LiquidityMining::sync_yield_farm(
                     &mut yield_farm, &mut global_farm, current_period).unwrap();
 
                 let global_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
@@ -282,7 +282,7 @@ proptest! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
-    fn update_global_farm_left_to_distribute_invariant(
+    fn sync_global_farm_left_to_distribute_invariant(
         (mut global_farm, _, current_period, _, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
@@ -296,7 +296,7 @@ proptest! {
                 let pot_balance_0 = Tokens::free_balance(REWARD_CURRENCY, &pot);
 
                 let reward =
-                    LiquidityMining::update_global_farm(&mut global_farm, current_period).unwrap();
+                    LiquidityMining::sync_global_farm(&mut global_farm, current_period).unwrap();
 
                 let s_0 = (left_to_distribute_0 - reward).max(0);
                 let s_1 = Tokens::free_balance(REWARD_CURRENCY, &global_farm_account);

@@ -99,6 +99,18 @@ pub mod pallet {
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        fn on_initialize(_p: T::BlockNumber) -> Weight {
+            let mut weight: u64 = 0;
+
+            //TODO: increment the weight once an action happens
+            //weight += T::WeightInfo::get_spot_price().ref_time();
+
+            Weight::from_ref_time(weight)
+        }
+    }
+
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;

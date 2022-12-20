@@ -109,6 +109,36 @@ fn schedule_should_work_when_block_is_specified_by_user() {
 }
 
 #[test]
+fn schedule_should_work_when_perpetual_schedule_is_specified() {
+    ExtBuilder::default().build().execute_with(|| {
+        //Arrange
+        let schedule = schedule_fake(Recurrence::Perpetual);
+
+        //Act
+        set_block_number(500);
+        assert_ok!(Dca::schedule(Origin::signed(ALICE), schedule, Option::None));
+
+        //Assert
+        let schedule_id = 1;
+        let stored_schedule = Dca::schedules(schedule_id).unwrap();
+        assert_eq!(stored_schedule, schedule_fake(Recurrence::Perpetual));
+
+        //Check if schedule ids are stored
+        let schedule_ids = Dca::schedule_ids_per_block(501);
+        assert!(Dca::schedule_ids_per_block(501).is_some());
+        let expected_scheduled_ids_for_next_block = create_bounded_vec_with_schedule_ids(vec![1]);
+        assert_eq!(schedule_ids.unwrap(), expected_scheduled_ids_for_next_block);
+
+        //Check if schedule ownership is created
+        assert!(Dca::schedule_ownership(ALICE).is_some());
+        assert_eq!(Dca::schedule_ownership(ALICE).unwrap(), 1);
+
+        //Check if the recurrances have been stored
+        assert!(Dca::remaining_recurrences(schedule_id).is_none());
+    });
+}
+
+#[test]
 fn schedule_should_fail_when_not_called_by_user() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange

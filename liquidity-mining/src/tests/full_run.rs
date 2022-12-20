@@ -20,6 +20,7 @@ use pretty_assertions::assert_eq;
 use test_ext::*;
 
 use crate::tests::mock::LiquidityMining2;
+use test_utils::assert_balance_approx;
 
 use rand::Rng;
 
@@ -765,8 +766,9 @@ fn yield_farm_should_claim_expected_amount() {
             ));
 
             let global_farm_account = LiquidityMining2::farm_account_id(GLOBAL_FARM).unwrap();
-            //leftover because of rounding errors
-            assert_eq!(Tokens::free_balance(BSX, &pot), 2);
+            //leftovers in the pot because of rounding errors
+            assert_balance_approx!(pot, BSX, 0, 2);
+
             assert_eq!(
                 LiquidityMining2::yield_farm(yield_farm_a_key)
                     .unwrap()

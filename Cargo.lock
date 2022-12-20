@@ -5130,6 +5130,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-utils",
 ]
 
 [[package]]
@@ -10163,7 +10164,7 @@ dependencies = [
 
 [[package]]
 name = "test-utils"
-version = "1.0.2"
+version = "1.1.0"
 dependencies = [
  "frame-system",
  "pretty_assertions",

@@ -18,6 +18,7 @@
 use super::*;
 use pretty_assertions::assert_eq;
 use test_ext::*;
+use test_utils::assert_transact_ok;
 
 #[test]
 fn validate_create_farm_data_should_work() {
@@ -1611,13 +1612,11 @@ fn sync_yield_farm_should_work() {
             );
 
             //Act
-            assert_ok!(with_transaction(|| {
-                TransactionOutcome::Commit(LiquidityMining::sync_yield_farm(
-                    &mut yield_farm,
-                    &mut global_farm,
-                    current_period,
-                ))
-            }));
+            assert_transact_ok!(LiquidityMining::sync_yield_farm(
+                &mut yield_farm,
+                &mut global_farm,
+                current_period,
+            ));
 
             //Assert
             //
@@ -1718,13 +1717,11 @@ fn sync_yield_farm_should_now_update_when_yield_farm_is_not_acitve() {
     new_test_ext().execute_with(|| {
         let current_period = yield_farm_0.updated_at + global_farm_0.updated_at;
         //Stopped yield-farm
-        assert_ok!(with_transaction(|| {
-            TransactionOutcome::Commit(LiquidityMining::sync_yield_farm(
-                &mut stopped_yield_farm,
-                &mut global_farm,
-                current_period,
-            ))
-        }));
+        assert_transact_ok!(LiquidityMining::sync_yield_farm(
+            &mut stopped_yield_farm,
+            &mut global_farm,
+            current_period,
+        ));
 
         assert_eq!(
             stopped_yield_farm,
@@ -1736,13 +1733,11 @@ fn sync_yield_farm_should_now_update_when_yield_farm_is_not_acitve() {
         assert_eq!(global_farm, global_farm_0);
 
         //Terminated yield-farm
-        assert_ok!(with_transaction(|| {
-            TransactionOutcome::Commit(LiquidityMining::sync_yield_farm(
-                &mut terminated_yield_farm,
-                &mut global_farm,
-                current_period,
-            ))
-        }));
+        assert_transact_ok!(LiquidityMining::sync_yield_farm(
+            &mut terminated_yield_farm,
+            &mut global_farm,
+            current_period,
+        ));
 
         assert_eq!(
             terminated_yield_farm,
@@ -1799,13 +1794,11 @@ fn sync_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
 
     new_test_ext().execute_with(|| {
         let current_period = yield_farm_0.updated_at + global_farm_0.updated_at;
-        assert_ok!(with_transaction(|| {
-            TransactionOutcome::Commit(LiquidityMining::sync_yield_farm(
-                &mut yield_farm,
-                &mut global_farm,
-                current_period,
-            ))
-        }));
+        assert_transact_ok!(LiquidityMining::sync_yield_farm(
+            &mut yield_farm,
+            &mut global_farm,
+            current_period,
+        ));
 
         assert_eq!(yield_farm, yield_farm_0);
         assert_eq!(global_farm, global_farm_0);
@@ -1813,7 +1806,7 @@ fn sync_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
 }
 
 #[test]
-fn sync_yield_farm_should_now_update_when_yield_farm_was_already_updated_in_this_period() {
+fn sync_yield_farm_should_not_update_when_yield_farm_was_already_updated_in_this_period() {
     let global_farm_0 = GlobalFarmData {
         id: 1,
         owner: ALICE,
@@ -1856,13 +1849,11 @@ fn sync_yield_farm_should_now_update_when_yield_farm_was_already_updated_in_this
 
     new_test_ext().execute_with(|| {
         let current_period = global_farm_0.updated_at;
-        assert_ok!(with_transaction(|| {
-            TransactionOutcome::Commit(LiquidityMining::sync_yield_farm(
-                &mut yield_farm,
-                &mut global_farm,
-                current_period,
-            ))
-        }));
+        assert_transact_ok!(LiquidityMining::sync_yield_farm(
+            &mut yield_farm,
+            &mut global_farm,
+            current_period,
+        ));
 
         assert_eq!(yield_farm, yield_farm_0);
         assert_eq!(global_farm, global_farm_0);

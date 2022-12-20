@@ -1388,9 +1388,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     let current_period = Self::get_current_period(global_farm.blocks_per_period)?;
 
                     Self::update_global_farm(global_farm, current_period)?;
-                    if !yield_farm.total_shares.is_zero() && yield_farm.updated_at != current_period {
-                        Self::update_yield_farm(yield_farm, global_farm, current_period)?;
-                    }
+                    Self::update_yield_farm(yield_farm, global_farm, current_period)?;
 
                     let valued_shares = get_token_value_of_lp_shares(
                         global_farm.incentivized_asset,
@@ -1643,6 +1641,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// This function calculates and updates `accumulated_rpvz` and all associated properties of
     /// `YieldFarm` if conditions are met. It also transfers `yield_farm_rewards` from `GlobalFarm`
     /// account to `YieldFarm` account.
+    #[require_transactional]
     fn update_yield_farm(
         yield_farm: &mut YieldFarmData<T, I>,
         global_farm: &mut GlobalFarmData<T, I>,
@@ -1728,24 +1727,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         Ok(())
     }
 
-    /// This function update both (global and yield) farms if conditions are met.
-    #[require_transactional]
-    fn maybe_update_farms(
-        global_farm: &mut GlobalFarmData<T, I>,
-        yield_farm: &mut YieldFarmData<T, I>,
-        current_period: PeriodOf<T>,
-    ) -> Result<(), DispatchError> {
-        if !yield_farm.state.is_active() {
-            return Ok(());
-        }
-
-        if !yield_farm.total_shares.is_zero() && yield_farm.updated_at != current_period {
-            Self::update_global_farm(global_farm, current_period)?;
-            Self::update_yield_farm(yield_farm, global_farm, current_period)?;
-        }
-        Ok(())
-    }
-
     // Claiming from `YieldFarm` is not possible(will fail) if yield farm is terminated or has no
     // entries.
     fn is_yield_farm_claimable(
@@ -1770,16 +1751,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         }
 
         None
-    }
-
-    /// This function updates global farm's RPZ if conditions are met.
-    fn maybe_update_global_farm_rpz(
-        global_farm: &mut GlobalFarmData<T, I>,
-        current_period: PeriodOf<T>,
-    ) -> Result<(), DispatchError> {
-        Self::update_global_farm(global_farm, current_period)?;
-
-        Ok(())
     }
 
     #[inline(always)]

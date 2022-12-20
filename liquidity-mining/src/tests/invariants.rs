@@ -29,7 +29,7 @@ const REWARD_CURRENCY: AssetId = BSX;
 const BLOCK_PER_YEAR: u64 = 5_256_000;
 
 fn total_shares_z() -> impl Strategy<Value = Balance> {
-    0..100_000_000_000_000_u128
+    0..100_000_000_000_000_000_u128
 }
 
 fn left_to_distribute() -> impl Strategy<Value = Balance> {
@@ -89,7 +89,7 @@ prop_compose! {
         )(
             yield_farm_accumulated_rpz in 0..global_farm.accumulated_rpz.checked_div_int(1_u128).unwrap(),
             tmp_reward in 100_000 * ONE..5_256_000_000 * ONE, //max: 10K for 1 year, every block
-            yield_farm_updated_at in global_farm.updated_at..global_farm.updated_at + 1_000,
+            yield_farm_updated_at in global_farm.updated_at - 1_000..global_farm.updated_at,
             global_farm in Just(global_farm),
         )
     -> (GlobalFarmData<Test, Instance1>, YieldFarmData<Test,Instance1>) {
@@ -232,73 +232,46 @@ proptest! {
         (mut global_farm, mut yield_farm, current_period, _, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),
     ) {
         new_test_ext().execute_with(|| {
-            const GLOBAL_FARM_ID: GlobalFarmId = 1;
-
-            let pot = LiquidityMining::pot_account_id().unwrap();
-            let global_farm_account = LiquidityMining::farm_account_id(GLOBAL_FARM_ID).unwrap();
-            //rewads for yield farm are paid from global-farm's account to pot
-            Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
-
-            //NOTE: _0 - before action, _1 - after action
-            let pot_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &pot);
-            let global_farm_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
-
-            LiquidityMining::update_yield_farm(
-                &mut yield_farm, &mut global_farm, current_period).unwrap();
-
-            let global_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
-
-            //invariant 1
-            //NOTE: yield-farm's rewards are left in the pot until user claims.
-            let pot_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &pot);
-            let s_0 = global_farm_balance_0 + pot_balance_0;
-            let s_1 = global_farm_balance_1 + pot_balance_1;
-
-            assert_eq!(
-                s_0,
-                s_1,
-                "invariant: `global_farm_balance + yield_farm_balance` is always constant"
-           );
-        });
-    }
-}
-
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(1_000))]
-    #[test]
-    fn maybe_update_farms(
-        (mut global_farm, mut yield_farm, current_period, _, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),
-    ) {
-        new_test_ext().execute_with(|| {
             let _ = with_transaction(|| {
                 const GLOBAL_FARM_ID: GlobalFarmId = 1;
 
+                let pot = LiquidityMining::pot_account_id().unwrap();
                 let global_farm_account = LiquidityMining::farm_account_id(GLOBAL_FARM_ID).unwrap();
                 //rewads for yield farm are paid from global-farm's account to pot
                 Tokens::set_balance(Origin::root(), global_farm_account, REWARD_CURRENCY, left_to_distribute, 0).unwrap();
 
                 //NOTE: _0 - before action, _1 - after action
+                let pot_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &pot);
                 let global_farm_balance_0 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
+                let pending_rewards_0 = global_farm.pending_rewards;
                 let accumulated_rpvs_0 = yield_farm.accumulated_rpvs;
 
-                LiquidityMining::maybe_update_farms(&mut global_farm, &mut yield_farm, current_period).unwrap();
+                LiquidityMining::update_yield_farm(
+                    &mut yield_farm, &mut global_farm, current_period).unwrap();
 
                 let global_farm_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
 
-                //invariant 2
-                let s_0 = accumulated_rpvs_0
-                    .checked_mul(&FixedU128::from((yield_farm.total_valued_shares, ONE))).unwrap()
-                    .checked_add(&FixedU128::from((global_farm_balance_0, ONE))).unwrap();
-                let s_1 = yield_farm.accumulated_rpvs
-                    .checked_mul(&FixedU128::from((yield_farm.total_valued_shares, ONE))).unwrap()
-                    .checked_add(&FixedU128::from((global_farm_balance_1, ONE))).unwrap();
+                //invariant 1
+                //NOTE: yield-farm's rewards are left in the pot until user claims.
+                let pot_balance_1 = Tokens::total_balance(REWARD_CURRENCY, &pot);
+                let s_0 = global_farm_balance_0 + pot_balance_0;
+                let s_1 = global_farm_balance_1 + pot_balance_1;
 
-                assert_eq_approx!(
+                assert_eq!(
                     s_0,
                     s_1,
-                    FixedU128::from((TOLERANCE, ONE)),
-                    "invariant: global_farm_balance + acc_rpvs * total_valued_shares"
-                );
+                    "invariant: `global_farm_balance + pot_balance` is always constant"
+               );
+
+                //invariant 2
+                let s_0 = FixedU128::from((pending_rewards_0, ONE)) + accumulated_rpvs_0 * FixedU128::from((yield_farm.total_valued_shares, ONE));
+                let s_1 = FixedU128::from((global_farm.pending_rewards, ONE)) + yield_farm.accumulated_rpvs * FixedU128::from((yield_farm.total_valued_shares, ONE));
+
+                assert_eq!(
+                    s_0,
+                    s_1,
+                    "invariant: `global_farm.pending_rewards + yield_farm.accumulated_rpvs * yield_farm.total_valued_shares` is always constant"
+               );
 
                 TransactionOutcome::Commit(DispatchResult::Ok(()))
             });
@@ -307,7 +280,7 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(1000))]
+    #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
     fn update_global_farm_left_to_distribute_invariant(
         (mut global_farm, _, current_period, _, left_to_distribute) in get_farms_and_current_period_and_yield_farm_rewards_and_lef_to_distribute(),

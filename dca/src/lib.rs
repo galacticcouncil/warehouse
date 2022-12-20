@@ -117,7 +117,7 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         ///First error
-        DummyError,
+        UnexpectedError,
     }
 
     /// Id sequencer for schedules
@@ -163,11 +163,11 @@ pub mod pallet {
                 ScheduleIdsPerBlock::<T>::try_mutate_exists(
                     blocknumber_for_schedule,
                     |schedule_ids| -> DispatchResult {
-                        let mut schedule_ids = schedule_ids.as_mut().ok_or(Error::<T>::DummyError)?;
+                        let mut schedule_ids = schedule_ids.as_mut().ok_or(Error::<T>::UnexpectedError)?; //TODO: add different error handling
 
                         schedule_ids
                             .try_push(next_schedule_id)
-                            .map_err(|_| Error::<T>::DummyError)?;
+                            .map_err(|_| Error::<T>::UnexpectedError)?;
                         Ok(())
                     },
                 );

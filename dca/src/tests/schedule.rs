@@ -74,8 +74,10 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
             }
         );
 
+        let schedule_ids = Dca::schedule_ids_per_block(501);
         assert!(Dca::schedule_ids_per_block(501).is_some());
-        //TODO: add assertion for next
+        let expected_scheduled_ids_for_next_block = create_bounded_vec_with_schedule_ids(vec![1]);
+        assert_eq!(schedule_ids.unwrap(), expected_scheduled_ids_for_next_block);
     });
 }
 

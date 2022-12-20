@@ -74,8 +74,7 @@ pub struct Schedule {
 ///A single trade for buy/sell, describing the asset pair and the pool type in which the trade is executed
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 pub struct Trade {
-    //TODO: consider using the same type as in route executor
-    pub pool: PoolType,
+    pub pool: PoolType, //TODO: consider using the same type as in route executor
     pub asset_in: AssetId,
     pub asset_out: AssetId,
 }

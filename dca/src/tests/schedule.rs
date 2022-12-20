@@ -22,6 +22,7 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use pretty_assertions::assert_eq;
 use sp_runtime::DispatchError;
 use sp_runtime::DispatchError::BadOrigin;
+use sp_runtime::BoundedVec;
 
 #[test]
 fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified() {
@@ -32,6 +33,10 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
             asset_out: 4,
             pool: PoolType::XYK
         }];
+
+        let bounded_vec: BoundedVec<Trade, sp_runtime::traits::ConstU32<5>> =
+            trades.try_into().unwrap();
+
         let schedule = Schedule {
             period: 1,
             order: Order {
@@ -40,7 +45,7 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
                 amount_in: 1000,
                 amount_out: 2000,
                 limit: 0,
-                route: trades
+                route: bounded_vec
             },
             recurrence: Recurrence::Fixed
         };
@@ -53,6 +58,7 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
         ));
 
         let stored_schedule = Dca::schedules(1).unwrap();
+
 
         //Assert
     });

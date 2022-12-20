@@ -26,7 +26,7 @@ use frame_support::transactional;
 use frame_system::ensure_signed;
 use orml_traits::arithmetic::{CheckedAdd, CheckedSub};
 use scale_info::TypeInfo;
-use sp_runtime::DispatchError;
+use sp_runtime::{BoundedVec, DispatchError};
 use sp_std::vec::Vec;
 
 #[cfg(test)]
@@ -55,7 +55,7 @@ pub struct Order {
     pub amount_in: Balance,
     pub amount_out: Balance,
     pub limit: Balance,
-    pub route: Vec<Trade>
+    pub route: BoundedVec<Trade, sp_runtime::traits::ConstU32<5>>
 }
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
@@ -134,7 +134,9 @@ pub mod pallet {
             schedule: Schedule,
             next_execution_block: Option<BlockNumber>
         ) -> DispatchResult {
-            let who = ensure_signed(origin.clone())?;
+            //let who = ensure_signed(origin.clone())?;
+
+            Schedules::<T>::insert(1, schedule);
             Ok(())
         }
     }

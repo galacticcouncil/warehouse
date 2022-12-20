@@ -149,8 +149,8 @@ pub mod pallet {
             let next_block_number = Self::get_next_block_mumber();
 
             if !ScheduleIdsPerBlock::<T>::contains_key(next_block_number) {
-                let bounded_vec = Self::create_bounded_vec(next_schedule_id);
-                ScheduleIdsPerBlock::<T>::insert(next_block_number, bounded_vec);
+                let vec_with_first_schedule_id = Self::create_bounded_vec(next_schedule_id);
+                ScheduleIdsPerBlock::<T>::insert(next_block_number, vec_with_first_schedule_id);
             } else {
                 ScheduleIdsPerBlock::<T>::try_mutate_exists(next_block_number, |schedule_ids| -> DispatchResult {
                     let mut schedule_ids = schedule_ids.as_mut().ok_or(Error::<T>::DummyError)?;

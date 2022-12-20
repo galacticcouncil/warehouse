@@ -19,6 +19,7 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::ensure;
+use frame_support::pallet_prelude::*;
 use frame_support::traits::fungibles::Inspect;
 use frame_support::traits::Get;
 use frame_support::transactional;
@@ -89,7 +90,6 @@ pub enum PoolType {
 pub mod pallet {
     use super::*;
     use codec::EncodeLike;
-    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
     use hydradx_traits::router::ExecutorError;
     use sp_runtime::traits::{MaybeDisplay, Saturating};
@@ -166,17 +166,7 @@ pub mod pallet {
                 let vec_with_first_schedule_id = Self::create_bounded_vec(next_schedule_id);
                 ScheduleIdsPerBlock::<T>::insert(blocknumber_for_schedule, vec_with_first_schedule_id);
             } else {
-                ScheduleIdsPerBlock::<T>::try_mutate_exists(
-                    blocknumber_for_schedule,
-                    |schedule_ids| -> DispatchResult {
-                        let mut schedule_ids = schedule_ids.as_mut().ok_or(Error::<T>::UnexpectedError)?; //TODO: add different error handling
-
-                        schedule_ids
-                            .try_push(next_schedule_id)
-                            .map_err(|_| Error::<T>::UnexpectedError)?;
-                        Ok(())
-                    },
-                )?;
+                Self::add_schedule_id_to_existing_ids_per_block(next_schedule_id, blocknumber_for_schedule)?;
             }
 
             Ok(())
@@ -210,5 +200,21 @@ impl<T: Config> Pallet<T> {
         if let Recurrence::Fixed(number_of_recurrence) = recurrence {
             RemainingRecurrences::<T>::insert(next_schedule_id, number_of_recurrence);
         };
+    }
+
+    fn add_schedule_id_to_existing_ids_per_block(
+        next_schedule_id: ScheduleId,
+        blocknumber_for_schedule: <T as frame_system::Config>::BlockNumber,
+    ) -> DispatchResult {
+        ScheduleIdsPerBlock::<T>::try_mutate_exists(blocknumber_for_schedule, |schedule_ids| -> DispatchResult {
+            let mut schedule_ids = schedule_ids.as_mut().ok_or(Error::<T>::UnexpectedError)?; //TODO: add different error handling
+
+            schedule_ids
+                .try_push(next_schedule_id)
+                .map_err(|_| Error::<T>::UnexpectedError)?;
+            Ok(())
+        })?;
+
+        Ok(())
     }
 }

@@ -15,7 +15,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, MaxEncodedLen};
@@ -26,26 +25,26 @@ use frame_support::transactional;
 use frame_system::ensure_signed;
 use orml_traits::arithmetic::{CheckedAdd, CheckedSub};
 use scale_info::TypeInfo;
+use sp_runtime::ArithmeticError;
 use sp_runtime::{BoundedVec, DispatchError};
 use sp_std::vec::Vec;
 
 #[cfg(test)]
 mod tests;
 
-pub mod weights;
 pub mod types;
+pub mod weights;
 
 use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
+use crate::types::{AssetId, Balance, BlockNumber, ScheduleId};
 pub use pallet::*;
-use crate::types::{Balance, AssetId, BlockNumber};
-
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
-pub enum Recurrence{
+pub enum Recurrence {
     Fixed,
-    Perpetual
+    Perpetual,
 }
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
@@ -55,19 +54,20 @@ pub struct Order {
     pub amount_in: Balance,
     pub amount_out: Balance,
     pub limit: Balance,
-    pub route: BoundedVec<Trade, sp_runtime::traits::ConstU32<5>>
+    pub route: BoundedVec<Trade, sp_runtime::traits::ConstU32<5>>,
 }
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 pub struct Schedule {
     pub period: BlockNumber, //TODO: use proper block number
     pub recurrence: Recurrence,
-    pub order: Order
+    pub order: Order,
 }
 
 ///A single trade for buy/sell, describing the asset pair and the pool type in which the trade is executed
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
-pub struct Trade { //TODO: consider using the same type as in route executor
+pub struct Trade {
+    //TODO: consider using the same type as in route executor
     pub pool: PoolType,
     pub asset_in: AssetId,
     pub asset_out: AssetId,
@@ -77,7 +77,6 @@ pub struct Trade { //TODO: consider using the same type as in route executor
 pub enum PoolType {
     XYK,
 }
-
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -102,27 +101,23 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         ///First event
-        DummyEvent {
-        },
+        DummyEvent {},
     }
 
     #[pallet::error]
     pub enum Error<T> {
         ///First error
         DummyError,
-
     }
 
-    /*/// Id sequencer schedules
+    /// Id sequencer for schedules
     #[pallet::storage]
-    #[pallet::getter(fn last_farm_id)]
-    pub type FarmSequencer<T: Config> = StorageValue<_, FarmId, ValueQuery>;*/
-
+    #[pallet::getter(fn next_schedule_id)]
+    pub type ScheduleIdSequencer<T: Config> = StorageValue<_, ScheduleId, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn schedules)]
-    pub type Schedules<T: Config> =
-        StorageMap<_, Blake2_128Concat, BlockNumber, Schedule, OptionQuery>;
+    pub type Schedules<T: Config> = StorageMap<_, Blake2_128Concat, BlockNumber, Schedule, OptionQuery>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -132,16 +127,24 @@ pub mod pallet {
         pub fn schedule(
             origin: OriginFor<T>,
             schedule: Schedule,
-            next_execution_block: Option<BlockNumber>
+            next_execution_block: Option<BlockNumber>,
         ) -> DispatchResult {
             //let who = ensure_signed(origin.clone())?;
 
-            Schedules::<T>::insert(1, schedule);
+            let next_schedule_id = Self::get_next_schedule_id()?;
+
+            Schedules::<T>::insert(next_schedule_id, schedule);
             Ok(())
         }
     }
 }
 
 impl<T: Config> Pallet<T> {
+    fn get_next_schedule_id() -> Result<ScheduleId, ArithmeticError> {
+        ScheduleIdSequencer::<T>::try_mutate(|current_id| {
+            *current_id = current_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
+            Ok(*current_id)
+        })
+    }
 }

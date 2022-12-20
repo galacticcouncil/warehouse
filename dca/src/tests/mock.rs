@@ -16,7 +16,7 @@
 // limitations under the License.
 
 use crate as dca;
-use crate::{Config};
+use crate::Config;
 use frame_support::parameter_types;
 use frame_support::traits::{Everything, GenesisBuild, Nothing};
 use frame_system as system;
@@ -41,7 +41,6 @@ pub type AssetId = u32;
 pub type Balance = u128;
 
 pub const ALICE_INITIAL_NATIVE_BALANCE: u128 = 1000;
-
 
 frame_support::construct_runtime!(
     pub enum Test where
@@ -175,22 +174,20 @@ impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-      /*  pallet_balances::GenesisConfig::<Test> {
-            balances: vec![
-                (ALICE, ALICE_INITIAL_NATIVE_BALANCE),
-                (ASSET_PAIR_ACCOUNT, ALICE_INITIAL_NATIVE_BALANCE),
-            ],
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
-*/
-        let mut initial_accounts = vec![
-            (ASSET_PAIR_ACCOUNT, AUSD, 1000u128),
-        ];
+        /*  pallet_balances::GenesisConfig::<Test> {
+                    balances: vec![
+                        (ALICE, ALICE_INITIAL_NATIVE_BALANCE),
+                        (ASSET_PAIR_ACCOUNT, ALICE_INITIAL_NATIVE_BALANCE),
+                    ],
+                }
+                .assimilate_storage(&mut t)
+                .unwrap();
+        */
+        let mut initial_accounts = vec![(ASSET_PAIR_ACCOUNT, AUSD, 1000u128)];
 
         initial_accounts.extend(self.endowed_accounts);
 
-       /* orml_tokens::GenesisConfig::<Test> {
+        /* orml_tokens::GenesisConfig::<Test> {
             balances: initial_accounts,
         }
         .assimilate_storage(&mut t)
@@ -205,7 +202,6 @@ impl ExtBuilder {
 thread_local! {
     pub static DummyThreadLocal: RefCell<u128> = RefCell::new(100);
 }
-
 
 pub fn expect_events(e: Vec<Event>) {
     test_utils::expect_events::<Event, Test>(e);

@@ -22,14 +22,14 @@ use proptest::prelude::*;
 use sp_arithmetic::traits::{CheckedAdd, CheckedMul};
 
 const ONE: Balance = 1_000_000_000_000;
-const TOLERANCE: Balance = 1;
+const TOLERANCE: Balance = 1_000;
 const REWARD_CURRENCY: AssetId = BSX;
 
 //6s blocks
 const BLOCK_PER_YEAR: u64 = 5_256_000;
 
 fn total_shares_z() -> impl Strategy<Value = Balance> {
-    0..100_000_000_000_000_000_u128
+    0..1_000_000_000 * ONE
 }
 
 fn left_to_distribute() -> impl Strategy<Value = Balance> {
@@ -44,6 +44,10 @@ fn global_farm_accumulated_rewards() -> impl Strategy<Value = (Balance, Balance)
     (0..10_000_000_000 * ONE, 0..10_000_000_000 * ONE)
 }
 
+fn accumulated_rpz(total_shares_z: Balance, pending_rewards: Balance) -> impl Strategy<Value = Balance> {
+    0..pending_rewards.checked_div(total_shares_z).unwrap().max(1)
+}
+
 prop_compose! {
     fn get_global_farm()
         (
@@ -51,7 +55,7 @@ prop_compose! {
             (pending_rewards, accumulated_paid_rewards) in global_farm_accumulated_rewards(),
             reward_per_period in reward_per_period(),
         )(
-            accumulated_rpz in 0..pending_rewards.checked_div(total_shares_z).unwrap(),
+            accumulated_rpz in accumulated_rpz(total_shares_z, pending_rewards),
             pending_rewards in Just(pending_rewards),
             accumulated_paid_rewards in Just(accumulated_paid_rewards),
             reward_per_period in Just(reward_per_period),
@@ -87,7 +91,7 @@ prop_compose! {
         (
             global_farm in get_global_farm(),
         )(
-            yield_farm_accumulated_rpz in 0..global_farm.accumulated_rpz.checked_div_int(1_u128).unwrap(),
+            yield_farm_accumulated_rpz in 0..global_farm.accumulated_rpz.checked_div_int(1_u128).unwrap().max(1),
             tmp_reward in 100_000 * ONE..5_256_000_000 * ONE, //max: 10K for 1 year, every block
             yield_farm_updated_at in global_farm.updated_at - 1_000..global_farm.updated_at,
             global_farm in Just(global_farm),
@@ -134,7 +138,7 @@ prop_compose! {
         (
             (global_farm, yield_farm) in get_farms(),
         )(
-            current_period in yield_farm.updated_at..(yield_farm.updated_at + BLOCK_PER_YEAR),
+            current_period in global_farm.updated_at..(global_farm.updated_at + BLOCK_PER_YEAR),
             yield_farm in Just(yield_farm),
             global_farm in Just(global_farm),
         )
@@ -206,7 +210,7 @@ proptest! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
-    fn claim_from_global_farm(
+    fn calculate_rewards_from_pot(
         (mut global_farm, mut yield_farm) in get_farms()
     ) {
         new_test_ext().execute_with(|| {

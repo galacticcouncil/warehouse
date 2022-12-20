@@ -1544,10 +1544,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         .map_err(|_| ArithmeticError::Overflow)?;
 
         // Number of periods since last farm update.
+
         let periods_since_last_update: Balance = TryInto::<u128>::try_into(
             current_period
                 .checked_sub(&global_farm.updated_at)
-                .ok_or(ArithmeticError::Overflow)?,
+                .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?,
         )
         .map_err(|_| ArithmeticError::Overflow)?;
 

@@ -25,6 +25,8 @@ use frame_support::transactional;
 use frame_system::ensure_signed;
 use orml_traits::arithmetic::{CheckedAdd, CheckedSub};
 use scale_info::TypeInfo;
+use sp_runtime::traits::BlockNumberProvider;
+use sp_runtime::traits::Saturating;
 use sp_runtime::ArithmeticError;
 use sp_runtime::{BoundedVec, DispatchError};
 use sp_std::vec::Vec;
@@ -40,6 +42,11 @@ use weights::WeightInfo;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use crate::types::{AssetId, Balance, BlockNumber, ScheduleId};
 pub use pallet::*;
+
+const MAX_NUMBER_OF_TRADES: u32 = 5;
+const MAX_NUMBER_OF_SCHEDULES_PER_BLOCK: u32 = 20; //TODO: use config for this
+
+type BlockNumberr<T> = <T as frame_system::Config>::BlockNumber;
 
 //TODO: research of substrate has already some planned execution logic //https://www.notion.so/DCA-061a93f912fd43b3a8e3e413abb8afdf#d784a1f7e5bf404a8a0e7aac5f0649fd
 //  https://substrate.stackexchange.com/questions/5153/how-can-i-start-a-function-automatically-after-a-certain-period-of-time
@@ -88,6 +95,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
     use hydradx_traits::router::ExecutorError;
+    use sp_runtime::traits::Saturating;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -123,6 +131,11 @@ pub mod pallet {
     #[pallet::getter(fn schedules)]
     pub type Schedules<T: Config> = StorageMap<_, Blake2_128Concat, BlockNumber, Schedule, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn schedule_ids_per_block)]
+    pub type ScheduleIdsPerBlock<T: Config> =
+        StorageMap<_, Blake2_128Concat, BlockNumberr<T>, BoundedVec<ScheduleId, ConstU32<5>>, OptionQuery>;
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         ///Schedule
@@ -136,8 +149,25 @@ pub mod pallet {
             //let who = ensure_signed(origin.clone())?;
 
             let next_schedule_id = Self::get_next_schedule_id()?;
-
             Schedules::<T>::insert(next_schedule_id, schedule);
+
+            let next_block_number = Self::get_next_block_mumber();
+
+            if !ScheduleIdsPerBlock::<T>::contains_key(next_block_number) {
+                let ids = vec![next_schedule_id];
+                let bounded_vec: BoundedVec<ScheduleId, ConstU32<5>> = ids.try_into().unwrap();
+                ScheduleIdsPerBlock::<T>::insert(next_block_number, bounded_vec);
+            } else {
+                ScheduleIdsPerBlock::<T>::try_mutate_exists(next_block_number, |schedule_ids| -> DispatchResult {
+                    let mut schedule_ids = schedule_ids.as_mut().ok_or(Error::<T>::DummyError)?;
+
+                    schedule_ids
+                        .try_push(next_schedule_id)
+                        .map_err(|_| Error::<T>::DummyError)?;
+                    Ok(())
+                });
+            }
+
             Ok(())
         }
     }
@@ -150,5 +180,12 @@ impl<T: Config> Pallet<T> {
 
             Ok(*current_id)
         })
+    }
+
+    fn get_next_block_mumber() -> BlockNumberr<T> {
+        let mut current_block_number = frame_system::Pallet::<T>::current_block_number();
+        current_block_number.saturating_inc();
+
+        current_block_number
     }
 }

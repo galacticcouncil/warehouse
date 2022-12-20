@@ -16,7 +16,7 @@
 // limitations under the License.
 
 use crate::tests::mock::*;
-use crate::{Error, Event, Order, PoolType, Recurrence, Schedule, Trade};
+use crate::{Error, Event, Order, PoolType, Recurrence, Schedule, ScheduleId, Trade};
 use frame_support::{assert_noop, assert_ok};
 use frame_system::pallet_prelude::BlockNumberFor;
 use pretty_assertions::assert_eq;
@@ -49,6 +49,7 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
         };
 
         //Act
+        set_block_number(500);
         assert_ok!(Dca::schedule(Origin::signed(ALICE), schedule, Option::None));
 
         //Assert
@@ -71,12 +72,15 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
                 },
                 recurrence: Recurrence::Fixed
             }
-        )
+        );
+
+        assert!(Dca::schedule_ids_per_block(501).is_some());
+        //TODO: add assertion for next
     });
 }
 
 #[test]
-fn schedule_should_use_sequencer_when_storing_schedule_in_storage() {
+fn schedule_should_work_when_multiple_schedules_stored() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
         let trades = create_bounded_vec(vec![Trade {
@@ -99,17 +103,29 @@ fn schedule_should_use_sequencer_when_storing_schedule_in_storage() {
         };
 
         //Act
+        set_block_number(500);
+
         assert_ok!(Dca::schedule(Origin::signed(ALICE), schedule.clone(), Option::None));
         assert_ok!(Dca::schedule(Origin::signed(ALICE), schedule, Option::None));
 
         //Assert
         assert!(Dca::schedules(1).is_some());
         assert!(Dca::schedules(2).is_some());
+
+        let scheduled_ids_for_next_block = Dca::schedule_ids_per_block(501).unwrap();
+
+        let expected_scheduled_ids_for_next_block = create_bounded_vec_with_schedule_ids(vec![1, 2]);
+        assert_eq!(scheduled_ids_for_next_block, expected_scheduled_ids_for_next_block);
     });
 }
 
 fn create_bounded_vec(trades: Vec<Trade>) -> BoundedVec<Trade, ConstU32<5>> {
     let bounded_vec: BoundedVec<Trade, sp_runtime::traits::ConstU32<5>> = trades.try_into().unwrap();
+    bounded_vec
+}
+
+fn create_bounded_vec_with_schedule_ids(schedule_ids: Vec<ScheduleId>) -> BoundedVec<ScheduleId, ConstU32<5>> {
+    let bounded_vec: BoundedVec<ScheduleId, sp_runtime::traits::ConstU32<5>> = schedule_ids.try_into().unwrap();
     bounded_vec
 }
 

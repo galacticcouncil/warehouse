@@ -125,7 +125,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn schedules)]
-    pub type Schedules<T: Config> = StorageMap<_, Blake2_128Concat, BlockNumber, Schedule, OptionQuery>;
+    pub type Schedules<T: Config> = StorageMap<_, Blake2_128Concat, ScheduleId, Schedule, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn schedule_ids_per_block)]

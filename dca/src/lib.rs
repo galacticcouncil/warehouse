@@ -61,7 +61,7 @@ pub struct Order {
     pub amount_in: Balance,
     pub amount_out: Balance,
     pub limit: Balance,
-    pub route: BoundedVec<Trade, sp_runtime::traits::ConstU32<5>>,
+    pub route: BoundedVec<Trade, sp_runtime::traits::ConstU32<MAX_NUMBER_OF_TRADES>>,
 }
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]

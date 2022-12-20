@@ -140,7 +140,7 @@ pub mod pallet {
         pub fn schedule(
             origin: OriginFor<T>,
             schedule: Schedule,
-            next_execution_block: Option<BlockNumber>,
+            next_execution_block: Option<BlockNumberr<T>>,
         ) -> DispatchResult {
             //let who = ensure_signed(origin.clone())?;
 

@@ -20,6 +20,7 @@ use pretty_assertions::assert_eq;
 use test_ext::*;
 
 use crate::tests::mock::LiquidityMining2;
+use test_utils::assert_balance_approx;
 
 use rand::Rng;
 
@@ -80,7 +81,6 @@ fn non_full_farm_running_longer_than_expected() {
                 |_, _, _| { Ok(5_000 * ONE) }
             ));
 
-            set_block_number(140);
             //bob
             assert_ok!(LiquidityMining2::deposit_lp_shares(
                 GLOBAL_FARM,
@@ -250,10 +250,9 @@ fn non_full_farm_distribute_everything_and_update_farms() {
                 1_000
             );
 
-            //NOTE: 1 because we are not able to claim everything becasue us rounding errors
             assert_eq!(
                 Tokens::free_balance(BSX, &LiquidityMining2::pot_account_id().unwrap()),
-                2
+                0
             );
 
             set_block_number(501);
@@ -732,9 +731,9 @@ fn yield_farm_should_claim_expected_amount() {
                 LiquidityMining2::yield_farm(yield_farm_b_key)
                     .unwrap()
                     .left_to_distribute,
-                5_000 * ONE
+                2_500 * ONE
             );
-            assert_eq!(Tokens::free_balance(BSX, &pot), 12_500 * ONE);
+            assert_eq!(Tokens::free_balance(BSX, &pot), 10_000 * ONE);
 
             //Global farm had rewards for 100_000 blocks.
             set_block_number(120_000);
@@ -767,8 +766,9 @@ fn yield_farm_should_claim_expected_amount() {
             ));
 
             let global_farm_account = LiquidityMining2::farm_account_id(GLOBAL_FARM).unwrap();
-            //leftover because of rounding errors
-            assert_eq!(Tokens::free_balance(BSX, &pot), 1);
+            //leftovers in the pot because of rounding errors
+            assert_balance_approx!(pot, BSX, 0, 2);
+
             assert_eq!(
                 LiquidityMining2::yield_farm(yield_farm_a_key)
                     .unwrap()
@@ -779,7 +779,7 @@ fn yield_farm_should_claim_expected_amount() {
                 LiquidityMining2::yield_farm(yield_farm_b_key)
                     .unwrap()
                     .left_to_distribute,
-                0
+                1
             );
             assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 1_000);
 

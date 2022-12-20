@@ -152,8 +152,8 @@ fn claim_rewards_should_work() {
                     updated_at: 30,
                     accumulated_rpz: FixedU128::from(6),
                     total_shares_z: 703_990 * ONE,
-                    accumulated_rewards: 569_250 * ONE,
-                    paid_accumulated_rewards: 2_474_275 * ONE,
+                    pending_rewards: 569_250 * ONE,
+                    accumulated_paid_rewards: 2_474_275 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -244,8 +244,8 @@ fn claim_rewards_should_work() {
                     updated_at: 1_258,
                     accumulated_rpz: FixedU128::from(620),
                     total_shares_z: 703_990 * ONE,
-                    accumulated_rewards: 292_442_060 * ONE,
-                    paid_accumulated_rewards: 142_851_325 * ONE,
+                    pending_rewards: 292_442_060 * ONE,
+                    accumulated_paid_rewards: 142_851_325 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -279,8 +279,7 @@ fn claim_rewards_should_work() {
             let distributed_from_global =
                 global_farm_total_rewards_start - Tokens::total_balance(REWARD_CURRENCY, &global_farm_account);
 
-            let tracked_distributed_rewards =
-                global_farm_1.paid_accumulated_rewards + global_farm_1.accumulated_rewards;
+            let tracked_distributed_rewards = global_farm_1.accumulated_paid_rewards + global_farm_1.pending_rewards;
 
             pretty_assertions::assert_eq!(distributed_from_global, tracked_distributed_rewards);
 

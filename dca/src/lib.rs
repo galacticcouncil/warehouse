@@ -46,7 +46,7 @@ pub use pallet::*;
 const MAX_NUMBER_OF_TRADES: u32 = 5;
 const MAX_NUMBER_OF_SCHEDULES_PER_BLOCK: u32 = 20; //TODO: use config for this
 
-type BlockNumberr<T> = <T as frame_system::Config>::BlockNumber;
+type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 pub enum Recurrence {
@@ -130,7 +130,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn schedule_ids_per_block)]
     pub type ScheduleIdsPerBlock<T: Config> =
-        StorageMap<_, Blake2_128Concat, BlockNumberr<T>, BoundedVec<ScheduleId, ConstU32<5>>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedVec<ScheduleId, ConstU32<5>>, OptionQuery>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -140,7 +140,7 @@ pub mod pallet {
         pub fn schedule(
             origin: OriginFor<T>,
             schedule: Schedule,
-            next_execution_block: Option<BlockNumberr<T>>,
+            next_execution_block: Option<BlockNumberFor<T>>,
         ) -> DispatchResult {
             //let who = ensure_signed(origin.clone())?;
 
@@ -178,7 +178,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-    fn get_next_block_mumber() -> BlockNumberr<T> {
+    fn get_next_block_mumber() -> BlockNumberFor<T> {
         let mut current_block_number = frame_system::Pallet::<T>::current_block_number();
         current_block_number.saturating_inc();
 

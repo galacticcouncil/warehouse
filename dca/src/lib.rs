@@ -51,7 +51,7 @@ type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 pub enum Recurrence {
-    Fixed,
+    Fixed(u128),
     Perpetual,
 }
 
@@ -134,6 +134,10 @@ pub mod pallet {
     pub type ScheduleOwnership<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, ScheduleId, OptionQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn remaining_recurrences)]
+    pub type RemainingRecurrences<T: Config> = StorageMap<_, Blake2_128Concat, ScheduleId, u128, OptionQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn schedule_ids_per_block)]
     pub type ScheduleIdsPerBlock<T: Config> =
         StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedVec<ScheduleId, ConstU32<20>>, OptionQuery>;
@@ -151,7 +155,9 @@ pub mod pallet {
             let who = ensure_signed(origin.clone())?;
 
             let next_schedule_id = Self::get_next_schedule_id()?;
+            let recurrence = schedule.recurrence.clone();
             Schedules::<T>::insert(next_schedule_id, schedule);
+            Self::store_recurrence_in_case_of_fixed_schedule(next_schedule_id, recurrence);
             ScheduleOwnership::<T>::insert(who, next_schedule_id);
 
             let blocknumber_for_schedule = next_execution_block.unwrap_or_else(|| Self::get_next_block_mumber());
@@ -198,5 +204,11 @@ impl<T: Config> Pallet<T> {
         let schedule_id = vec![next_schedule_id];
         let bounded_vec: BoundedVec<ScheduleId, ConstU32<20>> = schedule_id.try_into().unwrap(); //TODO: here use constant instead of hardcoded value
         bounded_vec
+    }
+
+    fn store_recurrence_in_case_of_fixed_schedule(next_schedule_id: ScheduleId, recurrence: Recurrence) {
+        if let Recurrence::Fixed(number_of_recurrence) = recurrence {
+            RemainingRecurrences::<T>::insert(next_schedule_id, number_of_recurrence);
+        };
     }
 }

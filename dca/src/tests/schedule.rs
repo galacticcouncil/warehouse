@@ -45,7 +45,7 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
                 limit: 0,
                 route: trades,
             },
-            recurrence: Recurrence::Fixed,
+            recurrence: Recurrence::Fixed(5),
         };
 
         //Act
@@ -53,7 +53,8 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
         assert_ok!(Dca::schedule(Origin::signed(ALICE), schedule, Option::None));
 
         //Assert
-        let stored_schedule = Dca::schedules(1).unwrap();
+        let schedule_id = 1;
+        let stored_schedule = Dca::schedules(schedule_id).unwrap();
         assert_eq!(
             stored_schedule,
             Schedule {
@@ -70,7 +71,7 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
                         pool: PoolType::XYK
                     }])
                 },
-                recurrence: Recurrence::Fixed
+                recurrence: Recurrence::Fixed(5),
             }
         );
 
@@ -83,6 +84,9 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
         //Check if schedule ownership is created
         assert!(Dca::schedule_ownership(ALICE).is_some());
         assert_eq!(Dca::schedule_ownership(ALICE).unwrap(), 1);
+
+        //Check if the recurrances have been stored
+        assert_eq!(Dca::remaining_recurrences(schedule_id).unwrap(), 5);
     });
 }
 
@@ -106,7 +110,7 @@ fn schedule_should_work_when_multiple_schedules_stored() {
                 limit: 0,
                 route: trades,
             },
-            recurrence: Recurrence::Fixed,
+            recurrence: Recurrence::Fixed(5),
         };
 
         //Act
@@ -146,7 +150,7 @@ fn schedule_should_work_when_block_is_specified_by_user() {
                 limit: 0,
                 route: trades,
             },
-            recurrence: Recurrence::Fixed,
+            recurrence: Recurrence::Fixed(5),
         };
 
         //Act
@@ -171,7 +175,7 @@ fn schedule_should_work_when_block_is_specified_by_user() {
                         pool: PoolType::XYK
                     }])
                 },
-                recurrence: Recurrence::Fixed
+                recurrence: Recurrence::Fixed(5),
             }
         );
 
@@ -207,7 +211,7 @@ fn schedule_should_fail_when_not_called_by_user() {
                 limit: 0,
                 route: trades,
             },
-            recurrence: Recurrence::Fixed,
+            recurrence: Recurrence::Fixed(5),
         };
 
         //Act and assert

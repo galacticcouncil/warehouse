@@ -74,10 +74,15 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
             }
         );
 
+        //Check if schedule ids are stored
         let schedule_ids = Dca::schedule_ids_per_block(501);
         assert!(Dca::schedule_ids_per_block(501).is_some());
         let expected_scheduled_ids_for_next_block = create_bounded_vec_with_schedule_ids(vec![1]);
         assert_eq!(schedule_ids.unwrap(), expected_scheduled_ids_for_next_block);
+
+        //Check if schedule ownership is created
+        assert!(Dca::schedule_ownership(ALICE).is_some());
+        assert_eq!(Dca::schedule_ownership(ALICE).unwrap(), 1);
     });
 }
 

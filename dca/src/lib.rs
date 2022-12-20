@@ -23,6 +23,7 @@ use frame_support::traits::fungibles::Inspect;
 use frame_support::traits::Get;
 use frame_support::transactional;
 use frame_system::ensure_signed;
+use frame_system::pallet_prelude::OriginFor;
 use orml_traits::arithmetic::{CheckedAdd, CheckedSub};
 use scale_info::TypeInfo;
 use sp_runtime::traits::Saturating;
@@ -87,10 +88,12 @@ pub enum PoolType {
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use codec::EncodeLike;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
     use hydradx_traits::router::ExecutorError;
-    use sp_runtime::traits::Saturating;
+    use sp_runtime::traits::{MaybeDisplay, Saturating};
+    use std::fmt::Debug;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -127,6 +130,10 @@ pub mod pallet {
     pub type Schedules<T: Config> = StorageMap<_, Blake2_128Concat, ScheduleId, Schedule, OptionQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn schedule_ownership)]
+    pub type ScheduleOwnership<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, ScheduleId, OptionQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn schedule_ids_per_block)]
     pub type ScheduleIdsPerBlock<T: Config> =
         StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedVec<ScheduleId, ConstU32<20>>, OptionQuery>;
@@ -141,10 +148,11 @@ pub mod pallet {
             schedule: Schedule,
             next_execution_block: Option<BlockNumberFor<T>>,
         ) -> DispatchResult {
-            //let who = ensure_signed(origin.clone())?;
+            let who = ensure_signed(origin.clone())?;
 
             let next_schedule_id = Self::get_next_schedule_id()?;
             Schedules::<T>::insert(next_schedule_id, schedule);
+            ScheduleOwnership::<T>::insert(who, next_schedule_id);
 
             let next_block_number = Self::get_next_block_mumber();
 

@@ -48,10 +48,6 @@ const MAX_NUMBER_OF_SCHEDULES_PER_BLOCK: u32 = 20; //TODO: use config for this
 
 type BlockNumberr<T> = <T as frame_system::Config>::BlockNumber;
 
-//TODO: research of substrate has already some planned execution logic //https://www.notion.so/DCA-061a93f912fd43b3a8e3e413abb8afdf#d784a1f7e5bf404a8a0e7aac5f0649fd
-//  https://substrate.stackexchange.com/questions/5153/how-can-i-start-a-function-automatically-after-a-certain-period-of-time
-// Either on initialize or scheduler
-// https://github.com/paritytech/substrate/tree/master/frame/scheduler
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 pub enum Recurrence {
     Fixed,

@@ -29,24 +29,7 @@ use sp_runtime::DispatchError::BadOrigin;
 fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
-        let trades = create_bounded_vec(vec![Trade {
-            asset_in: 3,
-            asset_out: 4,
-            pool: PoolType::XYK,
-        }]);
-
-        let schedule = Schedule {
-            period: 10,
-            order: Order {
-                asset_in: 3,
-                asset_out: 4,
-                amount_in: 1000,
-                amount_out: 2000,
-                limit: 0,
-                route: trades,
-            },
-            recurrence: Recurrence::Fixed(5),
-        };
+        let schedule = schedule_fake(Recurrence::Fixed(5));
 
         //Act
         set_block_number(500);
@@ -55,25 +38,7 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
         //Assert
         let schedule_id = 1;
         let stored_schedule = Dca::schedules(schedule_id).unwrap();
-        assert_eq!(
-            stored_schedule,
-            Schedule {
-                period: 10,
-                order: Order {
-                    asset_in: 3,
-                    asset_out: 4,
-                    amount_in: 1000,
-                    amount_out: 2000,
-                    limit: 0,
-                    route: create_bounded_vec(vec![Trade {
-                        asset_in: 3,
-                        asset_out: 4,
-                        pool: PoolType::XYK
-                    }])
-                },
-                recurrence: Recurrence::Fixed(5),
-            }
-        );
+        assert_eq!(stored_schedule, schedule_fake(Recurrence::Fixed(5)));
 
         //Check if schedule ids are stored
         let schedule_ids = Dca::schedule_ids_per_block(501);
@@ -94,24 +59,7 @@ fn schedule_should_store_schedule_for_next_block_when_no_blocknumber_specified()
 fn schedule_should_work_when_multiple_schedules_stored() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
-        let trades = create_bounded_vec(vec![Trade {
-            asset_in: 3,
-            asset_out: 4,
-            pool: PoolType::XYK,
-        }]);
-
-        let schedule = Schedule {
-            period: 10,
-            order: Order {
-                asset_in: 3,
-                asset_out: 4,
-                amount_in: 1000,
-                amount_out: 2000,
-                limit: 0,
-                route: trades,
-            },
-            recurrence: Recurrence::Fixed(5),
-        };
+        let schedule = schedule_fake(Recurrence::Fixed(5));
 
         //Act
         set_block_number(500);
@@ -134,50 +82,19 @@ fn schedule_should_work_when_multiple_schedules_stored() {
 fn schedule_should_work_when_block_is_specified_by_user() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
-        let trades = create_bounded_vec(vec![Trade {
-            asset_in: 3,
-            asset_out: 4,
-            pool: PoolType::XYK,
-        }]);
-
-        let schedule = Schedule {
-            period: 10,
-            order: Order {
-                asset_in: 3,
-                asset_out: 4,
-                amount_in: 1000,
-                amount_out: 2000,
-                limit: 0,
-                route: trades,
-            },
-            recurrence: Recurrence::Fixed(5),
-        };
+        let schedule = schedule_fake(Recurrence::Fixed(5));
 
         //Act
         set_block_number(500);
-        assert_ok!(Dca::schedule(Origin::signed(ALICE), schedule, Option::Some(600)));
+        assert_ok!(Dca::schedule(
+            Origin::signed(ALICE),
+            schedule.clone(),
+            Option::Some(600)
+        ));
 
         //Assert
         let stored_schedule = Dca::schedules(1).unwrap();
-        assert_eq!(
-            stored_schedule,
-            Schedule {
-                period: 10,
-                order: Order {
-                    asset_in: 3,
-                    asset_out: 4,
-                    amount_in: 1000,
-                    amount_out: 2000,
-                    limit: 0,
-                    route: create_bounded_vec(vec![Trade {
-                        asset_in: 3,
-                        asset_out: 4,
-                        pool: PoolType::XYK
-                    }])
-                },
-                recurrence: Recurrence::Fixed(5),
-            }
-        );
+        assert_eq!(stored_schedule, schedule);
 
         //Check if schedule ids are stored
         let schedule_ids = Dca::schedule_ids_per_block(600);
@@ -195,29 +112,14 @@ fn schedule_should_work_when_block_is_specified_by_user() {
 fn schedule_should_fail_when_not_called_by_user() {
     ExtBuilder::default().build().execute_with(|| {
         //Arrange
-        let trades = create_bounded_vec(vec![Trade {
-            asset_in: 3,
-            asset_out: 4,
-            pool: PoolType::XYK,
-        }]);
-
-        let schedule = Schedule {
-            period: 10,
-            order: Order {
-                asset_in: 3,
-                asset_out: 4,
-                amount_in: 1000,
-                amount_out: 2000,
-                limit: 0,
-                route: trades,
-            },
-            recurrence: Recurrence::Fixed(5),
-        };
+        let schedule = schedule_fake(Recurrence::Fixed(5));
 
         //Act and assert
         assert_noop!(Dca::schedule(Origin::none(), schedule, Option::None), BadOrigin);
     });
 }
+
+//TODO: add negative case for validating block numbers
 
 fn create_bounded_vec(trades: Vec<Trade>) -> BoundedVec<Trade, ConstU32<5>> {
     let bounded_vec: BoundedVec<Trade, sp_runtime::traits::ConstU32<5>> = trades.try_into().unwrap();
@@ -233,4 +135,24 @@ pub fn set_block_number(n: u64) {
     System::set_block_number(n);
 }
 
-//TODO: add negative case for validating block numbers
+fn schedule_fake(recurrence: Recurrence) -> Schedule {
+    let trades = create_bounded_vec(vec![Trade {
+        asset_in: 3,
+        asset_out: 4,
+        pool: PoolType::XYK,
+    }]);
+
+    let schedule = Schedule {
+        period: 10,
+        order: Order {
+            asset_in: 3,
+            asset_out: 4,
+            amount_in: 1000,
+            amount_out: 2000,
+            limit: 0,
+            route: trades,
+        },
+        recurrence: recurrence,
+    };
+    schedule
+}

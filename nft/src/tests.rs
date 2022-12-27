@@ -37,7 +37,7 @@ fn create_collection_works() {
         assert_eq!(
             NFTPallet::collections(COLLECTION_ID_0).unwrap(),
             CollectionInfo {
-                collection_type: CollectionType::Marketplace,
+                collection_type: CollectionTestType::Marketplace,
                 metadata: metadata.clone()
             }
         );
@@ -45,7 +45,7 @@ fn create_collection_works() {
         expect_events(vec![crate::Event::CollectionCreated {
             owner: ALICE,
             collection_id: COLLECTION_ID_0,
-            collection_type: CollectionType::Marketplace,
+            collection_type: CollectionTestType::Marketplace,
             metadata: metadata.clone(),
         }
         .into()]);
@@ -55,7 +55,7 @@ fn create_collection_works() {
             NFTPallet::create_collection(
                 Origin::signed(ALICE),
                 COLLECTION_ID_2,
-                CollectionType::Auction,
+                CollectionTestType::Auction,
                 metadata.clone()
             ),
             Error::<Test>::NotPermitted
@@ -66,7 +66,7 @@ fn create_collection_works() {
             NFTPallet::create_collection(
                 Origin::signed(ALICE),
                 COLLECTION_ID_0,
-                CollectionType::LiquidityMining,
+                CollectionTestType::LiquidityMining,
                 metadata.clone()
             ),
             pallet_uniques::Error::<Test>::InUse
@@ -77,7 +77,7 @@ fn create_collection_works() {
             NFTPallet::create_collection(
                 Origin::signed(ALICE),
                 COLLECTION_ID_RESERVED,
-                CollectionType::Marketplace,
+                CollectionTestType::Marketplace,
                 metadata
             ),
             Error::<Test>::IdReserved
@@ -100,7 +100,7 @@ fn mint_works() {
         assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
             COLLECTION_ID_1,
-            CollectionType::Redeemable,
+            CollectionTestType::Redeemable,
             metadata.clone()
         ));
 
@@ -166,7 +166,7 @@ fn transfer_works() {
         assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
             COLLECTION_ID_1,
-            CollectionType::LiquidityMining,
+            CollectionTestType::LiquidityMining,
             metadata.clone()
         ));
         assert_ok!(NFTPallet::mint(
@@ -241,7 +241,7 @@ fn burn_works() {
         assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
             COLLECTION_ID_1,
-            CollectionType::LiquidityMining,
+            CollectionTestType::LiquidityMining,
             metadata.clone()
         ));
         assert_ok!(NFTPallet::mint(
@@ -302,7 +302,7 @@ fn destroy_collection_works() {
         assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
             COLLECTION_ID_1,
-            CollectionType::Redeemable,
+            CollectionTestType::Redeemable,
             metadata.clone()
         ));
         assert_ok!(NFTPallet::mint(
@@ -356,7 +356,7 @@ fn deposit_works() {
         assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
             COLLECTION_ID_0,
-            CollectionType::Marketplace,
+            CollectionTestType::Marketplace,
             metadata.clone()
         ));
         assert_eq!(
@@ -379,7 +379,7 @@ fn deposit_works() {
         assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
             COLLECTION_ID_0,
-            CollectionType::LiquidityMining,
+            CollectionTestType::LiquidityMining,
             metadata
         ));
         assert_eq!(
@@ -799,13 +799,13 @@ fn create_typed_collection_should_work_without_deposit_when_deposit_is_not_requi
         assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
             COLLECTION_ID_0,
-            CollectionType::LiquidityMining
+            CollectionTestType::LiquidityMining
         ));
 
         assert_eq!(
             NFTPallet::collections(COLLECTION_ID_0).unwrap(),
             CollectionInfoOf::<Test> {
-                collection_type: CollectionType::LiquidityMining,
+                collection_type: CollectionTestType::LiquidityMining,
                 metadata: Default::default()
             }
         )
@@ -818,13 +818,13 @@ fn create_typed_collection_should_work_with_reserved_id() {
         assert_ok!(NFTPallet::create_typed_collection(
             ALICE,
             COLLECTION_ID_RESERVED,
-            CollectionType::LiquidityMining
+            CollectionTestType::LiquidityMining
         ));
 
         assert_eq!(
             NFTPallet::collections(COLLECTION_ID_RESERVED).unwrap(),
             CollectionInfoOf::<Test> {
-                collection_type: CollectionType::LiquidityMining,
+                collection_type: CollectionTestType::LiquidityMining,
                 metadata: Default::default()
             }
         )
@@ -835,7 +835,11 @@ fn create_typed_collection_should_work_with_reserved_id() {
 fn create_typed_collection_should_not_work_without_deposit_when_deposit_is_required() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            NFTPallet::create_typed_collection(ACCOUNT_WITH_NO_BALANCE, COLLECTION_ID_0, CollectionType::Marketplace),
+            NFTPallet::create_typed_collection(
+                ACCOUNT_WITH_NO_BALANCE,
+                COLLECTION_ID_0,
+                CollectionTestType::Marketplace
+            ),
             pallet_balances::Error::<Test>::InsufficientBalance
         );
     });
@@ -848,7 +852,7 @@ fn do_mint_should_work_when_account_has_no_balance() {
         assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
             COLLECTION_ID_0,
-            CollectionType::LiquidityMining
+            CollectionTestType::LiquidityMining
         ));
 
         //act & assert
@@ -867,7 +871,7 @@ fn burn_should_work_when_account_has_no_balance() {
         assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
             COLLECTION_ID_0,
-            CollectionType::LiquidityMining
+            CollectionTestType::LiquidityMining
         ));
 
         assert_ok!(NFTPallet::mint_into(
@@ -961,7 +965,7 @@ fn do_destroy_collection_works() {
         assert_ok!(NFTPallet::create_collection(
             Origin::signed(ALICE),
             COLLECTION_ID_1,
-            CollectionType::Redeemable,
+            CollectionTestType::Redeemable,
             metadata
         ));
 

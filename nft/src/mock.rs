@@ -18,6 +18,13 @@
 use super::*;
 use crate as pallet_nft;
 
+use frame_support::pallet_prelude::*;
+
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
+use scale_info::TypeInfo;
+
 use frame_support::traits::{AsEnsureOriginWithArg, Everything};
 use frame_support::{parameter_types, weights::Weight};
 use frame_system::EnsureRoot;
@@ -56,41 +63,57 @@ parameter_types! {
     pub ReserveCollectionIdUpTo: u128 = 999;
 }
 
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum CollectionTestType {
+    Marketplace = 0_isize,
+    LiquidityMining = 1_isize,
+    Redeemable = 2_isize,
+    Auction = 3_isize,
+    HydraHeads = 4_isize,
+}
+
+impl Default for CollectionTestType {
+    fn default() -> Self {
+        CollectionTestType::Marketplace
+    }
+}
+
 #[derive(Eq, Copy, PartialEq, Clone)]
 pub struct NftTestPermissions;
 
-impl NftPermission<CollectionType> for NftTestPermissions {
-    fn can_create(collection_type: &CollectionType) -> bool {
+impl NftPermission<CollectionTestType> for NftTestPermissions {
+    fn can_create(collection_type: &CollectionTestType) -> bool {
         matches!(
             *collection_type,
-            CollectionType::Marketplace | CollectionType::LiquidityMining | CollectionType::Redeemable
+            CollectionTestType::Marketplace | CollectionTestType::LiquidityMining | CollectionTestType::Redeemable
         )
     }
 
-    fn can_mint(collection_type: &CollectionType) -> bool {
+    fn can_mint(collection_type: &CollectionTestType) -> bool {
         matches!(
             *collection_type,
-            CollectionType::Marketplace | CollectionType::LiquidityMining
+            CollectionTestType::Marketplace | CollectionTestType::LiquidityMining
         )
     }
 
-    fn can_transfer(collection_type: &CollectionType) -> bool {
-        matches!(*collection_type, CollectionType::Marketplace)
+    fn can_transfer(collection_type: &CollectionTestType) -> bool {
+        matches!(*collection_type, CollectionTestType::Marketplace)
     }
 
-    fn can_burn(collection_type: &CollectionType) -> bool {
-        matches!(*collection_type, CollectionType::Marketplace)
+    fn can_burn(collection_type: &CollectionTestType) -> bool {
+        matches!(*collection_type, CollectionTestType::Marketplace)
     }
 
-    fn can_destroy(collection_type: &CollectionType) -> bool {
+    fn can_destroy(collection_type: &CollectionTestType) -> bool {
         matches!(
             *collection_type,
-            CollectionType::Marketplace | CollectionType::LiquidityMining
+            CollectionTestType::Marketplace | CollectionTestType::LiquidityMining
         )
     }
 
-    fn has_deposit(collection_type: &CollectionType) -> bool {
-        matches!(*collection_type, CollectionType::Marketplace)
+    fn has_deposit(collection_type: &CollectionTestType) -> bool {
+        matches!(*collection_type, CollectionTestType::Marketplace)
     }
 }
 
@@ -99,7 +122,7 @@ impl Config for Test {
     type WeightInfo = pallet_nft::weights::BasiliskWeight<Test>;
     type NftCollectionId = CollectionId;
     type NftItemId = ItemId;
-    type CollectionType = CollectionType;
+    type CollectionType = CollectionTestType;
     type Permissions = NftTestPermissions;
     type ReserveCollectionIdUpTo = ReserveCollectionIdUpTo;
 }

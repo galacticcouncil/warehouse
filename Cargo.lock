@@ -2849,7 +2849,7 @@ dependencies = [
 
 [[package]]
 name = "hydradx-traits"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -5199,7 +5199,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-nft"
-version = "6.0.2"
+version = "6.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

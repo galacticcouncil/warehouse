@@ -617,24 +617,28 @@ impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
     }
 }
 
-impl<T: Config> CreateTypedCollection<T::AccountId, T::NftCollectionId, T::CollectionType> for Pallet<T> {
+impl<T: Config> CreateTypedCollection<T::AccountId, T::NftCollectionId, T::CollectionType, BoundedVecOfUnq<T>>
+    for Pallet<T>
+{
     /// Creates an NFT collection of the given collection type and sets its metadata.
     /// The collection ID does not need to be outside of the range of reserved IDs.
     /// The permissions for the creation of a collection are not enforced.
-    /// Metadata is set to the default value.
+    /// Metadata is set to the default value if not provided.
     ///
     /// Parameters:
     /// - `owner`: The collection owner.
     /// - `collection_id`: Identifier of a collection.
     /// - `collection_type`: The collection type.
+    /// - `metadata`: Optional arbitrary data about a collection, e.g. IPFS hash or name.
     ///
     /// Emits CollectionCreated event
     fn create_typed_collection(
         owner: T::AccountId,
         collection_id: T::NftCollectionId,
         collection_type: T::CollectionType,
+        metadata: Option<BoundedVecOfUnq<T>>,
     ) -> DispatchResult {
-        Self::do_create_collection(owner, collection_id, collection_type, Default::default())
+        Self::do_create_collection(owner, collection_id, collection_type, metadata.unwrap_or_default())
     }
 }
 

@@ -447,14 +447,35 @@ fn get_entry_works() {
         System::set_block_number(100);
         let expected = AggregatedEntry {
             price: Price::from((1_000, 500)),
-            volume: Volume::from_a_in_b_out(1_000, 500),
+            volume: Volume::default(), // volume for new blocks is zero by default
             liquidity: 2_000,
             oracle_age: 98,
         };
-        assert_eq!(EmaOracle::get_entry(HDX, DOT, LastBlock, SOURCE), Ok(expected.clone()));
-        assert_eq!(EmaOracle::get_entry(HDX, DOT, TenMinutes, SOURCE), Ok(expected.clone()));
-        assert_eq!(EmaOracle::get_entry(HDX, DOT, Day, SOURCE), Ok(expected.clone()));
-        assert_eq!(EmaOracle::get_entry(HDX, DOT, Week, SOURCE), Ok(expected));
+        assert_eq!(EmaOracle::get_entry(HDX, DOT, LastBlock, SOURCE), Ok(expected));
+
+        let expected_ten_min = AggregatedEntry {
+            price: Price::from((1_000, 500)),
+            volume: Volume::from_a_in_b_out(20, 10), // volume oracle gets update towards zero
+            liquidity: 2_000,
+            oracle_age: 98,
+        };
+        assert_eq!(EmaOracle::get_entry(HDX, DOT, TenMinutes, SOURCE), Ok(expected_ten_min));
+
+        let expected_day = AggregatedEntry {
+            price: Price::from((1_000, 500)),
+            volume: Volume::from_a_in_b_out(973, 487),
+            liquidity: 2_000,
+            oracle_age: 98,
+        };
+        assert_eq!(EmaOracle::get_entry(HDX, DOT, Day, SOURCE), Ok(expected_day));
+
+        let expected_week = AggregatedEntry {
+            price: Price::from((1_000, 500)),
+            volume: Volume::from_a_in_b_out(996, 498),
+            liquidity: 2_000,
+            oracle_age: 98,
+        };
+        assert_eq!(EmaOracle::get_entry(HDX, DOT, Week, SOURCE), Ok(expected_week));
     });
 }
 

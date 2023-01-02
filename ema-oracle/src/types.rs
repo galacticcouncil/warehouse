@@ -79,12 +79,18 @@ where
     }
 
     /// Update the volume in `self` by adding in the volume of `incoming` and taking over the other
-    /// values.
+    /// values from `incoming`.
     pub fn accumulate_volume_and_update_from(&mut self, incoming: &Self) {
         self.volume = incoming.volume.saturating_add(&self.volume);
         self.price = incoming.price;
         self.liquidity = incoming.liquidity;
         self.timestamp = incoming.timestamp;
+    }
+
+    /// Fast forward the oracle value to `new_timestamp`. Updates the timestamp and resets the volume.
+    pub fn fast_forward_to(&mut self, new_timestamp: BlockNumber) {
+        self.timestamp = new_timestamp;
+        self.volume = Volume::default();
     }
 
     /// Determine a new entry based on `self` and a previous entry. Adds the volumes together and

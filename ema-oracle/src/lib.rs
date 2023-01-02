@@ -233,7 +233,11 @@ impl<T: Config> Pallet<T> {
                 if parent > prev_entry.timestamp && period != into_blocks::<T>(&LastBlock) {
                     Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))
                         .and_then(|(mut last_block, _)| -> Option<()> {
-                            last_block.timestamp = parent;
+                            // update the `LastBlock` oracle to the last block if it hasn't been updated for a while
+                            // price and liquidity stay constant, volume becomes zero
+                            if last_block.timestamp != parent {
+                                last_block.fast_forward_to(parent);
+                            }
                             prev_entry.update_via_ema_with(period, &last_block)?;
                             Some(())
                         }).unwrap_or_else(|| {
@@ -270,7 +274,11 @@ impl<T: Config> Pallet<T> {
         // First get the `LastBlock` oracle as we will use it to calculate the updated values for
         // the others.
         let (mut last_block, init) = Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))?;
-        last_block.timestamp = parent;
+        // update the `LastBlock` oracle to the last block if it hasn't been updated for a while
+        // price and liquidity stay constant, volume becomes zero
+        if last_block.timestamp != parent {
+            last_block.fast_forward_to(parent);
+        }
 
         if period == LastBlock {
             return Some((last_block, init));

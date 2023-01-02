@@ -16,6 +16,7 @@ members = [
 	"ema-oracle",
 	"liquidity-mining",
 	"currencies",
+	"stableswap",
 	"test-utils"
 ]
 

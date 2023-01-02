@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -38,6 +39,8 @@ fn create_yield_farm_should_work() {
                 loyalty_curve: Some(LoyaltyCurve::default()),
                 entries_count: 0,
                 state: FarmState::Active,
+                left_to_distribute: 0,
+                total_stopped: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_ACA_AMM,
@@ -66,6 +69,8 @@ fn create_yield_farm_should_work() {
                 loyalty_curve: None,
                 entries_count: 0,
                 state: FarmState::Active,
+                left_to_distribute: 0,
+                total_stopped: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_KSM_AMM,
@@ -97,6 +102,8 @@ fn create_yield_farm_should_work() {
                 }),
                 state: FarmState::Active,
                 entries_count: 0,
+                left_to_distribute: 0,
+                total_stopped: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_ETH_AMM,
@@ -128,6 +135,8 @@ fn create_yield_farm_should_work() {
                 }),
                 state: FarmState::Active,
                 entries_count: 0,
+                left_to_distribute: 0,
+                total_stopped: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_ETH_AMM,
@@ -291,7 +300,7 @@ fn add_yield_farm_invalid_multiplier_should_not_work() {
                 LiquidityMining::create_yield_farm(
                     ALICE,
                     ALICE_FARM,
-                    FixedU128::from(0_u128),
+                    FixedU128::from_inner(1_000_000_000_000_000 - 1),
                     Some(LoyaltyCurve::default()),
                     BSX_HDX_AMM,
                     vec![BSX, HDX],
@@ -421,7 +430,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
 
             //stop and destroy
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 GC_BSX_TKN1_YIELD_FARM_ID,
@@ -432,7 +441,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID))
                     .unwrap()
                     .state,
-                FarmState::Deleted
+                FarmState::Terminated
             );
 
             //This still should now work because deleted yield farms in storage are included in counts.
@@ -449,7 +458,7 @@ fn add_yield_farm_global_farm_full_should_not_work() {
             );
 
             //Destroy stopped empty farm(it will be flushed from storage).
-            assert_ok!(LiquidityMining::destroy_yield_farm(
+            assert_ok!(LiquidityMining::terminate_yield_farm(
                 GC,
                 GC_FARM,
                 bsx_dot_yield_farm_id,

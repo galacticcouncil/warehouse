@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -31,7 +32,7 @@ fn stop_yield_farm_should_work() {
 
             assert!(yield_farm.state.is_active());
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM).unwrap(),
                 yield_farm.id
             );
@@ -41,7 +42,7 @@ fn stop_yield_farm_should_work() {
                 .checked_mul_int(yield_farm.total_valued_shares)
                 .unwrap();
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
                 YieldFarmData {
                     state: FarmState::Stopped,
@@ -52,7 +53,7 @@ fn stop_yield_farm_should_work() {
 
             assert!(LiquidityMining::active_yield_farm(BSX_TKN1_AMM, GC_FARM).is_none());
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     total_shares_z: global_farm.total_shares_z.checked_sub(stake_in_global_farm).unwrap(),
@@ -60,8 +61,8 @@ fn stop_yield_farm_should_work() {
                 }
             );
 
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &yield_farm_account), yield_farm_bsx_balance);
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), global_farm_bsx_balance);
+            assert_eq!(Tokens::free_balance(BSX, &yield_farm_account), yield_farm_bsx_balance);
+            assert_eq!(Tokens::free_balance(BSX, &global_farm_account), global_farm_bsx_balance);
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
@@ -70,26 +71,33 @@ fn stop_yield_farm_should_work() {
     //Cancel yield farming with farms update.
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
-            let yield_farm_account = LiquidityMining::farm_account_id(GC_BSX_TKN1_YIELD_FARM_ID).unwrap();
             let global_farm_account = LiquidityMining::farm_account_id(GC_FARM).unwrap();
-            let yield_farm_bsx_balance = Tokens::free_balance(BSX, &yield_farm_account);
-            let yield_farm = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
-            let global_farm = LiquidityMining::global_farm(GC_FARM).unwrap();
+            let pot = LiquidityMining::pot_account_id().unwrap();
 
-            assert!(yield_farm.state.is_active());
+            //_0 - value before act.
+            let yield_farm_0 = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
+            let global_farm_0 = LiquidityMining::global_farm(GC_FARM).unwrap();
+            let pot_balance_0 = Tokens::free_balance(BSX, &pot);
+            let global_balance_0 = Tokens::free_balance(BSX, &global_farm_account);
+
+            let last_yield_farm_rewards = 8_538_750 * ONE;
+            let allocated_for_other_yield_farms = 17_860_875 * ONE;
+
+            assert!(yield_farm_0.state.is_active());
 
             set_block_number(10_000);
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM).unwrap(),
-                yield_farm.id
+                yield_farm_0.id
             );
 
-            let stake_in_global_farm = yield_farm
+            let stake_in_global_farm = yield_farm_0
                 .multiplier
-                .checked_mul_int(yield_farm.total_valued_shares)
+                .checked_mul_int(yield_farm_0.total_valued_shares)
                 .unwrap();
-            pretty_assertions::assert_eq!(
+
+            assert_eq!(
                 LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap(),
                 YieldFarmData {
                     updated_at: 100,
@@ -97,28 +105,32 @@ fn stop_yield_farm_should_work() {
                     accumulated_rpz: FixedU128::from_inner(41_000_000_000_000_000_000_u128),
                     state: FarmState::Stopped,
                     multiplier: 0.into(),
-                    ..yield_farm
+                    left_to_distribute: yield_farm_0.left_to_distribute + last_yield_farm_rewards,
+                    ..yield_farm_0
                 }
             );
 
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     updated_at: 100,
                     accumulated_rpz: FixedU128::from_inner(41_000_000_000_000_000_000_u128),
-                    total_shares_z: global_farm.total_shares_z.checked_sub(stake_in_global_farm).unwrap(),
-                    accumulated_rewards: 17_860_875,
-                    paid_accumulated_rewards: 9_822_300,
-                    ..global_farm
+                    total_shares_z: global_farm_0.total_shares_z.checked_sub(stake_in_global_farm).unwrap(),
+                    pending_rewards: global_farm_0.pending_rewards + allocated_for_other_yield_farms,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards + last_yield_farm_rewards,
+                    ..global_farm_0
                 }
             );
 
-            pretty_assertions::assert_eq!(
-                Tokens::free_balance(BSX, &yield_farm_account),
-                yield_farm_bsx_balance + 8_538_750 //8_538_750 - yield farm's last claim from global farm
+            assert_eq!(
+                Tokens::free_balance(BSX, &pot),
+                pot_balance_0 + last_yield_farm_rewards + allocated_for_other_yield_farms
             );
 
-            pretty_assertions::assert_eq!(Tokens::free_balance(BSX, &global_farm_account), 29_972_316_825);
+            assert_eq!(
+                Tokens::free_balance(BSX, &global_farm_account),
+                global_balance_0 - last_yield_farm_rewards - allocated_for_other_yield_farms
+            );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))
         });
@@ -144,7 +156,7 @@ fn stop_yield_farm_liquidity_mining_already_canceled() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
             //1-th stop should pass ok.
-            pretty_assertions::assert_eq!(
+            assert_eq!(
                 LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM).unwrap(),
                 GC_BSX_TKN1_YIELD_FARM_ID
             );

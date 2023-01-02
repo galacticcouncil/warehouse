@@ -433,17 +433,21 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    fn do_destroy_collection(owner: T::AccountId, collection_id: T::NftCollectionId) -> DispatchResult {
+    fn do_destroy_collection(
+        owner: T::AccountId,
+        collection_id: T::NftCollectionId,
+    ) -> Result<DestroyWitness, DispatchError> {
         let witness = Self::get_destroy_witness(&collection_id).ok_or(Error::<T>::CollectionUnknown)?;
 
         // witness struct is empty because we don't allow destroying a collection with existing items
         ensure!(witness.items == 0u32, Error::<T>::TokenCollectionNotEmpty);
 
-        pallet_uniques::Pallet::<T>::do_destroy_collection(collection_id.into(), witness, Some(owner.clone()))?;
+        let witness =
+            pallet_uniques::Pallet::<T>::do_destroy_collection(collection_id.into(), witness, Some(owner.clone()))?;
         Collections::<T>::remove(collection_id);
 
         Self::deposit_event(Event::CollectionDestroyed { owner, collection_id });
-        Ok(())
+        Ok(witness)
     }
 }
 
@@ -506,26 +510,6 @@ impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
     }
 }
 
-impl<T: Config> Create<T::AccountId> for Pallet<T> {
-    /// Creates an NFT collection of the given collection type and sets its metadata.
-    /// The collection ID needs to be outside of the range of reserved IDs.
-    /// The permissions for the creation of a collection are not enforced.
-    /// Default collection type and metadata are used.
-    ///
-    /// Parameters:
-    /// - `collection`: Identifier of a collection.
-    /// - `who`: The collection owner.
-    /// - `admin`: This parameter is ignored and is always set to be the same as the collection owner.
-    ///
-    /// Emits CollectionCreated event
-    fn create_collection(collection: &Self::CollectionId, who: &T::AccountId, _admin: &T::AccountId) -> DispatchResult {
-        ensure!(!Self::is_id_reserved(*collection), Error::<T>::IdReserved);
-        Self::do_create_collection(who.clone(), *collection, Default::default(), BoundedVec::default())?;
-
-        Ok(())
-    }
-}
-
 impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
     type DestroyWitness = pallet_uniques::DestroyWitness;
 
@@ -561,14 +545,7 @@ impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
             Self::collection_owner(&collection).ok_or(Error::<T>::CollectionUnknown)?
         };
 
-        Self::do_destroy_collection(owner, collection)?;
-
-        // We can return empty struct here because we don't allow destroying a collection with existing items
-        Ok(DestroyWitness {
-            items: 0,
-            item_metadatas: 0,
-            attributes: 0,
-        })
+        Self::do_destroy_collection(owner, collection)
     }
 }
 
@@ -620,24 +597,28 @@ impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
     }
 }
 
-impl<T: Config> CreateTypedCollection<T::AccountId, T::NftCollectionId, T::CollectionType> for Pallet<T> {
+impl<T: Config> CreateTypedCollection<T::AccountId, T::NftCollectionId, T::CollectionType, BoundedVecOfUnq<T>>
+    for Pallet<T>
+{
     /// Creates an NFT collection of the given collection type and sets its metadata.
     /// The collection ID does not need to be outside of the range of reserved IDs.
     /// The permissions for the creation of a collection are not enforced.
-    /// Metadata is set to the default value.
+    /// Metadata is set to the default value if not provided.
     ///
     /// Parameters:
     /// - `owner`: The collection owner.
     /// - `collection_id`: Identifier of a collection.
     /// - `collection_type`: The collection type.
+    /// - `metadata`: Optional arbitrary data about a collection, e.g. IPFS hash or name.
     ///
     /// Emits CollectionCreated event
     fn create_typed_collection(
         owner: T::AccountId,
         collection_id: T::NftCollectionId,
         collection_type: T::CollectionType,
+        metadata: Option<BoundedVecOfUnq<T>>,
     ) -> DispatchResult {
-        Self::do_create_collection(owner, collection_id, collection_type, Default::default())
+        Self::do_create_collection(owner, collection_id, collection_type, metadata.unwrap_or_default())
     }
 }
 

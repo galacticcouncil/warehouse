@@ -501,39 +501,6 @@ fn inspect_enumerable_trait_should_work() {
 }
 
 #[test]
-fn create_trait_should_work() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
-                &COLLECTION_ID_0,
-                &BOB,
-                &ALICE
-            )
-        );
-
-        // collection already exists
-        assert_noop!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
-                &COLLECTION_ID_0,
-                &BOB,
-                &ALICE
-            ),
-            pallet_uniques::Error::<Test>::InUse
-        );
-
-        // collection ID needs to be outside of the range of reserved IDs
-        assert_noop!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
-                &COLLECTION_ID_RESERVED,
-                &BOB,
-                &ALICE
-            ),
-            Error::<Test>::IdReserved
-        );
-    });
-}
-
-#[test]
 fn destroy_trait_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
@@ -796,17 +763,21 @@ fn is_id_reserved_should_return_false_when_id_is_not_from_reserved_range() {
 #[test]
 fn create_typed_collection_should_work_without_deposit_when_deposit_is_not_required() {
     ExtBuilder::default().build().execute_with(|| {
+        let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
+            b"metadata".to_vec().try_into().unwrap();
+
         assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
             COLLECTION_ID_0,
-            CollectionType::LiquidityMining
+            CollectionType::LiquidityMining,
+            Some(metadata.clone()),
         ));
 
         assert_eq!(
             NFTPallet::collections(COLLECTION_ID_0).unwrap(),
             CollectionInfoOf::<Test> {
                 collection_type: CollectionType::LiquidityMining,
-                metadata: Default::default()
+                metadata
             }
         )
     });
@@ -818,7 +789,8 @@ fn create_typed_collection_should_work_with_reserved_id() {
         assert_ok!(NFTPallet::create_typed_collection(
             ALICE,
             COLLECTION_ID_RESERVED,
-            CollectionType::LiquidityMining
+            CollectionType::LiquidityMining,
+            None,
         ));
 
         assert_eq!(
@@ -835,7 +807,12 @@ fn create_typed_collection_should_work_with_reserved_id() {
 fn create_typed_collection_should_not_work_without_deposit_when_deposit_is_required() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            NFTPallet::create_typed_collection(ACCOUNT_WITH_NO_BALANCE, COLLECTION_ID_0, CollectionType::Marketplace),
+            NFTPallet::create_typed_collection(
+                ACCOUNT_WITH_NO_BALANCE,
+                COLLECTION_ID_0,
+                CollectionType::Marketplace,
+                None,
+            ),
             pallet_balances::Error::<Test>::InsufficientBalance
         );
     });
@@ -848,7 +825,8 @@ fn do_mint_should_work_when_account_has_no_balance() {
         assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
             COLLECTION_ID_0,
-            CollectionType::LiquidityMining
+            CollectionType::LiquidityMining,
+            None,
         ));
 
         //act & assert
@@ -867,7 +845,8 @@ fn burn_should_work_when_account_has_no_balance() {
         assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
             COLLECTION_ID_0,
-            CollectionType::LiquidityMining
+            CollectionType::LiquidityMining,
+            None,
         ));
 
         assert_ok!(NFTPallet::mint_into(
@@ -901,5 +880,70 @@ fn burn_should_work_when_account_has_no_balance() {
             &ITEM_ID_1,
             Some(&ACCOUNT_WITH_NO_BALANCE)
         ));
+    });
+}
+
+#[test]
+fn do_destroy_collection_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
+            b"metadata".to_vec().try_into().unwrap();
+
+        // collection does not exist
+        assert_noop!(
+            NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_0),
+            Error::<Test>::CollectionUnknown
+        );
+
+        // existing item
+        assert_ok!(NFTPallet::create_collection(
+            Origin::signed(ALICE),
+            COLLECTION_ID_0,
+            Default::default(), // Marketplace
+            metadata.clone()
+        ));
+
+        assert_ok!(NFTPallet::mint(
+            Origin::signed(ALICE),
+            COLLECTION_ID_0,
+            ITEM_ID_0,
+            metadata.clone()
+        ));
+
+        assert_noop!(
+            NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_0),
+            Error::<Test>::TokenCollectionNotEmpty
+        );
+
+        // happy path
+        assert_ok!(NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0));
+
+        let witness = NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_0).unwrap();
+        assert_eq!(
+            witness,
+            DestroyWitness {
+                items: 0,
+                item_metadatas: 0,
+                attributes: 0
+            }
+        );
+
+        assert_eq!(NFTPallet::collections(COLLECTION_ID_0), None);
+
+        expect_events(vec![crate::Event::CollectionDestroyed {
+            owner: ALICE,
+            collection_id: COLLECTION_ID_0,
+        }
+        .into()]);
+
+        // permissions are ignored
+        assert_ok!(NFTPallet::create_collection(
+            Origin::signed(ALICE),
+            COLLECTION_ID_1,
+            CollectionType::Redeemable,
+            metadata
+        ));
+
+        assert_ok!(NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_1));
     });
 }

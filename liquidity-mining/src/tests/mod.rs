@@ -18,17 +18,17 @@
 use super::*;
 use mock::{
     asset_pair_to_map_key, set_block_number, with_transaction, AccountId, AssetId, AssetPair, Balance, BlockNumber,
-    ExtBuilder, LiquidityMining, Origin, Test, Tokens, TransactionOutcome, ACA, ACA_FARM, ACA_KSM_AMM,
+    ExtBuilder, LiquidityMining, Origin, Test, Tokens, TransactionOutcome, Whitelist, ACA, ACA_FARM, ACA_KSM_AMM,
     ACA_KSM_SHARE_ID, ACCOUNT_WITH_1M, ALICE, AMM_POOLS, BOB, BSX, BSX_ACA_AMM, BSX_ACA_SHARE_ID,
     BSX_ACA_YIELD_FARM_ID, BSX_DOT_AMM, BSX_DOT_SHARE_ID, BSX_DOT_YIELD_FARM_ID, BSX_ETH_AMM, BSX_ETH_SHARE_ID,
     BSX_FARM, BSX_HDX_AMM, BSX_HDX_SHARE_ID, BSX_KSM_AMM, BSX_KSM_SHARE_ID, BSX_KSM_YIELD_FARM_ID, BSX_TKN1_AMM,
     BSX_TKN1_SHARE_ID, BSX_TKN2_AMM, BSX_TKN2_SHARE_ID, CHARLIE, DAVE, DOT, ETH, EVE, GC, GC_FARM, HDX,
-    INITIAL_BALANCE, KSM, KSM_DOT_AMM, KSM_DOT_SHARE_ID, KSM_FARM, ONE, TKN1, TKN2, TREASURY,
+    INITIAL_BALANCE, KSM, KSM_DOT_AMM, KSM_DOT_SHARE_ID, KSM_FARM, ONE, TKN1, TKN2, TREASURY, UNKNOWN_ASSET,
 };
 
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::Contains};
 
-use sp_arithmetic::traits::CheckedSub;
+use sp_arithmetic::{traits::CheckedSub, FixedPointNumber};
 use std::cmp::Ordering;
 
 const ALICE_FARM: u32 = BSX_FARM;
@@ -48,15 +48,15 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 1_000_u64,
         owner: ALICE,
         incentivized_asset: BSX,
-        max_reward_per_period: 333_333_333,
+        max_reward_per_period: 333_333_333_333_333_333_333,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: Zero::zero(),
         total_yield_farms_count: Zero::zero(),
-        paid_accumulated_rewards: 0,
+        accumulated_paid_rewards: 0,
         total_shares_z: 0,
-        accumulated_rewards: 0,
+        pending_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: One::one(),
     },
     GlobalFarmData {
@@ -68,15 +68,15 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 10_000_u64,
         owner: BOB,
         incentivized_asset: BSX,
-        max_reward_per_period: 200_000,
+        max_reward_per_period: 200_000 * ONE,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: Zero::zero(),
         total_yield_farms_count: Zero::zero(),
-        paid_accumulated_rewards: 0,
+        accumulated_paid_rewards: 0,
         total_shares_z: 0,
-        accumulated_rewards: 0,
+        pending_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: One::one(),
     },
     GlobalFarmData {
@@ -88,15 +88,15 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 100_u64,
         owner: GC,
         incentivized_asset: BSX,
-        max_reward_per_period: 60_000_000,
+        max_reward_per_period: 60_000_000 * ONE,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: 2,
         total_yield_farms_count: 2,
-        paid_accumulated_rewards: 0,
+        accumulated_paid_rewards: 0,
         total_shares_z: 0,
-        accumulated_rewards: 0,
+        pending_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: One::one(),
     },
     GlobalFarmData {
@@ -108,15 +108,15 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 100_u64,
         owner: CHARLIE,
         incentivized_asset: KSM,
-        max_reward_per_period: 60_000_000,
+        max_reward_per_period: 60_000_000 * ONE,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: 1,
         total_yield_farms_count: 1,
-        paid_accumulated_rewards: 0,
+        accumulated_paid_rewards: 0,
         total_shares_z: 0,
-        accumulated_rewards: 0,
+        pending_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: FixedU128::from_float(0.5),
     },
     GlobalFarmData {
@@ -128,15 +128,15 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 1_000_u64,
         owner: DAVE,
         incentivized_asset: TKN1,
-        max_reward_per_period: 333_333_333,
+        max_reward_per_period: 333_333_333_333,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: Zero::zero(),
         total_yield_farms_count: Zero::zero(),
-        paid_accumulated_rewards: 0,
+        accumulated_paid_rewards: 0,
         total_shares_z: 0,
-        accumulated_rewards: 0,
+        pending_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: One::one(),
     },
     GlobalFarmData {
@@ -148,15 +148,15 @@ static PREDEFINED_GLOBAL_FARMS_INS1: [GlobalFarmData<Test, Instance1>; 6] = [
         blocks_per_period: 1_000_u64,
         owner: EVE,
         incentivized_asset: BSX,
-        max_reward_per_period: 333_333_333,
+        max_reward_per_period: 333_333_333_333,
         accumulated_rpz: Zero::zero(),
         live_yield_farms_count: Zero::zero(),
         total_yield_farms_count: Zero::zero(),
-        paid_accumulated_rewards: 0,
+        accumulated_paid_rewards: 0,
         total_shares_z: 0,
-        accumulated_rewards: 0,
+        pending_rewards: 0,
         state: FarmState::Active,
-        min_deposit: 10,
+        min_deposit: 1_000,
         price_adjustment: One::one(),
     },
 ]
@@ -221,7 +221,7 @@ fn is_approx_eq_fixedu128(num_1: FixedU128, num_2: FixedU128, delta: FixedU128) 
     };
 
     if diff.cmp(&delta) == Ordering::Greater {
-        println!("diff: {:?}; delta: {:?}; n1: {:?}; n2: {:?}", diff, delta, num_1, num_2);
+        println!("diff: {diff:?}; delta: {delta:?}; n1: {num_1:?}; n2: {num_2:?}");
 
         false
     } else {
@@ -251,14 +251,14 @@ pub mod claim_rewards;
 pub mod create_global_farm;
 pub mod create_yield_farm;
 pub mod deposit_lp_shares;
-pub mod destroy_global_farm;
-pub mod destroy_yield_farm;
 pub mod full_run;
 pub mod invariants;
 pub mod mock;
 pub mod redeposit_lp_shares;
 pub mod resume_yield_farm;
 pub mod stop_yield_farm;
+pub mod terminate_global_farm;
+pub mod terminate_yield_farm;
 pub mod test_ext;
 
 #[allow(clippy::module_inception)]

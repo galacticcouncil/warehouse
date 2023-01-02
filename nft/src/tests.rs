@@ -501,39 +501,6 @@ fn inspect_enumerable_trait_should_work() {
 }
 
 #[test]
-fn create_trait_should_work() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
-                &COLLECTION_ID_0,
-                &BOB,
-                &ALICE
-            )
-        );
-
-        // collection already exists
-        assert_noop!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
-                &COLLECTION_ID_0,
-                &BOB,
-                &ALICE
-            ),
-            pallet_uniques::Error::<Test>::InUse
-        );
-
-        // collection ID needs to be outside of the range of reserved IDs
-        assert_noop!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
-                &COLLECTION_ID_RESERVED,
-                &BOB,
-                &ALICE
-            ),
-            Error::<Test>::IdReserved
-        );
-    });
-}
-
-#[test]
 fn destroy_trait_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =

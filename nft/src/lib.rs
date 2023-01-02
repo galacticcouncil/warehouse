@@ -510,26 +510,6 @@ impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
     }
 }
 
-impl<T: Config> Create<T::AccountId> for Pallet<T> {
-    /// Creates an NFT collection of the given collection type and sets its metadata.
-    /// The collection ID needs to be outside of the range of reserved IDs.
-    /// The permissions for the creation of a collection are not enforced.
-    /// Default collection type and metadata are used.
-    ///
-    /// Parameters:
-    /// - `collection`: Identifier of a collection.
-    /// - `who`: The collection owner.
-    /// - `admin`: This parameter is ignored and is always set to be the same as the collection owner.
-    ///
-    /// Emits CollectionCreated event
-    fn create_collection(collection: &Self::CollectionId, who: &T::AccountId, _admin: &T::AccountId) -> DispatchResult {
-        ensure!(!Self::is_id_reserved(*collection), Error::<T>::IdReserved);
-        Self::do_create_collection(who.clone(), *collection, Default::default(), BoundedVec::default())?;
-
-        Ok(())
-    }
-}
-
 impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
     type DestroyWitness = pallet_uniques::DestroyWitness;
 

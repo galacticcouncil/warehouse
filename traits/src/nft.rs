@@ -17,12 +17,13 @@
 
 use frame_support::dispatch::DispatchResult;
 
-pub trait CreateTypedCollection<AccountId, CollectionId, CollectionType> {
+pub trait CreateTypedCollection<AccountId, CollectionId, CollectionType, Metadata> {
     /// This function create an NFT collection of `collection_type` type.
     fn create_typed_collection(
         owner: AccountId,
         collection_id: CollectionId,
         collection_type: CollectionType,
+        metadata: Option<Metadata>,
     ) -> DispatchResult;
 }
 

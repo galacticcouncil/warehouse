@@ -1126,10 +1126,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             );
                         }
 
-                        if yield_farm.state.is_active() {
-                            Self::sync_global_farm(global_farm, current_period)?;
-                            Self::sync_yield_farm(yield_farm, global_farm, current_period)?;
-                        }
+                        Self::sync_global_farm(global_farm, current_period)?;
+                        Self::sync_yield_farm(yield_farm, global_farm, current_period)?;
 
                         //NOTE: this should never fail yield-farm's stopped must be >= entry's
                         //stopped

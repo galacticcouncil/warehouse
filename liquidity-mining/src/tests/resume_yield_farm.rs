@@ -65,7 +65,7 @@ fn resume_yield_farm_should_work() {
                     total_shares_z: global_farm.total_shares_z + yield_farm_stake_in_global_farm,
                     updated_at: 134_200,
                     accumulated_rpz: FixedU128::from_inner(62_987_640_859_560_351_884_356_u128),
-                    accumulated_rewards: 29_998_716_449_999_999_999_000,
+                    pending_rewards: 29_998_716_449_999_999_999_000,
                     ..global_farm
                 }
             );

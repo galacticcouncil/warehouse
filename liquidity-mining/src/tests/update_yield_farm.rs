@@ -118,8 +118,8 @@ fn update_yield_farm_should_work() {
                     updated_at: 50,
                     accumulated_rpz: FixedU128::from_inner(6_790_366_340_394_671_545_u128),
                     total_shares_z: 228_176_290 * ONE,
-                    accumulated_rewards: global_farm_0.accumulated_rewards + expected_allocated_for_other_yield_farms,
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards
+                    pending_rewards: global_farm_0.pending_rewards + expected_allocated_for_other_yield_farms,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards
                         + expected_claimed_from_global_farm,
                     ..global_farm_0
                 }

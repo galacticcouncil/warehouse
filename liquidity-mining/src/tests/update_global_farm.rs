@@ -40,7 +40,7 @@ fn update_global_farm_price_adjustment_should_work() {
                     updated_at: 1_000,
                     accumulated_rpz: FixedU128::from_inner(491_000_000_000_000_000_000_u128),
                     price_adjustment: new_price_adjustment,
-                    accumulated_rewards: 343_195_125_u128 * ONE,
+                    pending_rewards: 343_195_125_u128 * ONE,
                     ..global_farm_0
                 },
             );

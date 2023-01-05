@@ -640,8 +640,11 @@ fn claim_rewards_should_claim_correct_amount_when_yield_farm_is_stopped() {
             let pot_balance_0 = Tokens::free_balance(BSX, &pot);
             let yield_farm_0 = LiquidityMining::yield_farm((BSX_TKN1_AMM, GC_FARM, GC_BSX_TKN1_YIELD_FARM_ID)).unwrap();
 
+            let expected_global_pending_rewards = 41_675_375_000_000_000_000_u128;
             //Stop yield farming before claiming.
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+
+            let global_farm_0 = LiquidityMining::global_farm(GC_FARM).unwrap();
 
             set_block_number(20_000);
 
@@ -696,7 +699,19 @@ fn claim_rewards_should_claim_correct_amount_when_yield_farm_is_stopped() {
 
             assert_eq!(
                 Tokens::free_balance(BSX, &pot),
-                pot_balance_0 - expected_claimed_rewards
+                pot_balance_0 + expected_global_pending_rewards - expected_claimed_rewards
+            );
+
+            //global-farm should be synced independetly of yield-farm (even it yield-farm is
+            //stopped).
+            assert_eq!(
+                LiquidityMining::global_farm(GC_FARM).unwrap(),
+                GlobalFarmData {
+                    updated_at: 200,
+                    accumulated_rpz: FixedU128::from_inner(91_000_000_000_000_000_000_u128),
+                    pending_rewards: 41_675_375_000_000_000_000_u128,
+                    ..global_farm_0
+                }
             );
 
             //Second claim on same deposit from stopped yield farm.

@@ -1873,8 +1873,8 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         deposit_id: DepositId,
         yield_farm_id: YieldFarmId,
     ) -> Result<(GlobalFarmId, T::AssetId, Self::Balance, Self::Balance), Self::Error> {
-        const FAIL_ON_DOUBLECLAIM: bool = true;
-        Self::claim_rewards(who, deposit_id, yield_farm_id, FAIL_ON_DOUBLECLAIM)
+        let fail_on_doubleclaim = true;
+        Self::claim_rewards(who, deposit_id, yield_farm_id, fail_on_doubleclaim)
     }
 
     fn withdraw_lp_shares(
@@ -1885,9 +1885,9 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         amm_pool_id: Self::AmmPoolId,
     ) -> Result<(Self::Balance, Option<(T::AssetId, Self::Balance, Self::Balance)>, bool), Self::Error> {
         let claim_data = if Self::is_yield_farm_claimable(global_farm_id, yield_farm_id, amm_pool_id) {
-            const FAIL_ON_DOUBLECLAIM: bool = false;
+            let fail_on_doubleclaim = false;
             let (_, reward_currency, claimed, unclaimable) =
-                Self::claim_rewards(who, deposit_id, yield_farm_id, FAIL_ON_DOUBLECLAIM)?;
+                Self::claim_rewards(who, deposit_id, yield_farm_id, fail_on_doubleclaim)?;
 
             Some((reward_currency, claimed, unclaimable))
         } else {

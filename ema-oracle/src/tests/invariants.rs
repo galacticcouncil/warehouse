@@ -38,9 +38,7 @@ proptest! {
     ) {
         let a_then_b = determine_normalized_price(asset_a, asset_b, amount_a, amount_b);
         let b_then_a = determine_normalized_price(asset_b, asset_a, amount_b, amount_a);
-        prop_assert!(a_then_b.is_some());
-        prop_assert!(b_then_a.is_some());
-        prop_assert_eq!(a_then_b.unwrap(), b_then_a.unwrap());
+        prop_assert_eq!(a_then_b, b_then_a);
     }
 }
 

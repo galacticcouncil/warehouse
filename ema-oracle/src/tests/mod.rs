@@ -25,18 +25,35 @@ pub use crate::mock::{
 
 use frame_support::assert_storage_noop;
 use pretty_assertions::assert_eq;
-use sp_arithmetic::FixedPointNumber;
+use rug::Rational;
 
 /// Default oracle source for tests.
 const SOURCE: Source = *b"dummysrc";
+/// Default tolerance for price comparisons.
+const TOLERANCE: Price = (1, 1_u128 << 120);
 
-#[macro_export]
-macro_rules! assert_eq_approx {
-    ( $x:expr, $y:expr, $z:expr, $r:expr) => {{
-        let diff = if $x >= $y { $x - $y } else { $y - $x };
-        if diff > $z {
-            panic!("\n{} not equal\n left: {:?}\nright: {:?}\n", $r, $x, $y);
-        }
+macro_rules! assert_price_approx_eq {
+    ($x:expr, $y:expr, $z:expr) => {{
+        assert_price_approx_eq!($x, $y, $z, "not approximately equal");
+    }};
+    ($x:expr, $y:expr, $z:expr, $r:expr) => {{
+        let x = Rational::from($x);
+        let y = Rational::from($y);
+        let z = Rational::from($z);
+        let diff = if x >= y {
+            x.clone() - y.clone()
+        } else {
+            y.clone() - x.clone()
+        };
+        assert!(
+            diff <= z,
+            "\n{}\n    left: {:?}\n   right: {:?}\n    diff: {:?}\nmax_diff: {:?}\n",
+            $r,
+            x,
+            y,
+            diff,
+            z
+        );
     }};
 }
 
@@ -58,8 +75,8 @@ fn get_oracle_entry(a: AssetId, b: AssetId, period: &OraclePeriod) -> Option<Ora
 fn genesis_config_works() {
     ExtBuilder::default()
         .with_price_data(vec![
-            (SOURCE, (HDX, DOT), Price::from(1_000_000), 2_000_000),
-            (SOURCE, (HDX, ACA), Price::from(3_000_000), 4_000_000),
+            (SOURCE, (HDX, DOT), (1_000_000, 1), 2_000_000),
+            (SOURCE, (HDX, ACA), (3_000_000, 1), 4_000_000),
         ])
         .build()
         .execute_with(|| {
@@ -67,7 +84,7 @@ fn genesis_config_works() {
                 assert_eq!(
                     get_oracle_entry(HDX, DOT, period),
                     Some(OracleEntry {
-                        price: Price::from(1_000_000),
+                        price: (1_000_000, 1),
                         volume: Volume::default(),
                         liquidity: 2_000_000,
                         timestamp: 0,
@@ -77,7 +94,7 @@ fn genesis_config_works() {
                 assert_eq!(
                     get_oracle_entry(HDX, ACA, period),
                     Some(OracleEntry {
-                        price: Price::from(3_000_000),
+                        price: (3_000_000, 1),
                         volume: Volume::default(),
                         liquidity: 4_000_000,
                         timestamp: 0,
@@ -114,7 +131,7 @@ fn on_liquidity_changed_handler_should_work() {
         let timestamp = 5;
         System::set_block_number(timestamp);
         let no_volume_entry = OracleEntry {
-            price: Price::saturating_from_integer(2),
+            price: (1_000, 500),
             volume: Volume::default(),
             liquidity: 2_000,
             timestamp,
@@ -126,30 +143,12 @@ fn on_liquidity_changed_handler_should_work() {
 }
 
 #[test]
-fn price_normalization_should_exclude_extreme_values() {
+fn price_normalization_should_exclude_zero_values() {
     new_test_ext().execute_with(|| {
         assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
             SOURCE,
             HDX,
             DOT,
-            Balance::MAX,
-            1,
-            2_000
-        ));
-
-        assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
-            SOURCE,
-            HDX,
-            DOT,
-            1,
-            Balance::MAX,
-            2_000
-        ));
-
-        assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
-            SOURCE,
-            HDX,
-            DOT,
             Balance::zero(),
             1_000,
             2_000
@@ -162,6 +161,15 @@ fn price_normalization_should_exclude_extreme_values() {
             1_000,
             Balance::zero(),
             2_000
+        ));
+
+        assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
+            SOURCE,
+            HDX,
+            DOT,
+            1_000,
+            1_000,
+            Balance::zero(),
         ));
     });
 }
@@ -185,13 +193,13 @@ fn oracle_volume_should_factor_in_asset_order() {
 
         let price_entry = get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap();
         let first_entry = OracleEntry {
-            price: Price::saturating_from_rational(2_000_000, 1_000),
+            price: (2_000_000, 1_000),
             volume: Volume::from_a_in_b_out(2_000_000, 1_000),
             liquidity: 2_000,
             timestamp: 0,
         };
         let second_entry = OracleEntry {
-            price: Price::saturating_from_rational(2_000_000, 1_000),
+            price: (2_000_000, 1_000),
             volume: Volume::from_a_out_b_in(2_000_000, 1_000),
             liquidity: 2_000,
             timestamp: 0,
@@ -258,6 +266,7 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
             let period_num = into_blocks::<Test>(period);
             let second_at_50 = OracleEntry {
                 timestamp: 49,
+                volume: Volume::default(),
                 ..second_entry.clone()
             };
             let mut expected = PRICE_ENTRY_1.clone();
@@ -282,7 +291,7 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
 fn combine_via_ema_with_only_updates_timestamp_on_stable_values() {
     let period: u32 = 7;
     let start_oracle = OracleEntry {
-        price: 4.into(),
+        price: (4, 1),
         volume: Volume::from_a_in_b_out(1u128, 4u128),
         liquidity: 4u128,
         timestamp: 5,
@@ -299,40 +308,43 @@ fn combine_via_ema_with_only_updates_timestamp_on_stable_values() {
 fn combine_via_ema_with_works() {
     let period: u32 = 7;
     let start_oracle = OracleEntry {
-        price: 4.into(),
+        price: (4, 1),
         volume: Volume::from_a_in_b_out(1u128, 4u128),
         liquidity: 4u128,
         timestamp: 5,
     };
 
     let next_value = OracleEntry {
-        price: 8.into(),
+        price: (8, 1),
         volume: Volume::from_a_in_b_out(1u128, 8u128),
         liquidity: 8u128,
         timestamp: 6,
     };
-    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value);
+    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value).unwrap();
     let expected_oracle = OracleEntry {
-        price: 5.into(),
+        price: (5, 1),
         volume: Volume::from_a_in_b_out(1u128, 5u128),
         liquidity: 5u128,
         timestamp: 6,
     };
-    assert_eq!(next_oracle, Some(expected_oracle));
+    assert_price_approx_eq!(next_oracle.price, expected_oracle.price, TOLERANCE);
+    assert_eq!(next_oracle.volume, expected_oracle.volume);
+    assert_eq!(next_oracle.liquidity, expected_oracle.liquidity);
+    assert_eq!(next_oracle.timestamp, expected_oracle.timestamp);
 }
 
 #[test]
 fn combine_via_ema_with_last_block_period_returns_new_value() {
     let period: u32 = 1;
     let start_oracle = OracleEntry {
-        price: 4.into(),
+        price: (4, 1),
         volume: Volume::from_a_in_b_out(1u128, 4u128),
         liquidity: 4u128,
         timestamp: 5,
     };
 
     let next_value = OracleEntry {
-        price: 8.into(),
+        price: (8, 1),
         volume: Volume::from_a_in_b_out(1u128, 8u128),
         liquidity: 8u128,
         timestamp: 6,
@@ -346,77 +358,87 @@ fn combine_via_ema_with_last_block_period_returns_new_value() {
 fn calculate_new_ema_equals_update_via_ema_with() {
     let period: u32 = 7;
     let mut start_oracle = OracleEntry {
-        price: 4.into(),
+        price: (4, 1),
         volume: Volume::from_a_in_b_out(1u128, 4u128),
         liquidity: 4u128,
         timestamp: 5,
     };
 
     let next_value = OracleEntry {
-        price: 8.into(),
+        price: (8, 1),
         volume: Volume::from_a_in_b_out(1u128, 8u128),
         liquidity: 8u128,
         timestamp: 6,
     };
-    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value);
+    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value).unwrap();
     let expected_oracle = OracleEntry {
-        price: 5.into(),
+        price: (5, 1),
         volume: Volume::from_a_in_b_out(1u128, 5u128),
         liquidity: 5u128,
         timestamp: 6,
     };
-    assert_eq!(next_oracle, Some(expected_oracle.clone()));
+    assert_price_approx_eq!(next_oracle.price, expected_oracle.price, TOLERANCE);
+    assert_eq!(next_oracle.volume, expected_oracle.volume);
+    assert_eq!(next_oracle.liquidity, expected_oracle.liquidity);
+    assert_eq!(next_oracle.timestamp, expected_oracle.timestamp);
+
     start_oracle.update_via_ema_with(period, &next_value).unwrap();
-    assert_eq!(start_oracle, expected_oracle);
+    assert_price_approx_eq!(next_oracle.price, expected_oracle.price, TOLERANCE);
+    assert_eq!(next_oracle.volume, expected_oracle.volume);
+    assert_eq!(next_oracle.liquidity, expected_oracle.liquidity);
+    assert_eq!(next_oracle.timestamp, expected_oracle.timestamp);
 }
 
 #[test]
 fn calculate_new_ema_should_incorporate_longer_time_deltas() {
     let period: u32 = 7;
     let start_oracle = OracleEntry {
-        price: Price::saturating_from_integer(4000u32),
+        price: (4000, 1),
         volume: Volume::from_a_in_b_out(1, 4_000),
         liquidity: 4_000u32.into(),
         timestamp: 5,
     };
     let next_value = OracleEntry {
-        price: Price::saturating_from_integer(8000u32),
+        price: (8000, 1),
         volume: Volume::from_a_in_b_out(1, 8_000),
         liquidity: 8_000u32.into(),
         timestamp: 100,
     };
     let next_oracle = start_oracle.combine_via_ema_with(period, &next_value).unwrap();
-    assert_eq_approx!(
+    assert_price_approx_eq!(
         next_oracle.price,
         next_value.price,
-        Price::from_float(0.0001),
+        (1, 10_000),
         "Oracle price deviates too much."
     );
 
     let next_value = OracleEntry {
-        price: Price::saturating_from_integer(8000u32),
+        price: (8000, 1),
         volume: Volume::from_a_in_b_out(1, 8_000),
         liquidity: 8_000u32.into(),
         timestamp: 8,
     };
-    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value);
+    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value).unwrap();
     let expected_oracle = OracleEntry {
-        price: Price::saturating_from_rational(63125, 10),
+        price: (63125, 10),
         volume: Volume::from_a_in_b_out(1, 6_312),
         liquidity: 6_312u32.into(),
         timestamp: 8,
     };
-    assert_eq!(next_oracle, Some(expected_oracle));
+    assert_price_approx_eq!(next_oracle.price, expected_oracle.price, (1, 1_u128 << 100));
+    assert_eq!(next_oracle.volume, expected_oracle.volume);
+    assert_eq!(next_oracle.liquidity, expected_oracle.liquidity);
+    assert_eq!(next_oracle.timestamp, expected_oracle.timestamp);
 }
 
 #[test]
 fn get_price_works() {
     ExtBuilder::default()
-        .with_price_data(vec![(SOURCE, (HDX, DOT), Price::from(1_000_000), 2_000_000)])
+        .with_price_data(vec![(SOURCE, (HDX, DOT), (1_000_000, 1), 2_000_000)])
         .build()
         .execute_with(|| {
             System::set_block_number(2);
-            let expected = (Price::from(1_000_000), 1);
+            let expected = ((1_000_000, 1), 1);
             assert_eq!(EmaOracle::get_price(HDX, DOT, LastBlock, SOURCE), Ok(expected));
             assert_eq!(EmaOracle::get_price(HDX, DOT, TenMinutes, SOURCE), Ok(expected));
             assert_eq!(EmaOracle::get_price(HDX, DOT, Day, SOURCE), Ok(expected));
@@ -427,7 +449,7 @@ fn get_price_works() {
 #[test]
 fn trying_to_get_price_for_same_asset_should_error() {
     ExtBuilder::default()
-        .with_price_data(vec![(SOURCE, (HDX, DOT), Price::from(1_000_000), 2_000_000)])
+        .with_price_data(vec![(SOURCE, (HDX, DOT), (1_000_000, 1), 2_000_000)])
         .build()
         .execute_with(|| {
             System::set_block_number(2);
@@ -446,7 +468,7 @@ fn get_entry_works() {
         EmaOracle::on_finalize(1);
         System::set_block_number(100);
         let expected = AggregatedEntry {
-            price: Price::from((1_000, 500)),
+            price: (1_000, 500),
             volume: Volume::default(), // volume for new blocks is zero by default
             liquidity: 2_000,
             oracle_age: 98,
@@ -454,7 +476,7 @@ fn get_entry_works() {
         assert_eq!(EmaOracle::get_entry(HDX, DOT, LastBlock, SOURCE), Ok(expected));
 
         let expected_ten_min = AggregatedEntry {
-            price: Price::from((1_000, 500)),
+            price: (1_000, 500),
             volume: Volume::from_a_in_b_out(20, 10), // volume oracle gets update towards zero
             liquidity: 2_000,
             oracle_age: 98,
@@ -462,7 +484,7 @@ fn get_entry_works() {
         assert_eq!(EmaOracle::get_entry(HDX, DOT, TenMinutes, SOURCE), Ok(expected_ten_min));
 
         let expected_day = AggregatedEntry {
-            price: Price::from((1_000, 500)),
+            price: (1_000, 500),
             volume: Volume::from_a_in_b_out(973, 487),
             liquidity: 2_000,
             oracle_age: 98,
@@ -470,7 +492,7 @@ fn get_entry_works() {
         assert_eq!(EmaOracle::get_entry(HDX, DOT, Day, SOURCE), Ok(expected_day));
 
         let expected_week = AggregatedEntry {
-            price: Price::from((1_000, 500)),
+            price: (1_000, 500),
             volume: Volume::from_a_in_b_out(996, 498),
             liquidity: 2_000,
             oracle_age: 98,
@@ -482,11 +504,11 @@ fn get_entry_works() {
 #[test]
 fn get_price_returns_updated_price() {
     ExtBuilder::default()
-        .with_price_data(vec![(SOURCE, (HDX, DOT), Price::from(1_000_000), 2_000_000)])
+        .with_price_data(vec![(SOURCE, (HDX, DOT), (1_000_000, 1), 2_000_000)])
         .build()
         .execute_with(|| {
             let on_trade_entry = OracleEntry {
-                price: Price::from(500_000),
+                price: (500_000, 1),
                 volume: Volume::default(),
                 liquidity: 2_000_000,
                 timestamp: 10_000,
@@ -508,28 +530,28 @@ fn get_price_returns_updated_price() {
                 "Oracle should be 10_000 blocks old."
             );
 
-            let e = Price::from_float(0.01);
-            assert_eq_approx!(
+            let e = (1, 100);
+            assert_price_approx_eq!(
                 EmaOracle::get_price(HDX, DOT, LastBlock, SOURCE).unwrap().0,
-                Price::from(500_000),
+                (500_000, 1),
                 e,
                 "LastBlock Oracle should have most recent value."
             );
-            assert_eq_approx!(
+            assert_price_approx_eq!(
                 EmaOracle::get_price(HDX, DOT, TenMinutes, SOURCE).unwrap().0,
-                Price::from(500_000),
+                (500_000, 1),
                 e,
                 "TenMinutes Oracle should converge within 1000 blocks."
             );
-            assert_eq_approx!(
+            assert_price_approx_eq!(
                 EmaOracle::get_price(HDX, DOT, Day, SOURCE).unwrap().0,
-                Price::from_float(531_088.261_455_784),
+                (531_088_261_455_784_u128, 1_000_000_000),
                 e,
                 "Day Oracle should converge somewhat."
             );
-            assert_eq_approx!(
+            assert_price_approx_eq!(
                 EmaOracle::get_price(HDX, DOT, Week, SOURCE).unwrap().0,
-                Price::from_float(836_225.713_750_993),
+                (836_225_713_750_993_u128, 1_000_000_000),
                 e,
                 "Week Oracle should converge somewhat."
             );

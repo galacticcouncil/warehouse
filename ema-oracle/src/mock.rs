@@ -22,7 +22,6 @@ use frame_support::parameter_types;
 use frame_support::sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    FixedU128,
 };
 use frame_support::traits::{Everything, GenesisBuild};
 use hydradx_traits::{AssetPairAccountIdFor, Volume};
@@ -30,9 +29,7 @@ use sp_core::H256;
 
 pub use hydradx_traits::Source;
 
-pub type AssetId = u32;
-pub type Balance = u128;
-pub type Price = FixedU128;
+use crate::types::{AssetId, Balance, Price};
 pub type BlockNumber = u64;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -43,7 +40,7 @@ pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
 
 pub const PRICE_ENTRY_1: OracleEntry<BlockNumber> = OracleEntry {
-    price: Price::from_inner(2000000000000000000),
+    price: (1_000, 500),
     volume: Volume {
         a_in: 1_000,
         b_out: 500,
@@ -54,7 +51,7 @@ pub const PRICE_ENTRY_1: OracleEntry<BlockNumber> = OracleEntry {
     timestamp: 5,
 };
 pub const PRICE_ENTRY_2: OracleEntry<BlockNumber> = OracleEntry {
-    price: Price::from_inner(5000000000000000000),
+    price: (2_000, 2_000),
     volume: Volume {
         a_in: 0,
         b_out: 0,

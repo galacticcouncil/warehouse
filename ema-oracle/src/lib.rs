@@ -33,7 +33,6 @@
 
 use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::{BlockNumberProvider, One, Zero};
-use frame_support::sp_runtime::FixedPointNumber;
 use hydradx_traits::{
     AggregatedEntry, AggregatedOracle, AggregatedPriceOracle, OnCreatePoolHandler, OnLiquidityChangedHandler,
     OnTradeHandler,
@@ -62,6 +61,8 @@ mod benchmarking;
 /// Maximum number of trades expected in one block. Empirically determined by running
 /// `trades_estimation.py` and rounding up from 212 to 300.
 pub const MAX_TRADES: u32 = 300;
+
+const LOG_TARGET: &str = "runtime::ema-oracle";
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -179,7 +180,7 @@ impl<T: Config> Pallet<T> {
             if !is_present {
                 accumulator.try_insert((src, assets), oracle_entry).unwrap_or_else(|((src, assets), entry)| {
                         log::error!(
-                            target: "runtime::ema-oracle",
+                            target: LOG_TARGET,
                             "Could not insert oracle entry at ({src:?}, {assets:?}). Dropping new entry ({entry:?}). This should not happen and implies that the configuration needs to be changed!"
                         );
                         debug_assert!(false, "Should not try to insert more than MAX_TRADES entries in accumulator.");
@@ -242,7 +243,7 @@ impl<T: Config> Pallet<T> {
                             Some(())
                         }).unwrap_or_else(|| {
                             log::warn!(
-                                target: "runtime::ema-oracle",
+                                target: LOG_TARGET,
                                 "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to parent block failed. Defaulting to previous value."
                             );
                             debug_assert!(false, "Updating to parent block should not fail.");
@@ -252,7 +253,7 @@ impl<T: Config> Pallet<T> {
                 prev_entry.update_via_ema_with(period, &oracle_entry)
                     .unwrap_or_else(|| {
                         log::warn!(
-                            target: "runtime::ema-oracle",
+                            target: LOG_TARGET,
                             "Updating EMA oracle ({src:?}, {assets:?}, {period:?}) to new value failed. Defaulting to previous value."
                         );
                         debug_assert!(false, "Updating to new value should not fail.");
@@ -314,16 +315,11 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
         liquidity: Balance,
     ) {
         // We assume that zero values are not valid and can be ignored.
-        if liquidity.is_zero() {
+        if liquidity.is_zero() || amount_in.is_zero() || amount_out.is_zero() {
+            log::warn!(target: LOG_TARGET, "Neither liquidity nor amounts should be zero. Ignoring. Source: {source:?}, liquidity: {liquidity}, amount_in: {amount_in}, amount_out: {amount_out}");
             return;
         }
-        // We don't want to throw an error here because this method is used in different extrinsics.
-        let price = determine_normalized_price(asset_in, asset_out, amount_in, amount_out).unwrap_or_else(Zero::zero);
-        // We assume that zero values are not valid and are ignored.
-        if price.is_zero() || amount_in.is_zero() || amount_out.is_zero() {
-            return;
-        }
-
+        let price = determine_normalized_price(asset_in, asset_out, amount_in, amount_out);
         let volume = determine_normalized_volume(asset_in, asset_out, amount_in, amount_out);
 
         let timestamp = T::BlockNumberProvider::current_block_number();
@@ -360,16 +356,12 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
         liquidity: Balance,
     ) {
         // We assume that zero values are not valid and can be ignored.
-        if liquidity.is_zero() {
+        if liquidity.is_zero() || amount_a.is_zero() || amount_b.is_zero() {
+            log::warn!(target: LOG_TARGET, "Neither liquidity nor amounts should be zero. Ignoring. Source: {source:?}, liquidity: {liquidity}, amount_a: {amount_a}, amount_b: {amount_b}");
             return;
         }
         // We don't want to throw an error here because this method is used in different extrinsics.
-        let price = determine_normalized_price(asset_a, asset_b, amount_a, amount_b).unwrap_or_else(Zero::zero);
-        // We assume that zero values are not valid and are ignored.
-        if price.is_zero() {
-            return;
-        }
-
+        let price = determine_normalized_price(asset_a, asset_b, amount_a, amount_b);
         let timestamp = T::BlockNumberProvider::current_block_number();
         let entry = OracleEntry {
             price,
@@ -401,14 +393,12 @@ pub fn determine_normalized_price(
     asset_out: AssetId,
     amount_in: Balance,
     amount_out: Balance,
-) -> Option<Price> {
-    let (balance_a, balance_b) = if ordered_pair(asset_in, asset_out) == (asset_in, asset_out) {
+) -> Price {
+    if ordered_pair(asset_in, asset_out) == (asset_in, asset_out) {
         (amount_in, amount_out)
     } else {
         (amount_out, amount_in)
-    };
-
-    Price::checked_from_rational(balance_a, balance_b)
+    }
 }
 
 /// Construct `Volume` based on unordered assets.

@@ -19,13 +19,11 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::sp_runtime::RuntimeDebug;
 use hydra_dx_math::ema::{
     balance_weighted_average, exp_smoothing, price_weighted_average, smoothing_from_period, volume_weighted_average,
+    EmaPrice,
 };
 use hydradx_traits::{AggregatedEntry, Volume};
 use scale_info::TypeInfo;
-use sp_arithmetic::{
-    traits::{AtLeast32BitUnsigned, One, SaturatedConversion, UniqueSaturatedInto},
-    Rational128,
-};
+use sp_arithmetic::traits::{AtLeast32BitUnsigned, One, SaturatedConversion, UniqueSaturatedInto};
 
 pub use hydradx_traits::Source;
 
@@ -37,7 +35,7 @@ use serde::{Deserialize, Serialize};
 pub type AssetId = u32;
 pub type Balance = u128;
 /// A price is a tuple of two `u128`s representing the numerator and denominator of a rational number.
-pub type Price = (u128, u128);
+pub type Price = EmaPrice;
 
 /// A type representing data produced by a trade or liquidity event. Timestamped to the block where
 /// it was created.
@@ -48,14 +46,6 @@ pub struct OracleEntry<BlockNumber> {
     pub volume: Volume<Balance>,
     pub liquidity: Balance,
     pub timestamp: BlockNumber,
-}
-
-fn to_tuple(r: Rational128) -> (u128, u128) {
-    (r.n(), r.d())
-}
-
-fn from_tuple((n, d): (u128, u128)) -> Rational128 {
-    Rational128::from(n, d)
 }
 
 impl<BlockNumber> OracleEntry<BlockNumber>
@@ -77,8 +67,12 @@ where
     /// So the price of a/b become the price b/a and the volume switches correspondingly.
     pub fn inverted(&self) -> Self {
         // It makes sense for the reciprocal of zero to be zero here.
-        let (a, b) = self.price;
-        let price = (b, a);
+        let price = if self.price.is_zero() {
+            self.price
+        } else {
+            let (a, b) = self.price.into();
+            (b, a).into()
+        };
         let volume = self.volume.inverted();
         Self {
             price,
@@ -139,11 +133,7 @@ where
         let smoothing = smoothing_from_period(period.saturated_into::<u64>());
         let exp_smoothing = exp_smoothing(smoothing, iterations.saturated_into::<u32>());
 
-        let price = to_tuple(price_weighted_average(
-            from_tuple(self.price),
-            from_tuple(incoming.price),
-            exp_smoothing,
-        ));
+        let price = price_weighted_average(self.price, incoming.price, exp_smoothing);
         let volume = volume_weighted_average(
             self.volume.clone().into(),
             incoming.volume.clone().into(),

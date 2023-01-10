@@ -395,9 +395,9 @@ pub fn determine_normalized_price(
     amount_out: Balance,
 ) -> Price {
     if ordered_pair(asset_in, asset_out) == (asset_in, asset_out) {
-        (amount_in, amount_out)
+        Price::new(amount_in, amount_out)
     } else {
-        (amount_out, amount_in)
+        Price::new(amount_out, amount_in)
     }
 }
 

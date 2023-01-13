@@ -36,6 +36,8 @@ pub enum OraclePeriod {
     LastBlock,
     /// The oracle data was aggregated over the blocks of the last ten minutes.
     TenMinutes,
+    /// The oracle data was aggregated over the blocks of the last hour.
+    Hour,
     /// The oracle data was aggregated over the blocks of the last day.
     Day,
     /// The oracle data was aggregated over the blocks of the last week.
@@ -43,14 +45,14 @@ pub enum OraclePeriod {
 }
 
 impl OraclePeriod {
-    pub fn all_periods() -> &'static [OraclePeriod] {
+    pub const fn all_periods() -> &'static [OraclePeriod] {
         use OraclePeriod::*;
-        &[LastBlock, TenMinutes, Day, Week]
+        &[LastBlock, TenMinutes, Hour, Day, Week]
     }
 
-    pub fn non_immediate_periods() -> &'static [OraclePeriod] {
+    pub const fn non_immediate_periods() -> &'static [OraclePeriod] {
         use OraclePeriod::*;
-        &[TenMinutes, Day, Week]
+        &[TenMinutes, Hour, Day, Week]
     }
 }
 

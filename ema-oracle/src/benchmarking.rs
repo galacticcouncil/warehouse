@@ -69,7 +69,7 @@ benchmarks! {
     }: { EmaOracle::<T>::on_finalize(block_num); }
     verify {
         assert!(Accumulator::<T>::get().is_empty());
-        assert_eq!(Oracles::<T>::get((SOURCE, ordered_pair(HDX, DOT), into_blocks::<T>(&LastBlock))).unwrap(), (entry, block_num));
+        assert_eq!(Oracles::<T>::get((SOURCE, ordered_pair(HDX, DOT), LastBlock)).unwrap(), (entry, block_num));
     }
 
     #[extra]
@@ -100,7 +100,7 @@ benchmarks! {
     }: { EmaOracle::<T>::on_finalize(block_num); }
     verify {
         assert!(Accumulator::<T>::get().is_empty());
-        assert_eq!(Oracles::<T>::get((SOURCE, ordered_pair(HDX, DOT), into_blocks::<T>(&LastBlock))).unwrap(), (entry, initial_data_block));
+        assert_eq!(Oracles::<T>::get((SOURCE, ordered_pair(HDX, DOT), LastBlock)).unwrap(), (entry, initial_data_block));
     }
 
     on_finalize_multiple_tokens {
@@ -138,7 +138,7 @@ benchmarks! {
         for i in 0 .. b {
             let asset_a = i * 1_000;
             let asset_b = asset_a + 500;
-            assert_eq!(Oracles::<T>::get((SOURCE, ordered_pair(asset_a, asset_b), into_blocks::<T>(&LastBlock))).unwrap(), (entry.clone(), initial_data_block));
+            assert_eq!(Oracles::<T>::get((SOURCE, ordered_pair(asset_a, asset_b), LastBlock)).unwrap(), (entry.clone(), initial_data_block));
         }
     }
 

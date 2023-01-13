@@ -18,12 +18,16 @@
 use crate as ema_oracle;
 use crate::Config;
 use ema_oracle::OracleEntry;
+use frame_support::bounded_vec;
+use frame_support::pallet_prelude::ConstU32;
 use frame_support::parameter_types;
 use frame_support::sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use frame_support::traits::{Everything, GenesisBuild};
+use frame_support::BoundedVec;
+use hydradx_traits::OraclePeriod::{self, *};
 use hydradx_traits::{AssetPairAccountIdFor, Volume};
 use sp_core::H256;
 
@@ -35,6 +39,7 @@ pub type BlockNumber = u64;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
+use crate::MAX_PERIODS;
 pub const HDX: AssetId = 1_000;
 pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
@@ -123,13 +128,14 @@ pub const EXCHANGE_FEE: (u32, u32) = (2, 1_000);
 parameter_types! {
     pub const ExchangeFee: (u32, u32) = EXCHANGE_FEE;
     pub const SecsPerBlock: u32 = 12;
+    pub SupportedPeriods: BoundedVec<OraclePeriod, ConstU32<MAX_PERIODS>> = bounded_vec![LastBlock, TenMinutes, Day, Week];
 }
 
 impl Config for Test {
     type Event = Event;
     type WeightInfo = ();
     type BlockNumberProvider = System;
-    type SecsPerBlock = SecsPerBlock;
+    type SupportedPeriods = SupportedPeriods;
 }
 
 #[derive(Default)]

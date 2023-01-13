@@ -18,14 +18,14 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::sp_runtime::RuntimeDebug;
 use hydra_dx_math::ema::{
-    balance_weighted_average, exp_smoothing, price_weighted_average, smoothing_from_period, volume_weighted_average,
-    EmaPrice,
+    balance_weighted_average, exp_smoothing, price_weighted_average, volume_weighted_average, EmaPrice,
 };
+use hydra_dx_math::types::Fraction;
 use hydradx_traits::{AggregatedEntry, Volume};
 use scale_info::TypeInfo;
-use sp_arithmetic::traits::{AtLeast32BitUnsigned, One, SaturatedConversion, UniqueSaturatedInto};
+use sp_arithmetic::traits::{AtLeast32BitUnsigned, SaturatedConversion, UniqueSaturatedInto};
 
-pub use hydradx_traits::Source;
+pub use hydradx_traits::{OraclePeriod, Source};
 
 use sp_std::prelude::*;
 
@@ -121,16 +121,16 @@ where
     ///
     /// Uses the difference between the `timestamp`s to determine the time to cover and
     /// exponentiates the complement (`1 - alpha`) with that time difference.
-    pub fn combine_via_ema_with(&self, period: BlockNumber, incoming: &Self) -> Option<Self> {
+    pub fn combine_via_ema_with(&self, period: OraclePeriod, incoming: &Self) -> Option<Self> {
         let iterations = incoming.timestamp.checked_sub(&self.timestamp)?;
         if iterations.is_zero() {
             return None;
         }
-        if period <= One::one() {
+        if period == OraclePeriod::LastBlock {
             return Some(incoming.clone());
         }
         // determine smoothing factor
-        let smoothing = smoothing_from_period(period.saturated_into::<u64>());
+        let smoothing = into_smoothing(period);
         let exp_smoothing = exp_smoothing(smoothing, iterations.saturated_into::<u32>());
 
         let price = price_weighted_average(self.price, incoming.price, exp_smoothing);
@@ -162,7 +162,7 @@ where
     ///
     /// Uses the difference between the `timestamp`s to determine the time to cover and
     /// exponentiates the complement (`1 - alpha`) with that time difference.
-    pub fn chained_update_via_ema_with(&mut self, period: BlockNumber, incoming: &Self) -> Option<&mut Self> {
+    pub fn chained_update_via_ema_with(&mut self, period: OraclePeriod, incoming: &Self) -> Option<&mut Self> {
         *self = self.combine_via_ema_with(period, incoming)?;
         Some(self)
     }
@@ -178,8 +178,20 @@ where
     ///
     /// Uses the difference between the `timestamp`s to determine the time to cover and
     /// exponentiates the complement (`1 - alpha`) with that time difference.
-    pub fn update_via_ema_with(&mut self, period: BlockNumber, incoming: &Self) -> Option<()> {
+    pub fn update_via_ema_with(&mut self, period: OraclePeriod, incoming: &Self) -> Option<()> {
         self.chained_update_via_ema_with(period, incoming).map(|_| ())
+    }
+}
+
+/// Convert a given `period` into the smoothing factor used in the weighted average.
+/// See [`check_period_smoothing_factors`] for how the values are generated.
+pub fn into_smoothing(period: OraclePeriod) -> Fraction {
+    match period {
+        OraclePeriod::LastBlock => Fraction::from_bits(170141183460469231731687303715884105728),
+        OraclePeriod::TenMinutes => Fraction::from_bits(3369132345751865974884897103284833777),
+        OraclePeriod::Hour => Fraction::from_bits(566193622164623067326746434994622648),
+        OraclePeriod::Day => Fraction::from_bits(23629079016800115510268356880200556),
+        OraclePeriod::Week => Fraction::from_bits(3375783642235081630771268215908257),
     }
 }
 

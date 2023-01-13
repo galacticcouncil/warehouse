@@ -67,6 +67,8 @@ const LOG_TARGET: &str = "runtime::ema-oracle";
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
+pub const MAX_PERIODS: u32 = OraclePeriod::all_periods().len() as u32;
+
 #[allow(clippy::type_complexity)]
 #[frame_support::pallet]
 pub mod pallet {
@@ -87,8 +89,8 @@ pub mod pallet {
         /// Provider for the current block number.
         type BlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
 
-        /// Number of seconds between blocks, used to convert periods.
-        type SecsPerBlock: Get<Self::BlockNumber>;
+        /// The periods supported by the pallet. I.e. which oracles to track.
+        type SupportedPeriods: Get<BoundedVec<OraclePeriod, ConstU32<MAX_PERIODS>>>;
     }
 
     #[pallet::error]
@@ -116,7 +118,7 @@ pub mod pallet {
         (
             NMapKey<Twox64Concat, Source>,
             NMapKey<Twox64Concat, (AssetId, AssetId)>,
-            NMapKey<Twox64Concat, T::BlockNumber>,
+            NMapKey<Twox64Concat, OraclePeriod>,
         ),
         (OracleEntry<T::BlockNumber>, T::BlockNumber),
         OptionQuery,
@@ -138,13 +140,8 @@ pub mod pallet {
                     liquidity,
                     timestamp: T::BlockNumber::zero(),
                 };
-                for period in OraclePeriod::all_periods() {
-                    Pallet::<T>::update_oracle(
-                        source,
-                        ordered_pair(asset_a, asset_b),
-                        into_blocks::<T>(period),
-                        entry.clone(),
-                    );
+                for period in T::SupportedPeriods::get() {
+                    Pallet::<T>::update_oracle(source, ordered_pair(asset_a, asset_b), period, entry.clone());
                 }
             }
         }
@@ -205,12 +202,13 @@ impl<T: Config> Pallet<T> {
     /// Update oracles based on data accumulated during the block.
     fn update_oracles_from_accumulator() {
         for ((src, assets), oracle_entry) in Accumulator::<T>::take().into_iter() {
-            for period in OraclePeriod::non_immediate_periods() {
-                Self::update_oracle(src, assets, into_blocks::<T>(period), oracle_entry.clone());
+            // First we update the non-immediate oracles with the value of the `LastBlock` oracle.
+            for period in T::SupportedPeriods::get().into_iter().filter(|p| *p != LastBlock) {
+                Self::update_oracle(src, assets, period, oracle_entry.clone());
             }
-            // We use (the old value of) the `LastBlock` entry to update the other oracles so it
+            // As we use (the old value of) the `LastBlock` entry to update the other oracles it
             // gets updated last.
-            Self::update_oracle(src, assets, into_blocks::<T>(&LastBlock), oracle_entry.clone());
+            Self::update_oracle(src, assets, LastBlock, oracle_entry.clone());
         }
     }
 
@@ -218,7 +216,7 @@ impl<T: Config> Pallet<T> {
     fn update_oracle(
         src: Source,
         assets: (AssetId, AssetId),
-        period: T::BlockNumber,
+        period: OraclePeriod,
         oracle_entry: OracleEntry<T::BlockNumber>,
     ) {
         Oracles::<T>::mutate((src, assets, period), |oracle| {
@@ -231,8 +229,8 @@ impl<T: Config> Pallet<T> {
                 let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
                 // update the entry to the parent block if it hasn't been updated for a while
                 // skip if we're updating the `LastBlock` event
-                if parent > prev_entry.timestamp && period != into_blocks::<T>(&LastBlock) {
-                    Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))
+                if parent > prev_entry.timestamp && period != LastBlock {
+                    Self::oracle((src, assets, LastBlock))
                         .and_then(|(mut last_block, _)| -> Option<()> {
                             // update the `LastBlock` oracle to the last block if it hasn't been updated for a while
                             // price and liquidity stay constant, volume becomes zero
@@ -274,7 +272,7 @@ impl<T: Config> Pallet<T> {
         let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
         // First get the `LastBlock` oracle as we will use it to calculate the updated values for
         // the others.
-        let (mut last_block, init) = Self::oracle((src, assets, into_blocks::<T>(&LastBlock)))?;
+        let (mut last_block, init) = Self::oracle((src, assets, LastBlock))?;
         // update the `LastBlock` oracle to the last block if it hasn't been updated for a while
         // price and liquidity stay constant, volume becomes zero
         if last_block.timestamp != parent {
@@ -285,9 +283,9 @@ impl<T: Config> Pallet<T> {
             return Some((last_block, init));
         }
 
-        let (entry, init) = Self::oracle((src, assets, into_blocks::<T>(&period)))?;
+        let (entry, init) = Self::oracle((src, assets, period))?;
         if entry.timestamp < parent {
-            entry.combine_via_ema_with(into_blocks::<T>(&period), &last_block)
+            entry.combine_via_ema_with(period, &last_block)
         } else {
             Some(entry)
         }
@@ -422,19 +420,6 @@ pub fn ordered_pair(asset_a: AssetId, asset_b: AssetId) -> (AssetId, AssetId) {
     match asset_a <= asset_b {
         true => (asset_a, asset_b),
         false => (asset_b, asset_a),
-    }
-}
-
-/// Convert the given `period` into a number of blocks based on `T::SecsPerBlock`.
-pub fn into_blocks<T: Config>(period: &OraclePeriod) -> T::BlockNumber {
-    let secs_per_block = T::SecsPerBlock::get();
-    let minutes = T::BlockNumber::from(60u8) / secs_per_block;
-    let days = T::BlockNumber::from(24u8) * T::BlockNumber::from(60u8) * minutes;
-    match period {
-        OraclePeriod::LastBlock => One::one(),
-        OraclePeriod::TenMinutes => T::BlockNumber::from(10u8) * minutes,
-        OraclePeriod::Day => days,
-        OraclePeriod::Week => T::BlockNumber::from(7u8) * days,
     }
 }
 

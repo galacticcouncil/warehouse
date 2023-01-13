@@ -26,7 +26,39 @@ fn valid_asset_ids() -> impl Strategy<Value = (AssetId, AssetId)> {
 }
 
 fn non_zero_amount() -> impl Strategy<Value = Balance> {
-    any::<Balance>().prop_filter("balance should be greater 0", |b| b > &0)
+    1..Balance::MAX
+}
+
+fn any_volume() -> impl Strategy<Value = Volume<Balance>> {
+    (any::<Balance>(), any::<Balance>(), any::<Balance>(), any::<Balance>()).prop_map(|(a_in, b_out, a_out, b_in)| {
+        Volume {
+            a_in,
+            b_out,
+            a_out,
+            b_in,
+        }
+    })
+}
+
+fn any_price() -> impl Strategy<Value = Price> {
+    (any::<Balance>(), non_zero_amount()).prop_map(|(a, b)| Price::new(a, b))
+}
+
+fn oracle_entry(
+    (timestamp_min, timestamp_max): (BlockNumber, BlockNumber),
+) -> impl Strategy<Value = OracleEntry<BlockNumber>> {
+    (
+        any_price(),
+        any_volume(),
+        any::<Balance>(),
+        timestamp_min..timestamp_max,
+    )
+        .prop_map(|(price, volume, liquidity, timestamp)| OracleEntry {
+            price,
+            volume,
+            liquidity,
+            timestamp,
+        })
 }
 
 // Tests
@@ -60,5 +92,19 @@ proptest! {
             let volume_after = get_accumulator_entry(SOURCE, (asset_a, asset_b)).unwrap().volume;
             assert_eq!(volume_before, volume_after);
         });
+    }
+}
+
+proptest! {
+    #[test]
+    fn calculate_new_ema_equals_update_via_ema_with(
+        start_oracle in oracle_entry((0, 1_000)),
+        incoming_value in oracle_entry((1_001, 100_000)),
+    ) {
+        let next_oracle = start_oracle.combine_via_ema_with(TenMinutes, &incoming_value);
+
+        let mut start_oracle = start_oracle;
+        start_oracle.update_via_ema_with(TenMinutes, &incoming_value);
+        prop_assert_eq!(next_oracle, Some(start_oracle));
     }
 }

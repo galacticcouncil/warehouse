@@ -131,11 +131,13 @@ parameter_types! {
     pub SupportedPeriods: BoundedVec<OraclePeriod, ConstU32<MAX_PERIODS>> = bounded_vec![LastBlock, TenMinutes, Day, Week];
 }
 
+use crate::MAX_TRADES;
 impl Config for Test {
     type Event = Event;
     type WeightInfo = ();
     type BlockNumberProvider = System;
     type SupportedPeriods = SupportedPeriods;
+    type MaxTradesPerBlock = ConstU32<MAX_TRADES>;
 }
 
 #[derive(Default)]

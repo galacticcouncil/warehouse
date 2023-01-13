@@ -44,9 +44,6 @@ use sp_std::marker::PhantomData;
 use sp_std::prelude::*;
 
 #[cfg(test)]
-mod mock;
-
-#[cfg(test)]
 mod tests;
 
 mod types;
@@ -61,13 +58,13 @@ mod benchmarking;
 /// Maximum number of trades expected in one block. Empirically determined by running
 /// `trades_estimation.py` and rounding up from 212 to 300.
 pub const MAX_TRADES: u32 = 300;
+/// The maximum number of periods that could have corresponding oracles.
+pub const MAX_PERIODS: u32 = OraclePeriod::all_periods().len() as u32;
 
 const LOG_TARGET: &str = "runtime::ema-oracle";
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
-
-pub const MAX_PERIODS: u32 = OraclePeriod::all_periods().len() as u32;
 
 #[allow(clippy::type_complexity)]
 #[frame_support::pallet]
@@ -91,6 +88,10 @@ pub mod pallet {
 
         /// The periods supported by the pallet. I.e. which oracles to track.
         type SupportedPeriods: Get<BoundedVec<OraclePeriod, ConstU32<MAX_PERIODS>>>;
+
+        /// Maximum number of trades expected in one block.
+        #[pallet::constant]
+        type MaxTradesPerBlock: Get<u32>;
     }
 
     #[pallet::error]
@@ -104,7 +105,7 @@ pub mod pallet {
     #[pallet::getter(fn accumulator)]
     pub type Accumulator<T: Config> = StorageValue<
         _,
-        BoundedBTreeMap<(Source, (AssetId, AssetId)), OracleEntry<T::BlockNumber>, ConstU32<MAX_TRADES>>,
+        BoundedBTreeMap<(Source, (AssetId, AssetId)), OracleEntry<T::BlockNumber>, T::MaxTradesPerBlock>,
         ValueQuery,
     >;
 
@@ -331,14 +332,15 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
     }
 
     fn on_trade_weight() -> Weight {
+        let max_trades = T::MaxTradesPerBlock::get();
         // on_trade + on_finalize / max_trades
-        T::WeightInfo::on_trade_multiple_tokens(MAX_TRADES).saturating_add(
+        T::WeightInfo::on_trade_multiple_tokens(max_trades).saturating_add(
             // TODO: Can we also divide the proof size weight the same way?
             Weight::from_ref_time(
-                T::WeightInfo::on_finalize_multiple_tokens(MAX_TRADES)
+                T::WeightInfo::on_finalize_multiple_tokens(max_trades)
                     .saturating_sub(T::WeightInfo::on_finalize_no_entry())
                     .ref_time()
-                    / (MAX_TRADES as u64),
+                    / (max_trades as u64),
             ),
         )
     }
@@ -372,14 +374,15 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
     }
 
     fn on_liquidity_changed_weight() -> Weight {
+        let max_trades = T::MaxTradesPerBlock::get();
         // on_liquidity + on_finalize / max_trades
-        T::WeightInfo::on_liquidity_changed_multiple_tokens(MAX_TRADES).saturating_add(
+        T::WeightInfo::on_liquidity_changed_multiple_tokens(max_trades).saturating_add(
             // TODO: Can we also divide the proof size weight the same way?
             Weight::from_ref_time(
-                T::WeightInfo::on_finalize_multiple_tokens(MAX_TRADES)
+                T::WeightInfo::on_finalize_multiple_tokens(max_trades)
                     .saturating_sub(T::WeightInfo::on_finalize_no_entry())
                     .ref_time()
-                    / (MAX_TRADES as u64),
+                    / (max_trades as u64),
             ),
         )
     }

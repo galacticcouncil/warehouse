@@ -16,9 +16,10 @@
 // limitations under the License.
 
 mod invariants;
+mod mock;
 
 use super::*;
-pub use crate::mock::{
+pub use mock::{
     BlockNumber, EmaOracle, Event as TestEvent, ExtBuilder, Origin, System, Test, ACA, DOT, HDX, PRICE_ENTRY_1,
     PRICE_ENTRY_2,
 };

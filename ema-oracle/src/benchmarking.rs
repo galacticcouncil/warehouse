@@ -254,7 +254,7 @@ benchmarks! {
     verify {
         assert_eq!(*res.borrow(), Ok(AggregatedEntry {
             price: Price::from((amount_in, amount_out)),
-            volume: Volume::from_a_in_b_out(amount_in, amount_out),
+            volume: Volume::default(),
             liquidity,
             oracle_age,
         }));

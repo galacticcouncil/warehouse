@@ -6,6 +6,6 @@ COPY . .
 
 RUN bash ./setup.sh
 
-RUN bash ./build-deps.sh
-
 ENV PATH="/root/.cargo/bin:$PATH"
+
+RUN zsh ./setup-cargo.sh

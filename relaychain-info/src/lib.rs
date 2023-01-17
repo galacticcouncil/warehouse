@@ -17,14 +17,14 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::sp_runtime::traits::BlockNumberProvider;
-
 use cumulus_primitives_core::PersistedValidationData;
+use frame_support::sp_runtime::traits::BlockNumberProvider;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use cumulus_primitives_core::relay_chain::Hash;
     use frame_support::pallet_prelude::*;
     use frame_support::sp_runtime::traits::BlockNumberProvider;
 
@@ -46,6 +46,10 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {}
 
+    #[pallet::storage]
+    #[pallet::getter(fn parent_hash)]
+    pub(super) type ParentHash<T> = StorageValue<_, Hash, ValueQuery>;
+
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -59,6 +63,16 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
+
+    impl<T: Config> Pallet<T> {
+        //Only for testing purposes
+        #[cfg(test)]
+        fn add_parent_hash(hash: Hash) -> DispatchResult {
+            ParentHash::<T>::put(hash);
+
+            Ok(())
+        }
+    }
 }
 
 pub struct OnValidationDataHandler<T>(sp_std::marker::PhantomData<T>);
@@ -69,6 +83,8 @@ impl<T: Config> cumulus_pallet_parachain_system::OnSystemEvent for OnValidationD
             parachain_block_number: frame_system::Pallet::<T>::current_block_number(),
             relaychain_block_number: data.relay_parent_number.into(),
         });
+
+        ParentHash::<T>::put(data.parent_head.hash());
     }
 
     fn on_validation_code_applied() {}

@@ -4980,7 +4980,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hydra-dx-math 4.9.0",
- "hydradx-traits",
+ "hydradx-traits 1.0.0",
  "orml-tokens",
  "orml-traits",
  "parity-scale-codec",

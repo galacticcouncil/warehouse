@@ -66,7 +66,7 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {
         //Only for testing purposes
-        #[cfg(test)]
+        #[cfg(feature = "test-utils")]
         fn add_parent_hash(hash: Hash) -> DispatchResult {
             ParentHash::<T>::put(hash);
 

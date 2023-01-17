@@ -111,7 +111,7 @@ fn deposit_lp_shares_should_work() {
                 GlobalFarmData {
                     accumulated_rpz: Zero::zero(),
                     updated_at: 18,
-                    paid_accumulated_rewards: 0,
+                    accumulated_paid_rewards: 0,
                     total_shares_z: 33_300 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
@@ -175,7 +175,7 @@ fn deposit_lp_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 18,
                     accumulated_rpz: Zero::zero(),
-                    paid_accumulated_rewards: 0,
+                    accumulated_paid_rewards: 0,
                     total_shares_z: 35_300 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
@@ -241,8 +241,8 @@ fn deposit_lp_shares_should_work() {
                 GlobalFarmData {
                     updated_at: 20,
                     accumulated_rpz: FixedU128::one(),
-                    accumulated_rewards: 33_300 * ONE,
-                    paid_accumulated_rewards: 2_000 * ONE,
+                    pending_rewards: 33_300 * ONE,
+                    accumulated_paid_rewards: 2_000 * ONE,
                     total_shares_z: 499_300 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
@@ -316,8 +316,8 @@ fn deposit_lp_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                     total_shares_z: 501_910 * ONE,
-                    accumulated_rewards: 116_550 * ONE,
-                    paid_accumulated_rewards: 1_167_000 * ONE,
+                    pending_rewards: 116_550 * ONE,
+                    accumulated_paid_rewards: 1_167_000 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -389,8 +389,8 @@ fn deposit_lp_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                     total_shares_z: 509_590 * ONE,
-                    accumulated_rewards: 116_550 * ONE,
-                    paid_accumulated_rewards: 1_167_000 * ONE,
+                    pending_rewards: 116_550 * ONE,
+                    accumulated_paid_rewards: 1_167_000 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );
@@ -461,8 +461,8 @@ fn deposit_lp_shares_should_work() {
                     updated_at: 25,
                     accumulated_rpz: FixedU128::from_inner(3_500_000_000_000_000_000_u128),
                     total_shares_z: 703_990 * ONE,
-                    accumulated_rewards: 0,
-                    paid_accumulated_rewards: 1_283_550 * ONE,
+                    pending_rewards: 0,
+                    accumulated_paid_rewards: 1_283_550 * ONE,
                     ..get_predefined_global_farm_ins1(2)
                 }
             );

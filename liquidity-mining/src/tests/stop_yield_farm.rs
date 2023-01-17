@@ -116,8 +116,8 @@ fn stop_yield_farm_should_work() {
                     updated_at: 100,
                     accumulated_rpz: FixedU128::from_inner(41_000_000_000_000_000_000_u128),
                     total_shares_z: global_farm_0.total_shares_z.checked_sub(stake_in_global_farm).unwrap(),
-                    accumulated_rewards: global_farm_0.accumulated_rewards + allocated_for_other_yield_farms,
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards + last_yield_farm_rewards,
+                    pending_rewards: global_farm_0.pending_rewards + allocated_for_other_yield_farms,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards + last_yield_farm_rewards,
                     ..global_farm_0
                 }
             );

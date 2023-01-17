@@ -46,7 +46,7 @@ fn terminate_yield_farm_with_deposits_should_work() {
                 LiquidityMining::global_farm(GC_FARM).unwrap(),
                 GlobalFarmData {
                     live_yield_farms_count: global_farm_0.live_yield_farms_count.checked_sub(1).unwrap(),
-                    paid_accumulated_rewards: global_farm_0.paid_accumulated_rewards - yield_farm_0.left_to_distribute,
+                    accumulated_paid_rewards: global_farm_0.accumulated_paid_rewards - yield_farm_0.left_to_distribute,
                     ..global_farm_0
                 }
             );

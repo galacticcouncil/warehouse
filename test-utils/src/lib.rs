@@ -58,3 +58,10 @@ macro_rules! assert_balance_approx {
         }
     }};
 }
+
+#[macro_export]
+macro_rules! assert_transact_ok {
+    ( $call:expr) => {{
+        assert_ok!(with_transaction(|| { TransactionOutcome::Commit($call) }));
+    }};
+}

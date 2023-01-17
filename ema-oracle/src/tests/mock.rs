@@ -127,7 +127,6 @@ pub const EXCHANGE_FEE: (u32, u32) = (2, 1_000);
 
 parameter_types! {
     pub const ExchangeFee: (u32, u32) = EXCHANGE_FEE;
-    pub const SecsPerBlock: u32 = 12;
     pub SupportedPeriods: BoundedVec<OraclePeriod, ConstU32<MAX_PERIODS>> = bounded_vec![LastBlock, TenMinutes, Day, Week];
 }
 

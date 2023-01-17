@@ -17,20 +17,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use cumulus_primitives_core::relay_chain::Hash;
 use cumulus_primitives_core::PersistedValidationData;
 use frame_support::sp_runtime::traits::BlockNumberProvider;
-
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
-pub trait ParentHashSetter {
-    fn set_parent_hash(hash: Hash);
-}
-
 #[frame_support::pallet]
 pub mod pallet {
-    use crate::ParentHashSetter;
     use cumulus_primitives_core::relay_chain::Hash;
     use frame_support::pallet_prelude::*;
     use frame_support::sp_runtime::traits::BlockNumberProvider;
@@ -48,8 +41,6 @@ pub mod pallet {
 
         /// Provider of relay chain block number
         type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
-
-        type ParentHashSetter: ParentHashSetter;
     }
 
     #[pallet::error]
@@ -93,14 +84,8 @@ impl<T: Config> cumulus_pallet_parachain_system::OnSystemEvent for OnValidationD
             relaychain_block_number: data.relay_parent_number.into(),
         });
 
-        T::ParentHashSetter::set_parent_hash(data.parent_head.hash());
+        ParentHash::<T>::put(data.parent_head.hash());
     }
 
     fn on_validation_code_applied() {}
-}
-
-impl<T: Config> ParentHashSetter for Pallet<T> {
-    fn set_parent_hash(hash: Hash) {
-        ParentHash::<T>::put(hash);
-    }
 }

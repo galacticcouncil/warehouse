@@ -60,7 +60,7 @@ fn register_asset_works() {
         let bn = AssetRegistryPallet::to_bounded_name(name.clone()).unwrap();
 
         expect_events(vec![Event::Registered {
-            asset_id: 1 + SequentailIdStart::get(),
+            asset_id: 1 + SequentialIdStart::get(),
             asset_name: bn.clone(),
             asset_type: AssetType::Token,
         }
@@ -68,10 +68,10 @@ fn register_asset_works() {
 
         assert_eq!(
             AssetRegistryPallet::asset_ids(&bn).unwrap(),
-            1u32 + SequentailIdStart::get()
+            1u32 + SequentialIdStart::get()
         );
         assert_eq!(
-            AssetRegistryPallet::assets(1u32 + SequentailIdStart::get()).unwrap(),
+            AssetRegistryPallet::assets(1u32 + SequentialIdStart::get()).unwrap(),
             AssetDetails {
                 name: bn,
                 asset_type: AssetType::Token,
@@ -126,7 +126,7 @@ fn create_asset() {
 
         assert_eq!(
             AssetRegistryPallet::asset_ids(dot).unwrap(),
-            2u32 + SequentailIdStart::get()
+            2u32 + SequentialIdStart::get()
         );
         assert!(AssetRegistryPallet::asset_ids(aaa).is_none());
     });
@@ -171,7 +171,7 @@ fn location_mapping_works() {
         ));
 
         expect_events(vec![Event::LocationSet {
-            asset_id: 1 + SequentailIdStart::get(),
+            asset_id: 1 + SequentialIdStart::get(),
             location: asset_location.clone(),
         }
         .into()]);
@@ -206,8 +206,13 @@ fn genesis_config_works() {
             let native: BoundedVec<u8, <Test as crate::Config>::StringLimit> = b"NATIVE".to_vec().try_into().unwrap();
             assert_eq!(AssetRegistryPallet::asset_ids(native).unwrap(), 0u32);
         });
+
+    let one = b"ONE".to_vec();
+    let life = b"LIFE".to_vec();
+
     ExtBuilder::default()
-        .with_assets(vec![(b"ONE".to_vec(), 1_000u128)])
+        .with_assets(vec![(one.clone(), 1_000u128)])
+        .with_asset_ids(vec![(life.clone(), 1_000u128, 42)])
         .build()
         .execute_with(|| {
             let native: BoundedVec<u8, <Test as crate::Config>::StringLimit> = b"NATIVE".to_vec().try_into().unwrap();
@@ -216,15 +221,27 @@ fn genesis_config_works() {
             let bsx: BoundedVec<u8, <Test as crate::Config>::StringLimit> = b"BSX".to_vec().try_into().unwrap();
             assert_eq!(AssetRegistryPallet::asset_ids(bsx).unwrap(), 0u32);
 
-            let one: BoundedVec<u8, <Test as crate::Config>::StringLimit> = b"ONE".to_vec().try_into().unwrap();
+            let one: BoundedVec<u8, <Test as crate::Config>::StringLimit> = one.try_into().unwrap();
             assert_eq!(
                 AssetRegistryPallet::asset_ids(one.clone()).unwrap(),
-                1u32 + SequentailIdStart::get()
+                1u32 + SequentialIdStart::get()
             );
             assert_eq!(
-                AssetRegistryPallet::assets(1u32 + SequentailIdStart::get()).unwrap(),
+                AssetRegistryPallet::assets(1u32 + SequentialIdStart::get()).unwrap(),
                 AssetDetails {
                     name: one,
+                    asset_type: AssetType::Token,
+                    existential_deposit: 1_000u128,
+                    locked: false
+                }
+            );
+
+            let life: BoundedVec<u8, <Test as crate::Config>::StringLimit> = life.try_into().unwrap();
+            assert_eq!(AssetRegistryPallet::asset_ids(life.clone()).unwrap(), 42u32);
+            assert_eq!(
+                AssetRegistryPallet::assets(42u32).unwrap(),
+                AssetDetails {
+                    name: life,
                     asset_type: AssetType::Token,
                     existential_deposit: 1_000u128,
                     locked: false
@@ -337,7 +354,7 @@ fn update_asset() {
             b"superBTC".to_vec().try_into().unwrap();
         assert_eq!(
             AssetRegistryPallet::asset_ids(new_btc_name).unwrap(),
-            1u32 + SequentailIdStart::get()
+            1u32 + SequentialIdStart::get()
         );
 
         // cannot set existing name for an existing asset
@@ -401,7 +418,7 @@ fn update_asset() {
             b"superBTC".to_vec().try_into().unwrap();
 
         assert_eq!(
-            AssetRegistryPallet::assets(1u32 + SequentailIdStart::get()).unwrap(),
+            AssetRegistryPallet::assets(1u32 + SequentialIdStart::get()).unwrap(),
             AssetDetails {
                 name: superbtc_name,
                 asset_type: AssetType::Token,
@@ -426,11 +443,11 @@ fn get_ed_by_key_works() {
         .with_assets(vec![(b"ONE".to_vec(), 1_000u128), (b"TWO".to_vec(), 2_000u128)])
         .build()
         .execute_with(|| {
-            assert_eq!(AssetRegistryPallet::get(&(1u32 + SequentailIdStart::get())), 1_000u128);
-            assert_eq!(AssetRegistryPallet::get(&(2u32 + SequentailIdStart::get())), 2_000u128);
+            assert_eq!(AssetRegistryPallet::get(&(1u32 + SequentialIdStart::get())), 1_000u128);
+            assert_eq!(AssetRegistryPallet::get(&(2u32 + SequentialIdStart::get())), 2_000u128);
             assert_eq!(AssetRegistryPallet::get(&0u32), 1_000_000u128);
             assert_eq!(
-                AssetRegistryPallet::get(&(1_000u32 + SequentailIdStart::get())),
+                AssetRegistryPallet::get(&(1_000u32 + SequentialIdStart::get())),
                 Balance::MAX
             ); // Non-existing assets are not supported
         });
@@ -511,7 +528,7 @@ fn register_asset_should_fail_when_provided_asset_is_already_registered() {
 }
 
 #[test]
-fn register_asset_should_faild_when_provided_asset_is_outside_reserved_range() {
+fn register_asset_should_fail_when_provided_asset_is_outside_reserved_range() {
     ExtBuilder::default()
         .with_native_asset_name(b"NATIVE".to_vec())
         .build()
@@ -522,7 +539,7 @@ fn register_asset_should_faild_when_provided_asset_is_outside_reserved_range() {
                     b"asset_id".to_vec(),
                     AssetType::Token,
                     1_000_000,
-                    Some(SequentailIdStart::get()),
+                    Some(SequentialIdStart::get()),
                     None,
                     None
                 ),
@@ -535,7 +552,7 @@ fn register_asset_should_faild_when_provided_asset_is_outside_reserved_range() {
                     b"asset_id".to_vec(),
                     AssetType::Token,
                     1_000_000,
-                    Some(SequentailIdStart::get() + 100),
+                    Some(SequentialIdStart::get() + 100),
                     None,
                     None
                 ),

@@ -456,6 +456,8 @@ impl Default for ExtBuilder {
                 (DAVE, KSM, INITIAL_BALANCE * ONE),
                 (DAVE, ACA, INITIAL_BALANCE * ONE),
                 (GC, BSX, INITIAL_BALANCE * ONE),
+                (GC, TKN1, INITIAL_BALANCE * ONE),
+                (GC, TKN2, INITIAL_BALANCE * ONE),
                 (TREASURY, BSX, 1_000_000_000_000 * ONE),
                 (TREASURY, ACA, 1_000_000_000_000 * ONE),
                 (TREASURY, HDX, 1_000_000_000_000 * ONE),

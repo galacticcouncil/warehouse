@@ -511,7 +511,7 @@ impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
-    type DestroyWitness = pallet_uniques::DestroyWitness;
+    type DestroyWitness = DestroyWitness;
 
     /// The witness data needed to destroy an item.
     fn get_destroy_witness(collection: &Self::CollectionId) -> Option<Self::DestroyWitness> {

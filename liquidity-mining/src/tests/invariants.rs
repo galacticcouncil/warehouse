@@ -536,6 +536,8 @@ fn invariant_1() {
     invariants_externalities().execute_with(|| {
         let mut runner = TestRunner::new(Config {
             cases: successfull_cases,
+            source_file: Some("liquidity-mining/src/tests/invariants.rs"),
+            test_name: Some("invariant_1"),
             ..Config::default()
         });
         let deposits: RefCell<Vec<Deposit>> = RefCell::new(Vec::new());
@@ -621,6 +623,8 @@ fn invariant_2() {
     invariants_externalities().execute_with(|| {
         let mut runner = TestRunner::new(Config {
             cases: successfull_cases,
+            source_file: Some("liquidity-mining/src/tests/invariants.rs"),
+            test_name: Some("invariant_2"),
             ..Config::default()
         });
         let deposits: RefCell<Vec<Deposit>> = RefCell::new(Vec::new());
@@ -721,6 +725,8 @@ fn invariant_3() {
     invariants_externalities().execute_with(|| {
         let mut runner = TestRunner::new(Config {
             cases: successfull_cases,
+            source_file: Some("liquidity-mining/src/tests/invariants.rs"),
+            test_name: Some("invariant_3"),
             ..Config::default()
         });
         let deposits: RefCell<Vec<Deposit>> = RefCell::new(Vec::new());
@@ -820,6 +826,8 @@ fn invariant_4() {
     invariants_externalities().execute_with(|| {
         let mut runner = TestRunner::new(Config {
             cases: successfull_cases,
+            source_file: Some("liquidity-mining/src/tests/invariants.rs"),
+            test_name: Some("invariant_4"),
             ..Config::default()
         });
         let deposits: RefCell<Vec<Deposit>> = RefCell::new(Vec::new());

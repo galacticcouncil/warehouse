@@ -49,7 +49,7 @@ use sp_std::marker::PhantomData;
 use frame_support::sp_runtime::FixedPointNumber;
 use frame_support::sp_runtime::FixedPointOperand;
 use frame_support::weights::{Pays, Weight};
-use hydradx_traits::{pools::SpotPriceProvider, NativePriceOracle};
+use hydradx_traits::NativePriceOracle;
 use orml_traits::{Happened, MultiCurrency, MultiCurrencyExtended};
 
 use codec::{Decode, Encode};
@@ -85,12 +85,10 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(_n: T::BlockNumber) -> Weight {
-            let native_asset = T::NativeAssetId::get();
-
             let mut weight: u64 = 0;
 
             for (asset_id, fallback_price) in <AcceptedCurrencies<T>>::iter() {
-                let maybe_price = T::SpotPriceProvider::spot_price(native_asset, asset_id);
+                let maybe_price = T::NativePriceOracle::price(asset_id);
 
                 let price = maybe_price.unwrap_or(fallback_price);
 
@@ -118,8 +116,8 @@ pub mod pallet {
         /// Multi Currency
         type Currencies: MultiCurrencyExtended<Self::AccountId>;
 
-        /// Spot price provider
-        type SpotPriceProvider: SpotPriceProvider<AssetIdOf<Self>, Price = Price>;
+        /// Price oracle
+        type NativePriceOracle: NativePriceOracle<AssetIdOf<Self>, Price>;
 
         /// Weight information for the extrinsics.
         type WeightInfo: WeightInfo;
@@ -388,7 +386,7 @@ where
             } else {
                 // If not loaded in on_init, let's try first the spot price provider again
                 // This is unlikely scenario as the price would be retrieved in on_init for each block
-                if let Some(spot_price) = T::SpotPriceProvider::spot_price(T::NativeAssetId::get(), currency) {
+                if let Some(spot_price) = T::NativePriceOracle::price(currency) {
                     spot_price
                 } else {
                     Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?
@@ -415,7 +413,7 @@ where
             } else {
                 // If not loaded in on_init, let's try first the spot price provider again
                 // This is unlikely scenario as the price would be retrieved in on_init for each block
-                if let Some(spot_price) = T::SpotPriceProvider::spot_price(T::NativeAssetId::get(), currency) {
+                if let Some(spot_price) = T::NativePriceOracle::price(currency) {
                     spot_price
                 } else {
                     Self::currencies(currency).ok_or(Error::<T>::FallbackPriceNotFound)?

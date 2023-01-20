@@ -25,7 +25,7 @@ use frame_support::{
     weights::{DispatchClass, IdentityFee, Weight},
 };
 use frame_system as system;
-use hydradx_traits::{pools::SpotPriceProvider, AssetPairAccountIdFor};
+use hydradx_traits::{pools::SpotPriceProvider, AssetPairAccountIdFor, NativeSpotPrice};
 use orml_traits::parameter_type_with_key;
 use pallet_currencies::BasicCurrencyAdapter;
 use sp_core::H256;
@@ -216,7 +216,7 @@ impl Config for Test {
     type Event = Event;
     type AcceptedCurrencyOrigin = frame_system::EnsureRoot<u64>;
     type Currencies = Currencies;
-    type SpotPriceProvider = SpotPrice;
+    type NativePriceOracle = NativeSpotPrice<AssetId, Price, HdxAssetId, SpotPrice>;
     type WeightInfo = ();
     type WithdrawFeeForSetCurrency = PayForSetCurrency;
     type WeightToFee = IdentityFee<Balance>;

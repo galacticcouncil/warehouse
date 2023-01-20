@@ -1,6 +1,9 @@
 use super::*;
+use crate::pools::SpotPriceProvider;
 
 use codec::MaxEncodedLen;
+use core::marker::PhantomData;
+use frame_support::pallet_prelude::Get;
 use frame_support::sp_runtime::traits::{AtLeast32BitUnsigned, One};
 use scale_info::TypeInfo;
 
@@ -26,6 +29,26 @@ where
 {
     fn price(_currency: AssetId) -> Option<Price> {
         Some(Price::one())
+    }
+}
+
+pub struct NativeSpotPrice<AssetId, Price, NativeAssetId, SpotPrice>(
+    PhantomData<(AssetId, Price, NativeAssetId, SpotPrice)>,
+);
+impl<AssetId, Price, NativeAssetId, SpotPrice> NativePriceOracle<AssetId, Price>
+    for NativeSpotPrice<AssetId, Price, NativeAssetId, SpotPrice>
+where
+    AssetId: AtLeast32BitUnsigned,
+    Price: One,
+    NativeAssetId: Get<AssetId>,
+    SpotPrice: SpotPriceProvider<AssetId, Price = Price>,
+{
+    fn price(currency: AssetId) -> Option<Price> {
+        if currency == NativeAssetId::get() {
+            Some(Price::one())
+        } else {
+            SpotPrice::spot_price(NativeAssetId::get(), currency)
+        }
     }
 }
 

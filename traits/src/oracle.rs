@@ -144,7 +144,7 @@ where
     }
 
     /// Switch assets a and b, so the new `a_in` refers to old `b_in` etc.
-    pub fn inverted(&self) -> Self {
+    pub fn inverted(self) -> Self {
         let Self {
             a_in,
             b_out,
@@ -152,10 +152,10 @@ where
             b_in,
         } = self;
         Self {
-            a_in: *b_in,
-            b_out: *a_out,
-            a_out: *b_out,
-            b_in: *a_in,
+            a_in: b_in,
+            b_out: a_out,
+            a_out: b_out,
+            b_in: a_in,
         }
     }
 }

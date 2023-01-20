@@ -40,6 +40,7 @@ type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 use crate::MAX_PERIODS;
+use crate::MAX_TRADES;
 pub const HDX: AssetId = 1_000;
 pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
@@ -123,14 +124,10 @@ impl AssetPairAccountIdFor<AssetId, u64> for AssetPairAccountIdTest {
     }
 }
 
-pub const EXCHANGE_FEE: (u32, u32) = (2, 1_000);
-
 parameter_types! {
-    pub const ExchangeFee: (u32, u32) = EXCHANGE_FEE;
     pub SupportedPeriods: BoundedVec<OraclePeriod, ConstU32<MAX_PERIODS>> = bounded_vec![LastBlock, TenMinutes, Day, Week];
 }
 
-use crate::MAX_TRADES;
 impl Config for Test {
     type Event = Event;
     type WeightInfo = ();

@@ -158,6 +158,13 @@ pub mod pallet {
             // update oracles based on data accumulated during the block
             Self::update_oracles_from_accumulator();
         }
+
+        fn integrity_test() {
+            assert!(
+                T::MaxTradesPerBlock::get() > 0,
+                "At least one trade should be possible per block."
+            );
+        }
     }
 
     #[pallet::call]

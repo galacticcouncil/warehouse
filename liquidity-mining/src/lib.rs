@@ -121,7 +121,7 @@ use registry_traits::Registry;
 use scale_info::TypeInfo;
 use sp_arithmetic::{
     traits::{CheckedAdd, CheckedDiv, CheckedSub},
-    FixedPointNumber, FixedU128, Perquintill,
+    FixedU128, Perquintill,
 };
 use sp_std::{
     convert::{From, Into, TryInto},
@@ -1555,9 +1555,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         // Calculate reward for all periods since last update capped by balance of `GlobalFarm`
         // account.
-        let reward = reward_per_period
-            .checked_mul_int(periods_since_last_update)
-            .ok_or(ArithmeticError::Overflow)?
+        let reward = math::calculate_rewards_for_periods(reward_per_period, periods_since_last_update)
+            .map_err(|_| ArithmeticError::Overflow)?
             .min(left_to_distribute);
 
         if !reward.is_zero() {

@@ -2819,8 +2819,8 @@ dependencies = [
 
 [[package]]
 name = "hydra-dx-math"
-version = "5.0.0"
-source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=1b678b779fc9291aea4673b7865651ab091d44b3#1b678b779fc9291aea4673b7865651ab091d44b3"
+version = "5.1.4"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=fdf7d6cdfb6968b826e6035c20b261a78a733573#fdf7d6cdfb6968b826e6035c20b261a78a733573"
 dependencies = [
  "fixed",
  "num-traits",
@@ -5127,7 +5127,7 @@ dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
- "hydra-dx-math 5.0.0",
+ "hydra-dx-math 5.1.4",
  "hydradx-traits 0.9.1",
  "hydradx-traits 1.0.0",
  "orml-currencies",
@@ -5213,7 +5213,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-nft"
-version = "7.0.0"
+version = "7.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

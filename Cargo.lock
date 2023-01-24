@@ -2817,8 +2817,26 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "hydra-dx-math"
+<<<<<<< HEAD
 version = "5.1.2"
 source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=dbcc48f01949ab6b17c6a6d6e3a7ab2401bf7b4a#dbcc48f01949ab6b17c6a6d6e3a7ab2401bf7b4a"
+=======
+version = "4.9.0"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=54fe636a19f283de9afbd5b5015a951b25e11a6b#54fe636a19f283de9afbd5b5015a951b25e11a6b"
+dependencies = [
+ "fixed",
+ "num-traits",
+ "parity-scale-codec",
+ "primitive-types 0.12.1",
+ "sp-arithmetic",
+ "sp-std",
+]
+
+[[package]]
+name = "hydra-dx-math"
+version = "5.1.4"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=fdf7d6cdfb6968b826e6035c20b261a78a733573#fdf7d6cdfb6968b826e6035c20b261a78a733573"
+>>>>>>> 5a8c8828bad91319333e73b4d33ca0970eeddfea
 dependencies = [
  "fixed",
  "num-traits",
@@ -5145,12 +5163,16 @@ dependencies = [
 
 [[package]]
 name = "pallet-liquidity-mining"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
+<<<<<<< HEAD
  "hydra-dx-math",
+=======
+ "hydra-dx-math 5.1.4",
+>>>>>>> 5a8c8828bad91319333e73b4d33ca0970eeddfea
  "hydradx-traits 0.9.1",
  "hydradx-traits 1.0.0",
  "orml-currencies",
@@ -5236,7 +5258,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-nft"
-version = "7.0.0"
+version = "7.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

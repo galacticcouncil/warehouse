@@ -17,7 +17,7 @@ codec = { package = 'parity-scale-codec', version = '3.2.1', default-features = 
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "dbcc48f01949ab6b17c6a6d6e3a7ab2401bf7b4a", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "280edb02619df02da8078d5ebd53b901bec421c2", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false, optional = true }

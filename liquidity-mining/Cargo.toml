@@ -21,7 +21,7 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev="dbcc48f01949ab6b17c6a6d6e3a7ab2401bf7b4a", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev="280edb02619df02da8078d5ebd53b901bec421c2", default-features = false }
 #NOTE: This is because we are not using latest version of asset-registry for now.
 registry-traits = { package="hydradx-traits", git = "https://github.com/galacticcouncil/warehouse", rev="fcebd285141ce9ed15136f6102fa6396605d96af", default-features = false }
 

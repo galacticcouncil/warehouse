@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use frame_support::pallet_prelude::*;
+use sp_std::vec::Vec;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};

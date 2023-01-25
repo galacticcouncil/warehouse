@@ -1036,7 +1036,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     ///
     /// This function DOESN'T create new deposit.
     ///
-    /// Returns: `(redeposited shares amount)`
+    /// Returns: `(redeposited shares amount, amm pool id)`
     ///
     /// Parameters:
     /// - `global_farm_id`: global farm identifier.

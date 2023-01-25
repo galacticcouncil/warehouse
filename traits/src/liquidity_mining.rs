@@ -107,14 +107,14 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
 
     /// Redeposit already locked LP shares to another yield farm.
     ///
-    /// Returns: `(redeposited LP shares amount)`
+    /// Returns: `(redeposited LP shares amount, amm pool id)`
     #[allow(clippy::type_complexity)]
     fn redeposit_lp_shares(
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
         get_token_value_of_lp_shares: fn(AssetId, Self::AmmPoolId, Self::Balance) -> Result<Self::Balance, Self::Error>,
-    ) -> Result<Self::Balance, Self::Error>;
+    ) -> Result<(Self::Balance, Self::AmmPoolId), Self::Error>;
 
     /// Claim rewards for given deposit.
     ///

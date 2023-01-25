@@ -1049,7 +1049,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
         get_token_value_of_lp_shares: fn(T::AssetId, T::AmmPoolId, Balance) -> Result<Balance, DispatchError>,
-    ) -> Result<Balance, DispatchError> {
+    ) -> Result<(Balance, T::AmmPoolId), DispatchError> {
         <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
             //NOTE: At this point deposit existence and owner must be checked by pallet calling this
             //function so this should never happen.
@@ -1059,7 +1059,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
             Self::do_deposit_lp_shares(deposit, global_farm_id, yield_farm_id, get_token_value_of_lp_shares)?;
 
-            Ok(deposit.shares)
+            Ok((deposit.shares, deposit.amm_pool_id.clone()))
         })
     }
 
@@ -1863,7 +1863,7 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
             Self::AmmPoolId,
             Self::Balance,
         ) -> Result<Self::Balance, Self::Error>,
-    ) -> Result<Self::Balance, Self::Error> {
+    ) -> Result<(Self::Balance, Self::AmmPoolId), Self::Error> {
         Self::redeposit_lp_shares(global_farm_id, yield_farm_id, deposit_id, get_token_value_of_lp_shares)
     }
 

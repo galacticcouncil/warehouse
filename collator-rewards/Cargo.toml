@@ -1,6 +1,6 @@
 [package]
 name = "pallet-collator-rewards"
-version = "1.0.3"
+version = "1.0.4"
 description = "Pallet for collator rewards"
 authors = ["GalacticCouncil"]
 edition = "2021"
@@ -36,6 +36,7 @@ frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", b
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false, optional = true }
 
 [dev-dependencies]
+test-utils = { path = "../test-utils", default-features = false }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.29", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }

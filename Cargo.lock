@@ -4911,7 +4911,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-collator-rewards"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5214,7 +5214,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-nft"
-version = "7.1.0"
+version = "7.1.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5231,6 +5231,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "syn",
+ "test-utils",
 ]
 
 [[package]]
@@ -10179,7 +10180,7 @@ dependencies = [
 
 [[package]]
 name = "test-utils"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "frame-system",
  "pretty_assertions",

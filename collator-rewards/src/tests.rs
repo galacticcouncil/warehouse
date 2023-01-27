@@ -1,8 +1,8 @@
 use super::*;
 
 use crate::mock::{
-    set_block_number, CollatorRewards, ExtBuilder, Test, Tokens, ALICE, BOB, CHARLIE, COLLATOR_REWARD, DAVE, GC_COLL_1,
-    GC_COLL_2, GC_COLL_3, NATIVE_TOKEN, SESSION_ENDED,
+    expect_unordered_events, set_block_number, CollatorRewards, ExtBuilder, Test, Tokens, ALICE, BOB, CHARLIE,
+    COLLATOR_REWARD, DAVE, GC_COLL_1, GC_COLL_2, GC_COLL_3, NATIVE_TOKEN, SESSION_ENDED,
 };
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -59,26 +59,32 @@ fn reward_collator_on_end_session_should_work() {
         assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &BOB), COLLATOR_REWARD);
         assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &DAVE), COLLATOR_REWARD);
 
-        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
-            who: ALICE,
-            amount: COLLATOR_REWARD,
-            currency: NATIVE_TOKEN,
-        }));
-        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
-            who: BOB,
-            amount: COLLATOR_REWARD,
-            currency: NATIVE_TOKEN,
-        }));
-        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
-            who: CHARLIE,
-            amount: COLLATOR_REWARD,
-            currency: NATIVE_TOKEN,
-        }));
-        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
-            who: DAVE,
-            amount: COLLATOR_REWARD,
-            currency: NATIVE_TOKEN,
-        }));
+        expect_unordered_events(vec![
+            Event::CollatorRewarded {
+                who: ALICE,
+                amount: COLLATOR_REWARD,
+                currency: NATIVE_TOKEN,
+            }
+            .into(),
+            Event::CollatorRewarded {
+                who: BOB,
+                amount: COLLATOR_REWARD,
+                currency: NATIVE_TOKEN,
+            }
+            .into(),
+            Event::CollatorRewarded {
+                who: CHARLIE,
+                amount: COLLATOR_REWARD,
+                currency: NATIVE_TOKEN,
+            }
+            .into(),
+            Event::CollatorRewarded {
+                who: DAVE,
+                amount: COLLATOR_REWARD,
+                currency: NATIVE_TOKEN,
+            }
+            .into(),
+        ]);
     });
 }
 

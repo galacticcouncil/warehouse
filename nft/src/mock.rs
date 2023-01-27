@@ -220,6 +220,6 @@ impl ExtBuilder {
     }
 }
 
-pub fn expect_events(e: Vec<Event>) {
-    e.into_iter().for_each(frame_system::Pallet::<Test>::assert_has_event);
+pub fn expect_unordered_events(e: Vec<Event>) {
+    test_utils::expect_unordered_events::<Event, Test>(e)
 }

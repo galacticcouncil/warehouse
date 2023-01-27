@@ -42,7 +42,7 @@ fn create_collection_works() {
             }
         );
 
-        expect_events(vec![crate::Event::CollectionCreated {
+        expect_unordered_events(vec![crate::Event::CollectionCreated {
             owner: ALICE,
             collection_id: COLLECTION_ID_0,
             collection_type: CollectionType::Marketplace,
@@ -117,7 +117,7 @@ fn mint_works() {
             }
         );
 
-        expect_events(vec![crate::Event::ItemMinted {
+        expect_unordered_events(vec![crate::Event::ItemMinted {
             owner: ALICE,
             collection_id: COLLECTION_ID_0,
             item_id: ITEM_ID_0,
@@ -216,7 +216,7 @@ fn transfer_works() {
         ));
         assert_eq!(NFTPallet::owner(&COLLECTION_ID_0, &ITEM_ID_0).unwrap(), BOB);
 
-        expect_events(vec![crate::Event::ItemTransferred {
+        expect_unordered_events(vec![crate::Event::ItemTransferred {
             from: ALICE,
             to: BOB,
             collection_id: COLLECTION_ID_0,
@@ -272,7 +272,7 @@ fn burn_works() {
         assert_ok!(NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0));
         assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_0));
 
-        expect_events(vec![crate::Event::ItemBurned {
+        expect_unordered_events(vec![crate::Event::ItemBurned {
             owner: ALICE,
             collection_id: COLLECTION_ID_0,
             item_id: ITEM_ID_0,
@@ -334,7 +334,7 @@ fn destroy_collection_works() {
         assert_ok!(NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0));
         assert_eq!(NFTPallet::collections(COLLECTION_ID_0), None);
 
-        expect_events(vec![crate::Event::CollectionDestroyed {
+        expect_unordered_events(vec![crate::Event::CollectionDestroyed {
             owner: ALICE,
             collection_id: COLLECTION_ID_0,
         }
@@ -940,7 +940,7 @@ fn do_destroy_collection_works() {
 
         assert_eq!(NFTPallet::collections(COLLECTION_ID_0), None);
 
-        expect_events(vec![crate::Event::CollectionDestroyed {
+        expect_unordered_events(vec![crate::Event::CollectionDestroyed {
             owner: ALICE,
             collection_id: COLLECTION_ID_0,
         }

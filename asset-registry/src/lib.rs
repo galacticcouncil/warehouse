@@ -162,6 +162,7 @@ pub mod pallet {
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub asset_names: Vec<(Vec<u8>, T::Balance)>,
+        pub asset_ids: Vec<(Vec<u8>, T::Balance, T::AssetId)>,
         pub native_asset_name: Vec<u8>,
         pub native_existential_deposit: T::Balance,
     }
@@ -171,6 +172,7 @@ pub mod pallet {
         fn default() -> Self {
             GenesisConfig::<T> {
                 asset_names: vec![],
+                asset_ids: vec![],
                 native_asset_name: b"BSX".to_vec(),
                 native_existential_deposit: Default::default(),
             }
@@ -200,6 +202,14 @@ pub mod pallet {
                     .map_err(|_| panic!("Invalid asset name!"))
                     .unwrap();
                 let _ = Pallet::<T>::register_asset(bounded_name, AssetType::Token, *ed, None)
+                    .map_err(|_| panic!("Failed to register asset"));
+            });
+
+            self.asset_ids.iter().for_each(|(name, ed, id)| {
+                let bounded_name = Pallet::<T>::to_bounded_name(name.to_vec())
+                    .map_err(|_| panic!("Invalid asset name!"))
+                    .unwrap();
+                let _ = Pallet::<T>::register_asset(bounded_name, AssetType::Token, *ed, Some(*id))
                     .map_err(|_| panic!("Failed to register asset"));
             })
         }

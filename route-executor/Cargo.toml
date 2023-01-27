@@ -8,30 +8,30 @@ license = 'Apache 2.0'
 repository = "https://github.com/galacticcouncil/warehouse/tree/master/route-executor"
 
 [dependencies]
-codec = { default-features = false, features = ["derive"], package = "parity-scale-codec", version = "3.1.5" }
-scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
+codec.workspace = true
+scale-info.workspace = true
 serde = { features = ["derive"], optional = true, version = "1.0.137" }
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }
 
 # ORML dependencies
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.29", default-features = false }
+orml-traits.workspace = true
 
 # Substrate dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false, optional = true }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
+frame-support.workspace = true
+frame-system.workspace = true
 frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false, optional = true }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
+sp-std.workspace = true
+sp-core.workspace = true
+sp-runtime.workspace = true
 
 [dev-dependencies]
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
+sp-io.workspace = true
 pretty_assertions = "1.2.1"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.29", default-features = false }
+orml-tokens.workspace = true
 pallet-currencies = { path = "../currencies", default-features = false }
 hydradx-adapters = { path = "../adapters", default-features = false }
 test-utils = { path = "../test-utils", default-features = false }

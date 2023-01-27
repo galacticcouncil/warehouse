@@ -1,12 +1,25 @@
 use frame_system::Config;
 use pretty_assertions::assert_eq;
 
+/// Test that the events were emitted in the given order.
+/// Provided events are compared with the last events that were emitted.
 pub fn expect_events<TEvent: std::fmt::Debug + PartialEq, TRuntime: Config>(e: Vec<TEvent>)
 where
     Vec<TEvent>: FromIterator<<TRuntime as Config>::Event>,
 {
     let last_events: Vec<TEvent> = last_events::<TEvent, TRuntime>(e.len());
     assert_eq!(last_events, e);
+}
+
+/// Test that the events were emitted, in no particular order.
+/// Provided events don't need to be the last events that were emitted.
+pub fn expect_unordered_events<TEvent: std::fmt::Debug + PartialEq, TRuntime: Config>(e: Vec<TEvent>)
+where
+    <TRuntime as Config>::Event: From<TEvent>,
+{
+    e.into_iter()
+        .map(|x| x.into())
+        .for_each(frame_system::Pallet::<TRuntime>::assert_has_event);
 }
 
 pub fn last_events<TEvent: std::fmt::Debug, TRuntime>(n: usize) -> Vec<TEvent>

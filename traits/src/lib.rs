@@ -29,7 +29,7 @@ pub mod oracle;
 pub use oracle::*;
 
 use codec::{Decode, Encode};
-use frame_support::dispatch;
+use frame_support::dispatch::{self, DispatchError};
 use frame_support::sp_runtime::traits::Zero;
 use frame_support::sp_runtime::RuntimeDebug;
 use frame_support::traits::LockIdentifier;
@@ -164,7 +164,7 @@ pub trait OnTradeHandler<AssetId, Balance> {
         amount_in: Balance,
         amount_out: Balance,
         liq_amount: Balance,
-    );
+    ) -> Result<Weight, (Weight, DispatchError)>;
     /// Known overhead for a trade in `on_initialize/on_finalize`.
     /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
     /// Add this weight to an extrinsic from which you call `on_trade`.
@@ -179,7 +179,8 @@ impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {
         _amount_in: Balance,
         _amount_out: Balance,
         _liq_amount: Balance,
-    ) {
+    ) -> Result<Weight, (Weight, DispatchError)> {
+        Ok(Weight::zero())
     }
     fn on_trade_weight() -> Weight {
         Weight::zero()
@@ -204,7 +205,7 @@ pub trait OnLiquidityChangedHandler<AssetId, Balance> {
         amount_a: Balance,
         amount_b: Balance,
         liquidity: Balance,
-    );
+    ) -> Result<Weight, (Weight, DispatchError)>;
     /// Known overhead for a liquidity change in `on_initialize/on_finalize`.
     /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
     /// Add this weight to an extrinsic from which you call `on_liquidity_changed`.
@@ -219,7 +220,8 @@ impl<AssetId, Balance> OnLiquidityChangedHandler<AssetId, Balance> for () {
         _amount_a: Balance,
         _amount_b: Balance,
         _liq: Balance,
-    ) {
+    ) -> Result<Weight, (Weight, DispatchError)> {
+        Ok(Weight::zero())
     }
 
     fn on_liquidity_changed_weight() -> Weight {

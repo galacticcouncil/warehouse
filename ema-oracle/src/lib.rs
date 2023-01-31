@@ -208,39 +208,50 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    /// Insert or update data in the accumulator from received price entry. Aggregates volume and
+    /// Insert or update data in the accumulator from received entry. Aggregates volume and
     /// takes the most recent data for the rest.
-    pub(crate) fn on_entry(src: Source, assets: (AssetId, AssetId), oracle_entry: OracleEntry<T::BlockNumber>) {
+    pub(crate) fn on_entry(
+        src: Source,
+        assets: (AssetId, AssetId),
+        oracle_entry: OracleEntry<T::BlockNumber>,
+    ) -> Result<(), ()> {
         Accumulator::<T>::mutate(|accumulator| {
-            let is_present = if let Some(entry) = accumulator.get_mut(&(src, assets)) {
+            if let Some(entry) = accumulator.get_mut(&(src, assets)) {
                 entry.accumulate_volume_and_update_from(&oracle_entry);
-                true
+                Ok(())
             } else {
-                false
-            };
-            if !is_present {
-                accumulator.try_insert((src, assets), oracle_entry).unwrap_or_else(|((src, assets), entry)| {
-                        log::error!(
-                            target: LOG_TARGET,
-                            "Could not insert oracle entry at ({src:?}, {assets:?}). Dropping new entry ({entry:?}). This should not happen and implies that the configuration needs to be changed!"
-                        );
-                        debug_assert!(false, "Should not try to insert more than MAX_UNIQUE_ENTRIES entries in accumulator.");
-                        None
-                    });
+                accumulator
+                    .try_insert((src, assets), oracle_entry)
+                    .map(|_| ())
+                    .map_err(|_| ())
             }
-        });
+        })
     }
 
-    pub(crate) fn on_trade(src: Source, assets: (AssetId, AssetId), oracle_entry: OracleEntry<T::BlockNumber>) {
+    /// Insert or update data in the accumulator from received entry. Aggregates volume and
+    /// takes the most recent data for the rest.
+    pub(crate) fn on_trade(
+        src: Source,
+        assets: (AssetId, AssetId),
+        oracle_entry: OracleEntry<T::BlockNumber>,
+    ) -> Result<Weight, (Weight, DispatchError)> {
+        let weight = OnActivityHandler::<T>::on_trade_weight();
         Self::on_entry(src, assets, oracle_entry)
+            .map(|_| weight)
+            .map_err(|_| (weight, DispatchError::Other("too many unique entries")))
     }
 
+    /// Insert or update data in the accumulator from received entry. Aggregates volume and
+    /// takes the most recent data for the rest.
     pub(crate) fn on_liquidity_changed(
         src: Source,
         assets: (AssetId, AssetId),
         oracle_entry: OracleEntry<T::BlockNumber>,
-    ) {
+    ) -> Result<Weight, (Weight, DispatchError)> {
+        let weight = OnActivityHandler::<T>::on_liquidity_changed_weight();
         Self::on_entry(src, assets, oracle_entry)
+            .map(|_| weight)
+            .map_err(|_| (weight, DispatchError::Other("too many unique entries")))
     }
 
     /// Update oracles based on data accumulated during the block.
@@ -347,6 +358,8 @@ impl<T: Config> OnCreatePoolHandler<AssetId> for OnActivityHandler<T> {
     }
 }
 
+/// Calculate the weight contribution of one `on_trade`/`on_liquidity_changed` call towards
+/// `on_finalize`.
 pub(crate) fn fractional_on_finalize_weight<T: Config>(max_entries: u32) -> Weight {
     T::WeightInfo::on_finalize_multiple_tokens(max_entries)
         .saturating_sub(T::WeightInfo::on_finalize_no_entry())
@@ -361,11 +374,14 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
         amount_in: Balance,
         amount_out: Balance,
         liquidity: Balance,
-    ) {
+    ) -> Result<Weight, (Weight, DispatchError)> {
         // We assume that zero values are not valid and can be ignored.
         if liquidity.is_zero() || amount_in.is_zero() || amount_out.is_zero() {
             log::warn!(target: LOG_TARGET, "Neither liquidity nor amounts should be zero. Ignoring. Source: {source:?}, liquidity: {liquidity}, amount_in: {amount_in}, amount_out: {amount_out}");
-            return;
+            return Err((
+                Self::on_trade_weight(),
+                DispatchError::Other("on_trade values should not be zero"),
+            ));
         }
         let price = determine_normalized_price(asset_in, asset_out, amount_in, amount_out);
         let volume = determine_normalized_volume(asset_in, asset_out, amount_in, amount_out);
@@ -377,7 +393,7 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
             liquidity,
             timestamp,
         };
-        Pallet::<T>::on_trade(source, ordered_pair(asset_in, asset_out), entry);
+        Pallet::<T>::on_trade(source, ordered_pair(asset_in, asset_out), entry)
     }
 
     fn on_trade_weight() -> Weight {
@@ -396,7 +412,7 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
         amount_a: Balance,
         amount_b: Balance,
         liquidity: Balance,
-    ) {
+    ) -> Result<Weight, (Weight, DispatchError)> {
         if liquidity.is_zero() || amount_a.is_zero() || amount_b.is_zero() {
             log::trace!(target: LOG_TARGET, "Liquidity or amounts are zero. Source: {source:?}, liquidity: {liquidity}, amount_a: {amount_a}, amount_b: {amount_b}");
         }
@@ -413,7 +429,7 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
             liquidity,
             timestamp,
         };
-        Pallet::<T>::on_liquidity_changed(source, ordered_pair(asset_a, asset_b), entry);
+        Pallet::<T>::on_liquidity_changed(source, ordered_pair(asset_a, asset_b), entry)
     }
 
     fn on_liquidity_changed_weight() -> Weight {

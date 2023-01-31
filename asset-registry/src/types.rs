@@ -16,7 +16,6 @@
 // limitations under the License.
 
 use frame_support::pallet_prelude::*;
-use sp_std::vec::Vec;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -51,8 +50,7 @@ pub struct AssetMetadata<BoundedString> {
     pub(super) decimals: u8,
 }
 
-#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, TypeInfo)]
 pub struct Metadata {
     pub(super) symbol: Vec<u8>,
     pub(super) decimals: u8,

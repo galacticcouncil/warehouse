@@ -27,8 +27,9 @@ use frame_support::{
     PalletId,
 };
 use frame_system as system;
-use hydradx_traits::{pools::DustRemovalAccountWhitelist, registry::Registry, AMM};
+use hydradx_traits::{pools::DustRemovalAccountWhitelist, AMM};
 use orml_traits::GetByKey;
+use registry_traits::Registry;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,

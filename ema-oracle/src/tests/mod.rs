@@ -146,7 +146,50 @@ fn on_liquidity_changed_handler_should_work() {
 }
 
 #[test]
-fn price_normalization_should_exclude_zero_values() {
+fn on_liquidity_changed_should_allow_zero_values() {
+    let timestamp = 5;
+    let liquidity = 2_000;
+    let amount = 1_000;
+
+    new_test_ext().execute_with(|| {
+        System::set_block_number(timestamp);
+        OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, HDX, DOT, Balance::zero(), amount, liquidity);
+        let only_liquidity_entry = OracleEntry {
+            price: Price::zero(),
+            volume: Volume::default(),
+            liquidity,
+            timestamp,
+        };
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(only_liquidity_entry));
+    });
+
+    new_test_ext().execute_with(|| {
+        System::set_block_number(timestamp);
+        OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, HDX, DOT, amount, Balance::zero(), liquidity);
+        let only_liquidity_entry = OracleEntry {
+            price: Price::zero(),
+            volume: Volume::default(),
+            liquidity,
+            timestamp,
+        };
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(only_liquidity_entry));
+    });
+
+    new_test_ext().execute_with(|| {
+        System::set_block_number(timestamp);
+        OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, HDX, DOT, amount, amount, Balance::zero());
+        let only_price_entry = OracleEntry {
+            price: Price::new(amount, amount),
+            volume: Volume::default(),
+            liquidity: Balance::zero(),
+            timestamp,
+        };
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(only_price_entry));
+    });
+}
+
+#[test]
+fn on_trade_should_exclude_zero_values() {
     new_test_ext().execute_with(|| {
         assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
             SOURCE,

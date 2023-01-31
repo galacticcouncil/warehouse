@@ -397,13 +397,14 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
         amount_b: Balance,
         liquidity: Balance,
     ) {
-        // We assume that zero values are not valid and can be ignored.
         if liquidity.is_zero() || amount_a.is_zero() || amount_b.is_zero() {
-            log::warn!(target: LOG_TARGET, "Neither liquidity nor amounts should be zero. Ignoring. Source: {source:?}, liquidity: {liquidity}, amount_a: {amount_a}, amount_b: {amount_b}");
-            return;
+            log::trace!(target: LOG_TARGET, "Liquidity or amounts are zero. Source: {source:?}, liquidity: {liquidity}, amount_a: {amount_a}, amount_b: {amount_b}");
         }
-        // We don't want to throw an error here because this method is used in different extrinsics.
-        let price = determine_normalized_price(asset_a, asset_b, amount_a, amount_b);
+        let price = if amount_a.is_zero() || amount_b.is_zero() {
+            Price::zero()
+        } else {
+            determine_normalized_price(asset_a, asset_b, amount_a, amount_b)
+        };
         let timestamp = T::BlockNumberProvider::current_block_number();
         let entry = OracleEntry {
             price,

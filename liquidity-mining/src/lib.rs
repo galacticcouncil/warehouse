@@ -1013,7 +1013,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         yield_farm_id: YieldFarmId,
         amm_pool_id: T::AmmPoolId,
         shares_amount: Balance,
-        get_token_value_of_lp_shares: fn(T::AssetId, T::AmmPoolId, Balance) -> Result<Balance, DispatchError>,
+        get_token_value_of_lp_shares: impl Fn(T::AssetId, T::AmmPoolId, Balance) -> Result<Balance, DispatchError>,
     ) -> Result<DepositId, DispatchError> {
         let mut deposit = DepositData::new(shares_amount, amm_pool_id);
 
@@ -1048,7 +1048,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
-        get_token_value_of_lp_shares: fn(T::AssetId, T::AmmPoolId, Balance) -> Result<Balance, DispatchError>,
+        get_token_value_of_lp_shares: impl Fn(T::AssetId, T::AmmPoolId, Balance) -> Result<Balance, DispatchError>,
     ) -> Result<(Balance, T::AmmPoolId), DispatchError> {
         <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
             //NOTE: At this point deposit existence and owner must be checked by pallet calling this
@@ -1333,7 +1333,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         deposit: &mut DepositData<T, I>,
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
-        get_token_value_of_lp_shares: fn(T::AssetId, T::AmmPoolId, Balance) -> Result<Balance, DispatchError>,
+        get_token_value_of_lp_shares: impl Fn(T::AssetId, T::AmmPoolId, Balance) -> Result<Balance, DispatchError>,
     ) -> Result<(), DispatchError> {
         //LP shares can be locked only once in the same yield farm.
         ensure!(
@@ -1833,7 +1833,7 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
     ) -> Result<(), Self::Error> {
         Self::terminate_yield_farm(who, global_farm_id, yield_farm_id, amm_pool_id)
     }
-
+    /*
     fn deposit_lp_shares(
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
@@ -1852,18 +1852,36 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
             shares_amount,
             get_token_value_of_lp_shares,
         )
+    }*/
+
+    fn deposit_lp_shares<F>(
+        global_farm_id: GlobalFarmId,
+        yield_farm_id: YieldFarmId,
+        amm_pool_id: Self::AmmPoolId,
+        shares_amount: Self::Balance,
+        get_token_value_of_lp_shares: F,
+    ) -> Result<DepositId, Self::Error>
+    where
+        F: Fn(T::AssetId, Self::AmmPoolId, Self::Balance) -> Result<Self::Balance, Self::Error>,
+    {
+        Self::deposit_lp_shares(
+            global_farm_id,
+            yield_farm_id,
+            amm_pool_id,
+            shares_amount,
+            get_token_value_of_lp_shares,
+        )
     }
 
-    fn redeposit_lp_shares(
+    fn redeposit_lp_shares<F>(
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
-        get_token_value_of_lp_shares: fn(
-            T::AssetId,
-            Self::AmmPoolId,
-            Self::Balance,
-        ) -> Result<Self::Balance, Self::Error>,
-    ) -> Result<(Self::Balance, Self::AmmPoolId), Self::Error> {
+        get_token_value_of_lp_shares: F,
+    ) -> Result<(Self::Balance, Self::AmmPoolId), Self::Error>
+    where
+        F: Fn(T::AssetId, Self::AmmPoolId, Self::Balance) -> Result<Self::Balance, Self::Error>,
+    {
         Self::redeposit_lp_shares(global_farm_id, yield_farm_id, deposit_id, get_token_value_of_lp_shares)
     }
 

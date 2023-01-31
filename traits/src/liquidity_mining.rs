@@ -97,24 +97,28 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     ///
     /// Returns: `(DepositId)`
     #[allow(clippy::type_complexity)]
-    fn deposit_lp_shares(
+    fn deposit_lp_shares<F>(
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         amm_pool_id: Self::AmmPoolId,
         shares_amount: Self::Balance,
-        get_token_value_of_lp_shares: fn(AssetId, Self::AmmPoolId, Self::Balance) -> Result<Self::Balance, Self::Error>,
-    ) -> Result<DepositId, Self::Error>;
+        get_token_value_of_lp_shares: F,
+    ) -> Result<DepositId, Self::Error>
+    where
+        F: Fn(AssetId, Self::AmmPoolId, Self::Balance) -> Result<Self::Balance, Self::Error>;
 
     /// Redeposit already locked LP shares to another yield farm.
     ///
     /// Returns: `(redeposited LP shares amount, amm pool id)`
     #[allow(clippy::type_complexity)]
-    fn redeposit_lp_shares(
+    fn redeposit_lp_shares<F>(
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
-        get_token_value_of_lp_shares: fn(AssetId, Self::AmmPoolId, Self::Balance) -> Result<Self::Balance, Self::Error>,
-    ) -> Result<(Self::Balance, Self::AmmPoolId), Self::Error>;
+        get_token_value_of_lp_shares: F,
+    ) -> Result<(Self::Balance, Self::AmmPoolId), Self::Error>
+    where
+        F: Fn(AssetId, Self::AmmPoolId, Self::Balance) -> Result<Self::Balance, Self::Error>;
 
     /// Claim rewards for given deposit.
     ///

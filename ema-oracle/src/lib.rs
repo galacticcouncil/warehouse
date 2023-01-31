@@ -53,10 +53,9 @@
 //! this aggregation is NOT based on EMA, yet, it just sums the volume and replaces price and
 //! liquidity with the most recent value.
 //!
-//! At the end of the block, all the entries are merged into
-//! permanent storage via the exponential moving average logic defined in the math package this
-//! pallet depens on. There is one oracle entry for each combination of `(source, asset_pair,
-//! period)` in storage.
+//! At the end of the block, all the entries are merged into permanent storage via the exponential
+//! moving average logic defined in the math package this pallet depens on. There is one oracle
+//! entry for each combination of `(source, asset_pair, period)` in storage.
 //!
 //! Oracle values are accessed lazily. This means that the storage does not contain the most recent
 //! value, but the value calculated the last time it was updated via trade or liquidity change. On a
@@ -91,9 +90,10 @@ use weights::WeightInfo;
 
 mod benchmarking;
 
-/// Maximum number of trades expected in one block. Empirically determined by running
-/// `trades_estimation.py` and rounding up from 212 to 300.
-pub const MAX_TRADES: u32 = 300;
+/// Maximum number of unique oracle entries expected in one block. Empirically determined by running
+/// `trades_estimation.py` and rounding up from 212 to 300. Not necessarily representative for all
+/// chains, configure `MaxUniqueEntries` according to your chain.
+pub const MAX_UNIQUE_ENTRIES: u32 = 300;
 /// The maximum number of periods that could have corresponding oracles.
 pub const MAX_PERIODS: u32 = OraclePeriod::all_periods().len() as u32;
 
@@ -125,9 +125,9 @@ pub mod pallet {
         /// The periods supported by the pallet. I.e. which oracles to track.
         type SupportedPeriods: Get<BoundedVec<OraclePeriod, ConstU32<MAX_PERIODS>>>;
 
-        /// Maximum number of trades expected in one block.
+        /// Maximum number of unique oracle entries expected in one block.
         #[pallet::constant]
-        type MaxTradesPerBlock: Get<u32>;
+        type MaxUniqueEntries: Get<u32>;
     }
 
     #[pallet::error]
@@ -141,7 +141,7 @@ pub mod pallet {
     #[pallet::getter(fn accumulator)]
     pub type Accumulator<T: Config> = StorageValue<
         _,
-        BoundedBTreeMap<(Source, (AssetId, AssetId)), OracleEntry<T::BlockNumber>, T::MaxTradesPerBlock>,
+        BoundedBTreeMap<(Source, (AssetId, AssetId)), OracleEntry<T::BlockNumber>, T::MaxUniqueEntries>,
         ValueQuery,
     >;
 
@@ -197,7 +197,7 @@ pub mod pallet {
 
         fn integrity_test() {
             assert!(
-                T::MaxTradesPerBlock::get() > 0,
+                T::MaxUniqueEntries::get() > 0,
                 "At least one trade should be possible per block."
             );
         }
@@ -224,7 +224,7 @@ impl<T: Config> Pallet<T> {
                             target: LOG_TARGET,
                             "Could not insert oracle entry at ({src:?}, {assets:?}). Dropping new entry ({entry:?}). This should not happen and implies that the configuration needs to be changed!"
                         );
-                        debug_assert!(false, "Should not try to insert more than MAX_TRADES entries in accumulator.");
+                        debug_assert!(false, "Should not try to insert more than MAX_UNIQUE_ENTRIES entries in accumulator.");
                         None
                     });
             }
@@ -347,6 +347,12 @@ impl<T: Config> OnCreatePoolHandler<AssetId> for OnActivityHandler<T> {
     }
 }
 
+pub(crate) fn fractional_on_finalize_weight<T: Config>(max_entries: u32) -> Weight {
+    T::WeightInfo::on_finalize_multiple_tokens(max_entries)
+        .saturating_sub(T::WeightInfo::on_finalize_no_entry())
+        .saturating_div(max_entries.into())
+}
+
 impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
     fn on_trade(
         source: Source,
@@ -375,17 +381,10 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
     }
 
     fn on_trade_weight() -> Weight {
-        let max_trades = T::MaxTradesPerBlock::get();
-        // on_trade + on_finalize / max_trades
-        T::WeightInfo::on_trade_multiple_tokens(max_trades).saturating_add(
-            // TODO: Can we also divide the proof size weight the same way?
-            Weight::from_ref_time(
-                T::WeightInfo::on_finalize_multiple_tokens(max_trades)
-                    .saturating_sub(T::WeightInfo::on_finalize_no_entry())
-                    .ref_time()
-                    / (max_trades as u64),
-            ),
-        )
+        let max_entries = T::MaxUniqueEntries::get();
+        // on_trade + on_finalize / max_entries
+        T::WeightInfo::on_trade_multiple_tokens(max_entries)
+            .saturating_add(fractional_on_finalize_weight::<T>(max_entries))
     }
 }
 
@@ -417,17 +416,10 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
     }
 
     fn on_liquidity_changed_weight() -> Weight {
-        let max_trades = T::MaxTradesPerBlock::get();
-        // on_liquidity + on_finalize / max_trades
-        T::WeightInfo::on_liquidity_changed_multiple_tokens(max_trades).saturating_add(
-            // TODO: Can we also divide the proof size weight the same way?
-            Weight::from_ref_time(
-                T::WeightInfo::on_finalize_multiple_tokens(max_trades)
-                    .saturating_sub(T::WeightInfo::on_finalize_no_entry())
-                    .ref_time()
-                    / (max_trades as u64),
-            ),
-        )
+        let max_entries = T::MaxUniqueEntries::get();
+        // on_liquidity + on_finalize / max_entries
+        T::WeightInfo::on_liquidity_changed_multiple_tokens(max_entries)
+            .saturating_add(fractional_on_finalize_weight::<T>(max_entries))
     }
 }
 

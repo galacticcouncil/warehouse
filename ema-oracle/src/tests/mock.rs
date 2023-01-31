@@ -40,7 +40,7 @@ type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 use crate::MAX_PERIODS;
-use crate::MAX_TRADES;
+use crate::MAX_UNIQUE_ENTRIES;
 pub const HDX: AssetId = 1_000;
 pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
@@ -133,7 +133,7 @@ impl Config for Test {
     type WeightInfo = ();
     type BlockNumberProvider = System;
     type SupportedPeriods = SupportedPeriods;
-    type MaxTradesPerBlock = ConstU32<MAX_TRADES>;
+    type MaxUniqueEntries = ConstU32<MAX_UNIQUE_ENTRIES>;
 }
 
 #[derive(Default)]

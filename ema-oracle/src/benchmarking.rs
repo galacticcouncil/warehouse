@@ -31,7 +31,7 @@ use pretty_assertions::assert_eq;
 use crate::Pallet as EmaOracle;
 
 /// Maximum parameter to run the benchmark for.
-pub const MAX_TOKEN_PAIRS: u32 = MAX_TRADES - 1;
+pub const MAX_TOKEN_PAIRS: u32 = MAX_UNIQUE_ENTRIES - 1;
 
 /// Default oracle source.
 const SOURCE: Source = *b"dummysrc";

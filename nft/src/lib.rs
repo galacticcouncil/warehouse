@@ -165,6 +165,9 @@ pub mod pallet {
 
             ensure!(T::Permissions::can_mint(&collection_type), Error::<T>::NotPermitted);
 
+            let collection_owner = Self::collection_owner(&collection_id).ok_or(Error::<T>::CollectionUnknown)?;
+            ensure!(collection_owner == sender, Error::<T>::NotPermitted);
+
             Self::do_mint(sender, collection_id, item_id, metadata)?;
 
             Ok(())

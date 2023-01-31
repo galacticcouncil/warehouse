@@ -107,14 +107,14 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
 
     /// Redeposit already locked LP shares to another yield farm.
     ///
-    /// Returns: `(redeposited LP shares amount)`
+    /// Returns: `(redeposited LP shares amount, amm pool id)`
     #[allow(clippy::type_complexity)]
     fn redeposit_lp_shares(
         global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
         get_token_value_of_lp_shares: fn(AssetId, Self::AmmPoolId, Self::Balance) -> Result<Self::Balance, Self::Error>,
-    ) -> Result<Self::Balance, Self::Error>;
+    ) -> Result<(Self::Balance, Self::AmmPoolId), Self::Error>;
 
     /// Claim rewards for given deposit.
     ///
@@ -124,17 +124,20 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         who: AccountId,
         deposit_id: DepositId,
         yield_farm_id: YieldFarmId,
-        fail_on_doubleclaim: bool,
     ) -> Result<(GlobalFarmId, AssetId, Self::Balance, Self::Balance), Self::Error>;
 
-    /// Withdraw LP shares from yield farm.
+    /// Withdraw LP shares from yield farm. Function attempts to claim rewards for `who` if farm is
+    /// claimable.
     ///
-    /// Returns: `(GlobalFarmId, withdrawn amount, true if deposit was destroyed)`
+    /// Returns: `(withdrawn amount, Option<(reward currency, claimed amount, unclaimable amount>, true if deposit was destroyed)`
+    #[allow(clippy::type_complexity)]
     fn withdraw_lp_shares(
+        who: AccountId,
         deposit_id: DepositId,
+        global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
-        unclaimable_rewards: Self::Balance,
-    ) -> Result<(GlobalFarmId, Self::Balance, bool), Self::Error>;
+        amm_pool_id: Self::AmmPoolId,
+    ) -> Result<(Self::Balance, Option<(AssetId, Self::Balance, Self::Balance)>, bool), Self::Error>;
 
     /// Returns true if rewards claiming from yield farm is possible.
     fn is_yield_farm_claimable(

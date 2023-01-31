@@ -33,7 +33,7 @@ fn redeposit_lp_shares_should_work() {
                     |_, _, _| { Ok(500 * ONE) }
                 )
                 .unwrap(),
-                50 * ONE
+                (50 * ONE, BSX_TKN1_AMM)
             );
 
             assert_eq!(
@@ -53,7 +53,7 @@ fn redeposit_lp_shares_should_work() {
                     |_, _, _| { Ok(5_000 * ONE) }
                 )
                 .unwrap(),
-                50 * ONE
+                (50 * ONE, BSX_TKN1_AMM)
             );
 
             assert_eq!(

@@ -139,7 +139,7 @@ fn mint_works() {
 
         // not owner
         assert_noop!(
-            NFTPallet::mint(Origin::signed(BOB), COLLECTION_ID_1, ITEM_ID_0, metadata.clone()),
+            NFTPallet::mint(Origin::signed(BOB), COLLECTION_ID_0, ITEM_ID_1, metadata.clone()),
             Error::<Test>::NotPermitted
         );
 
@@ -325,6 +325,12 @@ fn destroy_collection_works() {
             Error::<Test>::NotPermitted
         );
 
+        // not owner
+        assert_noop!(
+            NFTPallet::destroy_collection(Origin::signed(CHARLIE), COLLECTION_ID_0),
+            pallet_uniques::Error::<Test>::NoPermission
+        );
+
         assert_ok!(NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0));
         assert_eq!(NFTPallet::collections(COLLECTION_ID_0), None);
 
@@ -411,7 +417,7 @@ fn inspect_trait_should_work() {
         ));
 
         assert_ok!(NFTPallet::mint(
-            Origin::signed(BOB),
+            Origin::signed(ALICE),
             COLLECTION_ID_0,
             ITEM_ID_0,
             metadata
@@ -419,7 +425,7 @@ fn inspect_trait_should_work() {
 
         assert_eq!(
             <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&COLLECTION_ID_0, &ITEM_ID_0),
-            Some(BOB)
+            Some(ALICE)
         );
         assert_eq!(
             <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&COLLECTION_ID_1, &ITEM_ID_0),
@@ -468,7 +474,7 @@ fn inspect_enumerable_trait_should_work() {
         ));
 
         assert_ok!(NFTPallet::mint(
-            Origin::signed(BOB),
+            Origin::signed(ALICE),
             COLLECTION_ID_0,
             ITEM_ID_0,
             metadata
@@ -485,14 +491,17 @@ fn inspect_enumerable_trait_should_work() {
             vec![ITEM_ID_0]
         );
         assert_eq!(
-            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned(&BOB)
-                .collect::<Vec<(CollectionId, ItemId)>>(),
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned(&ALICE).collect::<Vec<(
+                CollectionId,
+                ItemId
+            )>>(
+            ),
             vec![(COLLECTION_ID_0, ITEM_ID_0)]
         );
         assert_eq!(
             *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned_in_collection(
                 &COLLECTION_ID_0,
-                &BOB
+                &ALICE
             )
             .collect::<Vec<ItemId>>(),
             vec![ITEM_ID_0]
@@ -514,7 +523,7 @@ fn destroy_trait_should_work() {
         ));
 
         assert_ok!(NFTPallet::mint(
-            Origin::signed(BOB),
+            Origin::signed(ALICE),
             COLLECTION_ID_0,
             ITEM_ID_0,
             metadata.clone()
@@ -628,6 +637,15 @@ fn mutate_trait_should_work() {
             <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
                 &COLLECTION_ID_0,
                 &ITEM_ID_0,
+                &ALICE
+            )
+        );
+
+        // not owner
+        assert_ok!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
+                &COLLECTION_ID_0,
+                &ITEM_ID_1,
                 &BOB
             )
         );
@@ -637,7 +655,7 @@ fn mutate_trait_should_work() {
             <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
                 &COLLECTION_ID_0,
                 &ITEM_ID_0,
-                Some(&ALICE)
+                Some(&BOB)
             ),
             Error::<Test>::NotPermitted
         );
@@ -645,24 +663,16 @@ fn mutate_trait_should_work() {
         // no owner check
         assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
             &COLLECTION_ID_0,
-            &ITEM_ID_0,
+            &ITEM_ID_1,
             None
         ));
         assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_1));
-
-        assert_ok!(
-            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
-                &COLLECTION_ID_0,
-                &ITEM_ID_0,
-                &BOB
-            )
-        );
 
         // with owner check
         assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
             &COLLECTION_ID_0,
             &ITEM_ID_0,
-            Some(&BOB)
+            Some(&ALICE)
         ));
         assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_0));
 
@@ -712,7 +722,7 @@ fn transfer_trait_should_work() {
         ));
 
         assert_ok!(NFTPallet::mint(
-            Origin::signed(BOB),
+            Origin::signed(ALICE),
             COLLECTION_ID_0,
             ITEM_ID_0,
             metadata

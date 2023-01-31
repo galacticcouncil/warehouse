@@ -115,12 +115,13 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::ArithmeticError;
 
 use hydra_dx_math::liquidity_mining as math;
-use hydradx_traits::{pools::DustRemovalAccountWhitelist, Registry};
+use hydradx_traits::pools::DustRemovalAccountWhitelist;
 use orml_traits::{GetByKey, MultiCurrency};
+use registry_traits::Registry;
 use scale_info::TypeInfo;
 use sp_arithmetic::{
     traits::{CheckedAdd, CheckedDiv, CheckedSub},
-    FixedPointNumber, FixedU128, Perquintill,
+    FixedU128, Perquintill,
 };
 use sp_std::{
     convert::{From, Into, TryInto},
@@ -1035,7 +1036,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     ///
     /// This function DOESN'T create new deposit.
     ///
-    /// Returns: `(redeposited shares amount)`
+    /// Returns: `(redeposited shares amount, amm pool id)`
     ///
     /// Parameters:
     /// - `global_farm_id`: global farm identifier.
@@ -1048,7 +1049,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         yield_farm_id: YieldFarmId,
         deposit_id: DepositId,
         get_token_value_of_lp_shares: fn(T::AssetId, T::AmmPoolId, Balance) -> Result<Balance, DispatchError>,
-    ) -> Result<Balance, DispatchError> {
+    ) -> Result<(Balance, T::AmmPoolId), DispatchError> {
         <Deposit<T, I>>::try_mutate(deposit_id, |maybe_deposit| {
             //NOTE: At this point deposit existence and owner must be checked by pallet calling this
             //function so this should never happen.
@@ -1058,7 +1059,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
             Self::do_deposit_lp_shares(deposit, global_farm_id, yield_farm_id, get_token_value_of_lp_shares)?;
 
-            Ok(deposit.shares)
+            Ok((deposit.shares, deposit.amm_pool_id.clone()))
         })
     }
 
@@ -1126,10 +1127,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                             );
                         }
 
-                        if yield_farm.state.is_active() {
-                            Self::sync_global_farm(global_farm, current_period)?;
-                            Self::sync_yield_farm(yield_farm, global_farm, current_period)?;
-                        }
+                        Self::sync_global_farm(global_farm, current_period)?;
+                        Self::sync_yield_farm(yield_farm, global_farm, current_period)?;
 
                         //NOTE: this should never fail yield-farm's stopped must be >= entry's
                         //stopped
@@ -1556,9 +1555,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         // Calculate reward for all periods since last update capped by balance of `GlobalFarm`
         // account.
-        let reward = reward_per_period
-            .checked_mul_int(periods_since_last_update)
-            .ok_or(ArithmeticError::Overflow)?
+        let reward = math::calculate_rewards_for_periods(reward_per_period, periods_since_last_update)
+            .map_err(|_| ArithmeticError::Overflow)?
             .min(left_to_distribute);
 
         if !reward.is_zero() {
@@ -1865,7 +1863,7 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
             Self::AmmPoolId,
             Self::Balance,
         ) -> Result<Self::Balance, Self::Error>,
-    ) -> Result<Self::Balance, Self::Error> {
+    ) -> Result<(Self::Balance, Self::AmmPoolId), Self::Error> {
         Self::redeposit_lp_shares(global_farm_id, yield_farm_id, deposit_id, get_token_value_of_lp_shares)
     }
 
@@ -1873,17 +1871,33 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         who: T::AccountId,
         deposit_id: DepositId,
         yield_farm_id: YieldFarmId,
-        fail_on_doubleclaim: bool,
     ) -> Result<(GlobalFarmId, T::AssetId, Self::Balance, Self::Balance), Self::Error> {
+        let fail_on_doubleclaim = true;
         Self::claim_rewards(who, deposit_id, yield_farm_id, fail_on_doubleclaim)
     }
 
     fn withdraw_lp_shares(
+        who: T::AccountId,
         deposit_id: DepositId,
+        global_farm_id: GlobalFarmId,
         yield_farm_id: YieldFarmId,
-        unclaimable_rewards: Self::Balance,
-    ) -> Result<(GlobalFarmId, Self::Balance, bool), Self::Error> {
-        Self::withdraw_lp_shares(deposit_id, yield_farm_id, unclaimable_rewards)
+        amm_pool_id: Self::AmmPoolId,
+    ) -> Result<(Self::Balance, Option<(T::AssetId, Self::Balance, Self::Balance)>, bool), Self::Error> {
+        let claim_data = if Self::is_yield_farm_claimable(global_farm_id, yield_farm_id, amm_pool_id) {
+            let fail_on_doubleclaim = false;
+            let (_, reward_currency, claimed, unclaimable) =
+                Self::claim_rewards(who, deposit_id, yield_farm_id, fail_on_doubleclaim)?;
+
+            Some((reward_currency, claimed, unclaimable))
+        } else {
+            None
+        };
+
+        let unclaimable = claim_data.map_or(Zero::zero(), |(_, _, unclaimable)| unclaimable);
+        let (_, withdrawn_amount, deposit_destroyed) =
+            Self::withdraw_lp_shares(deposit_id, yield_farm_id, unclaimable)?;
+
+        Ok((withdrawn_amount, claim_data, deposit_destroyed))
     }
 
     fn is_yield_farm_claimable(

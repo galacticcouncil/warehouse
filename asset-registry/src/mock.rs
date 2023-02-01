@@ -54,6 +54,7 @@ parameter_types! {
     pub const SS58Prefix: u8 = 63;
     pub const NativeAssetId: AssetId = 0;
     pub const RegistryStringLimit: u32 = 10;
+    pub const SequentialIdStart: u32 = 1_000_000;
 }
 
 impl system::Config for Test {
@@ -102,6 +103,7 @@ impl Config for Test {
     type Balance = Balance;
     type AssetNativeLocation = AssetLocation;
     type StringLimit = RegistryStringLimit;
+    type SequentialIdStartAt = SequentialIdStart;
     type NativeAssetId = NativeAssetId;
     type WeightInfo = ();
 }
@@ -110,12 +112,18 @@ pub type AssetRegistryPallet = crate::Pallet<Test>;
 #[derive(Default)]
 pub struct ExtBuilder {
     assets: Vec<(Vec<u8>, Balance)>,
+    asset_ids: Vec<(Vec<u8>, Balance, AssetId)>,
     native_asset_name: Option<Vec<u8>>,
 }
 
 impl ExtBuilder {
     pub fn with_assets(mut self, assets: Vec<(Vec<u8>, Balance)>) -> Self {
         self.assets = assets;
+        self
+    }
+
+    pub fn with_asset_ids(mut self, asset_ids: Vec<(Vec<u8>, Balance, AssetId)>) -> Self {
+        self.asset_ids = asset_ids;
         self
     }
 
@@ -130,12 +138,14 @@ impl ExtBuilder {
         if let Some(name) = self.native_asset_name {
             crate::GenesisConfig::<Test> {
                 asset_names: self.assets,
+                asset_ids: self.asset_ids,
                 native_asset_name: name,
                 native_existential_deposit: 1_000_000u128,
             }
         } else {
             crate::GenesisConfig::<Test> {
                 asset_names: self.assets,
+                asset_ids: self.asset_ids,
                 ..Default::default()
             }
         }

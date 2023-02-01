@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use frame_support::pallet_prelude::*;
+use sp_std::vec::Vec;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -47,5 +48,12 @@ pub struct AssetMetadata<BoundedString> {
     /// The ticker symbol for this asset. Limited in length by `StringLimit`.
     pub(super) symbol: BoundedString,
     /// The number of decimals this asset uses to represent one unit.
+    pub(super) decimals: u8,
+}
+
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct Metadata {
+    pub(super) symbol: Vec<u8>,
     pub(super) decimals: u8,
 }

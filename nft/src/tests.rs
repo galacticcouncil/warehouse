@@ -139,7 +139,7 @@ fn mint_works() {
 
         // not owner
         assert_noop!(
-            NFTPallet::mint(Origin::signed(BOB), COLLECTION_ID_1, ITEM_ID_0, metadata.clone()),
+            NFTPallet::mint(Origin::signed(BOB), COLLECTION_ID_0, ITEM_ID_1, metadata.clone()),
             Error::<Test>::NotPermitted
         );
 
@@ -325,6 +325,12 @@ fn destroy_collection_works() {
             Error::<Test>::NotPermitted
         );
 
+        // not owner
+        assert_noop!(
+            NFTPallet::destroy_collection(Origin::signed(CHARLIE), COLLECTION_ID_0),
+            pallet_uniques::Error::<Test>::NoPermission
+        );
+
         assert_ok!(NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0));
         assert_eq!(NFTPallet::collections(COLLECTION_ID_0), None);
 
@@ -411,7 +417,7 @@ fn inspect_trait_should_work() {
         ));
 
         assert_ok!(NFTPallet::mint(
-            Origin::signed(BOB),
+            Origin::signed(ALICE),
             COLLECTION_ID_0,
             ITEM_ID_0,
             metadata
@@ -419,7 +425,7 @@ fn inspect_trait_should_work() {
 
         assert_eq!(
             <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&COLLECTION_ID_0, &ITEM_ID_0),
-            Some(BOB)
+            Some(ALICE)
         );
         assert_eq!(
             <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&COLLECTION_ID_1, &ITEM_ID_0),
@@ -468,7 +474,7 @@ fn inspect_enumerable_trait_should_work() {
         ));
 
         assert_ok!(NFTPallet::mint(
-            Origin::signed(BOB),
+            Origin::signed(ALICE),
             COLLECTION_ID_0,
             ITEM_ID_0,
             metadata
@@ -485,50 +491,20 @@ fn inspect_enumerable_trait_should_work() {
             vec![ITEM_ID_0]
         );
         assert_eq!(
-            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned(&BOB)
-                .collect::<Vec<(CollectionId, ItemId)>>(),
+            *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned(&ALICE).collect::<Vec<(
+                CollectionId,
+                ItemId
+            )>>(
+            ),
             vec![(COLLECTION_ID_0, ITEM_ID_0)]
         );
         assert_eq!(
             *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::owned_in_collection(
                 &COLLECTION_ID_0,
-                &BOB
+                &ALICE
             )
             .collect::<Vec<ItemId>>(),
             vec![ITEM_ID_0]
-        );
-    });
-}
-
-#[test]
-fn create_trait_should_work() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
-                &COLLECTION_ID_0,
-                &BOB,
-                &ALICE
-            )
-        );
-
-        // collection already exists
-        assert_noop!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
-                &COLLECTION_ID_0,
-                &BOB,
-                &ALICE
-            ),
-            pallet_uniques::Error::<Test>::InUse
-        );
-
-        // collection ID needs to be outside of the range of reserved IDs
-        assert_noop!(
-            <NFTPallet as Create<<Test as frame_system::Config>::AccountId>>::create_collection(
-                &COLLECTION_ID_RESERVED,
-                &BOB,
-                &ALICE
-            ),
-            Error::<Test>::IdReserved
         );
     });
 }
@@ -547,7 +523,7 @@ fn destroy_trait_should_work() {
         ));
 
         assert_ok!(NFTPallet::mint(
-            Origin::signed(BOB),
+            Origin::signed(ALICE),
             COLLECTION_ID_0,
             ITEM_ID_0,
             metadata.clone()
@@ -661,6 +637,15 @@ fn mutate_trait_should_work() {
             <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
                 &COLLECTION_ID_0,
                 &ITEM_ID_0,
+                &ALICE
+            )
+        );
+
+        // not owner
+        assert_ok!(
+            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
+                &COLLECTION_ID_0,
+                &ITEM_ID_1,
                 &BOB
             )
         );
@@ -670,7 +655,7 @@ fn mutate_trait_should_work() {
             <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
                 &COLLECTION_ID_0,
                 &ITEM_ID_0,
-                Some(&ALICE)
+                Some(&BOB)
             ),
             Error::<Test>::NotPermitted
         );
@@ -678,24 +663,16 @@ fn mutate_trait_should_work() {
         // no owner check
         assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
             &COLLECTION_ID_0,
-            &ITEM_ID_0,
+            &ITEM_ID_1,
             None
         ));
         assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_1));
-
-        assert_ok!(
-            <NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::mint_into(
-                &COLLECTION_ID_0,
-                &ITEM_ID_0,
-                &BOB
-            )
-        );
 
         // with owner check
         assert_ok!(<NFTPallet as Mutate<<Test as frame_system::Config>::AccountId>>::burn(
             &COLLECTION_ID_0,
             &ITEM_ID_0,
-            Some(&BOB)
+            Some(&ALICE)
         ));
         assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_0));
 
@@ -745,7 +722,7 @@ fn transfer_trait_should_work() {
         ));
 
         assert_ok!(NFTPallet::mint(
-            Origin::signed(BOB),
+            Origin::signed(ALICE),
             COLLECTION_ID_0,
             ITEM_ID_0,
             metadata
@@ -796,17 +773,21 @@ fn is_id_reserved_should_return_false_when_id_is_not_from_reserved_range() {
 #[test]
 fn create_typed_collection_should_work_without_deposit_when_deposit_is_not_required() {
     ExtBuilder::default().build().execute_with(|| {
+        let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
+            b"metadata".to_vec().try_into().unwrap();
+
         assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
             COLLECTION_ID_0,
-            CollectionType::LiquidityMining
+            CollectionType::LiquidityMining,
+            Some(metadata.clone()),
         ));
 
         assert_eq!(
             NFTPallet::collections(COLLECTION_ID_0).unwrap(),
             CollectionInfoOf::<Test> {
                 collection_type: CollectionType::LiquidityMining,
-                metadata: Default::default()
+                metadata
             }
         )
     });
@@ -818,7 +799,8 @@ fn create_typed_collection_should_work_with_reserved_id() {
         assert_ok!(NFTPallet::create_typed_collection(
             ALICE,
             COLLECTION_ID_RESERVED,
-            CollectionType::LiquidityMining
+            CollectionType::LiquidityMining,
+            None,
         ));
 
         assert_eq!(
@@ -835,7 +817,12 @@ fn create_typed_collection_should_work_with_reserved_id() {
 fn create_typed_collection_should_not_work_without_deposit_when_deposit_is_required() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            NFTPallet::create_typed_collection(ACCOUNT_WITH_NO_BALANCE, COLLECTION_ID_0, CollectionType::Marketplace),
+            NFTPallet::create_typed_collection(
+                ACCOUNT_WITH_NO_BALANCE,
+                COLLECTION_ID_0,
+                CollectionType::Marketplace,
+                None,
+            ),
             pallet_balances::Error::<Test>::InsufficientBalance
         );
     });
@@ -848,7 +835,8 @@ fn do_mint_should_work_when_account_has_no_balance() {
         assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
             COLLECTION_ID_0,
-            CollectionType::LiquidityMining
+            CollectionType::LiquidityMining,
+            None,
         ));
 
         //act & assert
@@ -867,7 +855,8 @@ fn burn_should_work_when_account_has_no_balance() {
         assert_ok!(NFTPallet::create_typed_collection(
             ACCOUNT_WITH_NO_BALANCE,
             COLLECTION_ID_0,
-            CollectionType::LiquidityMining
+            CollectionType::LiquidityMining,
+            None,
         ));
 
         assert_ok!(NFTPallet::mint_into(

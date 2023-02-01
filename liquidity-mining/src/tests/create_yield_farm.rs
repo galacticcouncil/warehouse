@@ -16,6 +16,7 @@
 // limitations under the License.
 
 use super::*;
+use pretty_assertions::assert_eq;
 use test_ext::*;
 
 #[test]
@@ -39,6 +40,7 @@ fn create_yield_farm_should_work() {
                 entries_count: 0,
                 state: FarmState::Active,
                 left_to_distribute: 0,
+                total_stopped: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_ACA_AMM,
@@ -68,6 +70,7 @@ fn create_yield_farm_should_work() {
                 entries_count: 0,
                 state: FarmState::Active,
                 left_to_distribute: 0,
+                total_stopped: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_KSM_AMM,
@@ -100,6 +103,7 @@ fn create_yield_farm_should_work() {
                 state: FarmState::Active,
                 entries_count: 0,
                 left_to_distribute: 0,
+                total_stopped: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_ETH_AMM,
@@ -132,6 +136,7 @@ fn create_yield_farm_should_work() {
                 state: FarmState::Active,
                 entries_count: 0,
                 left_to_distribute: 0,
+                total_stopped: 0,
                 _phantom: PhantomData::default(),
             },
             BSX_ETH_AMM,
@@ -295,7 +300,7 @@ fn add_yield_farm_invalid_multiplier_should_not_work() {
                 LiquidityMining::create_yield_farm(
                     ALICE,
                     ALICE_FARM,
-                    FixedU128::from(0_u128),
+                    FixedU128::from_inner(1_000_000_000_000_000 - 1),
                     Some(LoyaltyCurve::default()),
                     BSX_HDX_AMM,
                     vec![BSX, HDX],

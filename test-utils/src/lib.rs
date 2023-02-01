@@ -32,3 +32,36 @@ macro_rules! assert_eq_approx {
         }
     }};
 }
+
+#[macro_export]
+macro_rules! assert_balance {
+    ($who:expr, $asset_id:expr,  $expected_balance:expr) => {{
+        assert_eq!(Tokens::free_balance($asset_id, &$who), $expected_balance);
+    }};
+}
+
+#[macro_export]
+macro_rules! assert_balance_approx {
+    ( $who:expr, $asset:expr, $expected_balance:expr, $delta:expr) => {{
+        let balance = Tokens::free_balance($asset, &$who);
+
+        let diff = if balance >= $expected_balance {
+            balance - $expected_balance
+        } else {
+            $expected_balance - balance
+        };
+        if diff > $delta {
+            panic!(
+                "\n{} not equal\nleft: {:?}\nright: {:?}\n",
+                "The balances are not equal", balance, $expected_balance
+            );
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! assert_transact_ok {
+    ( $call:expr) => {{
+        assert_ok!(with_transaction(|| { TransactionOutcome::Commit($call) }));
+    }};
+}

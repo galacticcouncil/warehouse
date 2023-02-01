@@ -37,8 +37,8 @@ pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) total_shares_z: Balance,
     pub(super) accumulated_rpz: FixedU128,
     pub(super) reward_currency: T::AssetId,
-    pub(super) accumulated_rewards: Balance,
-    pub(super) paid_accumulated_rewards: Balance,
+    pub(super) pending_rewards: Balance,
+    pub(super) accumulated_paid_rewards: Balance,
     pub(super) yield_per_period: Perquintill,
     pub(super) planned_yielding_periods: PeriodOf<T>,
     pub(super) blocks_per_period: BlockNumberFor<T>,
@@ -71,9 +71,9 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         price_adjustment: FixedU128,
     ) -> Self {
         Self {
-            accumulated_rewards: Zero::zero(),
+            pending_rewards: Zero::zero(),
             accumulated_rpz: Zero::zero(),
-            paid_accumulated_rewards: Zero::zero(),
+            accumulated_paid_rewards: Zero::zero(),
             total_shares_z: Zero::zero(),
             live_yield_farms_count: Zero::zero(),
             total_yield_farms_count: Zero::zero(),
@@ -111,12 +111,13 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
 
     /// This function updates `yield_farms_count` when yield farm is deleted from global farm.
     /// This function should be called only when yield farm is removed from global farm.
-    pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), ArithmeticError> {
-        // Note: only live count should change
+    pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), Error<T, I>> {
+        //NOTE: only live count should change
+        //NOTE: this counter is managed only by pallet so this sub should never fail.
         self.live_yield_farms_count = self
             .live_yield_farms_count
             .checked_sub(1)
-            .ok_or(ArithmeticError::Overflow)?;
+            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidLiveYielFarmsCount.into())?;
 
         Ok(())
     }
@@ -124,11 +125,12 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     /// This function updates `yield_farms_count` when yield farm is removed from storage.
     /// This function should be called only if yield farm was removed from storage.
     /// !!! DON'T call this function if yield farm is in stopped or deleted.
-    pub fn decrease_total_yield_farm_count(&mut self) -> Result<(), DispatchError> {
+    pub fn decrease_total_yield_farm_count(&mut self) -> Result<(), Error<T, I>> {
+        //NOTE: this counter is managed only by pallet so this sub should never fail.
         self.total_yield_farms_count = self
             .total_yield_farms_count
             .checked_sub(1)
-            .ok_or(ArithmeticError::Overflow)?;
+            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidTotalYieldFarmsCount.into())?;
 
         Ok(())
     }
@@ -149,6 +151,27 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
     pub fn is_full(&self) -> bool {
         self.total_yield_farms_count.ge(&<T>::MaxYieldFarmsPerGlobalFarm::get())
     }
+
+    /// Function adds `amount` to `total_shares_z`.
+    pub fn add_stake(&mut self, amount: Balance) -> Result<(), ArithmeticError> {
+        self.total_shares_z = self
+            .total_shares_z
+            .checked_add(amount)
+            .ok_or(ArithmeticError::Overflow)?;
+
+        Ok(())
+    }
+
+    /// Function removes `amount` from `total_shares_z`.
+    pub fn remove_stake(&mut self, amount: Balance) -> Result<(), Error<T, I>> {
+        //NOTE: This should never fail, we should never sub more than current state.
+        self.total_shares_z = self
+            .total_shares_z
+            .checked_sub(amount)
+            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidTotalSharesZ.into())?;
+
+        Ok(())
+    }
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -166,6 +189,7 @@ pub struct YieldFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) state: FarmState,
     pub(super) entries_count: u64,
     pub(super) left_to_distribute: Balance,
+    pub(super) total_stopped: PeriodOf<T>,
     pub(super) _phantom: PhantomData<I>,
 }
 
@@ -189,6 +213,7 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
             state: FarmState::Active,
             entries_count: Default::default(),
             left_to_distribute: Default::default(),
+            total_stopped: Default::default(),
             _phantom: PhantomData::default(),
         }
     }
@@ -200,8 +225,12 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
 
     /// This function updates entries count in the yield farm. This function should be called if  
     /// entry is removed from the yield farm.
-    pub fn decrease_entries_count(&mut self) -> Result<(), ArithmeticError> {
-        self.entries_count = self.entries_count.checked_sub(1).ok_or(ArithmeticError::Overflow)?;
+    pub fn decrease_entries_count(&mut self) -> Result<(), Error<T, I>> {
+        //NOTE: this counter is managed only by pallet so this sub should never fail.
+        self.entries_count = self
+            .entries_count
+            .checked_sub(1)
+            .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidYieldFarmEntriesCount.into())?;
 
         Ok(())
     }
@@ -223,9 +252,8 @@ impl<T: Config<I>, I: 'static> YieldFarmData<T, I> {
 /// Loyalty curve to calculate loyalty multiplier.
 ///
 /// `t = t_now - t_added`
-/// `𝞣 = t/[(initial_reward_percentage + 1) * scale_coef]`
-/// `num = [𝞣 + (𝞣 * initial_reward_percentage) + initial_reward_percentage]`
-/// `denom = [𝞣 + (𝞣 * initial_reward_percentage) + 1]`
+/// `num = t + initial_reward_percentage * scale_coef`
+/// `denom = t + scale_coef`
 ///
 /// `loyalty_multiplier = num/denom`
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -332,7 +360,9 @@ pub struct YieldFarmEntry<T: Config<I>, I: 'static = ()> {
     pub(super) accumulated_claimed_rewards: Balance,
     pub(super) entered_at: PeriodOf<T>,
     pub(super) updated_at: PeriodOf<T>,
-    pub(super) _phantom: PhantomData<I>, //pub because of tests
+    // Number of periods yield-farm experienced before creation of this entry.
+    pub(super) stopped_at_creation: PeriodOf<T>,
+    pub(super) _phantom: PhantomData<I>,
 }
 
 impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
@@ -342,6 +372,7 @@ impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
         valued_shares: Balance,
         accumulated_rpvs: FixedU128,
         entered_at: PeriodOf<T>,
+        stopped_at_creation: PeriodOf<T>,
     ) -> Self {
         Self {
             global_farm_id,
@@ -351,6 +382,7 @@ impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
             accumulated_claimed_rewards: Zero::zero(),
             entered_at,
             updated_at: entered_at,
+            stopped_at_creation,
             _phantom: PhantomData,
         }
     }

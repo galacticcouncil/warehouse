@@ -165,6 +165,9 @@ pub mod pallet {
 
             ensure!(T::Permissions::can_mint(&collection_type), Error::<T>::NotPermitted);
 
+            let collection_owner = Self::collection_owner(&collection_id).ok_or(Error::<T>::CollectionUnknown)?;
+            ensure!(collection_owner == sender, Error::<T>::NotPermitted);
+
             Self::do_mint(sender, collection_id, item_id, metadata)?;
 
             Ok(())
@@ -510,26 +513,6 @@ impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
     }
 }
 
-impl<T: Config> Create<T::AccountId> for Pallet<T> {
-    /// Creates an NFT collection of the given collection type and sets its metadata.
-    /// The collection ID needs to be outside of the range of reserved IDs.
-    /// The permissions for the creation of a collection are not enforced.
-    /// Default collection type and metadata are used.
-    ///
-    /// Parameters:
-    /// - `collection`: Identifier of a collection.
-    /// - `who`: The collection owner.
-    /// - `admin`: This parameter is ignored and is always set to be the same as the collection owner.
-    ///
-    /// Emits CollectionCreated event
-    fn create_collection(collection: &Self::CollectionId, who: &T::AccountId, _admin: &T::AccountId) -> DispatchResult {
-        ensure!(!Self::is_id_reserved(*collection), Error::<T>::IdReserved);
-        Self::do_create_collection(who.clone(), *collection, Default::default(), BoundedVec::default())?;
-
-        Ok(())
-    }
-}
-
 impl<T: Config> Destroy<T::AccountId> for Pallet<T> {
     type DestroyWitness = pallet_uniques::DestroyWitness;
 
@@ -617,24 +600,28 @@ impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
     }
 }
 
-impl<T: Config> CreateTypedCollection<T::AccountId, T::NftCollectionId, T::CollectionType> for Pallet<T> {
+impl<T: Config> CreateTypedCollection<T::AccountId, T::NftCollectionId, T::CollectionType, BoundedVecOfUnq<T>>
+    for Pallet<T>
+{
     /// Creates an NFT collection of the given collection type and sets its metadata.
     /// The collection ID does not need to be outside of the range of reserved IDs.
     /// The permissions for the creation of a collection are not enforced.
-    /// Metadata is set to the default value.
+    /// Metadata is set to the default value if not provided.
     ///
     /// Parameters:
     /// - `owner`: The collection owner.
     /// - `collection_id`: Identifier of a collection.
     /// - `collection_type`: The collection type.
+    /// - `metadata`: Optional arbitrary data about a collection, e.g. IPFS hash or name.
     ///
     /// Emits CollectionCreated event
     fn create_typed_collection(
         owner: T::AccountId,
         collection_id: T::NftCollectionId,
         collection_type: T::CollectionType,
+        metadata: Option<BoundedVecOfUnq<T>>,
     ) -> DispatchResult {
-        Self::do_create_collection(owner, collection_id, collection_type, Default::default())
+        Self::do_create_collection(owner, collection_id, collection_type, metadata.unwrap_or_default())
     }
 }
 

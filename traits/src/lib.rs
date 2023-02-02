@@ -195,7 +195,11 @@ pub trait OnLiquidityChangeHandler<AssetId, Balance> {
 }
 
 impl<AssetId, Balance> OnLiquidityChangeHandler<AssetId, Balance> for () {
-    fn after_add_liquidity(_asset_id: AssetId, _initial_liquidity: Balance, _added_liquidity: Balance) -> DispatchResult {
+    fn after_add_liquidity(
+        _asset_id: AssetId,
+        _initial_liquidity: Balance,
+        _added_liquidity: Balance,
+    ) -> DispatchResult {
         Ok(())
     }
 }

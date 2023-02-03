@@ -10,7 +10,10 @@ pub fn asset_fee_should_be_update_correctly_when_volume_is_increasing() {
             v.borrow_mut().push((HDX, 1));
         });
 
-        crate::AssetFee::<Test>::insert(HDX, (Permill::from_float(0.000025), 0));
+        dbg!(MinimumFee::get());
+        dbg!(MaximumFee::get());
+
+        crate::AssetFee::<Test>::insert(HDX, (Permill::from_float(0.03), 0));
         System::set_block_number(1);
 
         for block in (1..=200).step_by(1) {

@@ -99,11 +99,11 @@ parameter_type_with_key! {
 
 parameter_types! {
     pub const SelectedPeriod: u16 = 300;
-    //pub Decay: FixedU128= FixedU128::from_float(0.0005);
-    pub Decay: FixedU128= FixedU128::from_float(0.0);
+    pub Decay: FixedU128= FixedU128::from_float(0.0000005);
+    //pub Decay: FixedU128= FixedU128::from_float(0.0);
     pub Amplification: FixedU128= FixedU128::from_float(1.0);
-    pub MinimumFee: Permill = Permill::from_float(0.000025);
-    pub MaximumFee: Permill = Permill::from_float(0.004);
+    pub MinimumFee: Permill = Permill::from_float(0.0025);
+    pub MaximumFee: Permill = Permill::from_percent(40);
 }
 
 impl Config for Test {

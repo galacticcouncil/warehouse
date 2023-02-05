@@ -131,7 +131,10 @@ pub mod pallet {
     }
 
     #[pallet::error]
-    pub enum Error<T> {}
+    pub enum Error<T> {
+        TooManyUniqueEntries,
+        OnTradeValueZero,
+    }
 
     #[pallet::event]
     pub enum Event<T: Config> {}
@@ -238,7 +241,7 @@ impl<T: Config> Pallet<T> {
         let weight = OnActivityHandler::<T>::on_trade_weight();
         Self::on_entry(src, assets, oracle_entry)
             .map(|_| weight)
-            .map_err(|_| (weight, DispatchError::Other("too many unique entries")))
+            .map_err(|_| (weight, Error::<T>::TooManyUniqueEntries.into()))
     }
 
     /// Insert or update data in the accumulator from received entry. Aggregates volume and
@@ -251,7 +254,7 @@ impl<T: Config> Pallet<T> {
         let weight = OnActivityHandler::<T>::on_liquidity_changed_weight();
         Self::on_entry(src, assets, oracle_entry)
             .map(|_| weight)
-            .map_err(|_| (weight, DispatchError::Other("too many unique entries")))
+            .map_err(|_| (weight, Error::<T>::TooManyUniqueEntries.into()))
     }
 
     /// Update oracles based on data accumulated during the block.
@@ -378,10 +381,7 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
         // We assume that zero values are not valid and can be ignored.
         if liquidity.is_zero() || amount_in.is_zero() || amount_out.is_zero() {
             log::warn!(target: LOG_TARGET, "Neither liquidity nor amounts should be zero. Ignoring. Source: {source:?}, liquidity: {liquidity}, amount_in: {amount_in}, amount_out: {amount_out}");
-            return Err((
-                Self::on_trade_weight(),
-                DispatchError::Other("on_trade values should not be zero"),
-            ));
+            return Err((Self::on_trade_weight(), Error::<T>::OnTradeValueZero.into()));
         }
         let price = determine_normalized_price(asset_in, asset_out, amount_in, amount_out);
         let volume = determine_normalized_volume(asset_in, asset_out, amount_in, amount_out);

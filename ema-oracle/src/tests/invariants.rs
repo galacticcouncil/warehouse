@@ -20,6 +20,8 @@ use super::*;
 use pretty_assertions::assert_eq;
 use proptest::prelude::*;
 
+use frame_support::assert_ok;
+
 // Strategies
 fn valid_asset_ids() -> impl Strategy<Value = (AssetId, AssetId)> {
     (any::<AssetId>(), any::<AssetId>()).prop_filter("asset ids should not be equal", |(a, b)| a != b)
@@ -86,9 +88,9 @@ proptest! {
         new_test_ext().execute_with(|| {
             let timestamp = 5;
             System::set_block_number(timestamp);
-            OnActivityHandler::<Test>::on_trade(SOURCE, asset_a, asset_b, amount_a, amount_b, liquidity);
+            assert_ok!(OnActivityHandler::<Test>::on_trade(SOURCE, asset_a, asset_b, amount_a, amount_b, liquidity));
             let volume_before = get_accumulator_entry(SOURCE, (asset_a, asset_b)).unwrap().volume;
-            OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, asset_a, asset_b, second_amount_a, second_amount_b, second_liquidity);
+            assert_ok!(OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, asset_a, asset_b, second_amount_a, second_amount_b, second_liquidity));
             let volume_after = get_accumulator_entry(SOURCE, (asset_a, asset_b)).unwrap().volume;
             assert_eq!(volume_before, volume_after);
         });

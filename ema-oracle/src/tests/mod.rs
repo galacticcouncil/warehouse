@@ -24,7 +24,7 @@ pub use mock::{
     PRICE_ENTRY_2,
 };
 
-use frame_support::assert_storage_noop;
+use frame_support::{assert_noop, assert_ok};
 use pretty_assertions::assert_eq;
 use rug::Rational;
 
@@ -111,8 +111,8 @@ fn genesis_config_works() {
 fn on_trade_should_work() {
     new_test_ext().execute_with(|| {
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
-        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1);
-        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_2);
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1));
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_2));
         let price_entry = PRICE_ENTRY_2.with_added_volume_from(&PRICE_ENTRY_1);
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap(), price_entry);
     });
@@ -123,7 +123,7 @@ fn on_trade_handler_should_work() {
     new_test_ext().execute_with(|| {
         System::set_block_number(PRICE_ENTRY_1.timestamp);
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
-        OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 500, 2_000);
+        assert_ok!(OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 500, 2_000));
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(PRICE_ENTRY_1));
     });
 }
@@ -140,7 +140,9 @@ fn on_liquidity_changed_handler_should_work() {
             timestamp,
         };
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
-        OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, HDX, DOT, 1_000, 500, 2_000);
+        assert_ok!(OnActivityHandler::<Test>::on_liquidity_changed(
+            SOURCE, HDX, DOT, 1_000, 500, 2_000
+        ));
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(no_volume_entry));
     });
 }
@@ -153,7 +155,14 @@ fn on_liquidity_changed_should_allow_zero_values() {
 
     new_test_ext().execute_with(|| {
         System::set_block_number(timestamp);
-        OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, HDX, DOT, Balance::zero(), amount, liquidity);
+        assert_ok!(OnActivityHandler::<Test>::on_liquidity_changed(
+            SOURCE,
+            HDX,
+            DOT,
+            Balance::zero(),
+            amount,
+            liquidity
+        ));
         let only_liquidity_entry = OracleEntry {
             price: Price::zero(),
             volume: Volume::default(),
@@ -165,7 +174,14 @@ fn on_liquidity_changed_should_allow_zero_values() {
 
     new_test_ext().execute_with(|| {
         System::set_block_number(timestamp);
-        OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, HDX, DOT, amount, Balance::zero(), liquidity);
+        assert_ok!(OnActivityHandler::<Test>::on_liquidity_changed(
+            SOURCE,
+            HDX,
+            DOT,
+            amount,
+            Balance::zero(),
+            liquidity
+        ));
         let only_liquidity_entry = OracleEntry {
             price: Price::zero(),
             volume: Volume::default(),
@@ -177,7 +193,14 @@ fn on_liquidity_changed_should_allow_zero_values() {
 
     new_test_ext().execute_with(|| {
         System::set_block_number(timestamp);
-        OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, HDX, DOT, amount, amount, Balance::zero());
+        assert_ok!(OnActivityHandler::<Test>::on_liquidity_changed(
+            SOURCE,
+            HDX,
+            DOT,
+            amount,
+            amount,
+            Balance::zero()
+        ));
         let only_price_entry = OracleEntry {
             price: Price::new(amount, amount),
             volume: Volume::default(),
@@ -191,32 +214,44 @@ fn on_liquidity_changed_should_allow_zero_values() {
 #[test]
 fn on_trade_should_exclude_zero_values() {
     new_test_ext().execute_with(|| {
-        assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
-            SOURCE,
-            HDX,
-            DOT,
-            Balance::zero(),
-            1_000,
-            2_000
-        ));
+        assert_noop!(
+            OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, Balance::zero(), 1_000, 2_000).map_err(|(_w, e)| e),
+            Error::<Test>::OnTradeValueZero
+        );
 
-        assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
-            SOURCE,
-            HDX,
-            DOT,
-            1_000,
-            Balance::zero(),
-            2_000
-        ));
+        assert_noop!(
+            OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, Balance::zero(), 2_000).map_err(|(_w, e)| e),
+            Error::<Test>::OnTradeValueZero
+        );
 
-        assert_storage_noop!(OnActivityHandler::<Test>::on_trade(
-            SOURCE,
-            HDX,
-            DOT,
-            1_000,
-            1_000,
-            Balance::zero(),
-        ));
+        assert_noop!(
+            OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 1_000, Balance::zero(),).map_err(|(_w, e)| e),
+            Error::<Test>::OnTradeValueZero
+        );
+    });
+}
+
+#[test]
+fn on_entry_should_error_on_accumulator_overflow() {
+    new_test_ext().execute_with(|| {
+        let max_entries = MAX_UNIQUE_ENTRIES;
+        // let's fill the accumulator
+        for i in 0..max_entries {
+            assert_ok!(OnActivityHandler::<Test>::on_trade(
+                SOURCE,
+                i,
+                i + 1,
+                1_000,
+                1_000,
+                2_000
+            ));
+        }
+        // on_trade should fail once the accumulator is full
+        assert_noop!(
+            OnActivityHandler::<Test>::on_trade(SOURCE, 2 * max_entries, 2 * max_entries + 1, 1_000, 1_000, 2_000,)
+                .map_err(|(_w, e)| e),
+            Error::<Test>::TooManyUniqueEntries
+        );
     });
 }
 
@@ -233,9 +268,13 @@ fn oracle_volume_should_factor_in_asset_order() {
     new_test_ext().execute_with(|| {
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
 
-        OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 2_000_000, 1_000, 2_000);
+        assert_ok!(OnActivityHandler::<Test>::on_trade(
+            SOURCE, HDX, DOT, 2_000_000, 1_000, 2_000
+        ));
         // we reverse the order of the arguments
-        OnActivityHandler::<Test>::on_trade(SOURCE, DOT, HDX, 1_000, 2_000_000, 2_000);
+        assert_ok!(OnActivityHandler::<Test>::on_trade(
+            SOURCE, DOT, HDX, 1_000, 2_000_000, 2_000
+        ));
 
         let price_entry = get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap();
         let first_entry = OracleEntry {
@@ -262,9 +301,9 @@ fn update_data_should_work() {
         System::set_block_number(5);
         EmaOracle::on_initialize(5);
 
-        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1);
-        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_2);
-        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, ACA), PRICE_ENTRY_1);
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1));
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_2));
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, ACA), PRICE_ENTRY_1));
 
         EmaOracle::on_finalize(5);
         System::set_block_number(6);
@@ -285,7 +324,7 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
     new_test_ext().execute_with(|| {
         System::set_block_number(5);
         EmaOracle::on_initialize(5);
-        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1);
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1));
         EmaOracle::on_finalize(5);
 
         System::set_block_number(6);
@@ -295,7 +334,11 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
             timestamp: 6,
             ..PRICE_ENTRY_1
         };
-        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), second_entry.clone());
+        assert_ok!(EmaOracle::on_trade(
+            SOURCE,
+            ordered_pair(HDX, DOT),
+            second_entry.clone()
+        ));
         EmaOracle::on_finalize(6);
 
         System::set_block_number(50);
@@ -305,7 +348,7 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
             timestamp: 50,
             ..PRICE_ENTRY_1
         };
-        EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), third_entry.clone());
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), third_entry.clone()));
         EmaOracle::on_finalize(50);
 
         for period in supported_periods() {
@@ -458,7 +501,7 @@ fn trying_to_get_price_for_same_asset_should_error() {
 fn get_entry_works() {
     ExtBuilder::default().build().execute_with(|| {
         System::set_block_number(1);
-        OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 500, 2_000);
+        assert_ok!(OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 500, 2_000));
         EmaOracle::on_finalize(1);
         System::set_block_number(100);
         let expected = AggregatedEntry {
@@ -508,7 +551,7 @@ fn get_price_returns_updated_price() {
                 timestamp: 10_000,
             };
             System::set_block_number(1);
-            EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), on_trade_entry);
+            assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), on_trade_entry));
             EmaOracle::on_finalize(1);
 
             System::set_block_number(10_001);

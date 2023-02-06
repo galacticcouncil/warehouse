@@ -26,7 +26,6 @@ use frame_support::{
     construct_runtime, parameter_types,
     traits::{ConstU32, ConstU64},
 };
-use orml_traits::parameter_type_with_key;
 pub use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::{
@@ -91,18 +90,12 @@ impl frame_system::Config for Test {
     type MaxConsumers = ConstU32<16>;
 }
 
-parameter_type_with_key! {
-    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-        0
-    };
-}
-
 parameter_types! {
     pub const SelectedPeriod: u16 = 300;
-    pub Decay: FixedU128= FixedU128::from_float(0.0000005);
-    //pub Decay: FixedU128= FixedU128::from_float(0.0);
+    //pub Decay: FixedU128= FixedU128::from_float(0.0005);
+    pub Decay: FixedU128= FixedU128::from_float(0.0);
     pub Amplification: FixedU128= FixedU128::from_float(1.0);
-    pub MinimumFee: Permill = Permill::from_float(0.0025);
+    pub MinimumFee: Permill = Permill::from_rational(25u32, 10000u32);
     pub MaximumFee: Permill = Permill::from_percent(40);
 }
 

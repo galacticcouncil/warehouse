@@ -17,24 +17,23 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate core;
-
 use frame_support::traits::Get;
 use orml_traits::GetByKey;
-use sp_runtime::traits::{BlockNumberProvider, Saturating, Zero};
-use sp_runtime::{FixedPointNumber, FixedU128, Permill};
-use std::fmt::Debug;
+use sp_runtime::traits::{BlockNumberProvider, Saturating};
+use sp_runtime::{FixedU128, Permill};
 
+mod math;
 #[cfg(test)]
 mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
+use crate::math::{recalculate_asset_fee, recalculate_protocol_fee, AssetVolume, FeeParams};
 pub use pallet::*;
 
 type Fee = Permill;
 type Balance = u128;
 
-pub trait Volume<Balance>: Debug {
+pub trait Volume<Balance> {
     fn amount_a_in(&self) -> Balance;
     fn amount_b_in(&self) -> Balance;
     fn amount_a_out(&self) -> Balance;
@@ -61,7 +60,8 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn asset_fee)]
     /// STores last calculated fee of an asset and block number in which it was changed..
-    pub type AssetFee<T: Config> = StorageMap<_, Twox64Concat, T::AssetId, (Fee, T::BlockNumber), OptionQuery>;
+    /// Stored as (Asset fee, Protocol fee, Block number)
+    pub type AssetFee<T: Config> = StorageMap<_, Twox64Concat, T::AssetId, (Fee, Fee, T::BlockNumber), OptionQuery>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -106,79 +106,71 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn recalculate_fee(
-        asset_id: T::AssetId,
-        volume: <T::Oracle as VolumeProvider<T::AssetId, Balance, T::OraclePeriod>>::Volume,
-        liquidity: Balance,
-        block_number: T::BlockNumber,
-    ) -> Fee {
-        let previous_fee = if let Some(pf) = Self::asset_fee(asset_id) {
-            let delta_blocks = block_number.saturating_sub(pf.1);
-            let db = TryInto::<u128>::try_into(delta_blocks).ok().unwrap();
-            let decaying = T::Decay::get().saturating_mul(FixedU128::from(db.saturating_sub(1)));
-            let fee = FixedU128::from(pf.0);
-            let s = Fee::from_rational(fee.saturating_sub(decaying).into_inner(), FixedU128::DIV);
-            s.max(T::MinimumFee::get())
-        } else {
-            Fee::zero()
-        };
-
-        let v_o = volume.amount_a_out();
-        let v_i = volume.amount_a_in();
-        // x = (V0 - Vi) / L
-        let (x, x_neg) = if liquidity != Balance::zero() {
-            (FixedU128::from_rational(v_o.abs_diff(v_i), liquidity), v_o < v_i)
-        } else {
-            (FixedU128::zero(), false)
-        };
-
-        let a_x = T::Amplification::get().saturating_mul(x);
-
-        let (delta_f, neg) = if x_neg {
-            (a_x.saturating_add(T::Decay::get()), true)
-        } else {
-            if a_x > T::Decay::get() {
-                (a_x.saturating_sub(T::Decay::get()), false)
-            } else {
-                (T::Decay::get().saturating_sub(a_x), true)
-            }
-        };
-
-        let left = if neg {
-            FixedU128::from(previous_fee)
-                .saturating_sub(delta_f)
-                .max(FixedU128::from(T::MinimumFee::get()))
-        } else {
-            FixedU128::from(previous_fee)
-                .saturating_add(delta_f)
-                .max(FixedU128::from(T::MinimumFee::get()))
-        };
-
-        let f_plus = left.min(FixedU128::from(T::MaximumFee::get()));
-
-        let fee = Fee::from_rational(f_plus.into_inner(), FixedU128::DIV);
-
-        AssetFee::<T>::insert(asset_id, (fee, block_number));
-
-        fee
-    }
-
-    fn update_fee(pair: (T::AssetId, T::AssetId)) -> Fee {
+    fn update_fee(pair: (T::AssetId, T::AssetId)) -> (Fee, Fee) {
         let block_number = T::BlockNumberProvider::current_block_number();
-        let (current_fee, last_block) = Self::asset_fee(pair.0).unwrap_or((Fee::zero(), T::BlockNumber::default()));
+
+        //TODO: what if no previous and block 0 ( not happning but should be covered)
+        let (current_fee, current_protocol_fee, last_block) =
+            Self::asset_fee(pair.0).unwrap_or((Fee::zero(), Fee::zero(), T::BlockNumber::default()));
+
+        //TODO: it is difference btween blocks?!
+        let delta_blocks = block_number.saturating_sub(last_block);
+        let db = TryInto::<u128>::try_into(delta_blocks).ok().unwrap();
 
         // Update only if it was not yet updated in this block
         if block_number != last_block {
             let Some(volume) = T::Oracle::asset_pair_volume(pair, T::SelectedPeriod::get()) else{
-                return T::MaximumFee::get();
+                //TODO: what if fails to retrieve from oracle
+                return (T::MaximumFee::get(), T::MaximumFee::get());
             };
             let Some(liquidity) = T::Oracle::asset_pair_liquidity(pair, T::SelectedPeriod::get()) else{
-                return T::MaximumFee::get();
+                //TODO: what if fails to retrieve from oracle
+                return (T::MaximumFee::get(), T::MaximumFee::get());
             };
 
-            Self::recalculate_fee(pair.0, volume, liquidity, block_number)
+            let f = recalculate_asset_fee(
+                AssetVolume {
+                    amount_in: volume.amount_a_in(),
+                    amount_out: volume.amount_a_out(),
+                    liquidity,
+                },
+                Some(current_fee),
+                db,
+                Self::asset_fee_params(),
+            );
+            let protocol_fee = recalculate_protocol_fee(
+                AssetVolume {
+                    amount_in: volume.amount_a_in(),
+                    amount_out: volume.amount_a_out(),
+                    liquidity,
+                },
+                Some(current_protocol_fee),
+                db,
+                Self::protocol_fee_params(),
+            );
+
+            AssetFee::<T>::insert(pair.0, (f, protocol_fee, block_number));
+            (f, protocol_fee)
         } else {
-            current_fee
+            (current_fee, current_protocol_fee)
+        }
+    }
+
+    fn asset_fee_params() -> FeeParams {
+        FeeParams {
+            max_fee: T::MaximumFee::get(),
+            min_fee: T::MinimumFee::get(),
+            decay: T::Decay::get(),
+            amplification: T::Amplification::get(),
+        }
+    }
+
+    fn protocol_fee_params() -> FeeParams {
+        FeeParams {
+            max_fee: T::MaximumFee::get(),
+            min_fee: T::MinimumFee::get(),
+            decay: T::Decay::get(),
+            amplification: T::Amplification::get(),
         }
     }
 }
@@ -187,6 +179,14 @@ pub struct UpdateAndRetrieveAssetFee<T: Config>(sp_std::marker::PhantomData<T>);
 
 impl<T: Config> GetByKey<(T::AssetId, T::AssetId), Fee> for UpdateAndRetrieveAssetFee<T> {
     fn get(k: &(T::AssetId, T::AssetId)) -> Fee {
+        Pallet::<T>::update_fee(*k).0
+    }
+}
+
+pub struct UpdateAndRetrieveFees<T: Config>(sp_std::marker::PhantomData<T>);
+
+impl<T: Config> GetByKey<(T::AssetId, T::AssetId), (Fee, Fee)> for UpdateAndRetrieveFees<T> {
+    fn get(k: &(T::AssetId, T::AssetId)) -> (Fee, Fee) {
         Pallet::<T>::update_fee(*k)
     }
 }
@@ -196,7 +196,7 @@ pub struct RetrieveAssetFee<T: Config>(sp_std::marker::PhantomData<T>);
 impl<T: Config> GetByKey<(T::AssetId, T::AssetId), Fee> for RetrieveAssetFee<T> {
     fn get(k: &(T::AssetId, T::AssetId)) -> Fee {
         Pallet::<T>::asset_fee(k.0)
-            .unwrap_or((T::MaximumFee::get(), T::BlockNumber::default()))
+            .unwrap_or((T::MaximumFee::get(), T::MaximumFee::get(), T::BlockNumber::default()))
             .0
     }
 }

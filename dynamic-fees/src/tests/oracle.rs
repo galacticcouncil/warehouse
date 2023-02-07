@@ -1,4 +1,4 @@
-use crate::tests::mock::{AssetId, AssetVolume, Balance};
+use crate::tests::mock::{AssetId, AssetVolume, Balance, CustomOracle};
 
 const DATA: [(Balance, Balance, Balance); 303] = [
     (0, 0, 20000000000000000000),
@@ -308,16 +308,39 @@ const DATA: [(Balance, Balance, Balance); 303] = [
 
 pub struct Oracle {}
 
+impl CustomOracle for Oracle {
+    fn volume(&self, _pair: (AssetId, AssetId), block: usize) -> AssetVolume {
+        DATA[block].into()
+    }
+
+    fn liquidity(&self, _pair: (AssetId, AssetId), block: usize) -> Balance {
+        DATA[block].2
+    }
+}
+
 impl Oracle {
     pub fn new() -> Oracle {
         Self {}
     }
+}
 
-    pub fn volume(&self, _pair: (AssetId, AssetId), block: usize) -> AssetVolume {
-        DATA[block].into()
+pub struct SingleValueOracle {
+    data: (Balance, Balance, Balance),
+}
+impl SingleValueOracle {
+    pub fn new(volume_in: Balance, volume_out: Balance, liquidity: Balance) -> Self {
+        Self {
+            data: (volume_in, volume_out, liquidity),
+        }
+    }
+}
+
+impl CustomOracle for SingleValueOracle {
+    fn volume(&self, _pair: (AssetId, AssetId), _block: usize) -> AssetVolume {
+        self.data.into()
     }
 
-    pub fn liquidity(&self, _pair: (AssetId, AssetId), block: usize) -> Balance {
-        DATA[block].2
+    fn liquidity(&self, _pair: (AssetId, AssetId), _block: usize) -> Balance {
+        self.data.2
     }
 }

@@ -20,7 +20,7 @@
 use sp_std::prelude::*;
 use std::cell::RefCell;
 
-use crate::{Config, Volume, VolumeProvider};
+use crate::{Config, Fee, Volume, VolumeProvider};
 
 use frame_support::{
     construct_runtime, parameter_types,
@@ -37,6 +37,7 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 use crate::tests::oracle::Oracle;
+use sp_runtime::traits::{One, Zero};
 use sp_runtime::Permill;
 
 pub type Balance = u128;
@@ -46,10 +47,16 @@ pub type AccountId = u64;
 pub const HDX: AssetId = 0;
 pub const LRNA: AssetId = 1;
 
+pub const ONE: Balance = 1_000_000_000_000;
+
 thread_local! {
     pub static PAIRS: RefCell<Vec<(AssetId, AssetId)>> = RefCell::new(vec![]);
-    pub static ORACLE: RefCell<Oracle> = RefCell::new(Oracle::new());
+    pub static ORACLE: RefCell<Box<dyn CustomOracle>> = RefCell::new(Box::new(Oracle::new()));
     pub static BLOCK: RefCell<usize> = RefCell::new(0);
+    pub static MIN_ASSET_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(1));
+    pub static MAX_ASSET_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(40));
+    pub static ASSET_FEE_DECAY: RefCell<FixedU128> = RefCell::new(FixedU128::zero());
+    pub static ASSET_FEE_AMPLIFICATION: RefCell<FixedU128> = RefCell::new(FixedU128::one());
 }
 
 construct_runtime!(
@@ -93,10 +100,10 @@ impl frame_system::Config for Test {
 parameter_types! {
     pub const SelectedPeriod: u16 = 300;
     //pub Decay: FixedU128= FixedU128::from_float(0.0005);
-    pub Decay: FixedU128= FixedU128::from_float(0.0);
-    pub Amplification: FixedU128= FixedU128::from_float(1.0);
-    pub MinimumFee: Permill = Permill::from_rational(25u32, 10000u32);
-    pub MaximumFee: Permill = Permill::from_percent(40);
+    pub Decay: FixedU128= ASSET_FEE_DECAY.with(|v| *v.borrow());
+    pub Amplification: FixedU128= ASSET_FEE_AMPLIFICATION.with(|v| *v.borrow());
+    pub MinimumFee: Permill = MIN_ASSET_FEE.with(|v| *v.borrow());
+    pub MaximumFee: Permill = MAX_ASSET_FEE.with(|v| *v.borrow());
 }
 
 impl Config for Test {
@@ -112,15 +119,84 @@ impl Config for Test {
     type MaximumFee = MaximumFee;
 }
 
-#[derive(Default)]
-pub struct ExtBuilder {}
+pub struct ExtBuilder {
+    initial_fee: (Fee, Fee, u64),
+}
+
+impl Default for ExtBuilder {
+    fn default() -> Self {
+        MIN_ASSET_FEE.with(|v| {
+            *v.borrow_mut() = Fee::from_percent(1);
+        });
+
+        MAX_ASSET_FEE.with(|v| {
+            *v.borrow_mut() = Fee::from_percent(40);
+        });
+
+        ASSET_FEE_DECAY.with(|v| {
+            *v.borrow_mut() = FixedU128::zero();
+        });
+        ASSET_FEE_AMPLIFICATION.with(|v| {
+            *v.borrow_mut() = FixedU128::one();
+        });
+        ORACLE.with(|v| {
+            *v.borrow_mut() = Box::new(Oracle::new());
+        });
+
+        Self {
+            initial_fee: (Fee::zero(), Fee::zero(), 0),
+        }
+    }
+}
 
 impl ExtBuilder {
+    pub fn with_min_asset_fee(self, fee: Fee) -> Self {
+        MIN_ASSET_FEE.with(|v| {
+            *v.borrow_mut() = fee;
+        });
+        self
+    }
+
+    pub fn with_max_asset_fee(self, fee: Fee) -> Self {
+        MAX_ASSET_FEE.with(|v| {
+            *v.borrow_mut() = fee;
+        });
+        self
+    }
+
+    pub fn with_asset_fee_decay(self, decay: FixedU128) -> Self {
+        ASSET_FEE_DECAY.with(|v| {
+            *v.borrow_mut() = decay;
+        });
+        self
+    }
+    pub fn with_asset_fee_amplification(self, amp: FixedU128) -> Self {
+        ASSET_FEE_DECAY.with(|v| {
+            *v.borrow_mut() = amp;
+        });
+        self
+    }
+    pub fn with_oracle(self, oracle: impl CustomOracle + 'static) -> Self {
+        ORACLE.with(|v| {
+            *v.borrow_mut() = Box::new(oracle);
+        });
+        self
+    }
+    pub fn with_initial_fees(mut self, asset_fee: Fee, protocol_fee: Fee, block_number: u64) -> Self {
+        self.initial_fee = (asset_fee, protocol_fee, block_number);
+        self
+    }
+
     pub fn build(self) -> sp_io::TestExternalities {
-        frame_system::GenesisConfig::default()
+        let mut r: sp_io::TestExternalities = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap()
-            .into()
+            .into();
+        r.execute_with(|| {
+            crate::AssetFee::<Test>::insert(HDX, (self.initial_fee.0, self.initial_fee.1, self.initial_fee.2));
+        });
+
+        r
     }
 }
 
@@ -130,12 +206,12 @@ impl VolumeProvider<AssetId, Balance, u16> for OracleProvider {
     type Volume = AssetVolume;
 
     fn asset_pair_volume(pair: (AssetId, AssetId), _period: u16) -> Option<Self::Volume> {
-        let volume = ORACLE.with(|v| v.borrow().volume(pair, BLOCK.with(|v| v.borrow().clone())).clone());
+        let volume = ORACLE.with(|v| v.borrow().volume(pair, BLOCK.with(|v| *v.borrow())));
         Some(volume)
     }
 
     fn asset_pair_liquidity(pair: (AssetId, AssetId), _period: u16) -> Option<Balance> {
-        let liquidity = ORACLE.with(|v| v.borrow().liquidity(pair, BLOCK.with(|v| v.borrow().clone())).clone());
+        let liquidity = ORACLE.with(|v| v.borrow().liquidity(pair, BLOCK.with(|v| *v.borrow())));
         Some(liquidity)
     }
 }
@@ -152,7 +228,7 @@ impl Volume<Balance> for AssetVolume {
     }
 
     fn amount_b_in(&self) -> Balance {
-        todo!()
+        unimplemented!("no use in tests");
     }
 
     fn amount_a_out(&self) -> Balance {
@@ -160,7 +236,7 @@ impl Volume<Balance> for AssetVolume {
     }
 
     fn amount_b_out(&self) -> Balance {
-        todo!()
+        unimplemented!("no use in tests");
     }
 }
 
@@ -171,4 +247,10 @@ impl From<(Balance, Balance, Balance)> for AssetVolume {
             amount_out: value.1,
         }
     }
+}
+
+pub trait CustomOracle {
+    fn volume(&self, _pair: (AssetId, AssetId), block: usize) -> AssetVolume;
+
+    fn liquidity(&self, _pair: (AssetId, AssetId), block: usize) -> Balance;
 }

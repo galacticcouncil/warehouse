@@ -1,26 +1,182 @@
 use crate::tests::mock::*;
-use crate::UpdateAndRetrieveAssetFee;
+use crate::tests::oracle::SingleValueOracle;
+use crate::{Fee, UpdateAndRetrieveFees};
 use orml_traits::GetByKey;
-use sp_runtime::Permill;
+use sp_runtime::traits::Zero;
+use sp_runtime::FixedU128;
 
 #[test]
-pub fn asset_fee_should_be_update_correctly_when_volume_is_increasing() {
-    ExtBuilder::default().build().execute_with(|| {
-        PAIRS.with(|v| {
-            v.borrow_mut().push((HDX, 1));
+fn asset_fee_should_increase_when_volume_out_increased() {
+    let initial_fee = Fee::from_percent(2);
+
+    ExtBuilder::default()
+        .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
+        .with_initial_fees(initial_fee, Fee::zero(), 0)
+        .build()
+        .execute_with(|| {
+            System::set_block_number(1);
+
+            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+
+            assert!(fee.0 > initial_fee);
+
+            assert_eq!(fee.0, Fee::from_percent(4));
         });
+}
 
-        dbg!(MinimumFee::get());
-        dbg!(MaximumFee::get());
+#[test]
+fn asset_fee_should_decrease_when_volume_in_increased() {
+    let initial_fee = Fee::from_percent(20);
 
-        crate::AssetFee::<Test>::insert(HDX, (Permill::from_float(0.03), 0));
-        System::set_block_number(1);
+    ExtBuilder::default()
+        .with_oracle(SingleValueOracle::new(2 * ONE, ONE, 50 * ONE))
+        .with_initial_fees(initial_fee, Fee::zero(), 0)
+        .with_asset_fee_decay(FixedU128::zero())
+        .build()
+        .execute_with(|| {
+            System::set_block_number(1);
 
-        for block in (1..=200).step_by(1) {
-            let fee = <UpdateAndRetrieveAssetFee<Test> as GetByKey<(AssetId, AssetId), Permill>>::get(&(HDX, LRNA));
-            dbg!(fee);
-            System::set_block_number(block);
-            BLOCK.with(|v| *v.borrow_mut() = block as usize);
-        }
-    })
+            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+
+            assert!(fee.0 < initial_fee);
+
+            assert_eq!(fee.0, Fee::from_percent(18));
+        });
+}
+
+#[test]
+fn asset_fee_should_not_change_when_volume_has_not_changed_and_decay_is_0() {
+    let initial_fee = Fee::from_percent(20);
+
+    ExtBuilder::default()
+        .with_oracle(SingleValueOracle::new(ONE, ONE, 50 * ONE))
+        .with_initial_fees(initial_fee, Fee::zero(), 0)
+        .with_asset_fee_decay(FixedU128::zero())
+        .build()
+        .execute_with(|| {
+            System::set_block_number(1);
+
+            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+
+            assert_eq!(fee.0, initial_fee);
+        });
+}
+
+#[test]
+fn protocol_fee_should_increase_when_volume_in_increased() {
+    let initial_fee = Fee::from_percent(2);
+
+    ExtBuilder::default()
+        .with_oracle(SingleValueOracle::new(2 * ONE, ONE, 50 * ONE))
+        .with_initial_fees(Fee::zero(), initial_fee, 0)
+        .build()
+        .execute_with(|| {
+            System::set_block_number(1);
+
+            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+
+            assert!(fee.1 > initial_fee);
+
+            assert_eq!(fee.1, Fee::from_percent(4));
+        });
+}
+
+#[test]
+fn protocol_fee_should_decrease_when_volume_out_increased() {
+    let initial_fee = Fee::from_percent(20);
+
+    ExtBuilder::default()
+        .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
+        .with_initial_fees(Fee::zero(), initial_fee, 0)
+        .with_asset_fee_decay(FixedU128::zero())
+        .build()
+        .execute_with(|| {
+            System::set_block_number(1);
+
+            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+
+            assert!(fee.1 < initial_fee);
+
+            assert_eq!(fee.1, Fee::from_percent(18));
+        });
+}
+
+#[test]
+fn protocol_fee_should_not_change_when_volume_has_not_changed_and_decay_is_0() {
+    let initial_fee = Fee::from_percent(20);
+
+    ExtBuilder::default()
+        .with_oracle(SingleValueOracle::new(ONE, ONE, 50 * ONE))
+        .with_initial_fees(initial_fee, initial_fee, 0)
+        .with_asset_fee_decay(FixedU128::zero())
+        .build()
+        .execute_with(|| {
+            System::set_block_number(1);
+
+            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+
+            assert_eq!(fee.1, initial_fee);
+        });
+}
+
+#[test]
+fn fees_should_update_correcty_when_volume_in_increased() {
+    let initial_fee = Fee::from_percent(10);
+
+    ExtBuilder::default()
+        .with_oracle(SingleValueOracle::new(2 * ONE, ONE, 50 * ONE))
+        .with_initial_fees(initial_fee, initial_fee, 0)
+        .build()
+        .execute_with(|| {
+            System::set_block_number(1);
+
+            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+
+            assert!(fee.0 < initial_fee);
+            assert!(fee.1 > initial_fee);
+
+            assert_eq!(fee.0, Fee::from_percent(8));
+            assert_eq!(fee.1, Fee::from_percent(12));
+        });
+}
+
+#[test]
+fn fees_should_decrease_when_volume_out_increased() {
+    let initial_fee = Fee::from_percent(20);
+
+    ExtBuilder::default()
+        .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
+        .with_initial_fees(initial_fee, initial_fee, 0)
+        .with_asset_fee_decay(FixedU128::zero())
+        .build()
+        .execute_with(|| {
+            System::set_block_number(1);
+
+            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+
+            assert!(fee.0 > initial_fee);
+            assert!(fee.1 < initial_fee);
+
+            assert_eq!(fee.0, Fee::from_percent(22));
+            assert_eq!(fee.1, Fee::from_percent(18));
+        });
+}
+
+#[test]
+fn fees_should_not_change_when_volume_has_not_changed_and_decay_is_0() {
+    let initial_fee = Fee::from_percent(20);
+
+    ExtBuilder::default()
+        .with_oracle(SingleValueOracle::new(ONE, ONE, 50 * ONE))
+        .with_initial_fees(initial_fee, initial_fee, 0)
+        .with_asset_fee_decay(FixedU128::zero())
+        .build()
+        .execute_with(|| {
+            System::set_block_number(1);
+
+            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+
+            assert_eq!(fee.0, initial_fee);
+            assert_eq!(fee.1, initial_fee);
+        });
 }

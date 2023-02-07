@@ -18,7 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::ensure;
-use frame_support::pallet_prelude::Weight;
+use frame_support::pallet_prelude::{DispatchError, Weight};
 use frame_support::sp_runtime::traits::{CheckedDiv, Zero};
 use frame_support::sp_runtime::{DispatchResult, FixedPointNumber};
 use hydradx_traits::{OnCreatePoolHandler, OnTradeHandler, Source};
@@ -325,20 +325,17 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
         amount_in: Balance,
         amount_out: Balance,
         liq_amount: Balance,
-    ) {
+    ) -> Result<Weight, (Weight, DispatchError)> {
         let (price, amount) =
             if let Some(price_tuple) = Pallet::<T>::normalize_price(asset_a, asset_b, amount_in, amount_out) {
                 price_tuple
             } else {
-                // We don't want to throw an error here because this method is used in different extrinsics.
-                // Invalid prices are ignored and not added to the queue.
-                return;
+                return Err((Self::on_trade_weight(), DispatchError::Other("Invalid price")));
             };
 
         // We assume that zero values are not valid.
-        // Zero values are ignored and not added to the queue.
         if price.is_zero() || amount.is_zero() || liq_amount.is_zero() {
-            return;
+            return Err((Self::on_trade_weight(), DispatchError::Other("Invalid values")));
         }
 
         let price_entry = PriceEntry {
@@ -348,6 +345,7 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
         };
 
         Pallet::<T>::on_trade(asset_a, asset_b, price_entry);
+        Ok(Self::on_trade_weight())
     }
 
     fn on_trade_weight() -> Weight {

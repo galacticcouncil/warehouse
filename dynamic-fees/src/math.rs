@@ -65,8 +65,6 @@ pub fn recalculate_asset_fee(
 
     let f_plus = left.min(FixedU128::from(defaults.max_fee));
 
-    
-
     Fee::from_rational(f_plus.into_inner(), FixedU128::DIV)
 }
 
@@ -119,8 +117,6 @@ pub fn recalculate_protocol_fee(
     };
 
     let f_plus = left.min(FixedU128::from(defaults.max_fee));
-
-    
 
     Fee::from_rational(f_plus.into_inner(), FixedU128::DIV)
 }

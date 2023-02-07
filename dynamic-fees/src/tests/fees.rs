@@ -180,3 +180,20 @@ fn fees_should_not_change_when_volume_has_not_changed_and_decay_is_0() {
             assert_eq!(fee.1, initial_fee);
         });
 }
+
+#[test]
+fn fees_should_not_change_when_already_update_within_same_block() {
+    let initial_fee = Fee::from_percent(2);
+
+    ExtBuilder::default()
+        .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
+        .with_initial_fees(initial_fee, initial_fee, 1)
+        .build()
+        .execute_with(|| {
+            System::set_block_number(1);
+            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+
+            assert_eq!(fee.0, initial_fee);
+            assert_eq!(fee.1, initial_fee);
+        });
+}

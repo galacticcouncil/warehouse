@@ -83,7 +83,7 @@ pub mod pallet {
         type SelectedPeriod: Get<Self::OraclePeriod>;
 
         #[pallet::constant]
-        type Decay: Get<FixedU128>;
+        type Decay: Get<FixedU128>; // TODO: as percentage?
 
         #[pallet::constant]
         type Amplification: Get<FixedU128>;

@@ -52,8 +52,9 @@ where
         let decaying = params
             .decay
             .saturating_mul(FixedU128::from(last_block_diff.saturating_sub(1)));
-        let fee = FixedU128::from(previous_fee);
-        fee.saturating_sub(decaying).max(params.min_fee.into())
+        FixedU128::from(previous_fee)
+            .saturating_sub(decaying)
+            .max(params.min_fee.into())
     } else {
         previous_fee.into()
     };

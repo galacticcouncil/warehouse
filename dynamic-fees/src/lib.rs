@@ -60,7 +60,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn asset_fee)]
-    /// STores last calculated fee of an asset and block number in which it was changed..
+    /// Stores last calculated fee of an asset and block number in which it was changed..
     /// Stored as (Asset fee, Protocol fee, Block number)
     pub type AssetFee<T: Config> = StorageMap<_, Twox64Concat, T::AssetId, (Fee, Fee, T::BlockNumber), OptionQuery>;
 
@@ -77,7 +77,7 @@ pub mod pallet {
         /// Oracle period type
         type OraclePeriod: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
-        ///
+        /// Volume provider implementation
         type Oracle: VolumeProvider<Self::AssetId, Balance, Self::OraclePeriod>;
 
         #[pallet::constant]

@@ -59,42 +59,51 @@ pub mod pallet {
         /// Provider for the current block number.
         type BlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
 
-        ///
-        type Fee: Parameter + PerThing + MaxEncodedLen;
+        /// Fee PerThing type
+        type Fee: Parameter + MaybeSerializeDeserialize + MaxEncodedLen + PerThing;
 
         /// Asset id type
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaxEncodedLen;
 
         /// Oracle period type
-        type OraclePeriod: Parameter + Member + Copy + MaybeSerializeDeserialize;
+        type OraclePeriod: Parameter + Member + MaybeSerializeDeserialize;
 
         /// Volume provider implementation
         type Oracle: VolumeProvider<Self::AssetId, Balance, Self::OraclePeriod>;
 
+        /// Chosen Oracle period
         #[pallet::constant]
         type SelectedPeriod: Get<Self::OraclePeriod>;
 
+        /// Asset fee decay parameter
         #[pallet::constant]
         type AssetFeeDecay: Get<FixedU128>;
 
+        /// Asset fee amplification parameter
         #[pallet::constant]
         type AssetFeeAmplification: Get<FixedU128>;
 
+        /// Minimum asset fee
         #[pallet::constant]
         type AssetMinimumFee: Get<Self::Fee>;
 
+        /// Maximum asset fee
         #[pallet::constant]
         type AssetMaximumFee: Get<Self::Fee>;
 
+        /// Protocol fee decay parameter
         #[pallet::constant]
         type ProtocolFeeDecay: Get<FixedU128>;
 
+        /// Protocol fee amplification
         #[pallet::constant]
         type ProtocolFeeAmplification: Get<FixedU128>;
 
+        /// Minimum protocol fee
         #[pallet::constant]
         type ProtocolMinimumFee: Get<Self::Fee>;
 
+        /// Maximum protocol fee
         #[pallet::constant]
         type ProtocolMaximumFee: Get<Self::Fee>;
     }
@@ -144,10 +153,11 @@ where
             T::BlockNumber::default(),
         ));
 
-        let delta_blocks = block_number.saturating_sub(last_block);
-        let db = TryInto::<u128>::try_into(delta_blocks).ok().unwrap();
+        let Some(delta_blocks) = TryInto::<u128>::try_into(block_number.saturating_sub(last_block)).ok() else{
+            return (current_fee, current_protocol_fee);
+        };
 
-        // Update only if it was not yet updated in this block
+        // Update only if it has not yet been updated this block
         if block_number != last_block {
             let Some(volume) = T::Oracle::asset_volume(asset_id, T::SelectedPeriod::get()) else{
                 return (current_fee, current_protocol_fee);
@@ -156,14 +166,14 @@ where
                 return (current_fee, current_protocol_fee);
             };
 
-            let f = recalculate_asset_fee(
+            let asset_fee = recalculate_asset_fee(
                 AssetVolume {
                     amount_in: volume.amount_in(),
                     amount_out: volume.amount_out(),
                     liquidity,
                 },
                 current_fee,
-                db,
+                delta_blocks,
                 Self::asset_fee_params(),
             );
             let protocol_fee = recalculate_protocol_fee(
@@ -173,12 +183,12 @@ where
                     liquidity,
                 },
                 current_protocol_fee,
-                db,
+                delta_blocks,
                 Self::protocol_fee_params(),
             );
 
-            AssetFee::<T>::insert(asset_id, (f, protocol_fee, block_number));
-            (f, protocol_fee)
+            AssetFee::<T>::insert(asset_id, (asset_fee, protocol_fee, block_number));
+            (asset_fee, protocol_fee)
         } else {
             (current_fee, current_protocol_fee)
         }

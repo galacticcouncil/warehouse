@@ -53,10 +53,15 @@ thread_local! {
     pub static PAIRS: RefCell<Vec<(AssetId, AssetId)>> = RefCell::new(vec![]);
     pub static ORACLE: RefCell<Box<dyn CustomOracle>> = RefCell::new(Box::new(Oracle::new()));
     pub static BLOCK: RefCell<usize> = RefCell::new(0);
-    pub static MIN_ASSET_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(1));
-    pub static MAX_ASSET_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(40));
+    pub static ASSET_MIN_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(1));
+    pub static ASSET_MAX_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(40));
     pub static ASSET_FEE_DECAY: RefCell<FixedU128> = RefCell::new(FixedU128::zero());
     pub static ASSET_FEE_AMPLIFICATION: RefCell<FixedU128> = RefCell::new(FixedU128::one());
+
+    pub static PROTOCOL_MIN_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(1));
+    pub static PROTOCOL_MAX_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(40));
+    pub static PROTOCOL_FEE_DECAY: RefCell<FixedU128> = RefCell::new(FixedU128::zero());
+    pub static PROTOCOL_FEE_AMPLIFICATION: RefCell<FixedU128> = RefCell::new(FixedU128::one());
 }
 
 construct_runtime!(
@@ -100,10 +105,15 @@ impl frame_system::Config for Test {
 parameter_types! {
     pub const SelectedPeriod: u16 = 300;
     //pub Decay: FixedU128= FixedU128::from_float(0.0005);
-    pub Decay: FixedU128= ASSET_FEE_DECAY.with(|v| *v.borrow());
-    pub Amplification: FixedU128= ASSET_FEE_AMPLIFICATION.with(|v| *v.borrow());
-    pub MinimumFee: Permill = MIN_ASSET_FEE.with(|v| *v.borrow());
-    pub MaximumFee: Permill = MAX_ASSET_FEE.with(|v| *v.borrow());
+    pub AssetFeeDecay: FixedU128= ASSET_FEE_DECAY.with(|v| *v.borrow());
+    pub AssetFeeAmplification: FixedU128= ASSET_FEE_AMPLIFICATION.with(|v| *v.borrow());
+    pub AssetMinimumFee: Permill = ASSET_MIN_FEE.with(|v| *v.borrow());
+    pub AssetMaximumFee: Permill = ASSET_MAX_FEE.with(|v| *v.borrow());
+
+    pub ProtocolFeeDecay: FixedU128= PROTOCOL_FEE_DECAY.with(|v| *v.borrow());
+    pub ProtocolFeeAmplification: FixedU128= PROTOCOL_FEE_AMPLIFICATION.with(|v| *v.borrow());
+    pub ProtocolMinimumFee: Permill = PROTOCOL_MIN_FEE.with(|v| *v.borrow());
+    pub ProtocolMaximumFee: Permill = PROTOCOL_MAX_FEE.with(|v| *v.borrow());
 }
 
 impl Config for Test {
@@ -113,10 +123,14 @@ impl Config for Test {
     type BlockNumberProvider = System;
     type Oracle = OracleProvider;
     type SelectedPeriod = SelectedPeriod;
-    type Decay = Decay;
-    type Amplification = Amplification;
-    type MinimumFee = MinimumFee;
-    type MaximumFee = MaximumFee;
+    type AssetFeeDecay = AssetFeeDecay;
+    type AssetFeeAmplification = AssetFeeAmplification;
+    type AssetMinimumFee = AssetMinimumFee;
+    type AssetMaximumFee = AssetMaximumFee;
+    type ProtocolFeeDecay = ProtocolFeeDecay;
+    type ProtocolFeeAmplification = ProtocolFeeAmplification;
+    type ProtocolMinimumFee = ProtocolMinimumFee;
+    type ProtocolMaximumFee = ProtocolMaximumFee;
 }
 
 pub struct ExtBuilder {
@@ -125,14 +139,12 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        MIN_ASSET_FEE.with(|v| {
+        ASSET_MIN_FEE.with(|v| {
             *v.borrow_mut() = Fee::from_percent(1);
         });
-
-        MAX_ASSET_FEE.with(|v| {
+        ASSET_MAX_FEE.with(|v| {
             *v.borrow_mut() = Fee::from_percent(40);
         });
-
         ASSET_FEE_DECAY.with(|v| {
             *v.borrow_mut() = FixedU128::zero();
         });
@@ -150,38 +162,53 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-    pub fn with_min_asset_fee(self, fee: Fee) -> Self {
-        MIN_ASSET_FEE.with(|v| {
-            *v.borrow_mut() = fee;
+    pub fn with_asset_fee_params(self, min_fee: Fee, max_fee: Fee, decay: FixedU128, amplification: FixedU128) -> Self {
+        ASSET_MIN_FEE.with(|v| {
+            *v.borrow_mut() = min_fee;
         });
-        self
-    }
-
-    pub fn with_max_asset_fee(self, fee: Fee) -> Self {
-        MAX_ASSET_FEE.with(|v| {
-            *v.borrow_mut() = fee;
+        ASSET_MAX_FEE.with(|v| {
+            *v.borrow_mut() = max_fee;
         });
-        self
-    }
-
-    pub fn with_asset_fee_decay(self, decay: FixedU128) -> Self {
         ASSET_FEE_DECAY.with(|v| {
             *v.borrow_mut() = decay;
         });
-        self
-    }
-    pub fn with_asset_fee_amplification(self, amp: FixedU128) -> Self {
-        ASSET_FEE_DECAY.with(|v| {
-            *v.borrow_mut() = amp;
+        ASSET_FEE_AMPLIFICATION.with(|v| {
+            *v.borrow_mut() = amplification;
         });
+
         self
     }
+
+    pub fn with_protocol_fee_params(
+        self,
+        min_fee: Fee,
+        max_fee: Fee,
+        decay: FixedU128,
+        amplification: FixedU128,
+    ) -> Self {
+        PROTOCOL_MIN_FEE.with(|v| {
+            *v.borrow_mut() = min_fee;
+        });
+        PROTOCOL_MAX_FEE.with(|v| {
+            *v.borrow_mut() = max_fee;
+        });
+        PROTOCOL_FEE_DECAY.with(|v| {
+            *v.borrow_mut() = decay;
+        });
+        PROTOCOL_FEE_AMPLIFICATION.with(|v| {
+            *v.borrow_mut() = amplification;
+        });
+
+        self
+    }
+
     pub fn with_oracle(self, oracle: impl CustomOracle + 'static) -> Self {
         ORACLE.with(|v| {
             *v.borrow_mut() = Box::new(oracle);
         });
         self
     }
+
     pub fn with_initial_fees(mut self, asset_fee: Fee, protocol_fee: Fee, block_number: u64) -> Self {
         self.initial_fee = (asset_fee, protocol_fee, block_number);
         self

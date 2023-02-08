@@ -2,7 +2,7 @@ use crate::tests::mock::*;
 use crate::tests::oracle::SingleValueOracle;
 use crate::{Fee, UpdateAndRetrieveFees};
 use orml_traits::GetByKey;
-use sp_runtime::traits::Zero;
+use sp_runtime::traits::{Bounded, One, Zero};
 use sp_runtime::FixedU128;
 
 #[test]
@@ -12,7 +12,12 @@ fn asset_fee_should_not_exceed_max_limit_when_volume_out_increased() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
         .with_initial_fees(initial_fee, Fee::zero(), 0)
-        .with_max_asset_fee(Fee::from_percent(3))
+        .with_asset_fee_params(
+            Fee::from_percent(19),
+            Fee::from_percent(3),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -32,8 +37,12 @@ fn asset_fee_should_not_fall_below_min_limit_when_volume_in_increased() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(2 * ONE, ONE, 50 * ONE))
         .with_initial_fees(initial_fee, Fee::zero(), 0)
-        .with_asset_fee_decay(FixedU128::zero())
-        .with_min_asset_fee(Fee::from_percent(19))
+        .with_asset_fee_params(
+            Fee::from_percent(19),
+            Fee::max_value(),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -53,7 +62,12 @@ fn protocol_fee_should_not_exceed_max_limit_when_volume_in_increased() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(2 * ONE, ONE, 50 * ONE))
         .with_initial_fees(Fee::zero(), initial_fee, 0)
-        .with_max_asset_fee(Fee::from_percent(3))
+        .with_protocol_fee_params(
+            Fee::from_percent(19),
+            Fee::from_percent(3),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -73,8 +87,12 @@ fn protocol_fee_should_not_fall_bellow_min_limit_when_volume_out_increased() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
         .with_initial_fees(Fee::zero(), initial_fee, 0)
-        .with_asset_fee_decay(FixedU128::zero())
-        .with_min_asset_fee(Fee::from_percent(19))
+        .with_protocol_fee_params(
+            Fee::from_percent(19),
+            Fee::max_value(),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);

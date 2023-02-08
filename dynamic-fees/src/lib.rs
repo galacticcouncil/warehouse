@@ -52,7 +52,8 @@ pub trait VolumeProvider<AssetId, Balance, Period> {
 pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
-    use sp_runtime::traits::BlockNumberProvider;
+    use frame_system::pallet_prelude::BlockNumberFor;
+    use sp_runtime::traits::{BlockNumberProvider, Zero};
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -83,16 +84,28 @@ pub mod pallet {
         type SelectedPeriod: Get<Self::OraclePeriod>;
 
         #[pallet::constant]
-        type Decay: Get<FixedU128>; // TODO: as percentage?
+        type AssetFeeDecay: Get<FixedU128>;
 
         #[pallet::constant]
-        type Amplification: Get<FixedU128>;
+        type AssetFeeAmplification: Get<FixedU128>;
 
         #[pallet::constant]
-        type MinimumFee: Get<Fee>;
+        type AssetMinimumFee: Get<Fee>;
 
         #[pallet::constant]
-        type MaximumFee: Get<Fee>;
+        type AssetMaximumFee: Get<Fee>;
+
+        #[pallet::constant]
+        type ProtocolFeeDecay: Get<FixedU128>;
+
+        #[pallet::constant]
+        type ProtocolFeeAmplification: Get<FixedU128>;
+
+        #[pallet::constant]
+        type ProtocolMinimumFee: Get<Fee>;
+
+        #[pallet::constant]
+        type ProtocolMaximumFee: Get<Fee>;
     }
 
     #[pallet::event]
@@ -103,29 +116,50 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn integrity_test() {
+            assert!(
+                T::AssetMinimumFee::get() <= T::AssetMaximumFee::get(),
+                "Asset fee min > asset fee max."
+            );
+            assert!(
+                !T::AssetFeeAmplification::get().is_zero(),
+                "Asset fee amplification is 0."
+            );
+            assert!(
+                T::ProtocolMinimumFee::get() <= T::ProtocolMaximumFee::get(),
+                "Protocol fee min > protocol fee max."
+            );
+            assert!(
+                !T::ProtocolFeeAmplification::get().is_zero(),
+                "Protocol fee amplification is 0."
+            );
+        }
+    }
 }
 
 impl<T: Config> Pallet<T> {
     fn update_fee(pair: (T::AssetId, T::AssetId)) -> (Fee, Fee) {
         let block_number = T::BlockNumberProvider::current_block_number();
 
-        //TODO: what if no previous and block 0 ( not happning but should be covered)
-        let (current_fee, current_protocol_fee, last_block) =
-            Self::asset_fee(pair.0).unwrap_or((Fee::zero(), Fee::zero(), T::BlockNumber::default()));
+        let (current_fee, current_protocol_fee, last_block) = Self::asset_fee(pair.0).unwrap_or((
+            T::AssetMinimumFee::get(),
+            T::ProtocolMinimumFee::get(),
+            T::BlockNumber::default(),
+        ));
 
-        //TODO: it is difference btween blocks?!
         let delta_blocks = block_number.saturating_sub(last_block);
         let db = TryInto::<u128>::try_into(delta_blocks).ok().unwrap();
 
         // Update only if it was not yet updated in this block
         if block_number != last_block {
             let Some(volume) = T::Oracle::asset_pair_volume(pair, T::SelectedPeriod::get()) else{
-                //TODO: what if fails to retrieve from oracle
-                return (T::MaximumFee::get(), T::MaximumFee::get());
+                return (current_fee, current_protocol_fee);
             };
             let Some(liquidity) = T::Oracle::asset_pair_liquidity(pair, T::SelectedPeriod::get()) else{
-                //TODO: what if fails to retrieve from oracle
-                return (T::MaximumFee::get(), T::MaximumFee::get());
+                return (current_fee, current_protocol_fee);
             };
 
             let f = recalculate_asset_fee(
@@ -158,28 +192,20 @@ impl<T: Config> Pallet<T> {
 
     fn asset_fee_params() -> FeeParams {
         FeeParams {
-            max_fee: T::MaximumFee::get(),
-            min_fee: T::MinimumFee::get(),
-            decay: T::Decay::get(),
-            amplification: T::Amplification::get(),
+            max_fee: T::AssetMaximumFee::get(),
+            min_fee: T::AssetMinimumFee::get(),
+            decay: T::AssetFeeDecay::get(),
+            amplification: T::AssetFeeAmplification::get(),
         }
     }
 
     fn protocol_fee_params() -> FeeParams {
         FeeParams {
-            max_fee: T::MaximumFee::get(),
-            min_fee: T::MinimumFee::get(),
-            decay: T::Decay::get(),
-            amplification: T::Amplification::get(),
+            max_fee: T::ProtocolMaximumFee::get(),
+            min_fee: T::ProtocolMinimumFee::get(),
+            decay: T::ProtocolFeeDecay::get(),
+            amplification: T::ProtocolFeeAmplification::get(),
         }
-    }
-}
-
-pub struct UpdateAndRetrieveAssetFee<T: Config>(sp_std::marker::PhantomData<T>);
-
-impl<T: Config> GetByKey<(T::AssetId, T::AssetId), Fee> for UpdateAndRetrieveAssetFee<T> {
-    fn get(k: &(T::AssetId, T::AssetId)) -> Fee {
-        Pallet::<T>::update_fee(*k).0
     }
 }
 
@@ -188,15 +214,5 @@ pub struct UpdateAndRetrieveFees<T: Config>(sp_std::marker::PhantomData<T>);
 impl<T: Config> GetByKey<(T::AssetId, T::AssetId), (Fee, Fee)> for UpdateAndRetrieveFees<T> {
     fn get(k: &(T::AssetId, T::AssetId)) -> (Fee, Fee) {
         Pallet::<T>::update_fee(*k)
-    }
-}
-
-pub struct RetrieveAssetFee<T: Config>(sp_std::marker::PhantomData<T>);
-
-impl<T: Config> GetByKey<(T::AssetId, T::AssetId), Fee> for RetrieveAssetFee<T> {
-    fn get(k: &(T::AssetId, T::AssetId)) -> Fee {
-        Pallet::<T>::asset_fee(k.0)
-            .unwrap_or((T::MaximumFee::get(), T::MaximumFee::get(), T::BlockNumber::default()))
-            .0
     }
 }

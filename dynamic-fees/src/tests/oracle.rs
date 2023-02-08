@@ -306,7 +306,7 @@ const DATA: [(Balance, Balance, Balance); 303] = [
     (1749300086855548, 1650148498952096, 20002220028949618357),
 ];
 
-pub struct Oracle {}
+pub struct Oracle;
 
 impl CustomOracle for Oracle {
     fn volume(&self, _asset_id: AssetId, block: usize) -> AssetVolume {

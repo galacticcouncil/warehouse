@@ -153,16 +153,16 @@ where
             T::BlockNumber::default(),
         ));
 
-        let Some(delta_blocks) = TryInto::<u128>::try_into(block_number.saturating_sub(last_block)).ok() else{
+        let Some(delta_blocks) = TryInto::<u128>::try_into(block_number.saturating_sub(last_block)).ok() else {
             return (current_fee, current_protocol_fee);
         };
 
         // Update only if it has not yet been updated this block
         if block_number != last_block {
-            let Some(volume) = T::Oracle::asset_volume(asset_id, T::SelectedPeriod::get()) else{
+            let Some(volume) = T::Oracle::asset_volume(asset_id, T::SelectedPeriod::get()) else {
                 return (current_fee, current_protocol_fee);
             };
-            let Some(liquidity) = T::Oracle::asset_liquidity(asset_id, T::SelectedPeriod::get()) else{
+            let Some(liquidity) = T::Oracle::asset_liquidity(asset_id, T::SelectedPeriod::get()) else {
                 return (current_fee, current_protocol_fee);
             };
 

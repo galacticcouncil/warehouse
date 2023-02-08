@@ -229,7 +229,7 @@ impl ExtBuilder {
     }
 }
 
-pub struct OracleProvider {}
+pub struct OracleProvider;
 
 impl VolumeProvider<AssetId, Balance, u16> for OracleProvider {
     type Volume = AssetVolume;

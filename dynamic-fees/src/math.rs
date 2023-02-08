@@ -59,7 +59,7 @@ where
     };
 
     // x = (V0 - Vi) / L
-    let (x, x_neg) = if volume.liquidity != Balance::zero() {
+    let (x, x_neg) = if !volume.liquidity.is_zero() {
         let (diff, neg) = volume.net_volume(direction);
         (FixedU128::from_rational(diff, volume.liquidity), neg)
     } else {

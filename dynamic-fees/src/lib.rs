@@ -168,7 +168,7 @@ impl<T: Config> Pallet<T> {
                     amount_out: volume.amount_a_out(),
                     liquidity,
                 },
-                Some(current_fee),
+                current_fee,
                 db,
                 Self::asset_fee_params(),
             );
@@ -178,7 +178,7 @@ impl<T: Config> Pallet<T> {
                     amount_out: volume.amount_a_out(),
                     liquidity,
                 },
-                Some(current_protocol_fee),
+                current_protocol_fee,
                 db,
                 Self::protocol_fee_params(),
             );

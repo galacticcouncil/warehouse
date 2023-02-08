@@ -11,7 +11,7 @@ fn asset_fee_should_not_exceed_max_limit_when_volume_out_increased() {
         .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
         .with_initial_fees(initial_fee, Fee::zero(), 0)
         .with_asset_fee_params(
-            Fee::from_percent(19),
+            Fee::from_percent(1),
             Fee::from_percent(3),
             FixedU128::zero(),
             FixedU128::one(),
@@ -61,7 +61,7 @@ fn protocol_fee_should_not_exceed_max_limit_when_volume_in_increased() {
         .with_oracle(SingleValueOracle::new(2 * ONE, ONE, 50 * ONE))
         .with_initial_fees(Fee::zero(), initial_fee, 0)
         .with_protocol_fee_params(
-            Fee::from_percent(19),
+            Fee::from_percent(1),
             Fee::from_percent(3),
             FixedU128::zero(),
             FixedU128::one(),

@@ -80,13 +80,11 @@ where
     let fee_plus = if neg {
         FixedU128::from(previous_fee)
             .saturating_sub(delta_f)
-            .max(FixedU128::from(params.min_fee))
-            .min(FixedU128::from(params.max_fee))
+            .clamp(FixedU128::from(params.min_fee), FixedU128::from(params.max_fee))
     } else {
         FixedU128::from(previous_fee)
             .saturating_add(delta_f)
-            .max(FixedU128::from(params.min_fee))
-            .min(FixedU128::from(params.max_fee))
+            .clamp(FixedU128::from(params.min_fee), FixedU128::from(params.max_fee))
     };
 
     Fee::from_rational(fee_plus.into_inner(), FixedU128::DIV)

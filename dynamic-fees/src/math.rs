@@ -1,7 +1,7 @@
 use crate::math::NetVolumeDirection::*;
-use crate::{Balance, Fee};
+use crate::Balance;
 use sp_runtime::traits::{Saturating, Zero};
-use sp_runtime::{FixedPointNumber, FixedU128};
+use sp_runtime::{FixedPointNumber, FixedPointOperand, FixedU128, PerThing};
 
 pub struct AssetVolume {
     pub amount_in: Balance,
@@ -24,7 +24,7 @@ impl AssetVolume {
     }
 }
 
-pub struct FeeParams {
+pub struct FeeParams<Fee> {
     pub(crate) max_fee: Fee,
     pub(crate) min_fee: Fee,
     pub(crate) decay: FixedU128,
@@ -37,13 +37,16 @@ enum NetVolumeDirection {
     InOut,
 }
 
-fn recalculate_fee(
+fn recalculate_fee<Fee: PerThing>(
     volume: AssetVolume,
     previous_fee: Fee,
     last_block_diff: u128,
-    params: FeeParams,
+    params: FeeParams<Fee>,
     direction: NetVolumeDirection,
-) -> Fee {
+) -> Fee
+where
+    <Fee as PerThing>::Inner: FixedPointOperand,
+{
     let decaying = params
         .decay
         .saturating_mul(FixedU128::from(last_block_diff.saturating_sub(1)));
@@ -84,15 +87,26 @@ fn recalculate_fee(
     Fee::from_rational(f_plus.into_inner(), FixedU128::DIV)
 }
 
-pub fn recalculate_asset_fee(volume: AssetVolume, previous_fee: Fee, last_block_diff: u128, params: FeeParams) -> Fee {
-    recalculate_fee(volume, previous_fee, last_block_diff, params, OutIn)
-}
-
-pub fn recalculate_protocol_fee(
+pub fn recalculate_asset_fee<Fee: PerThing>(
     volume: AssetVolume,
     previous_fee: Fee,
     last_block_diff: u128,
-    params: FeeParams,
-) -> Fee {
+    params: FeeParams<Fee>,
+) -> Fee
+where
+    <Fee as PerThing>::Inner: FixedPointOperand,
+{
+    recalculate_fee(volume, previous_fee, last_block_diff, params, OutIn)
+}
+
+pub fn recalculate_protocol_fee<Fee: PerThing>(
+    volume: AssetVolume,
+    previous_fee: Fee,
+    last_block_diff: u128,
+    params: FeeParams<Fee>,
+) -> Fee
+where
+    <Fee as PerThing>::Inner: FixedPointOperand,
+{
     recalculate_fee(volume, previous_fee, last_block_diff, params, InOut)
 }

@@ -1,6 +1,5 @@
 use crate::tests::mock::*;
 use crate::tests::oracle::SingleValueOracle;
-use crate::{Fee};
 
 #[test]
 fn asset_fee_should_increase_when_volume_out_increased() {

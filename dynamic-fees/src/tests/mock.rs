@@ -20,7 +20,7 @@
 use sp_std::prelude::*;
 use std::cell::RefCell;
 
-use crate::{Config, Fee, UpdateAndRetrieveFees, Volume, VolumeProvider};
+use crate::{Config, UpdateAndRetrieveFees, Volume, VolumeProvider};
 
 use frame_support::{
     construct_runtime, parameter_types,
@@ -32,14 +32,13 @@ use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    FixedU128,
+    FixedU128, Permill,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 use crate::tests::oracle::Oracle;
 use sp_runtime::traits::{One, Zero};
-use sp_runtime::Permill;
 
 pub type Balance = u128;
 pub type AssetId = u32;
@@ -49,17 +48,19 @@ pub const HDX: AssetId = 0;
 
 pub const ONE: Balance = 1_000_000_000_000;
 
+pub(crate) type Fee = Permill;
+
 thread_local! {
     pub static PAIRS: RefCell<Vec<(AssetId, AssetId)>> = RefCell::new(vec![]);
     pub static ORACLE: RefCell<Box<dyn CustomOracle>> = RefCell::new(Box::new(Oracle::new()));
     pub static BLOCK: RefCell<usize> = RefCell::new(0);
-    pub static ASSET_MIN_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(1));
-    pub static ASSET_MAX_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(40));
+    pub static ASSET_MIN_FEE: RefCell<Fee> = RefCell::new(Fee::from_percent(1));
+    pub static ASSET_MAX_FEE: RefCell<Fee> = RefCell::new(Fee::from_percent(40));
     pub static ASSET_FEE_DECAY: RefCell<FixedU128> = RefCell::new(FixedU128::zero());
     pub static ASSET_FEE_AMPLIFICATION: RefCell<FixedU128> = RefCell::new(FixedU128::one());
 
-    pub static PROTOCOL_MIN_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(1));
-    pub static PROTOCOL_MAX_FEE: RefCell<Permill> = RefCell::new(Permill::from_percent(40));
+    pub static PROTOCOL_MIN_FEE: RefCell<Fee> = RefCell::new(Fee::from_percent(1));
+    pub static PROTOCOL_MAX_FEE: RefCell<Fee> = RefCell::new(Fee::from_percent(40));
     pub static PROTOCOL_FEE_DECAY: RefCell<FixedU128> = RefCell::new(FixedU128::zero());
     pub static PROTOCOL_FEE_AMPLIFICATION: RefCell<FixedU128> = RefCell::new(FixedU128::one());
 }
@@ -107,13 +108,13 @@ parameter_types! {
     //pub Decay: FixedU128= FixedU128::from_float(0.0005);
     pub AssetFeeDecay: FixedU128= ASSET_FEE_DECAY.with(|v| *v.borrow());
     pub AssetFeeAmplification: FixedU128= ASSET_FEE_AMPLIFICATION.with(|v| *v.borrow());
-    pub AssetMinimumFee: Permill = ASSET_MIN_FEE.with(|v| *v.borrow());
-    pub AssetMaximumFee: Permill = ASSET_MAX_FEE.with(|v| *v.borrow());
+    pub AssetMinimumFee: Fee = ASSET_MIN_FEE.with(|v| *v.borrow());
+    pub AssetMaximumFee: Fee = ASSET_MAX_FEE.with(|v| *v.borrow());
 
     pub ProtocolFeeDecay: FixedU128= PROTOCOL_FEE_DECAY.with(|v| *v.borrow());
     pub ProtocolFeeAmplification: FixedU128= PROTOCOL_FEE_AMPLIFICATION.with(|v| *v.borrow());
-    pub ProtocolMinimumFee: Permill = PROTOCOL_MIN_FEE.with(|v| *v.borrow());
-    pub ProtocolMaximumFee: Permill = PROTOCOL_MAX_FEE.with(|v| *v.borrow());
+    pub ProtocolMinimumFee: Fee = PROTOCOL_MIN_FEE.with(|v| *v.borrow());
+    pub ProtocolMaximumFee: Fee = PROTOCOL_MAX_FEE.with(|v| *v.borrow());
 }
 
 impl Config for Test {
@@ -131,6 +132,7 @@ impl Config for Test {
     type ProtocolFeeAmplification = ProtocolFeeAmplification;
     type ProtocolMinimumFee = ProtocolMinimumFee;
     type ProtocolMaximumFee = ProtocolMaximumFee;
+    type Fee = Fee;
 }
 
 pub struct ExtBuilder {

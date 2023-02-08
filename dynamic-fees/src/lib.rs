@@ -20,7 +20,7 @@
 use frame_support::traits::Get;
 use orml_traits::GetByKey;
 use sp_runtime::traits::{BlockNumberProvider, Saturating};
-use sp_runtime::{FixedU128, Permill};
+use sp_runtime::{FixedPointOperand, FixedU128, PerThing};
 
 mod math;
 #[cfg(test)]
@@ -32,17 +32,15 @@ pub use pallet::*;
 use crate::math::{recalculate_asset_fee, recalculate_protocol_fee, AssetVolume, FeeParams};
 use crate::traits::{Volume, VolumeProvider};
 
-// Represents fee types used in the implementation. TODO: consider making it generic as pallet's config ?
-type Fee = Permill;
 type Balance = u128;
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use crate::traits::VolumeProvider;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::BlockNumberFor;
     use sp_runtime::traits::{BlockNumberProvider, Zero};
-    use crate::traits::VolumeProvider;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -51,7 +49,8 @@ pub mod pallet {
     #[pallet::getter(fn asset_fee)]
     /// Stores last calculated fee of an asset and block number in which it was changed..
     /// Stored as (Asset fee, Protocol fee, Block number)
-    pub type AssetFee<T: Config> = StorageMap<_, Twox64Concat, T::AssetId, (Fee, Fee, T::BlockNumber), OptionQuery>;
+    pub type AssetFee<T: Config> =
+        StorageMap<_, Twox64Concat, T::AssetId, (T::Fee, T::Fee, T::BlockNumber), OptionQuery>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -59,6 +58,9 @@ pub mod pallet {
 
         /// Provider for the current block number.
         type BlockNumberProvider: BlockNumberProvider<BlockNumber = Self::BlockNumber>;
+
+        ///
+        type Fee: Parameter + PerThing + MaxEncodedLen;
 
         /// Asset id type
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaxEncodedLen;
@@ -79,10 +81,10 @@ pub mod pallet {
         type AssetFeeAmplification: Get<FixedU128>;
 
         #[pallet::constant]
-        type AssetMinimumFee: Get<Fee>;
+        type AssetMinimumFee: Get<Self::Fee>;
 
         #[pallet::constant]
-        type AssetMaximumFee: Get<Fee>;
+        type AssetMaximumFee: Get<Self::Fee>;
 
         #[pallet::constant]
         type ProtocolFeeDecay: Get<FixedU128>;
@@ -91,10 +93,10 @@ pub mod pallet {
         type ProtocolFeeAmplification: Get<FixedU128>;
 
         #[pallet::constant]
-        type ProtocolMinimumFee: Get<Fee>;
+        type ProtocolMinimumFee: Get<Self::Fee>;
 
         #[pallet::constant]
-        type ProtocolMaximumFee: Get<Fee>;
+        type ProtocolMaximumFee: Get<Self::Fee>;
     }
 
     #[pallet::event]
@@ -129,8 +131,11 @@ pub mod pallet {
     }
 }
 
-impl<T: Config> Pallet<T> {
-    fn update_fee(asset_id: T::AssetId) -> (Fee, Fee) {
+impl<T: Config> Pallet<T>
+where
+    <T::Fee as PerThing>::Inner: FixedPointOperand,
+{
+    fn update_fee(asset_id: T::AssetId) -> (T::Fee, T::Fee) {
         let block_number = T::BlockNumberProvider::current_block_number();
 
         let (current_fee, current_protocol_fee, last_block) = Self::asset_fee(asset_id).unwrap_or((
@@ -179,7 +184,7 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    fn asset_fee_params() -> FeeParams {
+    fn asset_fee_params() -> FeeParams<T::Fee> {
         FeeParams {
             max_fee: T::AssetMaximumFee::get(),
             min_fee: T::AssetMinimumFee::get(),
@@ -188,7 +193,7 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    fn protocol_fee_params() -> FeeParams {
+    fn protocol_fee_params() -> FeeParams<T::Fee> {
         FeeParams {
             max_fee: T::ProtocolMaximumFee::get(),
             min_fee: T::ProtocolMinimumFee::get(),
@@ -200,8 +205,11 @@ impl<T: Config> Pallet<T> {
 
 pub struct UpdateAndRetrieveFees<T: Config>(sp_std::marker::PhantomData<T>);
 
-impl<T: Config> GetByKey<T::AssetId, (Fee, Fee)> for UpdateAndRetrieveFees<T> {
-    fn get(k: &T::AssetId) -> (Fee, Fee) {
+impl<T: Config> GetByKey<T::AssetId, (T::Fee, T::Fee)> for UpdateAndRetrieveFees<T>
+where
+    <T::Fee as PerThing>::Inner: FixedPointOperand,
+{
+    fn get(k: &T::AssetId) -> (T::Fee, T::Fee) {
         Pallet::<T>::update_fee(*k)
     }
 }

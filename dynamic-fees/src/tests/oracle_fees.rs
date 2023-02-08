@@ -1,4 +1,3 @@
-use crate::Fee;
 use crate::tests::mock::*;
 
 #[test]

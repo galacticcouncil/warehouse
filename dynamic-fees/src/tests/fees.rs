@@ -1,7 +1,6 @@
 use crate::tests::mock::*;
 use crate::tests::oracle::SingleValueOracle;
-use crate::{Fee, UpdateAndRetrieveFees};
-use orml_traits::GetByKey;
+use crate::{Fee};
 
 #[test]
 fn asset_fee_should_increase_when_volume_out_increased() {
@@ -14,7 +13,7 @@ fn asset_fee_should_increase_when_volume_out_increased() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert!(fee.0 > initial_fee);
 
@@ -33,7 +32,7 @@ fn asset_fee_should_decrease_when_volume_in_increased() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert!(fee.0 < initial_fee);
 
@@ -52,7 +51,7 @@ fn asset_fee_should_not_change_when_volume_has_not_changed_and_decay_is_0() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert_eq!(fee.0, initial_fee);
         });
@@ -69,7 +68,7 @@ fn protocol_fee_should_increase_when_volume_in_increased() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert!(fee.1 > initial_fee);
 
@@ -88,7 +87,7 @@ fn protocol_fee_should_decrease_when_volume_out_increased() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert!(fee.1 < initial_fee);
 
@@ -107,7 +106,7 @@ fn protocol_fee_should_not_change_when_volume_has_not_changed_and_decay_is_0() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert_eq!(fee.1, initial_fee);
         });
@@ -124,7 +123,7 @@ fn fees_should_update_correcty_when_volume_in_increased() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert!(fee.0 < initial_fee);
             assert!(fee.1 > initial_fee);
@@ -145,7 +144,7 @@ fn fees_should_decrease_when_volume_out_increased() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert!(fee.0 > initial_fee);
             assert!(fee.1 < initial_fee);
@@ -166,7 +165,7 @@ fn fees_should_not_change_when_volume_has_not_changed_and_decay_is_0() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert_eq!(fee.0, initial_fee);
             assert_eq!(fee.1, initial_fee);
@@ -183,7 +182,7 @@ fn fees_should_not_change_when_already_update_within_same_block() {
         .build()
         .execute_with(|| {
             System::set_block_number(1);
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert_eq!(fee.0, initial_fee);
             assert_eq!(fee.1, initial_fee);

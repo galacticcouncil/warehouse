@@ -309,11 +309,11 @@ const DATA: [(Balance, Balance, Balance); 303] = [
 pub struct Oracle {}
 
 impl CustomOracle for Oracle {
-    fn volume(&self, _pair: (AssetId, AssetId), block: usize) -> AssetVolume {
+    fn volume(&self, _asset_id: AssetId, block: usize) -> AssetVolume {
         DATA[block].into()
     }
 
-    fn liquidity(&self, _pair: (AssetId, AssetId), block: usize) -> Balance {
+    fn liquidity(&self, _asset_id: AssetId, block: usize) -> Balance {
         DATA[block].2
     }
 }
@@ -336,11 +336,11 @@ impl SingleValueOracle {
 }
 
 impl CustomOracle for SingleValueOracle {
-    fn volume(&self, _pair: (AssetId, AssetId), _block: usize) -> AssetVolume {
+    fn volume(&self, _asset_id: AssetId, _block: usize) -> AssetVolume {
         self.data.into()
     }
 
-    fn liquidity(&self, _pair: (AssetId, AssetId), _block: usize) -> Balance {
+    fn liquidity(&self, _asset_id: AssetId, _block: usize) -> Balance {
         self.data.2
     }
 }

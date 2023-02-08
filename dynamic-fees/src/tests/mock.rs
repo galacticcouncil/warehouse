@@ -20,12 +20,13 @@
 use sp_std::prelude::*;
 use std::cell::RefCell;
 
-use crate::{Config, Fee, Volume, VolumeProvider};
+use crate::{Config, Fee, UpdateAndRetrieveFees, Volume, VolumeProvider};
 
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{ConstU32, ConstU64},
 };
+use orml_traits::GetByKey;
 pub use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::{
@@ -45,7 +46,6 @@ pub type AssetId = u32;
 pub type AccountId = u64;
 
 pub const HDX: AssetId = 0;
-pub const LRNA: AssetId = 1;
 
 pub const ONE: Balance = 1_000_000_000_000;
 
@@ -232,13 +232,13 @@ pub struct OracleProvider {}
 impl VolumeProvider<AssetId, Balance, u16> for OracleProvider {
     type Volume = AssetVolume;
 
-    fn asset_pair_volume(pair: (AssetId, AssetId), _period: u16) -> Option<Self::Volume> {
-        let volume = ORACLE.with(|v| v.borrow().volume(pair, BLOCK.with(|v| *v.borrow())));
+    fn asset_volume(asset_id: AssetId, _period: u16) -> Option<Self::Volume> {
+        let volume = ORACLE.with(|v| v.borrow().volume(asset_id, BLOCK.with(|v| *v.borrow())));
         Some(volume)
     }
 
-    fn asset_pair_liquidity(pair: (AssetId, AssetId), _period: u16) -> Option<Balance> {
-        let liquidity = ORACLE.with(|v| v.borrow().liquidity(pair, BLOCK.with(|v| *v.borrow())));
+    fn asset_liquidity(asset_id: AssetId, _period: u16) -> Option<Balance> {
+        let liquidity = ORACLE.with(|v| v.borrow().liquidity(asset_id, BLOCK.with(|v| *v.borrow())));
         Some(liquidity)
     }
 }
@@ -250,20 +250,12 @@ pub struct AssetVolume {
 }
 
 impl Volume<Balance> for AssetVolume {
-    fn amount_a_in(&self) -> Balance {
+    fn amount_in(&self) -> Balance {
         self.amount_in
     }
 
-    fn amount_b_in(&self) -> Balance {
-        unimplemented!("no use in tests");
-    }
-
-    fn amount_a_out(&self) -> Balance {
+    fn amount_out(&self) -> Balance {
         self.amount_out
-    }
-
-    fn amount_b_out(&self) -> Balance {
-        unimplemented!("no use in tests");
     }
 }
 
@@ -277,7 +269,11 @@ impl From<(Balance, Balance, Balance)> for AssetVolume {
 }
 
 pub trait CustomOracle {
-    fn volume(&self, _pair: (AssetId, AssetId), block: usize) -> AssetVolume;
+    fn volume(&self, _asset_id: AssetId, block: usize) -> AssetVolume;
 
-    fn liquidity(&self, _pair: (AssetId, AssetId), block: usize) -> Balance;
+    fn liquidity(&self, _asset_id: AssetId, block: usize) -> Balance;
+}
+
+pub(crate) fn retrieve_fee_entry(asset_id: AssetId) -> (Fee, Fee) {
+    <UpdateAndRetrieveFees<Test> as GetByKey<AssetId, (Fee, Fee)>>::get(&asset_id)
 }

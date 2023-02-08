@@ -1,7 +1,6 @@
 use crate::tests::mock::*;
 use crate::tests::oracle::SingleValueOracle;
-use crate::{Fee, UpdateAndRetrieveFees};
-use orml_traits::GetByKey;
+use crate::{Fee};
 use sp_runtime::traits::{Bounded, One};
 use sp_runtime::FixedU128;
 
@@ -22,7 +21,7 @@ fn asset_fee_should_decay_when_volume_has_not_changed() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert_eq!(fee.0, Fee::from_float(0.0195));
         });
@@ -45,7 +44,7 @@ fn protocol_fee_should_decay_when_volume_has_not_changed() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert_eq!(fee.1, Fee::from_float(0.0195));
         });
@@ -68,7 +67,7 @@ fn asset_fee_should_not_decay_below_min_limit_when_volume_has_not_changed() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert_eq!(fee.0, Fee::from_float(0.09));
         });
@@ -91,7 +90,7 @@ fn protocol_fee_should_not_decay_below_min_limit_when_volume_has_not_changed() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert_eq!(fee.1, Fee::from_float(0.09));
         });

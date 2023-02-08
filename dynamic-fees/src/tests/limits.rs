@@ -1,7 +1,6 @@
 use crate::tests::mock::*;
 use crate::tests::oracle::SingleValueOracle;
-use crate::{Fee, UpdateAndRetrieveFees};
-use orml_traits::GetByKey;
+use crate::{Fee};
 use sp_runtime::traits::{Bounded, One, Zero};
 use sp_runtime::FixedU128;
 
@@ -22,7 +21,7 @@ fn asset_fee_should_not_exceed_max_limit_when_volume_out_increased() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert!(fee.0 > initial_fee);
 
@@ -47,7 +46,7 @@ fn asset_fee_should_not_fall_below_min_limit_when_volume_in_increased() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert!(fee.0 < initial_fee);
 
@@ -72,7 +71,7 @@ fn protocol_fee_should_not_exceed_max_limit_when_volume_in_increased() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert!(fee.1 > initial_fee);
 
@@ -97,7 +96,7 @@ fn protocol_fee_should_not_fall_bellow_min_limit_when_volume_out_increased() {
         .execute_with(|| {
             System::set_block_number(1);
 
-            let fee = <UpdateAndRetrieveFees<Test> as GetByKey<(AssetId, AssetId), (Fee, Fee)>>::get(&(HDX, LRNA));
+            let fee = retrieve_fee_entry(HDX);
 
             assert!(fee.1 < initial_fee);
 

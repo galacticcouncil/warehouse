@@ -25,28 +25,16 @@ use sp_runtime::{FixedU128, Permill};
 mod math;
 #[cfg(test)]
 mod tests;
+pub mod traits;
 
-// Re-export pallet items so that they can be accessed from the crate namespace.
-use crate::math::{recalculate_asset_fee, recalculate_protocol_fee, AssetVolume, FeeParams};
 pub use pallet::*;
 
+use crate::math::{recalculate_asset_fee, recalculate_protocol_fee, AssetVolume, FeeParams};
+use crate::traits::{Volume, VolumeProvider};
+
+// Represents fee types used in the implementation. TODO: consider making it generic as pallet's config ?
 type Fee = Permill;
 type Balance = u128;
-
-pub trait Volume<Balance> {
-    fn amount_a_in(&self) -> Balance;
-    fn amount_b_in(&self) -> Balance;
-    fn amount_a_out(&self) -> Balance;
-    fn amount_b_out(&self) -> Balance;
-}
-
-pub trait VolumeProvider<AssetId, Balance, Period> {
-    type Volume: Volume<Balance>;
-
-    fn asset_pair_volume(pair: (AssetId, AssetId), period: Period) -> Option<Self::Volume>;
-
-    fn asset_pair_liquidity(pair: (AssetId, AssetId), period: Period) -> Option<Balance>;
-}
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -54,6 +42,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::BlockNumberFor;
     use sp_runtime::traits::{BlockNumberProvider, Zero};
+    use crate::traits::VolumeProvider;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -141,10 +130,10 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn update_fee(pair: (T::AssetId, T::AssetId)) -> (Fee, Fee) {
+    fn update_fee(asset_id: T::AssetId) -> (Fee, Fee) {
         let block_number = T::BlockNumberProvider::current_block_number();
 
-        let (current_fee, current_protocol_fee, last_block) = Self::asset_fee(pair.0).unwrap_or((
+        let (current_fee, current_protocol_fee, last_block) = Self::asset_fee(asset_id).unwrap_or((
             T::AssetMinimumFee::get(),
             T::ProtocolMinimumFee::get(),
             T::BlockNumber::default(),
@@ -155,17 +144,17 @@ impl<T: Config> Pallet<T> {
 
         // Update only if it was not yet updated in this block
         if block_number != last_block {
-            let Some(volume) = T::Oracle::asset_pair_volume(pair, T::SelectedPeriod::get()) else{
+            let Some(volume) = T::Oracle::asset_volume(asset_id, T::SelectedPeriod::get()) else{
                 return (current_fee, current_protocol_fee);
             };
-            let Some(liquidity) = T::Oracle::asset_pair_liquidity(pair, T::SelectedPeriod::get()) else{
+            let Some(liquidity) = T::Oracle::asset_liquidity(asset_id, T::SelectedPeriod::get()) else{
                 return (current_fee, current_protocol_fee);
             };
 
             let f = recalculate_asset_fee(
                 AssetVolume {
-                    amount_in: volume.amount_a_in(),
-                    amount_out: volume.amount_a_out(),
+                    amount_in: volume.amount_in(),
+                    amount_out: volume.amount_out(),
                     liquidity,
                 },
                 current_fee,
@@ -174,8 +163,8 @@ impl<T: Config> Pallet<T> {
             );
             let protocol_fee = recalculate_protocol_fee(
                 AssetVolume {
-                    amount_in: volume.amount_a_in(),
-                    amount_out: volume.amount_a_out(),
+                    amount_in: volume.amount_in(),
+                    amount_out: volume.amount_out(),
                     liquidity,
                 },
                 current_protocol_fee,
@@ -183,7 +172,7 @@ impl<T: Config> Pallet<T> {
                 Self::protocol_fee_params(),
             );
 
-            AssetFee::<T>::insert(pair.0, (f, protocol_fee, block_number));
+            AssetFee::<T>::insert(asset_id, (f, protocol_fee, block_number));
             (f, protocol_fee)
         } else {
             (current_fee, current_protocol_fee)
@@ -211,8 +200,8 @@ impl<T: Config> Pallet<T> {
 
 pub struct UpdateAndRetrieveFees<T: Config>(sp_std::marker::PhantomData<T>);
 
-impl<T: Config> GetByKey<(T::AssetId, T::AssetId), (Fee, Fee)> for UpdateAndRetrieveFees<T> {
-    fn get(k: &(T::AssetId, T::AssetId)) -> (Fee, Fee) {
+impl<T: Config> GetByKey<T::AssetId, (Fee, Fee)> for UpdateAndRetrieveFees<T> {
+    fn get(k: &T::AssetId) -> (Fee, Fee) {
         Pallet::<T>::update_fee(*k)
     }
 }

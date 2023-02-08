@@ -77,17 +77,13 @@ where
         (params.decay.saturating_sub(a_x), true)
     };
 
-    let fee_plus = if neg {
-        FixedU128::from(previous_fee)
-            .saturating_sub(delta_f)
-            .clamp(FixedU128::from(params.min_fee), FixedU128::from(params.max_fee))
+    if neg {
+        FixedU128::from(previous_fee).saturating_sub(delta_f)
     } else {
-        FixedU128::from(previous_fee)
-            .saturating_add(delta_f)
-            .clamp(FixedU128::from(params.min_fee), FixedU128::from(params.max_fee))
-    };
-
-    Fee::from_rational(fee_plus.into_inner(), FixedU128::DIV)
+        FixedU128::from(previous_fee).saturating_add(delta_f)
+    }
+    .clamp(FixedU128::from(params.min_fee), FixedU128::from(params.max_fee))
+    .into_clamped_perthing()
 }
 
 pub fn recalculate_asset_fee<Fee: PerThing>(

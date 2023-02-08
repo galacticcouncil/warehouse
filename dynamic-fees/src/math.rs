@@ -1,7 +1,7 @@
 use crate::math::NetVolumeDirection::*;
 use crate::Balance;
 use sp_runtime::traits::{Saturating, Zero};
-use sp_runtime::{FixedPointNumber, FixedPointOperand, FixedU128, PerThing};
+use sp_runtime::{FixedPointOperand, FixedU128, PerThing};
 
 pub struct AssetVolume {
     pub amount_in: Balance,
@@ -48,17 +48,18 @@ where
     <Fee as PerThing>::Inner: FixedPointOperand,
 {
     // Adjust previous fee which may not have been calculated in previous block
-    let previous_fee = if last_block_diff > 1 {
+    let fixed_previous_fee = if last_block_diff > 1 {
         let decaying = params
             .decay
             .saturating_mul(FixedU128::from(last_block_diff.saturating_sub(1)));
         let fee = FixedU128::from(previous_fee);
-        Fee::from_rational(fee.saturating_sub(decaying).into_inner(), FixedU128::DIV).max(params.min_fee)
+        fee.saturating_sub(decaying).max(params.min_fee.into())
     } else {
-        previous_fee
+        previous_fee.into()
     };
 
-    // x = (V0 - Vi) / L
+    // 1. if asset fee, direction OutIn : x = (Vo - Vi) / L
+    // 2. if protocol fee, direction InOut: x = (Vi - Vo) / L
     let (x, x_neg) = if !volume.liquidity.is_zero() {
         let (diff, neg) = volume.net_volume(direction);
         (FixedU128::from_rational(diff, volume.liquidity), neg)
@@ -78,12 +79,12 @@ where
     };
 
     if neg {
-        FixedU128::from(previous_fee).saturating_sub(delta_f)
+        fixed_previous_fee.saturating_sub(delta_f)
     } else {
-        FixedU128::from(previous_fee).saturating_add(delta_f)
+        fixed_previous_fee.saturating_add(delta_f)
     }
-    .clamp(FixedU128::from(params.min_fee), FixedU128::from(params.max_fee))
-    .into_clamped_perthing()
+    .into_clamped_perthing::<Fee>()
+    .clamp(params.min_fee, params.max_fee)
 }
 
 pub fn recalculate_asset_fee<Fee: PerThing>(

@@ -47,12 +47,16 @@ fn recalculate_fee<Fee: PerThing>(
 where
     <Fee as PerThing>::Inner: FixedPointOperand,
 {
-    let decaying = params
-        .decay
-        .saturating_mul(FixedU128::from(last_block_diff.saturating_sub(1)));
-    let fee = FixedU128::from(previous_fee);
-    let s = Fee::from_rational(fee.saturating_sub(decaying).into_inner(), FixedU128::DIV);
-    let previous_fee = s.max(params.min_fee);
+    // Adjust previous fee which may not have been calculated in previous block
+    let previous_fee = if last_block_diff > 1 {
+        let decaying = params
+            .decay
+            .saturating_mul(FixedU128::from(last_block_diff.saturating_sub(1)));
+        let fee = FixedU128::from(previous_fee);
+        Fee::from_rational(fee.saturating_sub(decaying).into_inner(), FixedU128::DIV).max(params.min_fee)
+    } else {
+        previous_fee
+    };
 
     // x = (V0 - Vi) / L
     let (x, x_neg) = if volume.liquidity != Balance::zero() {
@@ -64,6 +68,7 @@ where
 
     let a_x = params.amplification.saturating_mul(x);
 
+    // Work out fee adjustment taking into account possible negative result
     let (delta_f, neg) = if x_neg {
         (a_x.saturating_add(params.decay), true)
     } else if a_x > params.decay {
@@ -72,19 +77,19 @@ where
         (params.decay.saturating_sub(a_x), true)
     };
 
-    let left = if neg {
+    let fee_plus = if neg {
         FixedU128::from(previous_fee)
             .saturating_sub(delta_f)
             .max(FixedU128::from(params.min_fee))
+            .min(FixedU128::from(params.max_fee))
     } else {
         FixedU128::from(previous_fee)
             .saturating_add(delta_f)
             .max(FixedU128::from(params.min_fee))
+            .min(FixedU128::from(params.max_fee))
     };
 
-    let f_plus = left.min(FixedU128::from(params.max_fee));
-
-    Fee::from_rational(f_plus.into_inner(), FixedU128::DIV)
+    Fee::from_rational(fee_plus.into_inner(), FixedU128::DIV)
 }
 
 pub fn recalculate_asset_fee<Fee: PerThing>(

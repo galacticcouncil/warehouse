@@ -77,7 +77,7 @@ fn create_pool_should_store_assets_correctly_when_input_is_not_sorted() {
     let asset_d: AssetId = 4;
     let pool_id: AssetId = 100;
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
+        .with_endowed_accounts(vec![(ALICE, asset_a, 200 * ONE), (ALICE, asset_b, 200 * ONE)])
         .with_registered_asset("pool".as_bytes().to_vec(), pool_id)
         .with_registered_asset("one".as_bytes().to_vec(), asset_a)
         .with_registered_asset("two".as_bytes().to_vec(), asset_b)
@@ -179,9 +179,10 @@ fn create_pool_should_fail_when_share_asset_is_among_assets() {
 
 #[test]
 fn create_pool_should_fail_when_asset_is_not_registered() {
+    let pool_id: AssetId = 100;
     ExtBuilder::default()
         .with_registered_asset("one".as_bytes().to_vec(), 1000)
-        .with_registered_asset("pool".as_bytes().to_vec(), 100)
+        .with_registered_asset("pool".as_bytes().to_vec(), pool_id)
         .build()
         .execute_with(|| {
             let registered: AssetId = 1000;
@@ -191,7 +192,7 @@ fn create_pool_should_fail_when_asset_is_not_registered() {
             assert_noop!(
                 Stableswap::create_pool(
                     Origin::signed(ALICE),
-                    100u32,
+                    pool_id,
                     vec![not_registered, registered],
                     amplification,
                     Permill::from_percent(0),
@@ -203,7 +204,7 @@ fn create_pool_should_fail_when_asset_is_not_registered() {
             assert_noop!(
                 Stableswap::create_pool(
                     Origin::signed(ALICE),
-                    100u32,
+                    pool_id,
                     vec![registered, not_registered],
                     amplification,
                     Permill::from_percent(0),
@@ -216,20 +217,21 @@ fn create_pool_should_fail_when_asset_is_not_registered() {
 
 #[test]
 fn create_pool_should_when_same_pool_already_exists() {
+    let asset_a: AssetId = 1;
+    let asset_b: AssetId = 2;
+    let pool_id: AssetId = 100;
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
-        .with_registered_asset("pool".as_bytes().to_vec(), 100)
-        .with_registered_asset("one".as_bytes().to_vec(), 1)
-        .with_registered_asset("two".as_bytes().to_vec(), 2)
+        .with_endowed_accounts(vec![(ALICE, asset_a, 200 * ONE), (ALICE, asset_b, 200 * ONE)])
+        .with_registered_asset("pool".as_bytes().to_vec(), pool_id)
+        .with_registered_asset("one".as_bytes().to_vec(), asset_a)
+        .with_registered_asset("two".as_bytes().to_vec(), asset_b)
         .build()
         .execute_with(|| {
-            let asset_a: AssetId = 1;
-            let asset_b: AssetId = 2;
             let amplification: u16 = 100;
 
             assert_ok!(Stableswap::create_pool(
                 Origin::signed(ALICE),
-                100u32,
+                pool_id,
                 vec![asset_a, asset_b],
                 amplification,
                 Permill::from_percent(0),
@@ -239,7 +241,7 @@ fn create_pool_should_when_same_pool_already_exists() {
             assert_noop!(
                 Stableswap::create_pool(
                     Origin::signed(ALICE),
-                    100u32,
+                    pool_id,
                     vec![asset_a, asset_b],
                     amplification,
                     Permill::from_percent(0),
@@ -252,16 +254,16 @@ fn create_pool_should_when_same_pool_already_exists() {
 
 #[test]
 fn create_pool_should_fail_when_amplification_is_incorrect() {
+    let asset_a: AssetId = 1000;
+    let asset_b: AssetId = 2000;
     let pool_id: AssetId = 100;
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, 1000, 200 * ONE), (ALICE, 2000, 200 * ONE)])
+        .with_endowed_accounts(vec![(ALICE, asset_a, 200 * ONE), (ALICE, asset_b, 200 * ONE)])
         .with_registered_asset("pool".as_bytes().to_vec(), pool_id)
-        .with_registered_asset("one".as_bytes().to_vec(), 1000)
-        .with_registered_asset("two".as_bytes().to_vec(), 2000)
+        .with_registered_asset("one".as_bytes().to_vec(), asset_a)
+        .with_registered_asset("two".as_bytes().to_vec(), asset_b)
         .build()
         .execute_with(|| {
-            let asset_a: AssetId = 1000;
-            let asset_b: AssetId = 2000;
             let amplification_min: u16 = 1;
             let amplification_max: u16 = 10_001;
 

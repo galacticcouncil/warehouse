@@ -43,7 +43,7 @@
 extern crate core;
 
 use frame_support::pallet_prelude::{DispatchResult, Get};
-use frame_support::{ensure, transactional};
+use frame_support::{ensure, require_transactional, transactional};
 use hydradx_traits::{AccountIdFor, Registry};
 use sp_runtime::traits::Zero;
 use sp_runtime::{ArithmeticError, DispatchError, Permill};
@@ -293,6 +293,7 @@ pub mod pallet {
         ///
         /// Parameters:
         /// - `origin`: Must be T::AuthorityOrigin
+        /// - `share_asset`: Preregisted share asset identifier
         /// - `assets`: List of Asset ids
         /// - `amplification`: Pool amplification
         /// - `trade_fee`: trade fee to be applied in sell/buy trades
@@ -703,6 +704,7 @@ impl<T: Config> Pallet<T> {
         Pools::<T>::get(pool_id).ok_or_else(|| Error::<T>::PoolNotFound.into())
     }
 
+    #[require_transactional]
     pub fn do_create_pool(
         share_asset: T::AssetId,
         assets: &[T::AssetId],
@@ -744,6 +746,7 @@ impl<T: Config> Pallet<T> {
         Ok(share_asset)
     }
 
+    #[require_transactional]
     pub fn add_asset_to_existing_pool(pool_id: T::AssetId, asset_id: T::AssetId) -> DispatchResult {
         ensure!(T::AssetRegistry::exists(asset_id), Error::<T>::AssetNotRegistered);
 
@@ -775,6 +778,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
+    #[require_transactional]
     pub fn move_liquidity_to_pool(
         from: &T::AccountId,
         pool_id: T::AssetId,
@@ -792,6 +796,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    #[require_transactional]
     pub fn deposit_shares(who: &T::AccountId, pool_id: T::AssetId, amount: Balance) -> DispatchResult {
         ensure!(!amount.is_zero(), Error::<T>::InvalidAssetAmount);
         let current_share_balance = T::Currency::free_balance(pool_id, who);
@@ -804,6 +809,7 @@ impl<T: Config> Pallet<T> {
         T::Currency::deposit(pool_id, who, amount)
     }
 
+    #[require_transactional]
     pub fn do_add_liquidity(
         who: &T::AccountId,
         pool_id: T::AssetId,

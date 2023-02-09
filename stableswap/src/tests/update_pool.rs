@@ -11,7 +11,7 @@ fn update_pool_should_work_when_all_parames_are_updated() {
     let pool_id: AssetId = 100;
 
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
+        .with_endowed_accounts(vec![(ALICE, asset_a, 200 * ONE), (ALICE, asset_b, 200 * ONE)])
         .with_registered_asset("pool".as_bytes().to_vec(), pool_id)
         .with_registered_asset("one".as_bytes().to_vec(), asset_a)
         .with_registered_asset("two".as_bytes().to_vec(), asset_b)
@@ -53,7 +53,7 @@ fn update_pool_should_work_when_only_amplification_is_updated() {
     let pool_id: AssetId = 100;
 
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
+        .with_endowed_accounts(vec![(ALICE, asset_a, 200 * ONE), (ALICE, asset_b, 200 * ONE)])
         .with_registered_asset("pool".as_bytes().to_vec(), pool_id)
         .with_registered_asset("one".as_bytes().to_vec(), asset_a)
         .with_registered_asset("two".as_bytes().to_vec(), asset_b)
@@ -95,7 +95,7 @@ fn update_pool_should_work_when_only_trade_fee_is_updated() {
     let pool_id: AssetId = 100;
 
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
+        .with_endowed_accounts(vec![(ALICE, asset_a, 200 * ONE), (ALICE, asset_b, 200 * ONE)])
         .with_registered_asset("pool".as_bytes().to_vec(), pool_id)
         .with_registered_asset("one".as_bytes().to_vec(), asset_a)
         .with_registered_asset("two".as_bytes().to_vec(), asset_b)
@@ -137,7 +137,7 @@ fn update_pool_should_work_when_only_withdraw_fee_is_updated() {
     let pool_id: AssetId = 100;
 
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
+        .with_endowed_accounts(vec![(ALICE, asset_a, 200 * ONE), (ALICE, asset_b, 200 * ONE)])
         .with_registered_asset("pool".as_bytes().to_vec(), pool_id)
         .with_registered_asset("one".as_bytes().to_vec(), asset_a)
         .with_registered_asset("two".as_bytes().to_vec(), asset_b)
@@ -179,7 +179,7 @@ fn update_pool_should_work_when_only_fees_is_updated() {
     let pool_id: AssetId = 100;
 
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
+        .with_endowed_accounts(vec![(ALICE, asset_a, 200 * ONE), (ALICE, asset_b, 200 * ONE)])
         .with_registered_asset("pool".as_bytes().to_vec(), pool_id)
         .with_registered_asset("one".as_bytes().to_vec(), asset_a)
         .with_registered_asset("two".as_bytes().to_vec(), asset_b)
@@ -221,7 +221,7 @@ fn update_pool_should_fail_when_nothing_is_to_update() {
     let pool_id: AssetId = 100;
 
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
+        .with_endowed_accounts(vec![(ALICE, asset_a, 200 * ONE), (ALICE, asset_b, 200 * ONE)])
         .with_registered_asset("pool".as_bytes().to_vec(), pool_id)
         .with_registered_asset("one".as_bytes().to_vec(), asset_a)
         .with_registered_asset("two".as_bytes().to_vec(), asset_b)
@@ -259,7 +259,7 @@ fn update_pool_should_fail_when_pool_does_not_exists() {
     let asset_b: AssetId = 2;
 
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
+        .with_endowed_accounts(vec![(ALICE, asset_a, 200 * ONE), (ALICE, asset_b, 200 * ONE)])
         .with_registered_asset("one".as_bytes().to_vec(), asset_a)
         .with_registered_asset("two".as_bytes().to_vec(), asset_b)
         .build()
@@ -280,7 +280,7 @@ fn update_pool_should_fail_when_amplification_is_outside_allowed_range() {
     let pool_id: AssetId = 100;
 
     ExtBuilder::default()
-        .with_endowed_accounts(vec![(ALICE, 1, 200 * ONE), (ALICE, 2, 200 * ONE)])
+        .with_endowed_accounts(vec![(ALICE, asset_a, 200 * ONE), (ALICE, asset_b, 200 * ONE)])
         .with_registered_asset("pool".as_bytes().to_vec(), pool_id)
         .with_registered_asset("one".as_bytes().to_vec(), asset_a)
         .with_registered_asset("two".as_bytes().to_vec(), asset_b)

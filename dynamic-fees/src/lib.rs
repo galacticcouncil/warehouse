@@ -20,17 +20,19 @@
 use frame_support::traits::Get;
 use orml_traits::GetByKey;
 use sp_runtime::traits::{BlockNumberProvider, Saturating};
-use sp_runtime::{FixedPointOperand, FixedU128, PerThing};
+use sp_runtime::{FixedPointOperand, PerThing};
 
 mod math;
 #[cfg(test)]
 mod tests;
 pub mod traits;
+pub mod types;
 
 pub use pallet::*;
 
-use crate::math::{recalculate_asset_fee, recalculate_protocol_fee, AssetVolume, FeeParams};
+use crate::math::{recalculate_asset_fee, recalculate_protocol_fee, OracleEntry};
 use crate::traits::{Volume, VolumeProvider};
+use crate::types::FeeParams;
 
 type Balance = u128;
 
@@ -75,37 +77,11 @@ pub mod pallet {
         #[pallet::constant]
         type SelectedPeriod: Get<Self::OraclePeriod>;
 
-        /// Asset fee decay parameter
         #[pallet::constant]
-        type AssetFeeDecay: Get<FixedU128>;
+        type AssetFeeParameters: Get<FeeParams<Self::Fee>>;
 
-        /// Asset fee amplification parameter
         #[pallet::constant]
-        type AssetFeeAmplification: Get<FixedU128>;
-
-        /// Minimum asset fee
-        #[pallet::constant]
-        type AssetMinimumFee: Get<Self::Fee>;
-
-        /// Maximum asset fee
-        #[pallet::constant]
-        type AssetMaximumFee: Get<Self::Fee>;
-
-        /// Protocol fee decay parameter
-        #[pallet::constant]
-        type ProtocolFeeDecay: Get<FixedU128>;
-
-        /// Protocol fee amplification
-        #[pallet::constant]
-        type ProtocolFeeAmplification: Get<FixedU128>;
-
-        /// Minimum protocol fee
-        #[pallet::constant]
-        type ProtocolMinimumFee: Get<Self::Fee>;
-
-        /// Maximum protocol fee
-        #[pallet::constant]
-        type ProtocolMaximumFee: Get<Self::Fee>;
+        type ProtocolFeeParameters: Get<FeeParams<Self::Fee>>;
     }
 
     #[pallet::event]
@@ -120,20 +96,22 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn integrity_test() {
+            let asset_fee_params = T::AssetFeeParameters::get();
+            let protocol_fee_params = T::ProtocolFeeParameters::get();
             assert!(
-                T::AssetMinimumFee::get() <= T::AssetMaximumFee::get(),
+                asset_fee_params.min_fee <= asset_fee_params.max_fee,
                 "Asset fee min > asset fee max."
             );
             assert!(
-                !T::AssetFeeAmplification::get().is_zero(),
+                !asset_fee_params.amplification.is_zero(),
                 "Asset fee amplification is 0."
             );
             assert!(
-                T::ProtocolMinimumFee::get() <= T::ProtocolMaximumFee::get(),
+                protocol_fee_params.min_fee <= protocol_fee_params.max_fee,
                 "Protocol fee min > protocol fee max."
             );
             assert!(
-                !T::ProtocolFeeAmplification::get().is_zero(),
+                !protocol_fee_params.amplification.is_zero(),
                 "Protocol fee amplification is 0."
             );
         }
@@ -147,9 +125,12 @@ where
     fn update_fee(asset_id: T::AssetId) -> (T::Fee, T::Fee) {
         let block_number = T::BlockNumberProvider::current_block_number();
 
+        let asset_fee_params = T::AssetFeeParameters::get();
+        let protocol_fee_params = T::ProtocolFeeParameters::get();
+
         let (current_fee, current_protocol_fee, last_block) = Self::asset_fee(asset_id).unwrap_or((
-            T::AssetMinimumFee::get(),
-            T::ProtocolMinimumFee::get(),
+            asset_fee_params.min_fee,
+            protocol_fee_params.min_fee,
             T::BlockNumber::default(),
         ));
 
@@ -167,48 +148,30 @@ where
             };
 
             let asset_fee = recalculate_asset_fee(
-                AssetVolume {
+                OracleEntry {
                     amount_in: volume.amount_in(),
                     amount_out: volume.amount_out(),
                     liquidity,
                 },
                 current_fee,
                 delta_blocks,
-                Self::asset_fee_params(),
+                asset_fee_params,
             );
             let protocol_fee = recalculate_protocol_fee(
-                AssetVolume {
+                OracleEntry {
                     amount_in: volume.amount_in(),
                     amount_out: volume.amount_out(),
                     liquidity,
                 },
                 current_protocol_fee,
                 delta_blocks,
-                Self::protocol_fee_params(),
+                protocol_fee_params,
             );
 
             AssetFee::<T>::insert(asset_id, (asset_fee, protocol_fee, block_number));
             (asset_fee, protocol_fee)
         } else {
             (current_fee, current_protocol_fee)
-        }
-    }
-
-    fn asset_fee_params() -> FeeParams<T::Fee> {
-        FeeParams {
-            max_fee: T::AssetMaximumFee::get(),
-            min_fee: T::AssetMinimumFee::get(),
-            decay: T::AssetFeeDecay::get(),
-            amplification: T::AssetFeeAmplification::get(),
-        }
-    }
-
-    fn protocol_fee_params() -> FeeParams<T::Fee> {
-        FeeParams {
-            max_fee: T::ProtocolMaximumFee::get(),
-            min_fee: T::ProtocolMinimumFee::get(),
-            decay: T::ProtocolFeeDecay::get(),
-            amplification: T::ProtocolFeeAmplification::get(),
         }
     }
 }

@@ -38,6 +38,7 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 use crate::tests::oracle::Oracle;
+use crate::types::FeeParams;
 use sp_runtime::traits::{One, Zero};
 
 pub type Balance = u128;
@@ -54,15 +55,17 @@ thread_local! {
     pub static PAIRS: RefCell<Vec<(AssetId, AssetId)>> = RefCell::new(vec![]);
     pub static ORACLE: RefCell<Box<dyn CustomOracle>> = RefCell::new(Box::new(Oracle::new()));
     pub static BLOCK: RefCell<usize> = RefCell::new(0);
-    pub static ASSET_MIN_FEE: RefCell<Fee> = RefCell::new(Fee::from_percent(1));
-    pub static ASSET_MAX_FEE: RefCell<Fee> = RefCell::new(Fee::from_percent(40));
-    pub static ASSET_FEE_DECAY: RefCell<FixedU128> = RefCell::new(FixedU128::zero());
-    pub static ASSET_FEE_AMPLIFICATION: RefCell<FixedU128> = RefCell::new(FixedU128::one());
+    pub static ASSET_FEE_PARAMS: RefCell<FeeParams<Fee>> = RefCell::new(fee_params_default());
+    pub static PROTOCOL_FEE_PARAMS: RefCell<FeeParams<Fee>> = RefCell::new(fee_params_default());
+}
 
-    pub static PROTOCOL_MIN_FEE: RefCell<Fee> = RefCell::new(Fee::from_percent(1));
-    pub static PROTOCOL_MAX_FEE: RefCell<Fee> = RefCell::new(Fee::from_percent(40));
-    pub static PROTOCOL_FEE_DECAY: RefCell<FixedU128> = RefCell::new(FixedU128::zero());
-    pub static PROTOCOL_FEE_AMPLIFICATION: RefCell<FixedU128> = RefCell::new(FixedU128::one());
+fn fee_params_default() -> FeeParams<Fee> {
+    FeeParams {
+        min_fee: Fee::from_percent(1),
+        max_fee: Fee::from_percent(40),
+        decay: FixedU128::zero(),
+        amplification: FixedU128::one(),
+    }
 }
 
 construct_runtime!(
@@ -105,34 +108,20 @@ impl frame_system::Config for Test {
 
 parameter_types! {
     pub const SelectedPeriod: u16 = 300;
-    //pub Decay: FixedU128= FixedU128::from_float(0.0005);
-    pub AssetFeeDecay: FixedU128= ASSET_FEE_DECAY.with(|v| *v.borrow());
-    pub AssetFeeAmplification: FixedU128= ASSET_FEE_AMPLIFICATION.with(|v| *v.borrow());
-    pub AssetMinimumFee: Fee = ASSET_MIN_FEE.with(|v| *v.borrow());
-    pub AssetMaximumFee: Fee = ASSET_MAX_FEE.with(|v| *v.borrow());
-
-    pub ProtocolFeeDecay: FixedU128= PROTOCOL_FEE_DECAY.with(|v| *v.borrow());
-    pub ProtocolFeeAmplification: FixedU128= PROTOCOL_FEE_AMPLIFICATION.with(|v| *v.borrow());
-    pub ProtocolMinimumFee: Fee = PROTOCOL_MIN_FEE.with(|v| *v.borrow());
-    pub ProtocolMaximumFee: Fee = PROTOCOL_MAX_FEE.with(|v| *v.borrow());
+    pub AssetFeeParams: FeeParams<Fee>= ASSET_FEE_PARAMS.with(|v| *v.borrow());
+    pub ProtocolFeeParams: FeeParams<Fee>= PROTOCOL_FEE_PARAMS.with(|v| *v.borrow());
 }
 
 impl Config for Test {
     type Event = Event;
+    type Fee = Fee;
     type AssetId = AssetId;
     type OraclePeriod = u16;
     type BlockNumberProvider = System;
     type Oracle = OracleProvider;
     type SelectedPeriod = SelectedPeriod;
-    type AssetFeeDecay = AssetFeeDecay;
-    type AssetFeeAmplification = AssetFeeAmplification;
-    type AssetMinimumFee = AssetMinimumFee;
-    type AssetMaximumFee = AssetMaximumFee;
-    type ProtocolFeeDecay = ProtocolFeeDecay;
-    type ProtocolFeeAmplification = ProtocolFeeAmplification;
-    type ProtocolMinimumFee = ProtocolMinimumFee;
-    type ProtocolMaximumFee = ProtocolMaximumFee;
-    type Fee = Fee;
+    type AssetFeeParameters = AssetFeeParams;
+    type ProtocolFeeParameters = ProtocolFeeParams;
 }
 
 pub struct ExtBuilder {
@@ -141,18 +130,6 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        ASSET_MIN_FEE.with(|v| {
-            *v.borrow_mut() = Fee::from_percent(1);
-        });
-        ASSET_MAX_FEE.with(|v| {
-            *v.borrow_mut() = Fee::from_percent(40);
-        });
-        ASSET_FEE_DECAY.with(|v| {
-            *v.borrow_mut() = FixedU128::zero();
-        });
-        ASSET_FEE_AMPLIFICATION.with(|v| {
-            *v.borrow_mut() = FixedU128::one();
-        });
         ORACLE.with(|v| {
             *v.borrow_mut() = Box::new(Oracle::new());
         });
@@ -165,17 +142,13 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
     pub fn with_asset_fee_params(self, min_fee: Fee, max_fee: Fee, decay: FixedU128, amplification: FixedU128) -> Self {
-        ASSET_MIN_FEE.with(|v| {
-            *v.borrow_mut() = min_fee;
-        });
-        ASSET_MAX_FEE.with(|v| {
-            *v.borrow_mut() = max_fee;
-        });
-        ASSET_FEE_DECAY.with(|v| {
-            *v.borrow_mut() = decay;
-        });
-        ASSET_FEE_AMPLIFICATION.with(|v| {
-            *v.borrow_mut() = amplification;
+        ASSET_FEE_PARAMS.with(|v| {
+            *v.borrow_mut() = FeeParams {
+                max_fee,
+                min_fee,
+                decay,
+                amplification,
+            }
         });
 
         self
@@ -188,17 +161,13 @@ impl ExtBuilder {
         decay: FixedU128,
         amplification: FixedU128,
     ) -> Self {
-        PROTOCOL_MIN_FEE.with(|v| {
-            *v.borrow_mut() = min_fee;
-        });
-        PROTOCOL_MAX_FEE.with(|v| {
-            *v.borrow_mut() = max_fee;
-        });
-        PROTOCOL_FEE_DECAY.with(|v| {
-            *v.borrow_mut() = decay;
-        });
-        PROTOCOL_FEE_AMPLIFICATION.with(|v| {
-            *v.borrow_mut() = amplification;
+        PROTOCOL_FEE_PARAMS.with(|v| {
+            *v.borrow_mut() = FeeParams {
+                max_fee,
+                min_fee,
+                decay,
+                amplification,
+            }
         });
 
         self

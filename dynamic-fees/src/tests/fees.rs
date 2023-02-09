@@ -1,5 +1,7 @@
 use crate::tests::mock::*;
 use crate::tests::oracle::SingleValueOracle;
+use sp_runtime::traits::{One, Zero};
+use sp_runtime::FixedU128;
 
 #[test]
 fn asset_fee_should_increase_when_volume_out_increased() {
@@ -8,6 +10,12 @@ fn asset_fee_should_increase_when_volume_out_increased() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
         .with_initial_fees(initial_fee, Fee::zero(), 0)
+        .with_asset_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -27,6 +35,12 @@ fn asset_fee_should_decrease_when_volume_in_increased() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(2 * ONE, ONE, 50 * ONE))
         .with_initial_fees(initial_fee, Fee::zero(), 0)
+        .with_asset_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -46,6 +60,12 @@ fn asset_fee_should_not_change_when_volume_has_not_changed_and_decay_is_0() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(ONE, ONE, 50 * ONE))
         .with_initial_fees(initial_fee, Fee::zero(), 0)
+        .with_asset_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -63,6 +83,12 @@ fn protocol_fee_should_increase_when_volume_in_increased() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(2 * ONE, ONE, 50 * ONE))
         .with_initial_fees(Fee::zero(), initial_fee, 0)
+        .with_protocol_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -82,6 +108,12 @@ fn protocol_fee_should_decrease_when_volume_out_increased() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
         .with_initial_fees(Fee::zero(), initial_fee, 0)
+        .with_protocol_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -101,6 +133,12 @@ fn protocol_fee_should_not_change_when_volume_has_not_changed_and_decay_is_0() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(ONE, ONE, 50 * ONE))
         .with_initial_fees(initial_fee, initial_fee, 0)
+        .with_protocol_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -118,6 +156,18 @@ fn fees_should_update_correcty_when_volume_in_increased() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(2 * ONE, ONE, 50 * ONE))
         .with_initial_fees(initial_fee, initial_fee, 0)
+        .with_asset_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
+        .with_protocol_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -139,6 +189,18 @@ fn fees_should_decrease_when_volume_out_increased() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
         .with_initial_fees(initial_fee, initial_fee, 0)
+        .with_asset_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
+        .with_protocol_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -160,6 +222,18 @@ fn fees_should_not_change_when_volume_has_not_changed_and_decay_is_0() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(ONE, ONE, 50 * ONE))
         .with_initial_fees(initial_fee, initial_fee, 0)
+        .with_asset_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
+        .with_protocol_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);
@@ -178,6 +252,18 @@ fn fees_should_not_change_when_already_update_within_same_block() {
     ExtBuilder::default()
         .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
         .with_initial_fees(initial_fee, initial_fee, 1)
+        .with_asset_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
+        .with_protocol_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
         .build()
         .execute_with(|| {
             System::set_block_number(1);

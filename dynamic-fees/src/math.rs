@@ -1,15 +1,16 @@
 use crate::math::NetVolumeDirection::*;
+use crate::types::FeeParams;
 use crate::Balance;
 use sp_runtime::traits::{Saturating, Zero};
 use sp_runtime::{FixedPointOperand, FixedU128, PerThing};
 
-pub struct AssetVolume {
+pub struct OracleEntry {
     pub amount_in: Balance,
     pub amount_out: Balance,
     pub liquidity: Balance,
 }
 
-impl AssetVolume {
+impl OracleEntry {
     fn net_volume(&self, direction: NetVolumeDirection) -> (Balance, bool) {
         match direction {
             OutIn => (
@@ -24,13 +25,6 @@ impl AssetVolume {
     }
 }
 
-pub struct FeeParams<Fee> {
-    pub(crate) max_fee: Fee,
-    pub(crate) min_fee: Fee,
-    pub(crate) decay: FixedU128,
-    pub(crate) amplification: FixedU128,
-}
-
 #[derive(PartialEq, Eq, Debug)]
 enum NetVolumeDirection {
     OutIn,
@@ -38,7 +32,7 @@ enum NetVolumeDirection {
 }
 
 fn recalculate_fee<Fee: PerThing>(
-    volume: AssetVolume,
+    volume: OracleEntry,
     previous_fee: Fee,
     last_block_diff: u128,
     params: FeeParams<Fee>,
@@ -89,7 +83,7 @@ where
 }
 
 pub fn recalculate_asset_fee<Fee: PerThing>(
-    volume: AssetVolume,
+    volume: OracleEntry,
     previous_fee: Fee,
     last_block_diff: u128,
     params: FeeParams<Fee>,
@@ -101,7 +95,7 @@ where
 }
 
 pub fn recalculate_protocol_fee<Fee: PerThing>(
-    volume: AssetVolume,
+    volume: OracleEntry,
     previous_fee: Fee,
     last_block_diff: u128,
     params: FeeParams<Fee>,

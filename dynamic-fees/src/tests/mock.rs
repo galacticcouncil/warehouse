@@ -248,3 +248,7 @@ pub trait CustomOracle {
 pub(crate) fn retrieve_fee_entry(asset_id: AssetId) -> (Fee, Fee) {
     <UpdateAndRetrieveFees<Test> as GetByKey<AssetId, (Fee, Fee)>>::get(&asset_id)
 }
+
+pub(crate) fn get_oracle_entry(asset_id: AssetId, block_number: u64) -> AssetVolume {
+    ORACLE.with(|v| v.borrow().volume(asset_id, block_number as usize))
+}

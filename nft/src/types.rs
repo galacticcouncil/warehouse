@@ -48,9 +48,6 @@ pub struct ItemInfo<BoundedVec> {
 pub enum CollectionType {
     Marketplace = 0_isize,
     LiquidityMining = 1_isize,
-    Redeemable = 2_isize,
-    Auction = 3_isize,
-    HydraHeads = 4_isize,
 }
 
 impl Default for CollectionType {

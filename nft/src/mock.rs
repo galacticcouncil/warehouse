@@ -61,17 +61,11 @@ pub struct NftTestPermissions;
 
 impl NftPermission<CollectionType> for NftTestPermissions {
     fn can_create(collection_type: &CollectionType) -> bool {
-        matches!(
-            *collection_type,
-            CollectionType::Marketplace | CollectionType::LiquidityMining | CollectionType::Redeemable
-        )
+        matches!(*collection_type, CollectionType::Marketplace)
     }
 
     fn can_mint(collection_type: &CollectionType) -> bool {
-        matches!(
-            *collection_type,
-            CollectionType::Marketplace | CollectionType::LiquidityMining
-        )
+        matches!(*collection_type, CollectionType::Marketplace)
     }
 
     fn can_transfer(collection_type: &CollectionType) -> bool {
@@ -83,10 +77,7 @@ impl NftPermission<CollectionType> for NftTestPermissions {
     }
 
     fn can_destroy(collection_type: &CollectionType) -> bool {
-        matches!(
-            *collection_type,
-            CollectionType::Marketplace | CollectionType::LiquidityMining
-        )
+        matches!(*collection_type, CollectionType::Marketplace)
     }
 
     fn has_deposit(collection_type: &CollectionType) -> bool {

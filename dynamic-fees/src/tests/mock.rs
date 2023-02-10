@@ -32,7 +32,7 @@ use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    FixedU128, Permill,
+    FixedU128, Perquintill,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -49,7 +49,7 @@ pub const HDX: AssetId = 0;
 
 pub const ONE: Balance = 1_000_000_000_000;
 
-pub(crate) type Fee = Permill;
+pub(crate) type Fee = Perquintill;
 
 thread_local! {
     pub static PAIRS: RefCell<Vec<(AssetId, AssetId)>> = RefCell::new(vec![]);

@@ -5000,6 +5000,7 @@ dependencies = [
  "orml-traits",
  "parity-scale-codec",
  "pretty_assertions",
+ "proptest",
  "scale-info",
  "serde",
  "sp-core",

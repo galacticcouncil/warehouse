@@ -4,6 +4,7 @@ use crate::Balance;
 use sp_runtime::traits::{Saturating, Zero};
 use sp_runtime::{FixedPointOperand, FixedU128, PerThing};
 
+#[derive(Debug, Clone)]
 pub struct OracleEntry {
     pub amount_in: Balance,
     pub amount_out: Balance,

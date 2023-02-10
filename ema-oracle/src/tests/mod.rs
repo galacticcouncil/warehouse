@@ -29,7 +29,7 @@ use pretty_assertions::assert_eq;
 use rug::Rational;
 
 /// Default oracle source for tests.
-const SOURCE: Source = *b"dummysrc";
+pub(crate) const SOURCE: Source = *b"dummysrc";
 
 fn supported_periods() -> BoundedVec<OraclePeriod, ConstU32<MAX_PERIODS>> {
     <Test as crate::Config>::SupportedPeriods::get()

@@ -15,6 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use super::mock::{DOT, HDX};
 use super::*;
 
 use pretty_assertions::assert_eq;
@@ -108,5 +109,42 @@ proptest! {
         let mut start_oracle = start_oracle;
         start_oracle.update_via_ema_with(TenMinutes, &incoming_value);
         prop_assert_eq!(next_oracle, Some(start_oracle));
+    }
+}
+
+use hydra_dx_math::ema::{iterated_balance_ema, iterated_price_ema, iterated_volume_ema};
+
+proptest! {
+    #[test]
+    fn get_entry_equals_iterated_ema(
+        (amount_hdx, amount_dot, liquidity) in (non_zero_amount(), non_zero_amount(), non_zero_amount()),
+    ) {
+        new_test_ext().execute_with(|| -> Result<(), TestCaseError> {
+            System::set_block_number(1);
+            assert_ok!(OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, amount_hdx, amount_dot, liquidity));
+            EmaOracle::on_finalize(1);
+            let oracle_age: u32 = 98;
+            System::set_block_number(u64::from(oracle_age) + 2);
+            let smoothing = into_smoothing(LastBlock);
+            let price = Price::new(amount_hdx, amount_dot);
+            let volume = (amount_hdx, amount_dot, 0, 0);
+            let expected = AggregatedEntry {
+                price: iterated_price_ema(oracle_age, price, price, smoothing),
+                volume: iterated_volume_ema(oracle_age, volume, smoothing).into(),
+                liquidity: iterated_balance_ema(oracle_age, liquidity, liquidity, smoothing),
+                oracle_age: 98,
+            };
+            prop_assert_eq!(EmaOracle::get_entry(HDX, DOT, LastBlock, SOURCE), Ok(expected));
+
+            let smoothing = into_smoothing(TenMinutes);
+            let expected_ten_min = AggregatedEntry {
+                price: iterated_price_ema(oracle_age, price, price, smoothing),
+                volume: iterated_volume_ema(oracle_age, volume, smoothing).into(),
+                liquidity: iterated_balance_ema(oracle_age, liquidity, liquidity, smoothing),
+                oracle_age: 98,
+            };
+            prop_assert_eq!(EmaOracle::get_entry(HDX, DOT, TenMinutes, SOURCE), Ok(expected_ten_min));
+            Ok(())
+        })?;
     }
 }

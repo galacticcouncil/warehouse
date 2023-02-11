@@ -16,7 +16,8 @@ members = [
 	"liquidity-mining",
 	"currencies",
 	"stableswap",
-	"test-utils"
+	"test-utils",
+	"otc"
 ]
 
 resolver = "2"

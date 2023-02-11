@@ -88,10 +88,6 @@ pub mod pallet {
         #[pallet::constant]
         type ExistentialDepositMultiplier: Get<u8>;
 
-        /// Native Asset
-        #[pallet::constant]
-        type NativeAssetId: Get<Self::AssetId>;
-
         /// Weight information for the extrinsics.
         type WeightInfo: WeightInfo;
     }

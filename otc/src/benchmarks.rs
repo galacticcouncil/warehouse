@@ -81,7 +81,7 @@ where
     let token_amount: Balance = 200 * ONE;
 
     for asset in assets.iter() {
-        T::Currency::update_balance(asset.clone().into(), &account_id, token_amount as i128)?;
+        T::Currency::update_balance((*asset).into(), &account_id, token_amount as i128)?;
     }
 
     Ok(account_id)

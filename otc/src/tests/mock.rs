@@ -93,7 +93,6 @@ impl Config for Test {
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type ExistentialDepositMultiplier = ExistentialDepositMultiplier;
-    type NativeAssetId = NativeCurrencyId;
     type WeightInfo = ();
 }
 

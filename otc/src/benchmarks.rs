@@ -2,10 +2,10 @@
 
 use super::*;
 
-use frame_benchmarking::account;
-use frame_benchmarking::benchmarks;
+use frame_benchmarking::{account, benchmarks};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
+use sp_std::vec;
 use hydradx_traits::Registry;
 pub const ONE: Balance = 1_000_000_000_000;
 

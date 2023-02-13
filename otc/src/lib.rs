@@ -216,8 +216,7 @@ pub mod pallet {
                 let remaining_amount_buy = Self::calculate_difference(order.amount_buy, amount)?;
 
                 if remaining_amount_buy > 0 {
-                    let updated_order = Self::update_order(order, remaining_amount_buy);
-                    *order = updated_order;
+                    order.amount_buy = remaining_amount_buy;
 
                     Self::deposit_event(Event::OrderPartiallyFilled {
                         order_id,
@@ -370,18 +369,5 @@ impl<T: Config> Pallet<T> {
         T::Currency::transfer(order.asset_sell, &order.owner, who, amount_receive)?;
 
         Ok(())
-    }
-
-    fn update_order(
-        order: &Order<T::AccountId, T::AssetId>,
-        new_amount_buy: Balance,
-    ) -> Order<T::AccountId, T::AssetId> {
-        Order {
-            owner: order.owner.clone(),
-            asset_buy: order.asset_buy,
-            asset_sell: order.asset_sell,
-            amount_buy: new_amount_buy,
-            partially_fillable: order.partially_fillable,
-        }
     }
 }

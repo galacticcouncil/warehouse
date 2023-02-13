@@ -24,7 +24,7 @@ use pretty_assertions::assert_eq;
 #[test]
 fn partial_fill_order_should_work_when_order_is_partially_fillable() {
     ExtBuilder::default().build().execute_with(|| {
-        let reserve_id = named_reserve_identifier(0);
+        let reserve_id = named_reserve_identifier(1);
 
         // Arrange
         assert_ok!(OTC::place_order(
@@ -45,7 +45,7 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
 
         // Act
         let amount = 5 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount));
+        assert_ok!(OTC::fill_order(Origin::signed(BOB), 1, DAI, amount));
 
         // Assert
         let expected_amount_receive = 25_000_000_000_000_u128;
@@ -70,11 +70,11 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
         assert_eq!(bob_hdx_balance_after, bob_hdx_balance_before + expected_amount_receive);
         assert_eq!(bob_dai_balance_after, bob_dai_balance_before - amount);
 
-        let order = OTC::orders(0).unwrap();
+        let order = OTC::orders(1).unwrap();
         assert_eq!(order.amount_buy, expected_new_amount_buy);
 
         expect_events(vec![Event::OrderPartiallyFilled {
-            order_id: 0,
+            order_id: 1,
             who: BOB,
             amount: 5 * ONE,
             amount_receive: expected_amount_receive,
@@ -86,7 +86,7 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
 #[test]
 fn complete_fill_order_should_work_when_order_is_partially_fillable() {
     ExtBuilder::default().build().execute_with(|| {
-        let reserve_id = named_reserve_identifier(0);
+        let reserve_id = named_reserve_identifier(1);
 
         // Arrange
         assert_ok!(OTC::place_order(
@@ -107,10 +107,10 @@ fn complete_fill_order_should_work_when_order_is_partially_fillable() {
 
         // Act
         let amount = 20 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount));
+        assert_ok!(OTC::fill_order(Origin::signed(BOB), 1, DAI, amount));
 
         // Assert
-        let order = OTC::orders(0);
+        let order = OTC::orders(1);
         assert!(order.is_none());
 
         let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
@@ -133,7 +133,7 @@ fn complete_fill_order_should_work_when_order_is_partially_fillable() {
         assert_eq!(bob_dai_balance_after, bob_dai_balance_before - amount);
 
         expect_events(vec![Event::OrderFilled {
-            order_id: 0,
+            order_id: 1,
             who: BOB,
             amount: 20 * ONE,
         }
@@ -144,7 +144,7 @@ fn complete_fill_order_should_work_when_order_is_partially_fillable() {
 #[test]
 fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
     ExtBuilder::default().build().execute_with(|| {
-        let reserve_id = named_reserve_identifier(0);
+        let reserve_id = named_reserve_identifier(1);
 
         // Arrange
         assert_ok!(OTC::place_order(
@@ -165,10 +165,10 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
 
         // Act
         let amount = 20 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount));
+        assert_ok!(OTC::fill_order(Origin::signed(BOB), 1, DAI, amount));
 
         // Assert
-        let order = OTC::orders(0);
+        let order = OTC::orders(1);
         assert!(order.is_none());
 
         let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
@@ -191,7 +191,7 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
         assert_eq!(bob_dai_balance_after, bob_dai_balance_before - amount);
 
         expect_events(vec![Event::OrderFilled {
-            order_id: 0,
+            order_id: 1,
             who: BOB,
             amount: 20 * ONE,
         }
@@ -202,7 +202,7 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
 #[test]
 fn partial_fill_order_should_throw_error_when_remaining_amounts_are_too_low() {
     ExtBuilder::default().build().execute_with(|| {
-        let reserve_id = named_reserve_identifier(0);
+        let reserve_id = named_reserve_identifier(1);
 
         // Arrange
         assert_ok!(OTC::place_order(
@@ -224,7 +224,7 @@ fn partial_fill_order_should_throw_error_when_remaining_amounts_are_too_low() {
         // Act
         let amount = 16 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
+            OTC::fill_order(Origin::signed(BOB), 1, DAI, amount),
             Error::<Test>::OrderAmountTooSmall
         );
 
@@ -250,7 +250,7 @@ fn partial_fill_order_should_throw_error_when_remaining_amounts_are_too_low() {
 #[test]
 fn partial_fill_order_should_throw_error_when_order_is_not_partially_fillable() {
     ExtBuilder::default().build().execute_with(|| {
-        let reserve_id = named_reserve_identifier(0);
+        let reserve_id = named_reserve_identifier(1);
 
         // Arrange
         assert_ok!(OTC::place_order(
@@ -272,7 +272,7 @@ fn partial_fill_order_should_throw_error_when_order_is_not_partially_fillable() 
         // Act
         let amount = 5 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
+            OTC::fill_order(Origin::signed(BOB), 1, DAI, amount),
             Error::<Test>::OrderNotPartiallyFillable
         );
 
@@ -298,7 +298,7 @@ fn partial_fill_order_should_throw_error_when_order_is_not_partially_fillable() 
 #[test]
 fn fill_order_should_throw_error_when_insufficient_balance() {
     ExtBuilder::default().build().execute_with(|| {
-        let reserve_id = named_reserve_identifier(0);
+        let reserve_id = named_reserve_identifier(1);
 
         // Arrange
         assert_ok!(OTC::place_order(
@@ -320,7 +320,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
         // Act
         let amount = 110 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
+            OTC::fill_order(Origin::signed(BOB), 1, DAI, amount),
             Error::<Test>::InsufficientBalance
         );
 
@@ -346,7 +346,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
 #[test]
 fn fill_order_should_throw_error_when_amount_is_larger_than_order() {
     ExtBuilder::default().build().execute_with(|| {
-        let reserve_id = named_reserve_identifier(0);
+        let reserve_id = named_reserve_identifier(1);
 
         // Arrange
         assert_ok!(OTC::place_order(
@@ -368,7 +368,7 @@ fn fill_order_should_throw_error_when_amount_is_larger_than_order() {
         // Act
         let amount = 30 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
+            OTC::fill_order(Origin::signed(BOB), 1, DAI, amount),
             Error::<Test>::CannotFillMoreThanOrdered
         );
 

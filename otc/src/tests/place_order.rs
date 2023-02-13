@@ -34,7 +34,7 @@ fn place_order_should_work() {
         ));
 
         // Assert
-        let order = OTC::orders(0).unwrap();
+        let order = OTC::orders(1).unwrap();
         assert_eq!(order.owner, ALICE);
         assert_eq!(order.asset_buy, DAI);
         assert_eq!(order.asset_sell, HDX);
@@ -42,7 +42,7 @@ fn place_order_should_work() {
         assert_eq!(order.partially_fillable, true);
 
         expect_events(vec![Event::OrderPlaced {
-            order_id: 0,
+            order_id: 1,
             asset_buy: DAI,
             asset_sell: HDX,
             amount_buy: order.amount_buy,
@@ -51,7 +51,7 @@ fn place_order_should_work() {
         }
         .into()]);
 
-        let reserve_id = named_reserve_identifier(0);
+        let reserve_id = named_reserve_identifier(1);
         assert_eq!(Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE), 100 * ONE);
 
         let next_order_id = OTC::next_order_id();
@@ -82,10 +82,10 @@ fn place_order_should_work_when_user_has_multiple_orders() {
         ));
 
         // Assert
-        let reserve_id_0 = named_reserve_identifier(0);
+        let reserve_id_0 = named_reserve_identifier(1);
         assert_eq!(Tokens::reserved_balance_named(&reserve_id_0, HDX, &ALICE), 100 * ONE);
 
-        let reserve_id_1 = named_reserve_identifier(1);
+        let reserve_id_1 = named_reserve_identifier(2);
         assert_eq!(Tokens::reserved_balance_named(&reserve_id_1, HDX, &ALICE), 50 * ONE);
     });
 }

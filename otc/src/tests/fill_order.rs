@@ -50,8 +50,8 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
         let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
-        let amount_fill = 5 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount_fill));
+        let amount = 5 * ONE;
+        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount));
 
         // Assert
         let expected_amount_receive = 25_000_000_000_000_u128;
@@ -70,11 +70,11 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
             alice_reserved_hdx_balance_after,
             alice_reserved_hdx_balance_before - expected_amount_receive
         );
-        assert_eq!(alice_dai_balance_after, alice_dai_balance_before + amount_fill);
+        assert_eq!(alice_dai_balance_after, alice_dai_balance_before + amount);
 
         // Bob: HDX grows, DAI decreases
         assert_eq!(bob_hdx_balance_after, bob_hdx_balance_before + expected_amount_receive);
-        assert_eq!(bob_dai_balance_after, bob_dai_balance_before - amount_fill);
+        assert_eq!(bob_dai_balance_after, bob_dai_balance_before - amount);
 
         let order = OTC::orders(0).unwrap();
         assert_eq!(order.amount_buy, expected_new_amount_buy);
@@ -82,7 +82,7 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
         expect_events(vec![Event::OrderPartiallyFilled {
             order_id: 0,
             who: BOB,
-            amount_fill: 5 * ONE,
+            amount: 5 * ONE,
             amount_receive: expected_amount_receive,
         }
         .into()]);
@@ -112,8 +112,8 @@ fn complete_fill_order_should_work_when_order_is_partially_fillable() {
         let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
-        let amount_fill = 20 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount_fill));
+        let amount = 20 * ONE;
+        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount));
 
         // Assert
         let order = OTC::orders(0);
@@ -132,16 +132,16 @@ fn complete_fill_order_should_work_when_order_is_partially_fillable() {
             alice_reserved_hdx_balance_after,
             alice_reserved_hdx_balance_before - 100 * ONE
         );
-        assert_eq!(alice_dai_balance_after, alice_dai_balance_before + amount_fill);
+        assert_eq!(alice_dai_balance_after, alice_dai_balance_before + amount);
 
         // Bob: HDX grows, DAI decreases
         assert_eq!(bob_hdx_balance_after, bob_hdx_balance_before + 100 * ONE);
-        assert_eq!(bob_dai_balance_after, bob_dai_balance_before - amount_fill);
+        assert_eq!(bob_dai_balance_after, bob_dai_balance_before - amount);
 
         expect_events(vec![Event::OrderFilled {
             order_id: 0,
             who: BOB,
-            amount_fill: 20 * ONE,
+            amount: 20 * ONE,
         }
         .into()]);
     });
@@ -170,8 +170,8 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
         let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
-        let amount_fill = 20 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount_fill));
+        let amount = 20 * ONE;
+        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount));
 
         // Assert
         let order = OTC::orders(0);
@@ -190,16 +190,16 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
             alice_reserved_hdx_balance_after,
             alice_reserved_hdx_balance_before - 100 * ONE
         );
-        assert_eq!(alice_dai_balance_after, alice_dai_balance_before + amount_fill);
+        assert_eq!(alice_dai_balance_after, alice_dai_balance_before + amount);
 
         // Bob: HDX grows, DAI decreases
         assert_eq!(bob_hdx_balance_after, bob_hdx_balance_before + 100 * ONE);
-        assert_eq!(bob_dai_balance_after, bob_dai_balance_before - amount_fill);
+        assert_eq!(bob_dai_balance_after, bob_dai_balance_before - amount);
 
         expect_events(vec![Event::OrderFilled {
             order_id: 0,
             who: BOB,
-            amount_fill: 20 * ONE,
+            amount: 20 * ONE,
         }
         .into()]);
     });
@@ -228,10 +228,10 @@ fn partial_fill_order_should_throw_error_when_remaining_amounts_are_too_low() {
         let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
-        let amount_fill = 16 * ONE;
+        let amount = 16 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount_fill),
-            Error::<Test>::RemainingOrderSizeTooSmall
+            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
+            Error::<Test>::OrderAmountTooSmall
         );
 
         // Assert
@@ -276,9 +276,9 @@ fn partial_fill_order_should_throw_error_when_order_is_not_partially_fillable() 
         let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
-        let amount_fill = 5 * ONE;
+        let amount = 5 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount_fill),
+            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
             Error::<Test>::OrderNotPartiallyFillable
         );
 
@@ -324,9 +324,9 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
         let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
-        let amount_fill = 110 * ONE;
+        let amount = 110 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount_fill),
+            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
             Error::<Test>::InsufficientBalance
         );
 
@@ -350,7 +350,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
 }
 
 #[test]
-fn fill_order_should_throw_error_when_amount_fill_is_larger_than_order() {
+fn fill_order_should_throw_error_when_amount_is_larger_than_order() {
     ExtBuilder::default().build().execute_with(|| {
         let reserve_id = named_reserve_identifier(0);
 
@@ -372,9 +372,9 @@ fn fill_order_should_throw_error_when_amount_fill_is_larger_than_order() {
         let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
-        let amount_fill = 30 * ONE;
+        let amount = 30 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount_fill),
+            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
             Error::<Test>::CannotFillMoreThanOrdered
         );
 

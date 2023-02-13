@@ -211,8 +211,10 @@ fn genesis_config_works() {
     let life = b"LIFE".to_vec();
 
     ExtBuilder::default()
-        .with_assets(vec![(one.clone(), 1_000u128)])
-        .with_asset_ids(vec![(life.clone(), 1_000u128, 42)])
+        .with_assets(vec![
+            (one.clone(), 1_000u128, None),
+            (life.clone(), 1_000u128, Some(42)),
+        ])
         .build()
         .execute_with(|| {
             let native: BoundedVec<u8, <Test as crate::Config>::StringLimit> = b"NATIVE".to_vec().try_into().unwrap();
@@ -253,7 +255,7 @@ fn genesis_config_works() {
 #[test]
 fn set_metadata_works() {
     ExtBuilder::default()
-        .with_assets(vec![(b"DOT".to_vec(), 1_000u128)])
+        .with_assets(vec![(b"DOT".to_vec(), 1_000u128, None)])
         .build()
         .execute_with(|| {
             System::set_block_number(1); //TO have the ement emitted
@@ -440,7 +442,10 @@ fn native_asset_should_be_not_locked_when_genesis_block_built() {
 fn get_ed_by_key_works() {
     ExtBuilder::default()
         .with_native_asset_name(b"NATIVE".to_vec())
-        .with_assets(vec![(b"ONE".to_vec(), 1_000u128), (b"TWO".to_vec(), 2_000u128)])
+        .with_assets(vec![
+            (b"ONE".to_vec(), 1_000u128, None),
+            (b"TWO".to_vec(), 2_000u128, None),
+        ])
         .build()
         .execute_with(|| {
             assert_eq!(AssetRegistryPallet::get(&(1u32 + SequentialIdStart::get())), 1_000u128);

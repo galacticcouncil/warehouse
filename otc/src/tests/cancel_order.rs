@@ -47,7 +47,7 @@ fn cancel_order_should_work() {
         assert!(order.is_none());
 
         let reserve_id = named_reserve_identifier(0);
-        assert_eq!(Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE), 0);
+        assert_eq!(Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE), 0);
 
         expect_events(vec![Event::OrderCancelled { order_id: 0 }.into()]);
     });
@@ -85,6 +85,6 @@ fn cancel_order_should_throw_error_when_called_by_non_owner() {
         assert!(order.is_some());
 
         let reserve_id = named_reserve_identifier(0);
-        assert_eq!(Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE), 100 * ONE);
+        assert_eq!(Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE), 100 * ONE);
     });
 }

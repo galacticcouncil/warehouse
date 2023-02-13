@@ -42,12 +42,12 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
             true
         ));
 
-        let alice_free_hdx_balance_before = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_before = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_before = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_before = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
         let amount_fill = 5 * ONE;
@@ -57,12 +57,12 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
         let expected_amount_receive = 25_000_000_000_000_u128;
         let expected_new_amount_buy = 15_000_000_000_000_u128;
 
-        let alice_free_hdx_balance_after = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_after = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_after = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_after = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_after = Tokens::free_balance(DAI, &BOB);
 
         // Alice: HDX *free* balance remains the same, reserved balance decreases with amount_receive; DAI grows
         assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
@@ -104,12 +104,12 @@ fn complete_fill_order_should_work_when_order_is_partially_fillable() {
             true
         ));
 
-        let alice_free_hdx_balance_before = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_before = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_before = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_before = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
         let amount_fill = 20 * ONE;
@@ -119,12 +119,12 @@ fn complete_fill_order_should_work_when_order_is_partially_fillable() {
         let order = OTC::orders(0);
         assert!(order.is_none());
 
-        let alice_free_hdx_balance_after = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_after = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_after = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_after = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_after = Tokens::free_balance(DAI, &BOB);
 
         // Alice: HDX *free* balance remains the same, reserved balance decreases with amount_receive; DAI grows
         assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
@@ -162,12 +162,12 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
             false
         ));
 
-        let alice_free_hdx_balance_before = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_before = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_before = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_before = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
         let amount_fill = 20 * ONE;
@@ -177,12 +177,12 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
         let order = OTC::orders(0);
         assert!(order.is_none());
 
-        let alice_free_hdx_balance_after = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_after = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_after = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_after = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_after = Tokens::free_balance(DAI, &BOB);
 
         // Alice: HDX *free* balance remains the same, reserved balance decreases with amount_receive; DAI grows
         assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
@@ -220,12 +220,12 @@ fn partial_fill_order_should_throw_error_when_remaining_amounts_are_too_low() {
             true
         ));
 
-        let alice_free_hdx_balance_before = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_before = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_before = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_before = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
         let amount_fill = 16 * ONE;
@@ -235,12 +235,12 @@ fn partial_fill_order_should_throw_error_when_remaining_amounts_are_too_low() {
         );
 
         // Assert
-        let alice_free_hdx_balance_after = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_after = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_after = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_after = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_after = Tokens::free_balance(DAI, &BOB);
 
         // Alice: nothing changes
         assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
@@ -268,12 +268,12 @@ fn partial_fill_order_should_throw_error_when_order_is_not_partially_fillable() 
             false
         ));
 
-        let alice_free_hdx_balance_before = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_before = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_before = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_before = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
         let amount_fill = 5 * ONE;
@@ -283,12 +283,12 @@ fn partial_fill_order_should_throw_error_when_order_is_not_partially_fillable() 
         );
 
         // Assert
-        let alice_free_hdx_balance_after = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_after = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_after = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_after = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_after = Tokens::free_balance(DAI, &BOB);
 
         // Alice: nothing changes
         assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
@@ -316,12 +316,12 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
             true
         ));
 
-        let alice_free_hdx_balance_before = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_before = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_before = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_before = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
         let amount_fill = 110 * ONE;
@@ -331,12 +331,12 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
         );
 
         // Assert
-        let alice_free_hdx_balance_after = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_after = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_after = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_after = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_after = Tokens::free_balance(DAI, &BOB);
 
         // Alice: nothing changes
         assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
@@ -364,12 +364,12 @@ fn fill_order_should_throw_error_when_amount_fill_is_larger_than_order() {
             true
         ));
 
-        let alice_free_hdx_balance_before = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_before = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_before = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_before = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
         let amount_fill = 30 * ONE;
@@ -379,12 +379,12 @@ fn fill_order_should_throw_error_when_amount_fill_is_larger_than_order() {
         );
 
         // Assert
-        let alice_free_hdx_balance_after = Currencies::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_after = Currencies::free_balance(HDX, &BOB);
+        let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
+        let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
 
-        let alice_dai_balance_after = Currencies::free_balance(DAI, &ALICE);
-        let bob_dai_balance_after = Currencies::free_balance(DAI, &BOB);
+        let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);
+        let bob_dai_balance_after = Tokens::free_balance(DAI, &BOB);
 
         // Alice: nothing changes
         assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);

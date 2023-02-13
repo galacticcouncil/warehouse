@@ -17,7 +17,7 @@ members = [
 	"currencies",
 	"stableswap",
 	"test-utils",
-	"otc"
+	"otc",
 ]
 
 resolver = "2"

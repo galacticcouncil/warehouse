@@ -2820,19 +2820,6 @@ dependencies = [
 [[package]]
 name = "hydra-dx-math"
 version = "5.1.4"
-source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=2d7f86ffae242fc855bc833dd22df2d8dc5d03df#2d7f86ffae242fc855bc833dd22df2d8dc5d03df"
-dependencies = [
- "fixed",
- "num-traits",
- "parity-scale-codec",
- "primitive-types 0.12.1",
- "sp-arithmetic",
- "sp-std",
-]
-
-[[package]]
-name = "hydra-dx-math"
-version = "5.1.4"
 source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=fdf7d6cdfb6968b826e6035c20b261a78a733573#fdf7d6cdfb6968b826e6035c20b261a78a733573"
 dependencies = [
  "fixed",
@@ -5122,12 +5109,12 @@ dependencies = [
 
 [[package]]
 name = "pallet-liquidity-mining"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
- "hydra-dx-math 5.1.4 (git+https://github.com/galacticcouncil/HydraDX-math?rev=fdf7d6cdfb6968b826e6035c20b261a78a733573)",
+ "hydra-dx-math 5.1.4",
  "hydradx-traits",
  "orml-currencies",
  "orml-tokens",
@@ -5283,14 +5270,11 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hydra-dx-math 5.1.4 (git+https://github.com/galacticcouncil/HydraDX-math?rev=2d7f86ffae242fc855bc833dd22df2d8dc5d03df)",
  "hydradx-traits",
  "lazy_static",
  "log",
  "orml-tokens",
  "orml-traits",
- "pallet-balances",
- "pallet-currencies",
  "parity-scale-codec",
  "pretty_assertions",
  "proptest",

@@ -25,14 +25,9 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 # FRAME
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false, optional = true }
-
-# Math
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev="2d7f86ffae242fc855bc833dd22df2d8dc5d03df", default-features = false }
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }
-pallet-currencies = { path = "../currencies", default-features = false }
 
 # ORML dependencies
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.29", default-features = false }
@@ -64,9 +59,6 @@ std = [
   "scale-info/std",
   "orml-tokens/std",
   "hydradx-traits/std",
-  "pallet-balances/std",
-  "pallet-currencies/std",
-  "orml-tokens/std",
 ]
 
 runtime-benchmarks = [

@@ -58,7 +58,7 @@ fn place_order_should_work() {
         .into()]);
 
         let reserve_id = named_reserve_identifier(0);
-        assert_eq!(Currencies::reserved_balance_named(&reserve_id, HDX, &ALICE), 100 * ONE);
+        assert_eq!(Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE), 100 * ONE);
 
         let next_order_id = OTC::next_order_id();
         assert_eq!(next_order_id, 1);

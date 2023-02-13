@@ -23,12 +23,12 @@ use crate as otc;
 use crate::Config;
 use frame_support::{
     parameter_types,
-    traits::{ConstU128, Everything, GenesisBuild, Nothing},
+    traits::{Everything, GenesisBuild, Nothing},
 };
 use frame_system as system;
 use hydradx_traits::Registry;
+use orml_tokens::AccountData;
 use orml_traits::parameter_type_with_key;
-use pallet_currencies::BasicCurrencyAdapter;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -66,8 +66,6 @@ frame_support::construct_runtime!(
          System: frame_system,
          OTC: otc,
          Tokens: orml_tokens,
-         Balances: pallet_balances,
-         Currencies: pallet_currencies,
      }
 );
 
@@ -89,7 +87,7 @@ parameter_type_with_key! {
 impl Config for Test {
     type AssetId = AssetId;
     type AssetRegistry = DummyRegistry<Test>;
-    type Currency = Currencies;
+    type Currency = Tokens;
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type ExistentialDepositMultiplier = ExistentialDepositMultiplier;
@@ -120,7 +118,7 @@ impl system::Config for Test {
     type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = pallet_balances::AccountData<u128>;
+    type AccountData = AccountData<u128>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
@@ -143,26 +141,6 @@ impl orml_tokens::Config for Test {
     type OnKilledTokenAccount = ();
     type ReserveIdentifier = NamedReserveIdentifier;
     type MaxReserves = MaxReserves;
-}
-
-impl pallet_balances::Config for Test {
-    type MaxLocks = ();
-    type Balance = Balance;
-    type Event = Event;
-    type DustRemoval = ();
-    type ExistentialDeposit = ConstU128<1>;
-    type AccountStore = frame_system::Pallet<Test>;
-    type WeightInfo = ();
-    type MaxReserves = MaxReserves;
-    type ReserveIdentifier = NamedReserveIdentifier;
-}
-
-impl pallet_currencies::Config for Test {
-    type Event = Event;
-    type MultiCurrency = Tokens;
-    type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, u32>;
-    type GetNativeCurrencyId = NativeCurrencyId;
-    type WeightInfo = ();
 }
 
 pub struct DummyRegistry<T>(sp_std::marker::PhantomData<T>);
@@ -228,17 +206,6 @@ impl ExtBuilder {
                 v.borrow_mut().insert(*asset, *asset);
             });
         });
-
-        pallet_balances::GenesisConfig::<Test> {
-            balances: self
-                .endowed_accounts
-                .iter()
-                .filter(|a| a.1 == HDX)
-                .flat_map(|(x, _asset, amount)| vec![(*x, *amount)])
-                .collect(),
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
 
         orml_tokens::GenesisConfig::<Test> {
             balances: self

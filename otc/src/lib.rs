@@ -25,9 +25,7 @@ use codec::MaxEncodedLen;
 use frame_support::{pallet_prelude::*, require_transactional, transactional};
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use hydradx_traits::Registry;
-use orml_traits::{
-    GetByKey, MultiCurrency, MultiCurrencyExtended, MultiReservableCurrency, NamedMultiReservableCurrency,
-};
+use orml_traits::{GetByKey, MultiCurrency, MultiReservableCurrency, NamedMultiReservableCurrency};
 use sp_runtime::{
     traits::{BlakeTwo256, Hash, One},
     DispatchError,
@@ -179,7 +177,7 @@ pub mod pallet {
                 partially_fillable,
             };
 
-            Self::validate_place_order(order.clone(), amount_sell)?;
+            Self::validate_place_order(&order, amount_sell)?;
 
             let order_id = <NextOrderId<T>>::try_mutate(|next_id| -> result::Result<OrderId, DispatchError> {
                 let current_id = *next_id;
@@ -190,7 +188,7 @@ pub mod pallet {
             let reserve_id = Self::named_reserve_identifier(order_id);
             T::Currency::reserve_named(&reserve_id, order.asset_sell, &order.owner, amount_sell)?;
 
-            <Orders<T>>::insert(order_id, order.clone());
+            <Orders<T>>::insert(order_id, &order);
             Self::deposit_event(Event::OrderPlaced {
                 order_id,
                 asset_buy: order.asset_buy,
@@ -220,9 +218,9 @@ pub mod pallet {
 
                 let amount_receive = Self::amount_receive(order, amount_sell, amount_fill)?;
 
-                Self::validate_fill_order(order, who.clone(), asset_fill, amount_sell, amount_fill, amount_receive)?;
+                Self::validate_fill_order(order, &who, asset_fill, amount_sell, amount_fill, amount_receive)?;
 
-                Self::execute_deal(order_id, order, who.clone(), amount_fill, amount_receive)?;
+                Self::execute_deal(order_id, order, &who, amount_fill, amount_receive)?;
 
                 let remaining_amount_buy = Self::amount_remaining(order.amount_buy, amount_fill)?;
 
@@ -273,7 +271,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn validate_place_order(order: Order<T::AccountId, T::AssetId>, amount_sell: Balance) -> DispatchResult {
+    fn validate_place_order(order: &Order<T::AccountId, T::AssetId>, amount_sell: Balance) -> DispatchResult {
         ensure!(
             T::AssetRegistry::exists(order.asset_sell),
             Error::<T>::AssetNotRegistered
@@ -301,8 +299,8 @@ impl<T: Config> Pallet<T> {
     }
 
     fn validate_fill_order(
-        order: &mut Order<T::AccountId, T::AssetId>,
-        who: T::AccountId,
+        order: &Order<T::AccountId, T::AssetId>,
+        who: &T::AccountId,
         asset_fill: T::AssetId,
         amount_sell: Balance,
         amount_fill: Balance,
@@ -313,7 +311,7 @@ impl<T: Config> Pallet<T> {
         ensure!(order.amount_buy >= amount_fill, Error::<T>::CannotFillMoreThanOrdered);
 
         ensure!(
-            T::Currency::ensure_can_withdraw(asset_fill, &who, amount_fill).is_ok(),
+            T::Currency::ensure_can_withdraw(asset_fill, who, amount_fill).is_ok(),
             Error::<T>::InsufficientBalance
         );
 
@@ -364,13 +362,13 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::MathError)
     }
 
-    fn amount_sell(order_id: OrderId, order: &mut Order<T::AccountId, T::AssetId>) -> Balance {
+    fn amount_sell(order_id: OrderId, order: &Order<T::AccountId, T::AssetId>) -> Balance {
         let reserve_id = Self::named_reserve_identifier(order_id);
         T::Currency::reserved_balance_named(&reserve_id, order.asset_sell, &order.owner)
     }
 
     fn amount_receive(
-        order: &mut Order<T::AccountId, T::AssetId>,
+        order: &Order<T::AccountId, T::AssetId>,
         amount_sell: Balance,
         amount_fill: Balance,
     ) -> Result<Balance, Error<T>> {
@@ -387,17 +385,17 @@ impl<T: Config> Pallet<T> {
     #[require_transactional]
     fn execute_deal(
         order_id: OrderId,
-        order: &mut Order<T::AccountId, T::AssetId>,
-        who: T::AccountId,
+        order: &Order<T::AccountId, T::AssetId>,
+        who: &T::AccountId,
         amount_fill: Balance,
         amount_receive: Balance,
     ) -> DispatchResult {
         let reserve_id = Self::named_reserve_identifier(order_id);
         T::Currency::unreserve_named(&reserve_id, order.asset_sell, &order.owner, amount_receive);
 
-        T::Currency::transfer(order.asset_buy, &who, &order.owner, amount_fill)?;
+        T::Currency::transfer(order.asset_buy, who, &order.owner, amount_fill)?;
 
-        T::Currency::transfer(order.asset_sell, &order.owner, &who, amount_receive)?;
+        T::Currency::transfer(order.asset_sell, &order.owner, who, amount_receive)?;
 
         Ok(())
     }

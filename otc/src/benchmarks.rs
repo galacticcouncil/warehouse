@@ -6,6 +6,7 @@ use frame_benchmarking::{account, benchmarks};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use hydradx_traits::Registry;
+use orml_traits::MultiCurrencyExtended;
 use sp_std::vec;
 pub const ONE: Balance = 1_000_000_000_000;
 

@@ -55,7 +55,7 @@ fn create_collection_works() {
             NFTPallet::create_collection(
                 Origin::signed(ALICE),
                 COLLECTION_ID_2,
-                CollectionType::Auction,
+                CollectionType::LiquidityMining,
                 metadata.clone()
             ),
             Error::<Test>::NotPermitted
@@ -66,7 +66,7 @@ fn create_collection_works() {
             NFTPallet::create_collection(
                 Origin::signed(ALICE),
                 COLLECTION_ID_0,
-                CollectionType::LiquidityMining,
+                CollectionType::Marketplace,
                 metadata.clone()
             ),
             pallet_uniques::Error::<Test>::InUse
@@ -91,16 +91,16 @@ fn mint_works() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
-            Default::default(), // Marketplace
+            CollectionType::Marketplace,
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_1,
-            CollectionType::Redeemable,
+            CollectionType::LiquidityMining,
             metadata.clone()
         ));
 
@@ -157,30 +157,20 @@ fn transfer_works() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
-            Default::default(),
+            CollectionType::Marketplace,
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_1,
             CollectionType::LiquidityMining,
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
-            COLLECTION_ID_0,
-            ITEM_ID_0,
-            metadata.clone()
-        ));
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
-            COLLECTION_ID_1,
-            ITEM_ID_0,
-            metadata
-        ));
+        assert_ok!(NFTPallet::do_mint(ALICE, COLLECTION_ID_0, ITEM_ID_0, metadata.clone()));
+        assert_ok!(NFTPallet::do_mint(ALICE, COLLECTION_ID_1, ITEM_ID_0, metadata));
 
         // not existing
         assert_noop!(
@@ -232,30 +222,20 @@ fn burn_works() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
-            Default::default(),
+            CollectionType::Marketplace,
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_1,
             CollectionType::LiquidityMining,
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
-            COLLECTION_ID_0,
-            ITEM_ID_0,
-            metadata.clone()
-        ));
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
-            COLLECTION_ID_1,
-            ITEM_ID_0,
-            metadata
-        ));
+        assert_ok!(NFTPallet::do_mint(ALICE, COLLECTION_ID_0, ITEM_ID_0, metadata.clone()));
+        assert_ok!(NFTPallet::do_mint(ALICE, COLLECTION_ID_1, ITEM_ID_0, metadata));
 
         // not owner
         assert_noop!(
@@ -293,31 +273,26 @@ fn destroy_collection_works() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
-            Default::default(), // Marketplace
+            CollectionType::Marketplace,
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_1,
-            CollectionType::Redeemable,
+            CollectionType::LiquidityMining,
             metadata.clone()
         ));
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
-            COLLECTION_ID_0,
-            ITEM_ID_0,
-            metadata
-        ));
+        assert_ok!(NFTPallet::do_mint(ALICE, COLLECTION_ID_0, ITEM_ID_0, metadata));
 
         // existing item
         assert_noop!(
             NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0),
             Error::<Test>::TokenCollectionNotEmpty
         );
-        assert_ok!(NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0));
+        assert_ok!(NFTPallet::do_burn(ALICE, COLLECTION_ID_0, ITEM_ID_0));
 
         // not allowed in Permissions
         assert_noop!(
@@ -359,8 +334,8 @@ fn deposit_works() {
 
         // has deposit
         assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
             CollectionType::Marketplace,
             metadata.clone()
@@ -374,7 +349,7 @@ fn deposit_works() {
             collection_deposit
         );
 
-        assert_ok!(NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0));
+        assert_ok!(NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_0));
         assert_eq!(
             <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
             initial_balance
@@ -382,8 +357,8 @@ fn deposit_works() {
         assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
 
         // no deposit
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
             CollectionType::LiquidityMining,
             metadata
@@ -394,7 +369,7 @@ fn deposit_works() {
         );
         assert_eq!(<Test as pallet_uniques::Config>::Currency::reserved_balance(&ALICE), 0);
 
-        assert_ok!(NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0));
+        assert_ok!(NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_0));
         assert_eq!(
             <Test as pallet_uniques::Config>::Currency::free_balance(&ALICE),
             initial_balance
@@ -409,19 +384,14 @@ fn inspect_trait_should_work() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
-            Default::default(),
+            CollectionType::Marketplace,
             metadata.clone()
         ));
 
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
-            COLLECTION_ID_0,
-            ITEM_ID_0,
-            metadata
-        ));
+        assert_ok!(NFTPallet::do_mint(ALICE, COLLECTION_ID_0, ITEM_ID_0, metadata));
 
         assert_eq!(
             <NFTPallet as Inspect<<Test as frame_system::Config>::AccountId>>::owner(&COLLECTION_ID_0, &ITEM_ID_0),
@@ -466,19 +436,14 @@ fn inspect_enumerable_trait_should_work() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
-            Default::default(),
+            CollectionType::Marketplace,
             metadata.clone()
         ));
 
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
-            COLLECTION_ID_0,
-            ITEM_ID_0,
-            metadata
-        ));
+        assert_ok!(NFTPallet::do_mint(ALICE, COLLECTION_ID_0, ITEM_ID_0, metadata));
 
         assert_eq!(
             *<NFTPallet as InspectEnumerable<<Test as frame_system::Config>::AccountId>>::collections()
@@ -515,19 +480,14 @@ fn destroy_trait_should_work() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
-            Default::default(),
+            CollectionType::Marketplace,
             metadata.clone()
         ));
 
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
-            COLLECTION_ID_0,
-            ITEM_ID_0,
-            metadata.clone()
-        ));
+        assert_ok!(NFTPallet::do_mint(ALICE, COLLECTION_ID_0, ITEM_ID_0, metadata.clone()));
 
         let witness =
             <NFTPallet as Destroy<<Test as frame_system::Config>::AccountId>>::get_destroy_witness(&COLLECTION_ID_0)
@@ -591,10 +551,10 @@ fn destroy_trait_should_work() {
             witness
         );
 
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
-            Default::default(),
+            CollectionType::Marketplace,
             metadata,
         ));
 
@@ -616,10 +576,10 @@ fn mutate_trait_should_work() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
-            Default::default(),
+            CollectionType::Marketplace,
             metadata
         ));
 
@@ -714,19 +674,14 @@ fn transfer_trait_should_work() {
         let metadata: BoundedVec<u8, <Test as pallet_uniques::Config>::StringLimit> =
             b"metadata".to_vec().try_into().unwrap();
 
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
-            Default::default(),
+            CollectionType::Marketplace,
             metadata.clone()
         ));
 
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
-            COLLECTION_ID_0,
-            ITEM_ID_0,
-            metadata
-        ));
+        assert_ok!(NFTPallet::do_mint(ALICE, COLLECTION_ID_0, ITEM_ID_0, metadata));
 
         assert_ok!(
             <NFTPallet as Transfer<<Test as frame_system::Config>::AccountId>>::transfer(
@@ -906,19 +861,14 @@ fn do_destroy_collection_works() {
         );
 
         // existing item
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_0,
-            Default::default(), // Marketplace
+            CollectionType::Marketplace,
             metadata.clone()
         ));
 
-        assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
-            COLLECTION_ID_0,
-            ITEM_ID_0,
-            metadata.clone()
-        ));
+        assert_ok!(NFTPallet::do_mint(ALICE, COLLECTION_ID_0, ITEM_ID_0, metadata.clone()));
 
         assert_noop!(
             NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_0),
@@ -926,7 +876,7 @@ fn do_destroy_collection_works() {
         );
 
         // happy path
-        assert_ok!(NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0));
+        assert_ok!(NFTPallet::do_burn(ALICE, COLLECTION_ID_0, ITEM_ID_0));
 
         let witness = NFTPallet::do_destroy_collection(ALICE, COLLECTION_ID_0).unwrap();
         assert_eq!(
@@ -947,10 +897,10 @@ fn do_destroy_collection_works() {
         .into()]);
 
         // permissions are ignored
-        assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+        assert_ok!(NFTPallet::do_create_collection(
+            ALICE,
             COLLECTION_ID_1,
-            CollectionType::Redeemable,
+            CollectionType::LiquidityMining,
             metadata
         ));
 

@@ -4967,7 +4967,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hydra-dx-math 4.9.0",
- "hydradx-traits 1.0.0",
+ "hydradx-traits",
  "orml-tokens",
  "orml-traits",
  "parity-scale-codec",
@@ -5133,7 +5133,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-liquidity-mining"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "fixed",
  "frame-support",

@@ -78,7 +78,6 @@ pub mod pallet {
 
         /// Named reservable multi currency
         type Currency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Balance>
-            + MultiCurrencyExtended<Self::AccountId>
             + NamedMultiReservableCurrency<Self::AccountId, ReserveIdentifier = NamedReserveIdentifier>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;

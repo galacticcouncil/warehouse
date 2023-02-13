@@ -2835,7 +2835,7 @@ name = "hydradx-adapters"
 version = "0.2.2"
 dependencies = [
  "frame-support",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "lazy_static",
  "log",
  "pallet-transaction-multi-payment",
@@ -2845,19 +2845,6 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
-]
-
-[[package]]
-name = "hydradx-traits"
-version = "0.9.1"
-source = "git+https://github.com/galacticcouncil/warehouse?rev=fcebd285141ce9ed15136f6102fa6396605d96af#fcebd285141ce9ed15136f6102fa6396605d96af"
-dependencies = [
- "frame-support",
- "impl-trait-for-tuples",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic",
- "sp-std",
 ]
 
 [[package]]
@@ -4717,7 +4704,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-traits",
  "parity-scale-codec",
  "primitive-types 0.12.1",
@@ -4996,7 +4983,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "lazy_static",
  "orml-tokens",
  "orml-traits",
@@ -5152,8 +5139,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hydra-dx-math 5.1.4",
- "hydradx-traits 0.9.1",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -5242,7 +5228,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-utilities",
  "pallet-balances",
  "pallet-uniques",
@@ -5324,7 +5310,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5371,7 +5357,7 @@ dependencies = [
  "frame-system",
  "frame-system-benchmarking",
  "hydradx-adapters",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -5432,7 +5418,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hydra-dx-math 4.9.0",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-tokens",
  "orml-traits",
  "parity-scale-codec",
@@ -5519,7 +5505,7 @@ version = "8.0.4"
 dependencies = [
  "frame-support",
  "frame-system",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",

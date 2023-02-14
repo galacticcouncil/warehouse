@@ -14,7 +14,6 @@ and integrate provided [`UpdateAndRetrieveFees`]().
 
 * **Fee:** The type representing a fee. Must implement PerThing.
 * **Oracle:** Implementation of an oracle providing volume in and out as wel ass liquidity for an asset.
-* **Oracle period:** The period which is used to retrieve volumes of an asset from the oracle.
 * **Asset decay:** The decaying parameter for an asset fee.
 * **Protocol decay:** The decaying parameter for a protocol fee.
 * **Asset fee amplification:** The amplification parameter for asset fee.
@@ -37,6 +36,6 @@ On first retrieve call in a block, the asset fee as well as the protocol are upd
 
 #### Prerequisites
 
-An oracle which provides volume in and out of an asset and liquidity for selected period.
+An oracle which provides volume in and out of an asset and liquidity.
 
 License: Apache 2.0

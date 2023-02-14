@@ -1,10 +1,11 @@
+use frame_support::RuntimeDebug;
 use crate::math::NetVolumeDirection::*;
 use crate::types::FeeParams;
 use crate::Balance;
 use sp_runtime::traits::{Saturating, Zero};
 use sp_runtime::{FixedPointOperand, FixedU128, PerThing};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, RuntimeDebug)]
 pub struct OracleEntry {
     pub amount_in: Balance,
     pub amount_out: Balance,
@@ -26,7 +27,7 @@ impl OracleEntry {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, RuntimeDebug)]
 enum NetVolumeDirection {
     OutIn,
     InOut,

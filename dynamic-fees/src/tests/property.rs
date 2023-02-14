@@ -47,10 +47,16 @@ proptest! {
         };
 
         let asset_fee = recalculate_asset_fee(entry.clone(), previous_fee, block_diff, params);
-        let protocol_fee= recalculate_protocol_fee(entry, previous_fee, block_diff, params);
+        let protocol_fee = recalculate_protocol_fee(entry, previous_fee, block_diff, params);
 
-        assert!(asset_fee > previous_fee || asset_fee == params.max_fee, "Asset fee {previous_fee:?} has not increased - {asset_fee:?}");
-        assert!(protocol_fee< previous_fee || protocol_fee == params.min_fee, "Protocol fee {previous_fee:?} has not decreased - {asset_fee:?}");
+        assert!(
+            asset_fee > previous_fee || asset_fee == params.max_fee,
+            "Asset fee {previous_fee:?} has not increased - {asset_fee:?}"
+        );
+        assert!(
+            protocol_fee < previous_fee || protocol_fee == params.min_fee,
+            "Protocol fee {previous_fee:?} has not decreased - {asset_fee:?}"
+        );
     }
 }
 
@@ -58,7 +64,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(1000))]
     #[test]
     fn fees_should_update_correctly_when_volume_in_increasing(previous_fee in initial_fee(),
-        entry in entry().prop_filter("only interested when out > in", |v| v.amount_in > v.amount_out)){
+        entry in entry().prop_filter("only interested when out < in", |v| v.amount_in > v.amount_out)){
 
         let block_diff = 1u128;
         let params = FeeParams {

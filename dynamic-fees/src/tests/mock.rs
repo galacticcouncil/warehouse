@@ -107,7 +107,6 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-    pub const SelectedPeriod: u16 = 300;
     pub AssetFeeParams: FeeParams<Fee>= ASSET_FEE_PARAMS.with(|v| *v.borrow());
     pub ProtocolFeeParams: FeeParams<Fee>= PROTOCOL_FEE_PARAMS.with(|v| *v.borrow());
 }
@@ -116,10 +115,8 @@ impl Config for Test {
     type Event = Event;
     type Fee = Fee;
     type AssetId = AssetId;
-    type OraclePeriod = u16;
     type BlockNumberProvider = System;
     type Oracle = OracleProvider;
-    type SelectedPeriod = SelectedPeriod;
     type AssetFeeParameters = AssetFeeParams;
     type ProtocolFeeParameters = ProtocolFeeParams;
 }
@@ -200,15 +197,15 @@ impl ExtBuilder {
 
 pub struct OracleProvider;
 
-impl VolumeProvider<AssetId, Balance, u16> for OracleProvider {
+impl VolumeProvider<AssetId, Balance> for OracleProvider {
     type Volume = AssetVolume;
 
-    fn asset_volume(asset_id: AssetId, _period: u16) -> Option<Self::Volume> {
+    fn asset_volume(asset_id: AssetId) -> Option<Self::Volume> {
         let volume = ORACLE.with(|v| v.borrow().volume(asset_id, BLOCK.with(|v| *v.borrow())));
         Some(volume)
     }
 
-    fn asset_liquidity(asset_id: AssetId, _period: u16) -> Option<Balance> {
+    fn asset_liquidity(asset_id: AssetId) -> Option<Balance> {
         let liquidity = ORACLE.with(|v| v.borrow().liquidity(asset_id, BLOCK.with(|v| *v.borrow())));
         Some(liquidity)
     }

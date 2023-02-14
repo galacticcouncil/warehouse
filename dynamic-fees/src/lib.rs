@@ -29,7 +29,6 @@
 //!
 //! * **Fee:** The type representing a fee. Must implement PerThing.
 //! * **Oracle:** Implementation of an oracle providing volume in and out as wel ass liquidity for an asset.
-//! * **Oracle period:** The period which is used to retrieve volumes of an asset from the oracle.
 //! * **Asset decay:** The decaying parameter for an asset fee.
 //! * **Protocol decay:** The decaying parameter for a protocol fee.
 //! * **Asset fee amplification:** The amplification parameter for asset fee.
@@ -52,7 +51,7 @@
 //!
 //! ### Prerequisites
 //!
-//! An oracle which provides volume in and out of an asset and liquidity for selected period.
+//! An oracle which provides volume in and out of an asset and liquidity.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -106,15 +105,8 @@ pub mod pallet {
         /// Asset id type
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaxEncodedLen;
 
-        /// Oracle period type
-        type OraclePeriod: Parameter + Member + MaybeSerializeDeserialize;
-
         /// Volume provider implementation
-        type Oracle: VolumeProvider<Self::AssetId, Balance, Self::OraclePeriod>;
-
-        /// Chosen Oracle period
-        #[pallet::constant]
-        type SelectedPeriod: Get<Self::OraclePeriod>;
+        type Oracle: VolumeProvider<Self::AssetId, Balance>;
 
         #[pallet::constant]
         type AssetFeeParameters: Get<FeeParams<Self::Fee>>;
@@ -179,10 +171,10 @@ where
 
         // Update only if it has not yet been updated this block
         if block_number != last_block {
-            let Some(volume) = T::Oracle::asset_volume(asset_id, T::SelectedPeriod::get()) else {
+            let Some(volume) = T::Oracle::asset_volume(asset_id) else {
                 return (current_fee, current_protocol_fee);
             };
-            let Some(liquidity) = T::Oracle::asset_liquidity(asset_id, T::SelectedPeriod::get()) else {
+            let Some(liquidity) = T::Oracle::asset_liquidity(asset_id) else {
                 return (current_fee, current_protocol_fee);
             };
 

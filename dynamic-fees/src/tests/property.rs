@@ -49,8 +49,8 @@ proptest! {
         let asset_fee = recalculate_asset_fee(entry.clone(), previous_fee, block_diff, params);
         let protocol_fee= recalculate_protocol_fee(entry, previous_fee, block_diff, params);
 
-        assert!(asset_fee > previous_fee || asset_fee == params.max_fee, "Asset fee {:?} has not increased - {:?}", previous_fee, asset_fee);
-        assert!(protocol_fee< previous_fee || protocol_fee == params.min_fee, "Protocol fee {:?} has not decreased - {:?}", previous_fee, protocol_fee);
+        assert!(asset_fee > previous_fee || asset_fee == params.max_fee, "Asset fee {previous_fee:?} has not increased - {asset_fee:?}");
+        assert!(protocol_fee< previous_fee || protocol_fee == params.min_fee, "Protocol fee {previous_fee:?} has not decreased - {asset_fee:?}");
     }
 }
 
@@ -71,7 +71,7 @@ proptest! {
         let asset_fee = recalculate_asset_fee(entry.clone(), previous_fee, block_diff, params);
         let protocol_fee= recalculate_protocol_fee(entry, previous_fee, block_diff, params);
 
-        assert!(asset_fee < previous_fee || asset_fee == params.min_fee, "Asset fee {:?} has not decreased - {:?}", previous_fee, asset_fee);
-        assert!(protocol_fee > previous_fee || protocol_fee == params.max_fee, "Protocol fee {:?} has not increased - {:?}", previous_fee, protocol_fee);
+        assert!(asset_fee < previous_fee || asset_fee == params.min_fee, "Asset fee {previous_fee:?} has not decreased - {asset_fee:?}");
+        assert!(protocol_fee > previous_fee || protocol_fee == params.max_fee, "Protocol fee {previous_fee:?} has not increased - {asset_fee:?}");
     }
 }

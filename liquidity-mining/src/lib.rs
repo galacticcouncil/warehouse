@@ -115,9 +115,8 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::ArithmeticError;
 
 use hydra_dx_math::liquidity_mining as math;
-use hydradx_traits::pools::DustRemovalAccountWhitelist;
+use hydradx_traits::{pools::DustRemovalAccountWhitelist, registry::Registry};
 use orml_traits::{GetByKey, MultiCurrency};
-use registry_traits::Registry;
 use scale_info::TypeInfo;
 use sp_arithmetic::{
     traits::{CheckedAdd, CheckedDiv, CheckedSub},

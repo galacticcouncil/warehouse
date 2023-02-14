@@ -4976,6 +4976,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-duster"
+version = "3.1.11"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking",
+ "hydradx-traits",
+ "lazy_static",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-currencies",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "substrate-wasm-builder",
+]
+
+[[package]]
 name = "pallet-election-provider-multi-phase"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
@@ -5109,7 +5133,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-liquidity-mining"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "fixed",
  "frame-support",

@@ -15,7 +15,7 @@ pub trait Interface {
 
 pub enum PoolType<AssetId> {
     TwoAsset,
-    TwoAssetWith(AssetId),
+    TwoAssetWith(AssetId, u32),
 }
 
 pub enum TradeType {
@@ -96,11 +96,11 @@ fn pools(config: &Config) -> BoxedStrategy<Vec<PoolState>> {
             }
             r.boxed()
         }
-        PoolType::TwoAssetWith(asset_id) => {
+        PoolType::TwoAssetWith(asset_id, prec) => {
             let mut r = vec![];
             for asset in config.asset_ids.iter().filter(|id| **id != asset_id) {
                 let a = *asset;
-                let p = (asset_reserve(config.max_reserve), asset_reserve(config.max_reserve)).prop_map(
+                let p = (asset_reserve(config.max_reserve), asset_reserve_with_prec(config.max_reserve, prec)).prop_map(
                     move |(reserve_a, reserve_b)| PoolState {
                         asset_a: a,
                         asset_b: asset_id,
@@ -150,6 +150,9 @@ prop_compose! {
                     -> ( (u32,u32,u128) ,  Vec<PoolState>) {
         ((pool.asset_a, pool.asset_b, amount), state)
     }
+}
+fn asset_reserve_with_prec(max_amount: u128, prec: u32) -> impl Strategy<Value = u128> {
+    1.. max_amount * 10u128.pow(prec)
 }
 
 prop_compose! {

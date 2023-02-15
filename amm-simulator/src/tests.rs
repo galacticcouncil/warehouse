@@ -4,7 +4,7 @@ pub struct SomeAmm;
 fn sim_config() -> Config {
     Config {
         pool_type: PoolType::TwoAssetWith(1, 12),
-        trade_type: TradeType::Any,
+        trade_type: TradeType::SinglePool,
         max_reserve: 1,
         asset_ids: vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         max_trade_ratio: 3,

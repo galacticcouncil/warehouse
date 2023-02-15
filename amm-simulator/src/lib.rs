@@ -19,6 +19,7 @@ pub enum PoolType<AssetId> {
     TwoAssetWith(AssetId, u32),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TradeType {
     Any,
     SinglePool,
@@ -58,7 +59,7 @@ macro_rules! decl_amm {
                     ..PropConfig::default()
                 });
                 let result = runner.run(
-                    &(initial_state_and_trade_amount(&$config)),
+                    &(initial_state_and_trade_amount(&$config, $config.trade_type)),
                     |((asset_in, asset_out, amount), state)| {
                         <$runtime>::prepare(state);
                         $runtime.before_execute();
@@ -117,20 +118,26 @@ fn pools(config: &Config) -> BoxedStrategy<Vec<PoolState>> {
     }
 }
 
-fn select_pool(pools: &[PoolState]) -> BoxedStrategy<PoolState> {
-    prop_oneof![
-        Just(pools[0]),
-        Just(pools[1]),
-        Just(pools[2]),
-        Just(pools[3]),
-        Just(pools[4]),
-        Just(pools[5]),
-        Just(pools[6]),
-        Just(pools[7]),
-        Just(pools[8]),
-        Just(pools[9]),
-    ]
-    .boxed()
+fn select_trade_assets(
+    state: Vec<PoolState>,
+    trade_type: TradeType,
+) -> impl Strategy<Value = (u32, u32, u128, Vec<PoolState>)> {
+    let len = state.len();
+
+    (0..len, 0..len).prop_map(move |(idx1, idx2)| match trade_type {
+        TradeType::SinglePool => (
+            state[idx1].asset_a,
+            state[idx1].asset_b,
+            state[idx1].reserve_a,
+            state.clone(),
+        ),
+        TradeType::Any => (
+            state[idx1].asset_a,
+            state[idx2].asset_a,
+            state[idx1].reserve_a,
+            state.clone(),
+        ),
+    })
 }
 
 fn trade(max_amount: u128, max_ratio: u8) -> impl Strategy<Value = u128> {
@@ -138,19 +145,19 @@ fn trade(max_amount: u128, max_ratio: u8) -> impl Strategy<Value = u128> {
 }
 
 prop_compose! {
-    fn trade_params(config: &Config)
+    fn initial_state_and_trade_assets(config: &Config, trade_type: TradeType)
                     (state in pools(config))
-                    (pool in select_pool(&state), state in Just(state)) -> (PoolState, Vec<PoolState>) {
-        (pool, state)
+                    ((asset_in, asset_out, max_in, state) in select_trade_assets(state, trade_type)) -> ((u32,u32,u128), Vec<PoolState>) {
+        ((asset_in,asset_out, max_in), state)
     }
 }
 
 prop_compose! {
-    fn initial_state_and_trade_amount(config: &Config)
-                    ((pool, state) in trade_params(config))
-                    (amount in trade(pool.reserve_a , 3 ), (pool,state) in Just((pool, state)))
+    fn initial_state_and_trade_amount(config: &Config, trade_type: TradeType)
+                    (((asset_in,asset_out, max_in), state) in initial_state_and_trade_assets(config, trade_type))
+                    (amount in trade(max_in, 3 ), (asset_in, asset_out,state) in Just((asset_in, asset_out, state)))
                     -> ( (u32,u32,u128) ,  Vec<PoolState>) {
-        ((pool.asset_a, pool.asset_b, amount), state)
+        ((asset_in, asset_out, amount), state)
     }
 }
 fn asset_reserve_with_prec(max_amount: u128, prec: u32) -> impl Strategy<Value = u128> {

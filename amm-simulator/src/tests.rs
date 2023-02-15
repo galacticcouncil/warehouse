@@ -6,18 +6,21 @@ fn sim_config() -> Config {
         pool_type: PoolType::TwoAssetWith(1),
         trade_type: TradeType::Any,
         max_reserve: 1,
-        asset_ids: vec![0],
+        asset_ids: vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        max_trade_ratio: 3,
     }
 }
 
 impl Interface for SomeAmm {
-    fn prepare(pool: PoolState) {
+    fn prepare(pool: Vec<PoolState>) {
         dbg!(pool);
     }
 
     fn before_execute(&mut self) {}
 
-    fn execute(v: u128) {}
+    fn execute(asset_in: u32, asset_out: u32, amount: u128) {
+        dbg!(asset_in, asset_out, amount);
+    }
 
     fn after_execute(&mut self) {}
 }

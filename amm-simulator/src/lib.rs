@@ -6,10 +6,10 @@ use proptest::prop_oneof;
 use proptest::test_runner::{Config as PropConfig, FileFailurePersistence, TestError, TestRunner};
 
 pub trait Interface {
-    fn prepare(pool: PoolState);
+    fn prepare(pool: Vec<PoolState>);
 
     fn before_execute(&mut self);
-    fn execute(d: u128);
+    fn execute(asset_in: u32, asset_out: u32, amount: u128);
     fn after_execute(&mut self);
 }
 
@@ -28,9 +28,10 @@ pub struct Config {
     trade_type: TradeType,
     max_reserve: u128,
     asset_ids: Vec<u32>,
+    max_trade_ratio: u8,
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct PoolState {
     asset_a: u32,
     asset_b: u32,
@@ -55,13 +56,16 @@ macro_rules! decl_amm {
                     failure_persistence: Some(Box::new(FileFailurePersistence::Off)),
                     ..PropConfig::default()
                 });
-                let result = runner.run(&(pool_state_and_trade_amount(&$config)), |(amount, state)| {
-                    <$runtime>::prepare(state);
-                    $runtime.before_execute();
-                    <$runtime>::execute(amount);
-                    $runtime.after_execute();
-                    Ok(())
-                });
+                let result = runner.run(
+                    &(initial_state_and_trade_amount(&$config)),
+                    |((asset_in, asset_out, amount), state)| {
+                        <$runtime>::prepare(state);
+                        $runtime.before_execute();
+                        <$runtime>::execute(asset_in, asset_out, amount);
+                        $runtime.after_execute();
+                        Ok(())
+                    },
+                );
 
                 println!("I did this too!");
             }
@@ -73,30 +77,57 @@ fn decimals() -> impl Strategy<Value = u32> {
     prop_oneof![Just(6), Just(8), Just(10), Just(12), Just(18),]
 }
 
-fn pool_state(config: &Config) -> impl Strategy<Value = PoolState> {
-    (asset_reserve(config.max_reserve), asset_reserve(config.max_reserve)).prop_map(|(reserve_a, reserve_b)| {
-        PoolState {
-            asset_a: 0,
-            asset_b: 1,
-            reserve_a,
-            reserve_b,
-        }
-    })
+fn pools(config: &Config) -> BoxedStrategy<Vec<PoolState>> {
+    let mut r = vec![];
 
-    /*
-    match config.pool_type {
-        PoolType::TwoAsset => todo!(),
-        PoolType::TwoAssetWith(asset_id) => {
-            asset_reserve(config.max_reserve).prop_map(|reserve|PoolState{
-                asset_a: 0,
-                asset_b: asset_id.clone(),
-                reserve_a: reserve.clone(),
-                reserve_b: reserve.clone(),
-            })
-        }
+    for assets in config.asset_ids.windows(2) {
+        let a = assets[0];
+        let b = assets[1];
+        let p = (asset_reserve(config.max_reserve), asset_reserve(config.max_reserve)).prop_map(
+            move |(reserve_a, reserve_b)| PoolState {
+                asset_a: a,
+                asset_b: b,
+                reserve_a,
+                reserve_b,
+            },
+        );
+        r.push(p);
     }
 
-         */
+    r.boxed()
+}
+
+fn select_pool(pools: &[PoolState]) -> BoxedStrategy<PoolState> {
+    prop_oneof![
+        Just(pools[0]),
+        Just(pools[1]),
+        Just(pools[2]),
+        Just(pools[3]),
+        Just(pools[4]),
+        Just(pools[5]),
+    ]
+    .boxed()
+}
+
+fn trade(max_amount: u128, max_ratio: u8) -> impl Strategy<Value = u128> {
+    0..max_amount / max_ratio as u128
+}
+
+prop_compose! {
+    fn trade_params(config: &Config)
+                    (state in pools(config))
+                    (pool in select_pool(&state), state in Just(state)) -> (PoolState, Vec<PoolState>) {
+        (pool, state)
+    }
+}
+
+prop_compose! {
+    fn initial_state_and_trade_amount(config: &Config)
+                    ((pool, state) in trade_params(config))
+                    (amount in trade(pool.reserve_a , 3 ), (pool,state) in Just((pool, state)))
+                    -> ( (u32,u32,u128) ,  Vec<PoolState>) {
+        ((pool.asset_a, pool.asset_b, amount), state)
+    }
 }
 
 prop_compose! {
@@ -104,21 +135,5 @@ prop_compose! {
                     (prec in decimals())
                     (reserve in 1.. max_amount * 10u128.pow(prec)) -> u128 {
         reserve
-    }
-}
-
-prop_compose! {
-    fn reserve_and_trade_amount(config: &Config)
-                    (reserve in asset_reserve(config.max_reserve))
-                    (amount in 1.. reserve / 3, reserve in Just(reserve)) -> (u128, u128) {
-        (reserve, amount)
-    }
-}
-
-prop_compose! {
-    fn pool_state_and_trade_amount(config: &Config)
-                    (pool in pool_state(config))
-                    (amount in 1.. pool.reserve_a / 3, pool in Just(pool)) -> (u128, PoolState) {
-        (amount, pool)
     }
 }

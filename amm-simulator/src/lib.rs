@@ -78,23 +78,41 @@ fn decimals() -> impl Strategy<Value = u32> {
 }
 
 fn pools(config: &Config) -> BoxedStrategy<Vec<PoolState>> {
-    let mut r = vec![];
-
-    for assets in config.asset_ids.windows(2) {
-        let a = assets[0];
-        let b = assets[1];
-        let p = (asset_reserve(config.max_reserve), asset_reserve(config.max_reserve)).prop_map(
-            move |(reserve_a, reserve_b)| PoolState {
-                asset_a: a,
-                asset_b: b,
-                reserve_a,
-                reserve_b,
-            },
-        );
-        r.push(p);
+    match config.pool_type {
+        PoolType::TwoAsset => {
+            let mut r = vec![];
+            for assets in config.asset_ids.windows(2) {
+                let a = assets[0];
+                let b = assets[1];
+                let p = (asset_reserve(config.max_reserve), asset_reserve(config.max_reserve)).prop_map(
+                    move |(reserve_a, reserve_b)| PoolState {
+                        asset_a: a,
+                        asset_b: b,
+                        reserve_a,
+                        reserve_b,
+                    },
+                );
+                r.push(p);
+            }
+            r.boxed()
+        }
+        PoolType::TwoAssetWith(asset_id) => {
+            let mut r = vec![];
+            for asset in config.asset_ids.iter().filter(|id| **id != asset_id) {
+                let a = *asset;
+                let p = (asset_reserve(config.max_reserve), asset_reserve(config.max_reserve)).prop_map(
+                    move |(reserve_a, reserve_b)| PoolState {
+                        asset_a: a,
+                        asset_b: asset_id,
+                        reserve_a,
+                        reserve_b,
+                    },
+                );
+                r.push(p);
+            }
+            r.boxed()
+        }
     }
-
-    r.boxed()
 }
 
 fn select_pool(pools: &[PoolState]) -> BoxedStrategy<PoolState> {
@@ -105,6 +123,10 @@ fn select_pool(pools: &[PoolState]) -> BoxedStrategy<PoolState> {
         Just(pools[3]),
         Just(pools[4]),
         Just(pools[5]),
+        Just(pools[6]),
+        Just(pools[7]),
+        Just(pools[8]),
+        Just(pools[9]),
     ]
     .boxed()
 }

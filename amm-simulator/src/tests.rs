@@ -23,6 +23,8 @@ impl Interface for SomeAmm {
     }
 
     fn after_execute(&mut self) {}
+
+    fn validate_sell(&self) {}
 }
 
 decl_amm!(

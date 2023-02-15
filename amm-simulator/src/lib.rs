@@ -11,6 +11,7 @@ pub trait Interface {
     fn before_execute(&mut self);
     fn execute(asset_in: u32, asset_out: u32, amount: u128);
     fn after_execute(&mut self);
+    fn validate_sell(&self);
 }
 
 pub enum PoolType<AssetId> {
@@ -63,11 +64,10 @@ macro_rules! decl_amm {
                         $runtime.before_execute();
                         <$runtime>::execute(asset_in, asset_out, amount);
                         $runtime.after_execute();
+                        $runtime.validate_sell();
                         Ok(())
                     },
                 );
-
-                println!("I did this too!");
             }
         }
     };
@@ -100,14 +100,16 @@ fn pools(config: &Config) -> BoxedStrategy<Vec<PoolState>> {
             let mut r = vec![];
             for asset in config.asset_ids.iter().filter(|id| **id != asset_id) {
                 let a = *asset;
-                let p = (asset_reserve(config.max_reserve), asset_reserve_with_prec(config.max_reserve, prec)).prop_map(
-                    move |(reserve_a, reserve_b)| PoolState {
+                let p = (
+                    asset_reserve(config.max_reserve),
+                    asset_reserve_with_prec(config.max_reserve, prec),
+                )
+                    .prop_map(move |(reserve_a, reserve_b)| PoolState {
                         asset_a: a,
                         asset_b: asset_id,
                         reserve_a,
                         reserve_b,
-                    },
-                );
+                    });
                 r.push(p);
             }
             r.boxed()
@@ -152,7 +154,7 @@ prop_compose! {
     }
 }
 fn asset_reserve_with_prec(max_amount: u128, prec: u32) -> impl Strategy<Value = u128> {
-    1.. max_amount * 10u128.pow(prec)
+    1..max_amount * 10u128.pow(prec)
 }
 
 prop_compose! {

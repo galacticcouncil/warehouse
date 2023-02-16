@@ -152,7 +152,7 @@ fn remove_liquidity_should_apply_fee_when_withdrawing_all_shares() {
 
             let amount_received = Tokens::free_balance(asset_c, &BOB);
             assert_balance!(BOB, asset_a, 0u128);
-            assert_balance!(BOB, asset_c, 175017638623598u128);
+            assert_balance!(BOB, asset_c, 190632279384122);
             assert_balance!(BOB, pool_id, 0u128);
             assert_balance!(pool_account, asset_a, 100 * ONE + amount_added);
             assert_balance!(pool_account, asset_c, 300 * ONE - amount_received);

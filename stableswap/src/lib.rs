@@ -293,7 +293,7 @@ pub mod pallet {
         ///
         /// Parameters:
         /// - `origin`: Must be T::AuthorityOrigin
-        /// - `share_asset`: Preregisted share asset identifier
+        /// - `share_asset`: Preregistered share asset identifier
         /// - `assets`: List of Asset ids
         /// - `amplification`: Pool amplification
         /// - `trade_fee`: trade fee to be applied in sell/buy trades

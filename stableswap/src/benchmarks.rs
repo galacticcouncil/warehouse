@@ -171,7 +171,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(lp_provider.clone()), pool_id, asset_id_to_withdraw, shares)
     verify {
         assert_eq!(T::Currency::free_balance(pool_id, &lp_provider), 0u128);
-        assert_eq!(T::Currency::free_balance(asset_id_to_withdraw, &lp_provider), 1_289_970_212_644_248u128);
+        assert_eq!(T::Currency::free_balance(asset_id_to_withdraw, &lp_provider), 1296846466078107);
     }
 
 

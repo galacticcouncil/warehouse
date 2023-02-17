@@ -103,10 +103,10 @@ pub mod pallet {
         /// An Order has been placed
         OrderPlaced {
             order_id: OrderId,
-            asset_buy: T::AssetId,
-            asset_sell: T::AssetId,
-            amount_buy: Balance,
-            amount_sell: Balance,
+            asset_in: T::AssetId,
+            asset_out: T::AssetId,
+            amount_in: Balance,
+            amount_out: Balance,
             partially_fillable: bool,
         },
     }
@@ -115,7 +115,7 @@ pub mod pallet {
     pub enum Error<T> {
         /// Asset does not exist in registry
         AssetNotRegistered,
-        /// The asset used to fill the order is different than asset_buy of the order
+        /// The asset used to fill the order is different than asset_in of the order
         AssetNotInOrder,
         /// When filling and order, the fill amount cannot be greater than the remaining order amount
         CannotFillMoreThanOrdered,
@@ -127,7 +127,7 @@ pub mod pallet {
         OrderIdOutOfBound,
         /// Cannot partially fill an order which is not partially fillable
         OrderNotPartiallyFillable,
-        /// Order amount_buy and amount_sell must at all times be greater than the existential deposit
+        /// Order amount_in and amount_out must at all times be greater than the existential deposit
         /// for the asset multiplied by the ExistentialDepositMultiplier.
         /// A fill order may not leave behind amounts smaller than this.
         OrderAmountTooSmall,
@@ -152,23 +152,23 @@ pub mod pallet {
         #[transactional]
         pub fn place_order(
             origin: OriginFor<T>,
-            asset_buy: T::AssetId,
-            asset_sell: T::AssetId,
-            amount_buy: Balance,
-            amount_sell: Balance,
+            asset_in: T::AssetId,
+            asset_out: T::AssetId,
+            amount_in: Balance,
+            amount_out: Balance,
             partially_fillable: bool,
         ) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
             let order = Order {
                 owner,
-                asset_buy,
-                asset_sell,
-                amount_buy,
+                asset_in,
+                asset_out,
+                amount_in,
                 partially_fillable,
             };
 
-            Self::validate_place_order(&order, amount_sell)?;
+            Self::validate_place_order(&order, amount_out)?;
 
             let order_id = <NextOrderId<T>>::try_mutate(|current_id| -> result::Result<OrderId, DispatchError> {
                 *current_id = current_id
@@ -178,15 +178,15 @@ pub mod pallet {
             })?;
 
             let reserve_id = Self::named_reserve_identifier(order_id);
-            T::Currency::reserve_named(&reserve_id, order.asset_sell, &order.owner, amount_sell)?;
+            T::Currency::reserve_named(&reserve_id, order.asset_out, &order.owner, amount_out)?;
 
             <Orders<T>>::insert(order_id, &order);
             Self::deposit_event(Event::OrderPlaced {
                 order_id,
-                asset_buy: order.asset_buy,
-                asset_sell: order.asset_sell,
-                amount_buy: order.amount_buy,
-                amount_sell,
+                asset_in: order.asset_in,
+                asset_out: order.asset_out,
+                amount_in: order.amount_in,
+                amount_out,
                 partially_fillable: order.partially_fillable,
             });
 
@@ -206,18 +206,18 @@ pub mod pallet {
             <Orders<T>>::try_mutate_exists(order_id, |maybe_order| -> DispatchResult {
                 let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
 
-                let amount_sell = Self::fetch_amount_sell(order_id, order);
+                let amount_out = Self::fetch_amount_out(order_id, order);
 
-                let amount_receive = Self::calculate_amount_receive(order, amount_sell, amount)?;
+                let amount_receive = Self::calculate_amount_receive(order, amount_out, amount)?;
 
-                Self::validate_fill_order(order, &who, asset, amount, amount_sell, amount_receive)?;
+                Self::validate_fill_order(order, &who, asset, amount, amount_out, amount_receive)?;
 
                 Self::execute_deal(order_id, order, &who, amount, amount_receive)?;
 
-                let remaining_amount_buy = Self::calculate_difference(order.amount_buy, amount)?;
+                let remaining_amount_in = Self::calculate_difference(order.amount_in, amount)?;
 
-                if remaining_amount_buy > 0 {
-                    order.amount_buy = remaining_amount_buy;
+                if remaining_amount_in > 0 {
+                    order.amount_in = remaining_amount_in;
 
                     Self::deposit_event(Event::OrderPartiallyFilled {
                         order_id,
@@ -245,9 +245,9 @@ pub mod pallet {
 
                 ensure!(order.owner == who, Error::<T>::NoPermission);
 
-                let amount_sell = Self::fetch_amount_sell(order_id, order);
+                let amount_out = Self::fetch_amount_out(order_id, order);
                 let reserve_id = Self::named_reserve_identifier(order_id);
-                T::Currency::unreserve_named(&reserve_id, order.asset_sell, &order.owner, amount_sell);
+                T::Currency::unreserve_named(&reserve_id, order.asset_out, &order.owner, amount_out);
 
                 *maybe_order = None;
 
@@ -260,24 +260,21 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn validate_place_order(order: &Order<T::AccountId, T::AssetId>, amount_sell: Balance) -> DispatchResult {
+    fn validate_place_order(order: &Order<T::AccountId, T::AssetId>, amount_out: Balance) -> DispatchResult {
         ensure!(
-            T::AssetRegistry::exists(order.asset_sell),
+            T::AssetRegistry::exists(order.asset_out),
             Error::<T>::AssetNotRegistered
         );
 
-        ensure!(
-            T::AssetRegistry::exists(order.asset_buy),
-            Error::<T>::AssetNotRegistered
-        );
+        ensure!(T::AssetRegistry::exists(order.asset_in), Error::<T>::AssetNotRegistered);
 
         ensure!(
-            T::Currency::can_reserve(order.asset_sell, &order.owner, amount_sell),
+            T::Currency::can_reserve(order.asset_out, &order.owner, amount_out),
             Error::<T>::InsufficientBalance
         );
 
-        Self::validate_min_order_amount(order.asset_buy, order.amount_buy)?;
-        Self::validate_min_order_amount(order.asset_sell, amount_sell)?;
+        Self::validate_min_order_amount(order.asset_in, order.amount_in)?;
+        Self::validate_min_order_amount(order.asset_out, amount_out)?;
 
         Ok(())
     }
@@ -287,12 +284,12 @@ impl<T: Config> Pallet<T> {
         who: &T::AccountId,
         asset: T::AssetId,
         amount: Balance,
-        amount_sell: Balance,
+        amount_out: Balance,
         amount_receive: Balance,
     ) -> DispatchResult {
-        ensure!(order.asset_buy == asset, Error::<T>::AssetNotInOrder);
+        ensure!(order.asset_in == asset, Error::<T>::AssetNotInOrder);
 
-        ensure!(order.amount_buy >= amount, Error::<T>::CannotFillMoreThanOrdered);
+        ensure!(order.amount_in >= amount, Error::<T>::CannotFillMoreThanOrdered);
 
         ensure!(
             T::Currency::ensure_can_withdraw(asset, who, amount).is_ok(),
@@ -300,16 +297,16 @@ impl<T: Config> Pallet<T> {
         );
 
         if !order.partially_fillable {
-            ensure!(amount == order.amount_buy, Error::<T>::OrderNotPartiallyFillable)
+            ensure!(amount == order.amount_in, Error::<T>::OrderNotPartiallyFillable)
         } else {
-            let remaining_amount_buy = Self::calculate_difference(order.amount_buy, amount)?;
-            if remaining_amount_buy > 0 {
-                Self::validate_min_order_amount(order.asset_buy, remaining_amount_buy)?;
+            let remaining_amount_in = Self::calculate_difference(order.amount_in, amount)?;
+            if remaining_amount_in > 0 {
+                Self::validate_min_order_amount(order.asset_in, remaining_amount_in)?;
             }
 
-            let remaining_amount_sell = Self::calculate_difference(amount_sell, amount_receive)?;
-            if remaining_amount_sell > 0 {
-                Self::validate_min_order_amount(order.asset_sell, remaining_amount_sell)?;
+            let remaining_amount_out = Self::calculate_difference(amount_out, amount_receive)?;
+            if remaining_amount_out > 0 {
+                Self::validate_min_order_amount(order.asset_out, remaining_amount_out)?;
             }
         }
 
@@ -334,19 +331,19 @@ impl<T: Config> Pallet<T> {
         result
     }
 
-    fn fetch_amount_sell(order_id: OrderId, order: &Order<T::AccountId, T::AssetId>) -> Balance {
+    fn fetch_amount_out(order_id: OrderId, order: &Order<T::AccountId, T::AssetId>) -> Balance {
         let reserve_id = Self::named_reserve_identifier(order_id);
-        T::Currency::reserved_balance_named(&reserve_id, order.asset_sell, &order.owner)
+        T::Currency::reserved_balance_named(&reserve_id, order.asset_out, &order.owner)
     }
 
     fn calculate_amount_receive(
         order: &Order<T::AccountId, T::AssetId>,
-        amount_sell: Balance,
+        amount_out: Balance,
         amount_fill: Balance,
     ) -> Result<Balance, Error<T>> {
-        amount_sell
+        amount_out
             .checked_mul(amount_fill)
-            .and_then(|v| v.checked_div(order.amount_buy))
+            .and_then(|v| v.checked_div(order.amount_in))
             .ok_or(Error::<T>::MathError)
     }
 
@@ -363,11 +360,11 @@ impl<T: Config> Pallet<T> {
         amount_receive: Balance,
     ) -> DispatchResult {
         let reserve_id = Self::named_reserve_identifier(order_id);
-        T::Currency::unreserve_named(&reserve_id, order.asset_sell, &order.owner, amount_receive);
+        T::Currency::unreserve_named(&reserve_id, order.asset_out, &order.owner, amount_receive);
 
-        T::Currency::transfer(order.asset_buy, who, &order.owner, amount_fill)?;
+        T::Currency::transfer(order.asset_in, who, &order.owner, amount_fill)?;
 
-        T::Currency::transfer(order.asset_sell, &order.owner, who, amount_receive)?;
+        T::Currency::transfer(order.asset_out, &order.owner, who, amount_receive)?;
 
         Ok(())
     }

@@ -49,7 +49,7 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
 
         // Assert
         let expected_amount_receive = 25_000_000_000_000_u128;
-        let expected_new_amount_buy = 15_000_000_000_000_u128;
+        let expected_new_amount_in = 15_000_000_000_000_u128;
 
         let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
         let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
@@ -71,7 +71,7 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
         assert_eq!(bob_dai_balance_after, bob_dai_balance_before - amount);
 
         let order = OTC::orders(1).unwrap();
-        assert_eq!(order.amount_buy, expected_new_amount_buy);
+        assert_eq!(order.amount_in, expected_new_amount_in);
 
         expect_events(vec![Event::OrderPartiallyFilled {
             order_id: 1,

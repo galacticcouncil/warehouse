@@ -36,17 +36,17 @@ fn place_order_should_work() {
         // Assert
         let order = OTC::orders(1).unwrap();
         assert_eq!(order.owner, ALICE);
-        assert_eq!(order.asset_buy, DAI);
-        assert_eq!(order.asset_sell, HDX);
-        assert_eq!(order.amount_buy, 20 * ONE);
+        assert_eq!(order.asset_in, DAI);
+        assert_eq!(order.asset_out, HDX);
+        assert_eq!(order.amount_in, 20 * ONE);
         assert_eq!(order.partially_fillable, true);
 
         expect_events(vec![Event::OrderPlaced {
             order_id: 1,
-            asset_buy: DAI,
-            asset_sell: HDX,
-            amount_buy: order.amount_buy,
-            amount_sell: 100 * ONE,
+            asset_in: DAI,
+            asset_out: HDX,
+            amount_in: order.amount_in,
+            amount_out: 100 * ONE,
             partially_fillable: true,
         }
         .into()]);
@@ -102,7 +102,7 @@ fn place_order_should_throw_error_when_amount_is_higher_than_balance() {
 }
 
 #[test]
-fn place_order_should_throw_error_when_asset_sell_is_not_registered() {
+fn place_order_should_throw_error_when_asset_out_is_not_registered() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_noop!(
@@ -113,7 +113,7 @@ fn place_order_should_throw_error_when_asset_sell_is_not_registered() {
 }
 
 #[test]
-fn place_order_should_throw_error_when_asset_buy_is_not_registered() {
+fn place_order_should_throw_error_when_asset_in_is_not_registered() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_noop!(
@@ -124,7 +124,7 @@ fn place_order_should_throw_error_when_asset_buy_is_not_registered() {
 }
 
 #[test]
-fn place_order_should_throw_error_when_amount_buy_is_too_low() {
+fn place_order_should_throw_error_when_amount_in_is_too_low() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_noop!(
@@ -135,7 +135,7 @@ fn place_order_should_throw_error_when_amount_buy_is_too_low() {
 }
 
 #[test]
-fn place_order_should_throw_error_when_amount_sell_is_too_low() {
+fn place_order_should_throw_error_when_amount_out_is_too_low() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_noop!(

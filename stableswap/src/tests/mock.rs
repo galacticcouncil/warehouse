@@ -146,7 +146,7 @@ impl Config for Test {
     type Currency = Tokens;
     type ShareAccountId = AccountIdConstructor;
     type AssetRegistry = DummyRegistry<Test>;
-    type PoolMasterOrigin = EnsureSigned<AccountId>;
+    type AuthorityOrigin = EnsureSigned<AccountId>;
     type MinPoolLiquidity = MinimumLiquidity;
     type AmplificationRange = AmplificationRange;
     type MinTradingLimit = MinimumTradingLimit;
@@ -232,8 +232,16 @@ impl ExtBuilder {
         r.execute_with(|| {
             for (who, pool, initial_liquid) in self.created_pools {
                 let pool_id = retrieve_current_asset_id();
+                REGISTERED_ASSETS.with(|v| {
+                    v.borrow_mut().insert(pool_id, pool_id);
+                });
+                ASSET_IDENTS.with(|v| {
+                    v.borrow_mut().insert(b"main".to_vec(), pool_id);
+                });
+
                 assert_ok!(Stableswap::create_pool(
                     Origin::signed(who),
+                    pool_id,
                     pool.assets.clone().into(),
                     pool.amplification,
                     pool.trade_fee,

@@ -17,6 +17,7 @@ members = [
 	"currencies",
 	"stableswap",
 	"test-utils",
+	"duster",
 	"otc",
 ]
 

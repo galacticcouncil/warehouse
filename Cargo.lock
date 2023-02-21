@@ -2835,7 +2835,7 @@ name = "hydradx-adapters"
 version = "0.2.2"
 dependencies = [
  "frame-support",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "lazy_static",
  "log",
  "pallet-transaction-multi-payment",
@@ -2845,19 +2845,6 @@ dependencies = [
  "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
  "xcm-builder 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
  "xcm-executor 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
-]
-
-[[package]]
-name = "hydradx-traits"
-version = "0.9.1"
-source = "git+https://github.com/galacticcouncil/warehouse?rev=fcebd285141ce9ed15136f6102fa6396605d96af#fcebd285141ce9ed15136f6102fa6396605d96af"
-dependencies = [
- "frame-support",
- "impl-trait-for-tuples",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic",
- "sp-std",
 ]
 
 [[package]]
@@ -4711,13 +4698,13 @@ dependencies = [
 
 [[package]]
 name = "pallet-asset-registry"
-version = "2.0.1"
+version = "2.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-traits",
  "parity-scale-codec",
  "primitive-types 0.12.1",
@@ -4955,7 +4942,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-currencies"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4986,6 +4973,30 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-duster"
+version = "3.1.11"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking",
+ "hydradx-traits",
+ "lazy_static",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-currencies",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "substrate-wasm-builder",
 ]
 
 [[package]]
@@ -5037,7 +5048,7 @@ dependencies = [
  "frame-system",
  "frame-system-benchmarking",
  "hydra-dx-math",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "log",
  "parity-scale-codec",
  "pretty_assertions",
@@ -5145,14 +5156,13 @@ dependencies = [
 
 [[package]]
 name = "pallet-liquidity-mining"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
  "hydra-dx-math",
- "hydradx-traits 0.9.1",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -5241,7 +5251,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-utilities",
  "pallet-balances",
  "pallet-uniques",
@@ -5323,7 +5333,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5370,7 +5380,7 @@ dependencies = [
  "frame-system",
  "frame-system-benchmarking",
  "hydradx-adapters",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -5425,13 +5435,14 @@ dependencies = [
 
 [[package]]
 name = "pallet-stableswap"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
+ "bitflags",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hydra-dx-math",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-tokens",
  "orml-traits",
  "parity-scale-codec",
@@ -5518,7 +5529,7 @@ version = "8.0.4"
 dependencies = [
  "frame-support",
  "frame-system",
- "hydradx-traits 2.0.0",
+ "hydradx-traits",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",

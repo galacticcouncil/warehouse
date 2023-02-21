@@ -102,6 +102,7 @@ name = "amm-simulator"
 version = "0.1.0"
 dependencies = [
  "proptest",
+ "sp-arithmetic",
 ]
 
 [[package]]

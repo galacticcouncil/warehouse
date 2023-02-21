@@ -7,3 +7,9 @@ edition = "2021"
 
 [dependencies]
 proptest = "1.0.0"
+sp-arithmetic= { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false}
+
+
+[features]
+default = ["std"]
+std = []

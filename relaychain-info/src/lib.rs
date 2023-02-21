@@ -63,16 +63,6 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
-
-    impl<T: Config> Pallet<T> {
-        //Only for testing purposes
-        #[cfg(feature = "test-utils")]
-        fn add_parent_hash(hash: Hash) -> DispatchResult {
-            ParentHash::<T>::put(hash);
-
-            Ok(())
-        }
-    }
 }
 
 pub struct OnValidationDataHandler<T>(sp_std::marker::PhantomData<T>);

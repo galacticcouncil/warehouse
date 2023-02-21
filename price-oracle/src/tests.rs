@@ -17,7 +17,8 @@
 
 use super::*;
 pub use crate::mock::{
-    Event as TestEvent, ExtBuilder, Origin, PriceOracle, System, Test, ACA, DOT, ETH, HDX, PRICE_ENTRY_1, PRICE_ENTRY_2,
+    Event as TestEvent, ExtBuilder, Origin, PriceOracle, System, Test, ACA, DOT, ETH, HDX, ORACLE_ENTRY_1,
+    ORACLE_ENTRY_2,
 };
 use frame_support::{
     assert_noop, assert_ok,
@@ -195,9 +196,9 @@ fn on_trade_should_work() {
             <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name.clone()),
             Err(())
         );
-        PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_1);
-        PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_2);
-        let price_entry = PRICE_ENTRY_1.calculate_new_price_entry(&PRICE_ENTRY_2);
+        PriceOracle::on_trade(HDX, DOT, ORACLE_ENTRY_1);
+        PriceOracle::on_trade(HDX, DOT, ORACLE_ENTRY_2);
+        let price_entry = ORACLE_ENTRY_1.calculate_new_price_entry(&ORACLE_ENTRY_2);
         assert_eq!(
             <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name).ok(),
             price_entry
@@ -216,11 +217,11 @@ fn on_trade_handler_should_work() {
         );
 
         assert_ok!(PriceOracleHandler::<Test>::on_trade(
-            SOURCE, HDX, DOT, 1_000, 500, 2_000
+            SOURCE, HDX, DOT, 1_000, 500, 2_000, 1_000
         ));
         assert_eq!(
             <PriceDataAccumulator<Test>>::try_get(hdx_dot_pair_name),
-            Ok(PRICE_ENTRY_1)
+            Ok(ORACLE_ENTRY_1)
         );
     });
 }
@@ -236,22 +237,24 @@ fn price_normalization_should_work() {
         );
 
         assert_noop!(
-            PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, Balance::MAX, 1, 2_000).map_err(|(_w, e)| e),
+            PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, Balance::MAX, 1, 2_000, 1_000).map_err(|(_w, e)| e),
             DispatchError::Other("Invalid price")
         );
 
         assert_noop!(
-            PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1, Balance::MAX, 2_000).map_err(|(_w, e)| e),
+            PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1, Balance::MAX, 2_000, 1_000).map_err(|(_w, e)| e),
             DispatchError::Other("Invalid price")
         );
 
         assert_noop!(
-            PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, Balance::zero(), 1_000, 2_000).map_err(|(_w, e)| e),
+            PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, Balance::zero(), 1_000, 2_000, 1_000)
+                .map_err(|(_w, e)| e),
             DispatchError::Other("Invalid values")
         );
 
         assert_noop!(
-            PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, Balance::zero(), 2_000).map_err(|(_w, e)| e),
+            PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, Balance::zero(), 2_000, 1_000)
+                .map_err(|(_w, e)| e),
             DispatchError::Other("Invalid price")
         );
 
@@ -261,21 +264,22 @@ fn price_normalization_should_work() {
             DOT,
             340282366920938463463,
             1,
-            2_000
+            2_000,
+            1_000
         ));
 
         assert_noop!(
-            PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1, 340282366920938463463, 2_000)
+            PriceOracleHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1, 340282366920938463463, 2_000, 1_000)
                 .map_err(|(_w, e)| e),
             DispatchError::Other("Invalid values")
         );
 
         assert_ok!(PriceOracleHandler::<Test>::on_trade(
-            SOURCE, HDX, DOT, 2_000_000, 1_000, 2_000
+            SOURCE, HDX, DOT, 2_000_000, 1_000, 2_000, 1_000
         ));
 
         assert_ok!(PriceOracleHandler::<Test>::on_trade(
-            SOURCE, HDX, DOT, 1_000, 2_000_000, 2_000
+            SOURCE, HDX, DOT, 1_000, 2_000_000, 2_000, 1_000
         ));
 
         let price_entry = PriceDataAccumulator::<Test>::get(hdx_dot_pair_name);
@@ -321,9 +325,9 @@ fn update_data_should_work() {
         System::set_block_number(4);
         PriceOracle::on_initialize(4);
 
-        PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_1);
-        PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_2);
-        PriceOracle::on_trade(HDX, ACA, PRICE_ENTRY_1);
+        PriceOracle::on_trade(HDX, DOT, ORACLE_ENTRY_1);
+        PriceOracle::on_trade(HDX, DOT, ORACLE_ENTRY_2);
+        PriceOracle::on_trade(HDX, ACA, ORACLE_ENTRY_1);
 
         PriceOracle::on_finalize(4);
         System::set_block_number(5);
@@ -570,7 +574,7 @@ fn stable_price_should_work() {
         for i in num_of_iters - 2..2 * num_of_iters + 2 {
             PriceOracle::on_initialize(i.into());
             System::set_block_number(i.into());
-            PriceOracle::on_trade(HDX, DOT, PRICE_ENTRY_1);
+            PriceOracle::on_trade(HDX, DOT, ORACLE_ENTRY_1);
             PriceOracle::on_finalize(i.into());
         }
 

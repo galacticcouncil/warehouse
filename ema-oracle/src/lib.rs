@@ -69,8 +69,8 @@
 use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::{BlockNumberProvider, One, Zero};
 use hydradx_traits::{
-    AggregatedEntry, AggregatedOracle, AggregatedPriceOracle, OnCreatePoolHandler, OnLiquidityChangedHandler,
-    OnTradeHandler,
+    AggregatedEntry, AggregatedOracle, AggregatedPriceOracle, Liquidity, OnCreatePoolHandler,
+    OnLiquidityChangedHandler, OnTradeHandler,
     OraclePeriod::{self, *},
     Volume,
 };
@@ -167,19 +167,27 @@ pub mod pallet {
     #[pallet::genesis_config]
     #[derive(Default)]
     pub struct GenesisConfig {
-        pub price_data: Vec<(Source, (AssetId, AssetId), Price, Balance)>,
+        pub initial_data: Vec<(Source, (AssetId, AssetId), Price, Liquidity<Balance>)>,
     }
 
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
-            for &(source, (asset_a, asset_b), price, liquidity) in self.price_data.iter() {
-                let entry: OracleEntry<T::BlockNumber> = OracleEntry {
-                    price,
-                    volume: Volume::default(),
-                    liquidity,
-                    timestamp: T::BlockNumber::zero(),
+            for &(source, (asset_a, asset_b), price, liquidity) in self.initial_data.iter() {
+                let entry: OracleEntry<T::BlockNumber> = {
+                    let e = OracleEntry {
+                        price,
+                        volume: Volume::default(),
+                        liquidity,
+                        timestamp: T::BlockNumber::zero(),
+                    };
+                    if ordered_pair(asset_a, asset_b) == (asset_a, asset_b) {
+                        e
+                    } else {
+                        e.inverted()
+                    }
                 };
+
                 for period in T::SupportedPeriods::get() {
                     Pallet::<T>::update_oracle(source, ordered_pair(asset_a, asset_b), period, entry.clone());
                 }
@@ -376,15 +384,17 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
         asset_out: AssetId,
         amount_in: Balance,
         amount_out: Balance,
-        liquidity: Balance,
+        liquidity_a: Balance,
+        liquidity_b: Balance,
     ) -> Result<Weight, (Weight, DispatchError)> {
         // We assume that zero values are not valid and can be ignored.
-        if liquidity.is_zero() || amount_in.is_zero() || amount_out.is_zero() {
-            log::warn!(target: LOG_TARGET, "Neither liquidity nor amounts should be zero. Ignoring. Source: {source:?}, liquidity: {liquidity}, amount_in: {amount_in}, amount_out: {amount_out}");
+        if liquidity_a.is_zero() || liquidity_b.is_zero() || amount_in.is_zero() || amount_out.is_zero() {
+            log::warn!(target: LOG_TARGET, "Neither liquidity nor amounts should be zero. Ignoring. Source: {source:?}, liquidity: ({liquidity_a},{liquidity_a}) , amount_in/_out: {amount_in}/{amount_out}");
             return Err((Self::on_trade_weight(), Error::<T>::OnTradeValueZero.into()));
         }
         let price = determine_normalized_price(asset_in, asset_out, amount_in, amount_out);
         let volume = determine_normalized_volume(asset_in, asset_out, amount_in, amount_out);
+        let liquidity = determine_normalized_liquidity(asset_in, asset_out, liquidity_a, liquidity_b);
 
         let timestamp = T::BlockNumberProvider::current_block_number();
         let entry = OracleEntry {
@@ -411,16 +421,18 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
         asset_b: AssetId,
         amount_a: Balance,
         amount_b: Balance,
-        liquidity: Balance,
+        liquidity_a: Balance,
+        liquidity_b: Balance,
     ) -> Result<Weight, (Weight, DispatchError)> {
-        if liquidity.is_zero() || amount_a.is_zero() || amount_b.is_zero() {
-            log::trace!(target: LOG_TARGET, "Liquidity or amounts are zero. Source: {source:?}, liquidity: {liquidity}, amount_a: {amount_a}, amount_b: {amount_b}");
+        if liquidity_a.is_zero() || liquidity_b.is_zero() || amount_a.is_zero() || amount_b.is_zero() {
+            log::trace!(target: LOG_TARGET, "Liquidity or amounts are zero. Source: {source:?}, liquidity: ({liquidity_a},{liquidity_a}) , amount_a: {amount_a}, amount_b: {amount_b}");
         }
         let price = if amount_a.is_zero() || amount_b.is_zero() {
             Price::zero()
         } else {
             determine_normalized_price(asset_a, asset_b, amount_a, amount_b)
         };
+        let liquidity = determine_normalized_liquidity(asset_a, asset_b, liquidity_a, liquidity_b);
         let timestamp = T::BlockNumberProvider::current_block_number();
         let entry = OracleEntry {
             price,
@@ -465,6 +477,20 @@ pub fn determine_normalized_volume(
         Volume::from_a_in_b_out(amount_in, amount_out)
     } else {
         Volume::from_a_out_b_in(amount_out, amount_in)
+    }
+}
+
+/// Construct `Volume` based on unordered assets.
+pub fn determine_normalized_liquidity(
+    asset_in: AssetId,
+    asset_out: AssetId,
+    liquidity_asset_in: Balance,
+    liquidity_asset_out: Balance,
+) -> Liquidity<Balance> {
+    if ordered_pair(asset_in, asset_out) == (asset_in, asset_out) {
+        Liquidity::new(liquidity_asset_in, liquidity_asset_out)
+    } else {
+        Liquidity::new(liquidity_asset_out, liquidity_asset_in)
     }
 }
 

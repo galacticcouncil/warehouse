@@ -324,7 +324,8 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
         asset_b: AssetId,
         amount_in: Balance,
         amount_out: Balance,
-        liq_amount: Balance,
+        liquidity_a: Balance,
+        liquidity_b: Balance,
     ) -> Result<Weight, (Weight, DispatchError)> {
         let (price, amount) =
             if let Some(price_tuple) = Pallet::<T>::normalize_price(asset_a, asset_b, amount_in, amount_out) {
@@ -334,14 +335,14 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
             };
 
         // We assume that zero values are not valid.
-        if price.is_zero() || amount.is_zero() || liq_amount.is_zero() {
+        if price.is_zero() || amount.is_zero() || liquidity_a.is_zero() || liquidity_b.is_zero() {
             return Err((Self::on_trade_weight(), DispatchError::Other("Invalid values")));
         }
 
         let price_entry = PriceEntry {
             price,
             trade_amount: amount,
-            liquidity_amount: liq_amount,
+            liquidity_amount: liquidity_a,
         };
 
         Pallet::<T>::on_trade(asset_a, asset_b, price_entry);

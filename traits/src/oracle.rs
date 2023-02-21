@@ -62,14 +62,14 @@ impl OraclePeriod {
 pub struct AggregatedEntry<Balance, BlockNumber, Price> {
     pub price: Price,
     pub volume: Volume<Balance>,
-    pub liquidity: Balance,
+    pub liquidity: Liquidity<Balance>,
     pub oracle_age: BlockNumber,
 }
 
-impl<Balance, BlockNumber, Price> From<(Price, Volume<Balance>, Balance, BlockNumber)>
+impl<Balance, BlockNumber, Price> From<(Price, Volume<Balance>, Liquidity<Balance>, BlockNumber)>
     for AggregatedEntry<Balance, BlockNumber, Price>
 {
-    fn from((price, volume, liquidity, oracle_age): (Price, Volume<Balance>, Balance, BlockNumber)) -> Self {
+    fn from((price, volume, liquidity, oracle_age): (Price, Volume<Balance>, Liquidity<Balance>, BlockNumber)) -> Self {
         Self {
             price,
             volume,
@@ -181,6 +181,41 @@ impl<Balance> From<Volume<Balance>> for (Balance, Balance, Balance, Balance) {
         }: Volume<Balance>,
     ) -> Self {
         (a_in, b_out, a_out, b_in)
+    }
+}
+
+/// Struct to represent pool liquidity for an asset pair.
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(RuntimeDebug, Encode, Decode, Copy, Clone, PartialEq, Eq, Default, TypeInfo, MaxEncodedLen)]
+pub struct Liquidity<Balance> {
+    pub a: Balance,
+    pub b: Balance,
+}
+
+impl<Balance> Liquidity<Balance>
+where
+    Balance: Copy + AtLeast32BitUnsigned,
+{
+    /// Constructor for pool liquidity of assets a and b
+    pub const fn new(a: Balance, b: Balance) -> Self {
+        Self { a, b }
+    }
+
+    /// Switch assets a and b, so the new `a_in` refers to old `b_in` etc.
+    pub fn inverted(self) -> Self {
+        Self { a: self.b, b: self.a }
+    }
+}
+
+impl<Balance> From<(Balance, Balance)> for Liquidity<Balance> {
+    fn from((a, b): (Balance, Balance)) -> Self {
+        Self { a, b }
+    }
+}
+
+impl<Balance> From<Liquidity<Balance>> for (Balance, Balance) {
+    fn from(Liquidity { a, b }: Liquidity<Balance>) -> Self {
+        (a, b)
     }
 }
 

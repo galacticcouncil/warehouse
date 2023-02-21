@@ -20,8 +20,8 @@ mod mock;
 
 use super::*;
 pub use mock::{
-    BlockNumber, EmaOracle, Event as TestEvent, ExtBuilder, Origin, System, Test, ACA, DOT, HDX, PRICE_ENTRY_1,
-    PRICE_ENTRY_2,
+    BlockNumber, EmaOracle, Event as TestEvent, ExtBuilder, Origin, System, Test, ACA, DOT, HDX, ORACLE_ENTRY_1,
+    ORACLE_ENTRY_2,
 };
 
 use frame_support::{assert_noop, assert_ok};
@@ -77,9 +77,19 @@ fn get_oracle_entry(a: AssetId, b: AssetId, period: OraclePeriod) -> Option<Orac
 #[test]
 fn genesis_config_works() {
     ExtBuilder::default()
-        .with_price_data(vec![
-            (SOURCE, (HDX, DOT), (1_000_000, 1).into(), 2_000_000),
-            (SOURCE, (HDX, ACA), (3_000_000, 1).into(), 4_000_000),
+        .with_initial_data(vec![
+            (
+                SOURCE,
+                (HDX, DOT),
+                (1_000_000, 1).into(),
+                Liquidity::new(2_000_000, 2_000_000_000),
+            ),
+            (
+                SOURCE,
+                (HDX, ACA),
+                (3_000_000, 1).into(),
+                Liquidity::new(4_000_000, 4_000_000_000),
+            ),
         ])
         .build()
         .execute_with(|| {
@@ -89,7 +99,7 @@ fn genesis_config_works() {
                     Some(OracleEntry {
                         price: Price::new(1_000_000, 1),
                         volume: Volume::default(),
-                        liquidity: 2_000_000,
+                        liquidity: Liquidity::new(2_000_000, 2_000_000_000),
                         timestamp: 0,
                     })
                 );
@@ -99,7 +109,7 @@ fn genesis_config_works() {
                     Some(OracleEntry {
                         price: Price::new(3_000_000, 1),
                         volume: Volume::default(),
-                        liquidity: 4_000_000,
+                        liquidity: Liquidity::new(4_000_000, 4_000_000_000),
                         timestamp: 0,
                     })
                 );
@@ -111,9 +121,9 @@ fn genesis_config_works() {
 fn on_trade_should_work() {
     new_test_ext().execute_with(|| {
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
-        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1));
-        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_2));
-        let price_entry = PRICE_ENTRY_2.with_added_volume_from(&PRICE_ENTRY_1);
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), ORACLE_ENTRY_1));
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), ORACLE_ENTRY_2));
+        let price_entry = ORACLE_ENTRY_2.with_added_volume_from(&ORACLE_ENTRY_1);
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap(), price_entry);
     });
 }
@@ -121,10 +131,12 @@ fn on_trade_should_work() {
 #[test]
 fn on_trade_handler_should_work() {
     new_test_ext().execute_with(|| {
-        System::set_block_number(PRICE_ENTRY_1.timestamp);
+        System::set_block_number(ORACLE_ENTRY_1.timestamp);
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
-        assert_ok!(OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 500, 2_000));
-        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(PRICE_ENTRY_1));
+        assert_ok!(OnActivityHandler::<Test>::on_trade(
+            SOURCE, HDX, DOT, 1_000, 500, 2_000, 1_000
+        ));
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(ORACLE_ENTRY_1));
     });
 }
 
@@ -136,12 +148,12 @@ fn on_liquidity_changed_handler_should_work() {
         let no_volume_entry = OracleEntry {
             price: Price::new(1_000, 500),
             volume: Volume::default(),
-            liquidity: 2_000,
+            liquidity: Liquidity::new(2_000, 1_000),
             timestamp,
         };
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
         assert_ok!(OnActivityHandler::<Test>::on_liquidity_changed(
-            SOURCE, HDX, DOT, 1_000, 500, 2_000
+            SOURCE, HDX, DOT, 1_000, 500, 2_000, 1_000
         ));
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(no_volume_entry));
     });
@@ -150,7 +162,7 @@ fn on_liquidity_changed_handler_should_work() {
 #[test]
 fn on_liquidity_changed_should_allow_zero_values() {
     let timestamp = 5;
-    let liquidity = 2_000;
+    let (liquidity_a, liquidity_b) = (2_000, 1_000);
     let amount = 1_000;
 
     new_test_ext().execute_with(|| {
@@ -161,12 +173,13 @@ fn on_liquidity_changed_should_allow_zero_values() {
             DOT,
             Balance::zero(),
             amount,
-            liquidity
+            liquidity_a,
+            liquidity_b,
         ));
         let only_liquidity_entry = OracleEntry {
             price: Price::zero(),
             volume: Volume::default(),
-            liquidity,
+            liquidity: (liquidity_a, liquidity_b).into(),
             timestamp,
         };
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(only_liquidity_entry));
@@ -180,12 +193,13 @@ fn on_liquidity_changed_should_allow_zero_values() {
             DOT,
             amount,
             Balance::zero(),
-            liquidity
+            liquidity_a,
+            liquidity_b,
         ));
         let only_liquidity_entry = OracleEntry {
             price: Price::zero(),
             volume: Volume::default(),
-            liquidity,
+            liquidity: (liquidity_a, liquidity_b).into(),
             timestamp,
         };
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(only_liquidity_entry));
@@ -199,12 +213,13 @@ fn on_liquidity_changed_should_allow_zero_values() {
             DOT,
             amount,
             amount,
-            Balance::zero()
+            Balance::zero(),
+            Balance::zero(),
         ));
         let only_price_entry = OracleEntry {
             price: Price::new(amount, amount),
             volume: Volume::default(),
-            liquidity: Balance::zero(),
+            liquidity: (Balance::zero(), Balance::zero()).into(),
             timestamp,
         };
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(only_price_entry));
@@ -215,17 +230,26 @@ fn on_liquidity_changed_should_allow_zero_values() {
 fn on_trade_should_exclude_zero_values() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, Balance::zero(), 1_000, 2_000).map_err(|(_w, e)| e),
+            OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, Balance::zero(), 1_000, 2_000, 1_000)
+                .map_err(|(_w, e)| e),
             Error::<Test>::OnTradeValueZero
         );
 
         assert_noop!(
-            OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, Balance::zero(), 2_000).map_err(|(_w, e)| e),
+            OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, Balance::zero(), 2_000, 1_000)
+                .map_err(|(_w, e)| e),
             Error::<Test>::OnTradeValueZero
         );
 
         assert_noop!(
-            OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 1_000, Balance::zero(),).map_err(|(_w, e)| e),
+            OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 1_000, Balance::zero(), 1_000)
+                .map_err(|(_w, e)| e),
+            Error::<Test>::OnTradeValueZero
+        );
+
+        assert_noop!(
+            OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 1_000, 2_000, Balance::zero())
+                .map_err(|(_w, e)| e),
             Error::<Test>::OnTradeValueZero
         );
     });
@@ -243,13 +267,22 @@ fn on_entry_should_error_on_accumulator_overflow() {
                 i + 1,
                 1_000,
                 1_000,
-                2_000
+                2_000,
+                2_000,
             ));
         }
         // on_trade should fail once the accumulator is full
         assert_noop!(
-            OnActivityHandler::<Test>::on_trade(SOURCE, 2 * max_entries, 2 * max_entries + 1, 1_000, 1_000, 2_000,)
-                .map_err(|(_w, e)| e),
+            OnActivityHandler::<Test>::on_trade(
+                SOURCE,
+                2 * max_entries,
+                2 * max_entries + 1,
+                1_000,
+                1_000,
+                2_000,
+                2_000
+            )
+            .map_err(|(_w, e)| e),
             Error::<Test>::TooManyUniqueEntries
         );
     });
@@ -269,24 +302,24 @@ fn oracle_volume_should_factor_in_asset_order() {
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
 
         assert_ok!(OnActivityHandler::<Test>::on_trade(
-            SOURCE, HDX, DOT, 2_000_000, 1_000, 2_000
+            SOURCE, HDX, DOT, 2_000_000, 1_000, 2_000, 1,
         ));
         // we reverse the order of the arguments
         assert_ok!(OnActivityHandler::<Test>::on_trade(
-            SOURCE, DOT, HDX, 1_000, 2_000_000, 2_000
+            SOURCE, DOT, HDX, 1_000, 2_000_000, 1, 2_000,
         ));
 
         let price_entry = get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap();
         let first_entry = OracleEntry {
             price: Price::new(2_000_000, 1_000),
             volume: Volume::from_a_in_b_out(2_000_000, 1_000),
-            liquidity: 2_000,
+            liquidity: (2_000, 1).into(),
             timestamp: 0,
         };
         let second_entry = OracleEntry {
             price: Price::new(2_000_000, 1_000),
             volume: Volume::from_a_out_b_in(2_000_000, 1_000),
-            liquidity: 2_000,
+            liquidity: (2_000, 1).into(),
             timestamp: 0,
         };
 
@@ -301,9 +334,9 @@ fn update_data_should_work() {
         System::set_block_number(5);
         EmaOracle::on_initialize(5);
 
-        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1));
-        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_2));
-        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, ACA), PRICE_ENTRY_1));
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), ORACLE_ENTRY_1));
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), ORACLE_ENTRY_2));
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, ACA), ORACLE_ENTRY_1));
 
         EmaOracle::on_finalize(5);
         System::set_block_number(6);
@@ -312,9 +345,9 @@ fn update_data_should_work() {
         for period in supported_periods() {
             assert_eq!(
                 get_oracle_entry(HDX, DOT, period),
-                Some(PRICE_ENTRY_2.with_added_volume_from(&PRICE_ENTRY_1)),
+                Some(ORACLE_ENTRY_2.with_added_volume_from(&ORACLE_ENTRY_1)),
             );
-            assert_eq!(get_oracle_entry(HDX, ACA, period), Some(PRICE_ENTRY_1),);
+            assert_eq!(get_oracle_entry(HDX, ACA, period), Some(ORACLE_ENTRY_1),);
         }
     });
 }
@@ -324,15 +357,15 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
     new_test_ext().execute_with(|| {
         System::set_block_number(5);
         EmaOracle::on_initialize(5);
-        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), PRICE_ENTRY_1));
+        assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), ORACLE_ENTRY_1));
         EmaOracle::on_finalize(5);
 
         System::set_block_number(6);
         EmaOracle::on_initialize(6);
         let second_entry = OracleEntry {
-            liquidity: 3_000,
+            liquidity: Liquidity::new(3_000, 1_500),
             timestamp: 6,
-            ..PRICE_ENTRY_1
+            ..ORACLE_ENTRY_1
         };
         assert_ok!(EmaOracle::on_trade(
             SOURCE,
@@ -344,9 +377,9 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
         System::set_block_number(50);
         EmaOracle::on_initialize(50);
         let third_entry = OracleEntry {
-            liquidity: 10,
+            liquidity: Liquidity::new(10, 5),
             timestamp: 50,
-            ..PRICE_ENTRY_1
+            ..ORACLE_ENTRY_1
         };
         assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), third_entry.clone()));
         EmaOracle::on_finalize(50);
@@ -357,7 +390,7 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
                 volume: Volume::default(),
                 ..second_entry.clone()
             };
-            let mut expected = PRICE_ENTRY_1.clone();
+            let mut expected = ORACLE_ENTRY_1.clone();
             expected
                 .chained_update_via_ema_with(period, &second_entry)
                 .unwrap()
@@ -381,7 +414,7 @@ fn combine_via_ema_with_only_updates_timestamp_on_stable_values() {
     let start_oracle = OracleEntry {
         price: Price::new(4, 1),
         volume: Volume::from_a_in_b_out(1, 4),
-        liquidity: 4,
+        liquidity: Liquidity::new(4, 1),
         timestamp: 5_u32,
     };
     let next_value = OracleEntry {
@@ -397,14 +430,14 @@ fn combine_via_ema_with_works() {
     let start_oracle = OracleEntry {
         price: Price::new(50, 1),
         volume: Volume::from_a_in_b_out(1, 50),
-        liquidity: 50,
+        liquidity: Liquidity::new(50, 1),
         timestamp: 5_u32,
     };
 
     let next_value = OracleEntry {
         price: Price::new(151, 1),
         volume: Volume::from_a_in_b_out(1, 151),
-        liquidity: 151,
+        liquidity: Liquidity::new(151, 1),
         timestamp: 6,
     };
     let next_oracle = start_oracle.combine_via_ema_with(TenMinutes, &next_value).unwrap();
@@ -414,7 +447,7 @@ fn combine_via_ema_with_works() {
     let expected_oracle = OracleEntry {
         price: Price::new(52, 1),
         volume: Volume::from_a_in_b_out(1, 52),
-        liquidity: 52,
+        liquidity: Liquidity::new(52, 1),
         timestamp: 6,
     };
     let tolerance = Price::new(1, 1e10 as u128);
@@ -428,15 +461,15 @@ fn combine_via_ema_with_works() {
 fn combine_via_ema_with_last_block_period_returns_new_value() {
     let start_oracle = OracleEntry {
         price: Price::new(4, 1),
-        volume: Volume::from_a_in_b_out(1u128, 4u128),
-        liquidity: 4u128,
+        volume: Volume::from_a_in_b_out(1_u128, 4_u128),
+        liquidity: Liquidity::new(4_u128, 1_u128),
         timestamp: 5_u32,
     };
 
     let next_value = OracleEntry {
         price: Price::new(8, 1),
-        volume: Volume::from_a_in_b_out(1u128, 8u128),
-        liquidity: 8u128,
+        volume: Volume::from_a_in_b_out(1_u128, 8_u128),
+        liquidity: Liquidity::new(8_u128, 1_u128),
         timestamp: 6,
     };
     let next_oracle = start_oracle.combine_via_ema_with(LastBlock, &next_value);
@@ -450,13 +483,13 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
     let start_oracle = OracleEntry {
         price: Price::new(4_000, 1),
         volume: Volume::from_a_in_b_out(1, 4_000),
-        liquidity: 4_000,
+        liquidity: Liquidity::new(4_000, 1),
         timestamp: 5_u32,
     };
     let next_value = OracleEntry {
         price: Price::new(8_000, 1),
         volume: Volume::from_a_in_b_out(1, 8_000),
-        liquidity: 8_000,
+        liquidity: Liquidity::new(8_000, 1),
         timestamp: 1_000,
     };
     let next_oracle = start_oracle.combine_via_ema_with(period, &next_value).unwrap();
@@ -471,7 +504,12 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
 #[test]
 fn get_price_works() {
     ExtBuilder::default()
-        .with_price_data(vec![(SOURCE, (HDX, DOT), (1_000_000, 1).into(), 2_000_000)])
+        .with_initial_data(vec![(
+            SOURCE,
+            (HDX, DOT),
+            (1_000_000, 1).into(),
+            Liquidity::new(2_000_000, 2),
+        )])
         .build()
         .execute_with(|| {
             System::set_block_number(2);
@@ -486,7 +524,12 @@ fn get_price_works() {
 #[test]
 fn trying_to_get_price_for_same_asset_should_error() {
     ExtBuilder::default()
-        .with_price_data(vec![(SOURCE, (HDX, DOT), (1_000_000, 1).into(), 2_000_000)])
+        .with_initial_data(vec![(
+            SOURCE,
+            (HDX, DOT),
+            (1_000_000, 1).into(),
+            Liquidity::new(2_000_000, 2),
+        )])
         .build()
         .execute_with(|| {
             System::set_block_number(2);
@@ -501,13 +544,15 @@ fn trying_to_get_price_for_same_asset_should_error() {
 fn get_entry_works() {
     ExtBuilder::default().build().execute_with(|| {
         System::set_block_number(1);
-        assert_ok!(OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, 1_000, 500, 2_000));
+        assert_ok!(OnActivityHandler::<Test>::on_trade(
+            SOURCE, HDX, DOT, 1_000, 500, 2_000, 1_000
+        ));
         EmaOracle::on_finalize(1);
         System::set_block_number(100);
         let expected = AggregatedEntry {
             price: Price::new(1_000, 500),
             volume: Volume::default(), // volume for new blocks is zero by default
-            liquidity: 2_000,
+            liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,
         };
         assert_eq!(EmaOracle::get_entry(HDX, DOT, LastBlock, SOURCE), Ok(expected));
@@ -515,7 +560,7 @@ fn get_entry_works() {
         let expected_ten_min = AggregatedEntry {
             price: Price::new(1_000, 500),
             volume: Volume::from_a_in_b_out(141, 70), // volume oracle gets updated towards zero
-            liquidity: 2_000,
+            liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,
         };
         assert_eq!(EmaOracle::get_entry(HDX, DOT, TenMinutes, SOURCE), Ok(expected_ten_min));
@@ -523,7 +568,7 @@ fn get_entry_works() {
         let expected_day = AggregatedEntry {
             price: Price::new(1_000, 500),
             volume: Volume::from_a_in_b_out(986, 493),
-            liquidity: 2_000,
+            liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,
         };
         assert_eq!(EmaOracle::get_entry(HDX, DOT, Day, SOURCE), Ok(expected_day));
@@ -531,7 +576,7 @@ fn get_entry_works() {
         let expected_week = AggregatedEntry {
             price: Price::new(1_000, 500),
             volume: Volume::from_a_in_b_out(998, 499),
-            liquidity: 2_000,
+            liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,
         };
         assert_eq!(EmaOracle::get_entry(HDX, DOT, Week, SOURCE), Ok(expected_week));
@@ -541,13 +586,18 @@ fn get_entry_works() {
 #[test]
 fn get_price_returns_updated_price() {
     ExtBuilder::default()
-        .with_price_data(vec![(SOURCE, (HDX, DOT), (1_000_000, 1).into(), 2_000_000)])
+        .with_initial_data(vec![(
+            SOURCE,
+            (HDX, DOT),
+            (1_000_000, 1).into(),
+            Liquidity::new(2_000_000, 2),
+        )])
         .build()
         .execute_with(|| {
             let on_trade_entry = OracleEntry {
                 price: Price::new(500_000, 1),
                 volume: Volume::default(),
-                liquidity: 2_000_000,
+                liquidity: Liquidity::new(2_000_000, 2),
                 timestamp: 10_000,
             };
             System::set_block_number(1);
@@ -599,20 +649,20 @@ fn get_price_returns_updated_price() {
 fn ema_update_should_return_none_if_new_entry_is_older() {
     let mut entry = OracleEntry {
         timestamp: 10,
-        ..PRICE_ENTRY_1
+        ..ORACLE_ENTRY_1
     };
     let original = entry.clone();
     // older than current
     let outdated_entry = OracleEntry {
         timestamp: 9,
-        ..PRICE_ENTRY_2
+        ..ORACLE_ENTRY_2
     };
     assert_eq!(entry.combine_via_ema_with(TenMinutes, &outdated_entry), None);
     assert_eq!(entry.combine_via_ema_with(LastBlock, &outdated_entry), None);
     // same timestamp as current
     let outdated_entry = OracleEntry {
         timestamp: 10,
-        ..PRICE_ENTRY_2
+        ..ORACLE_ENTRY_2
     };
     assert_eq!(entry.combine_via_ema_with(TenMinutes, &outdated_entry), None);
     assert_eq!(entry.combine_via_ema_with(LastBlock, &outdated_entry), None);

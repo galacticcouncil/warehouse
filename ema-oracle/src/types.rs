@@ -21,7 +21,7 @@ use hydra_dx_math::ema::{
     balance_weighted_average, exp_smoothing, price_weighted_average, volume_weighted_average, EmaPrice,
 };
 use hydra_dx_math::types::Fraction;
-use hydradx_traits::{AggregatedEntry, Volume};
+use hydradx_traits::{AggregatedEntry, Liquidity, Volume};
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::{AtLeast32BitUnsigned, SaturatedConversion, UniqueSaturatedInto};
 
@@ -44,7 +44,7 @@ pub type Price = EmaPrice;
 pub struct OracleEntry<BlockNumber> {
     pub price: Price,
     pub volume: Volume<Balance>,
-    pub liquidity: Balance,
+    pub liquidity: Liquidity<Balance>,
     pub timestamp: BlockNumber,
 }
 
@@ -74,10 +74,11 @@ where
             (b, a).into()
         };
         let volume = self.volume.inverted();
+        let liquidity = self.liquidity.inverted();
         Self {
             price,
             volume,
-            liquidity: self.liquidity,
+            liquidity,
             timestamp: self.timestamp,
         }
     }
@@ -140,7 +141,11 @@ where
             exp_smoothing,
         )
         .into();
-        let liquidity = balance_weighted_average(self.liquidity, incoming.liquidity, exp_smoothing);
+        let liquidity = (
+            balance_weighted_average(self.liquidity.a, incoming.liquidity.a, exp_smoothing),
+            balance_weighted_average(self.liquidity.b, incoming.liquidity.b, exp_smoothing),
+        )
+            .into();
 
         Some(Self {
             price,
@@ -195,8 +200,8 @@ pub fn into_smoothing(period: OraclePeriod) -> Fraction {
     }
 }
 
-impl<BlockNumber> From<(Price, Volume<Balance>, Balance, BlockNumber)> for OracleEntry<BlockNumber> {
-    fn from((price, volume, liquidity, timestamp): (Price, Volume<Balance>, Balance, BlockNumber)) -> Self {
+impl<BlockNumber> From<(Price, Volume<Balance>, Liquidity<Balance>, BlockNumber)> for OracleEntry<BlockNumber> {
+    fn from((price, volume, liquidity, timestamp): (Price, Volume<Balance>, Liquidity<Balance>, BlockNumber)) -> Self {
         Self {
             price,
             volume,

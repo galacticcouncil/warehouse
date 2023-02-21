@@ -28,7 +28,7 @@ use frame_support::sp_runtime::{
 use frame_support::traits::{Everything, GenesisBuild};
 use frame_support::BoundedVec;
 use hydradx_traits::OraclePeriod::{self, *};
-use hydradx_traits::{AssetPairAccountIdFor, Volume};
+use hydradx_traits::{AssetPairAccountIdFor, Liquidity, Volume};
 use sp_core::H256;
 
 pub use hydradx_traits::Source;
@@ -45,7 +45,7 @@ pub const HDX: AssetId = 1_000;
 pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
 
-pub const PRICE_ENTRY_1: OracleEntry<BlockNumber> = OracleEntry {
+pub const ORACLE_ENTRY_1: OracleEntry<BlockNumber> = OracleEntry {
     price: Price::new(1_000, 500),
     volume: Volume {
         a_in: 1_000,
@@ -53,10 +53,10 @@ pub const PRICE_ENTRY_1: OracleEntry<BlockNumber> = OracleEntry {
         a_out: 0,
         b_in: 0,
     },
-    liquidity: 2_000,
+    liquidity: Liquidity::new(2_000, 1_000),
     timestamp: 5,
 };
-pub const PRICE_ENTRY_2: OracleEntry<BlockNumber> = OracleEntry {
+pub const ORACLE_ENTRY_2: OracleEntry<BlockNumber> = OracleEntry {
     price: Price::new(2_000, 2_000),
     volume: Volume {
         a_in: 0,
@@ -64,7 +64,7 @@ pub const PRICE_ENTRY_2: OracleEntry<BlockNumber> = OracleEntry {
         a_out: 2_000,
         b_in: 2_000,
     },
-    liquidity: 4_000,
+    liquidity: Liquidity::new(4_000, 4_000),
     timestamp: 5,
 };
 
@@ -138,12 +138,12 @@ impl Config for Test {
 
 #[derive(Default)]
 pub struct ExtBuilder {
-    pub price_data: Vec<(Source, (AssetId, AssetId), Price, Balance)>,
+    pub initial_data: Vec<(Source, (AssetId, AssetId), Price, Liquidity<Balance>)>,
 }
 
 impl ExtBuilder {
-    pub fn with_price_data(mut self, data: Vec<(Source, (AssetId, AssetId), Price, Balance)>) -> Self {
-        self.price_data = data;
+    pub fn with_initial_data(mut self, data: Vec<(Source, (AssetId, AssetId), Price, Liquidity<Balance>)>) -> Self {
+        self.initial_data = data;
         self
     }
 
@@ -151,7 +151,7 @@ impl ExtBuilder {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
         GenesisBuild::<Test>::assimilate_storage(
             &crate::GenesisConfig {
-                price_data: self.price_data,
+                initial_data: self.initial_data,
             },
             &mut t,
         )

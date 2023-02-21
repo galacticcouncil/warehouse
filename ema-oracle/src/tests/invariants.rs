@@ -47,21 +47,21 @@ fn any_price() -> impl Strategy<Value = Price> {
     (any::<Balance>(), non_zero_amount()).prop_map(|(a, b)| Price::new(a, b))
 }
 
+fn any_liquidity() -> impl Strategy<Value = Liquidity<Balance>> {
+    (any::<Balance>(), any::<Balance>()).prop_map(|l| l.into())
+}
+
 fn oracle_entry(
     (timestamp_min, timestamp_max): (BlockNumber, BlockNumber),
 ) -> impl Strategy<Value = OracleEntry<BlockNumber>> {
-    (
-        any_price(),
-        any_volume(),
-        any::<Balance>(),
-        timestamp_min..timestamp_max,
-    )
-        .prop_map(|(price, volume, liquidity, timestamp)| OracleEntry {
+    (any_price(), any_volume(), any_liquidity(), timestamp_min..timestamp_max).prop_map(
+        |(price, volume, liquidity, timestamp)| OracleEntry {
             price,
             volume,
             liquidity,
             timestamp,
-        })
+        },
+    )
 }
 
 // Tests
@@ -82,16 +82,16 @@ proptest! {
     fn on_liquidity_changed_should_not_change_volume(
         (asset_a, asset_b) in valid_asset_ids(),
         (amount_a, amount_b) in (non_zero_amount(), non_zero_amount()),
-        liquidity in non_zero_amount(),
+        (liquidity_a, liquidity_b) in (non_zero_amount(), non_zero_amount()),
         (second_amount_a, second_amount_b) in (non_zero_amount(), non_zero_amount()),
-        second_liquidity in non_zero_amount(),
+        (second_liquidity_a, second_liquidity_b) in (non_zero_amount(), non_zero_amount()),
     ) {
         new_test_ext().execute_with(|| {
             let timestamp = 5;
             System::set_block_number(timestamp);
-            assert_ok!(OnActivityHandler::<Test>::on_trade(SOURCE, asset_a, asset_b, amount_a, amount_b, liquidity));
+            assert_ok!(OnActivityHandler::<Test>::on_trade(SOURCE, asset_a, asset_b, amount_a, amount_b, liquidity_a, liquidity_b));
             let volume_before = get_accumulator_entry(SOURCE, (asset_a, asset_b)).unwrap().volume;
-            assert_ok!(OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, asset_a, asset_b, second_amount_a, second_amount_b, second_liquidity));
+            assert_ok!(OnActivityHandler::<Test>::on_liquidity_changed(SOURCE, asset_a, asset_b, second_amount_a, second_amount_b, second_liquidity_a, second_liquidity_b));
             let volume_after = get_accumulator_entry(SOURCE, (asset_a, asset_b)).unwrap().volume;
             assert_eq!(volume_before, volume_after);
         });
@@ -117,11 +117,12 @@ use hydra_dx_math::ema::{iterated_balance_ema, iterated_price_ema, iterated_volu
 proptest! {
     #[test]
     fn get_entry_equals_iterated_ema(
-        (amount_hdx, amount_dot, liquidity) in (non_zero_amount(), non_zero_amount(), non_zero_amount()),
+        (amount_hdx, amount_dot) in (non_zero_amount(), non_zero_amount()),
+        (liquidity_hdx, liquidity_dot) in (non_zero_amount(), non_zero_amount()),
     ) {
         new_test_ext().execute_with(|| -> Result<(), TestCaseError> {
             System::set_block_number(1);
-            assert_ok!(OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, amount_hdx, amount_dot, liquidity));
+            assert_ok!(OnActivityHandler::<Test>::on_trade(SOURCE, HDX, DOT, amount_hdx, amount_dot, liquidity_hdx, liquidity_dot));
             EmaOracle::on_finalize(1);
             let oracle_age: u32 = 98;
             System::set_block_number(u64::from(oracle_age) + 2);
@@ -131,7 +132,8 @@ proptest! {
             let expected = AggregatedEntry {
                 price: iterated_price_ema(oracle_age, price, price, smoothing),
                 volume: iterated_volume_ema(oracle_age, volume, smoothing).into(),
-                liquidity: iterated_balance_ema(oracle_age, liquidity, liquidity, smoothing),
+                liquidity: (iterated_balance_ema(oracle_age, liquidity_hdx, liquidity_hdx, smoothing),
+                iterated_balance_ema(oracle_age, liquidity_dot, liquidity_dot, smoothing)).into(),
                 oracle_age: 98,
             };
             prop_assert_eq!(EmaOracle::get_entry(HDX, DOT, LastBlock, SOURCE), Ok(expected));
@@ -140,7 +142,8 @@ proptest! {
             let expected_ten_min = AggregatedEntry {
                 price: iterated_price_ema(oracle_age, price, price, smoothing),
                 volume: iterated_volume_ema(oracle_age, volume, smoothing).into(),
-                liquidity: iterated_balance_ema(oracle_age, liquidity, liquidity, smoothing),
+                liquidity: (iterated_balance_ema(oracle_age, liquidity_hdx, liquidity_hdx, smoothing),
+                iterated_balance_ema(oracle_age, liquidity_dot, liquidity_dot, smoothing)).into(),
                 oracle_age: 98,
             };
             prop_assert_eq!(EmaOracle::get_entry(HDX, DOT, TenMinutes, SOURCE), Ok(expected_ten_min));

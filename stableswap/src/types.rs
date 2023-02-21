@@ -38,7 +38,7 @@ impl<AssetId> PoolInfo<AssetId>
 where
     AssetId: Ord + Copy,
 {
-    pub(crate) fn find_asset(&self, asset: AssetId) -> Option<usize> {
+    pub fn find_asset(&self, asset: AssetId) -> Option<usize> {
         self.assets.iter().position(|v| *v == asset)
     }
 
@@ -46,14 +46,14 @@ where
         has_unique_elements(&mut self.assets.iter())
     }
 
-    pub(crate) fn pool_account<T: Config>(&self) -> T::AccountId
+    pub fn pool_account<T: Config>(&self) -> T::AccountId
     where
         T::ShareAccountId: AccountIdFor<Vec<AssetId>, AccountId = T::AccountId>,
     {
         T::ShareAccountId::from_assets(&self.assets, Some(POOL_IDENTIFIER))
     }
 
-    pub(crate) fn balances<T: Config>(&self) -> Vec<Balance>
+    pub fn balances<T: Config>(&self) -> Vec<Balance>
     where
         T::ShareAccountId: AccountIdFor<Vec<AssetId>, AccountId = T::AccountId>,
         T::AssetId: From<AssetId>,
@@ -70,4 +70,27 @@ where
 pub struct AssetLiquidity<AssetId> {
     pub asset_id: AssetId,
     pub amount: Balance,
+}
+
+bitflags::bitflags! {
+    /// Indicates whether asset can be bought or sold to/from Omnipool and/or liquidity added/removed.
+    #[derive(Encode,Decode, MaxEncodedLen, TypeInfo)]
+    pub struct Tradability: u8 {
+        /// Asset is frozen. No operations are allowed.
+        const FROZEN = 0b0000_0000;
+        /// Asset is allowed to be sold into omnipool
+        const SELL = 0b0000_0001;
+        /// Asset is allowed to be bought into omnipool
+        const BUY = 0b0000_0010;
+        /// Adding liquidity of asset is allowed
+        const ADD_LIQUIDITY = 0b0000_0100;
+        /// Removing liquidity of asset is not allowed
+        const REMOVE_LIQUIDITY = 0b0000_1000;
+    }
+}
+
+impl Default for Tradability {
+    fn default() -> Self {
+        Tradability::SELL | Tradability::BUY | Tradability::ADD_LIQUIDITY | Tradability::REMOVE_LIQUIDITY
+    }
 }

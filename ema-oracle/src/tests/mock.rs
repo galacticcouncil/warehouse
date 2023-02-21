@@ -136,13 +136,15 @@ impl Config for Test {
     type MaxUniqueEntries = ConstU32<MAX_UNIQUE_ENTRIES>;
 }
 
+pub type InitialDataEntry = (Source, (AssetId, AssetId), Price, Liquidity<Balance>);
+
 #[derive(Default)]
 pub struct ExtBuilder {
-    pub initial_data: Vec<(Source, (AssetId, AssetId), Price, Liquidity<Balance>)>,
+    pub initial_data: Vec<InitialDataEntry>,
 }
 
 impl ExtBuilder {
-    pub fn with_initial_data(mut self, data: Vec<(Source, (AssetId, AssetId), Price, Liquidity<Balance>)>) -> Self {
+    pub fn with_initial_data(mut self, data: Vec<InitialDataEntry>) -> Self {
         self.initial_data = data;
         self
     }

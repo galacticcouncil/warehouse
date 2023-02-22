@@ -63,6 +63,7 @@ use sp_runtime::{
 };
 use sp_std::{fmt::Debug, marker, result};
 
+pub mod fungibles;
 mod mock;
 mod tests;
 mod weights;

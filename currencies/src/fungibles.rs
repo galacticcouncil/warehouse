@@ -5,7 +5,7 @@ use frame_support::traits::tokens::{fungible, fungibles, DepositConsequence, Wit
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::Get;
 use sp_runtime::DispatchError;
-use std::marker::PhantomData;
+use sp_std::marker::PhantomData;
 
 pub struct FungibleCurrencies<T>(PhantomData<T>);
 

@@ -66,6 +66,7 @@ use sp_std::{fmt::Debug, marker, result};
 pub mod fungibles;
 mod mock;
 mod tests;
+mod tests_fungibles;
 mod weights;
 
 pub use module::*;

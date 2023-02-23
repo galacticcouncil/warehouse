@@ -297,6 +297,14 @@ fn volume_normalization_should_factor_in_asset_order() {
 }
 
 #[test]
+fn liquidity_normalization_should_factor_in_asset_order() {
+    assert_ne!(
+        determine_normalized_liquidity(HDX, DOT, 1_000, 500),
+        determine_normalized_liquidity(DOT, HDX, 1_000, 500)
+    );
+}
+
+#[test]
 fn oracle_volume_should_factor_in_asset_order() {
     new_test_ext().execute_with(|| {
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
@@ -392,11 +400,11 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
             };
             let mut expected = ORACLE_ENTRY_1.clone();
             expected
-                .chained_update_via_ema_with(period, &second_entry)
+                .update_to_new_by_integrating_incoming(period, &second_entry)
                 .unwrap()
-                .chained_update_via_ema_with(period, &second_at_50)
+                .update_outdated_to_current(period, &second_at_50)
                 .unwrap()
-                .update_via_ema_with(period, &third_entry)
+                .update_to_new_by_integrating_incoming(period, &third_entry)
                 .unwrap();
             assert_eq!(
                 get_oracle_entry(HDX, DOT, period).unwrap(),
@@ -409,7 +417,7 @@ fn update_data_should_use_old_last_block_oracle_to_update_to_parent() {
 }
 
 #[test]
-fn combine_via_ema_with_only_updates_timestamp_on_stable_values() {
+fn calculate_new_by_integrating_incoming_only_updates_timestamp_on_stable_values() {
     let period = TenMinutes;
     let start_oracle = OracleEntry {
         price: Price::new(4, 1),
@@ -421,12 +429,12 @@ fn combine_via_ema_with_only_updates_timestamp_on_stable_values() {
         timestamp: 6,
         ..start_oracle.clone()
     };
-    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value);
+    let next_oracle = start_oracle.calculate_new_by_integrating_incoming(period, &next_value);
     assert_eq!(next_oracle, Some(next_value));
 }
 
 #[test]
-fn combine_via_ema_with_works() {
+fn calculate_new_by_integrating_incoming_with_works() {
     let start_oracle = OracleEntry {
         price: Price::new(50, 1),
         volume: Volume::from_a_in_b_out(1, 50),
@@ -440,7 +448,9 @@ fn combine_via_ema_with_works() {
         liquidity: Liquidity::new(151, 1),
         timestamp: 6,
     };
-    let next_oracle = start_oracle.combine_via_ema_with(TenMinutes, &next_value).unwrap();
+    let next_oracle = start_oracle
+        .calculate_new_by_integrating_incoming(TenMinutes, &next_value)
+        .unwrap();
     // ten minutes corresponds to 100 blocks which corresponds to a smoothing factor of
     // `2 / 101 ≈ 1 / 50` which means that for an update from 50 to 151 we expect an update of
     // about 2
@@ -458,7 +468,7 @@ fn combine_via_ema_with_works() {
 }
 
 #[test]
-fn combine_via_ema_with_last_block_period_returns_new_value() {
+fn calculate_new_by_integrating_incoming_last_block_period_returns_new_value() {
     let start_oracle = OracleEntry {
         price: Price::new(4, 1),
         volume: Volume::from_a_in_b_out(1_u128, 4_u128),
@@ -472,13 +482,13 @@ fn combine_via_ema_with_last_block_period_returns_new_value() {
         liquidity: Liquidity::new(8_u128, 1_u128),
         timestamp: 6,
     };
-    let next_oracle = start_oracle.combine_via_ema_with(LastBlock, &next_value);
+    let next_oracle = start_oracle.calculate_new_by_integrating_incoming(LastBlock, &next_value);
     let expected_oracle = next_value;
     assert_eq!(next_oracle, Some(expected_oracle));
 }
 
 #[test]
-fn calculate_new_ema_should_incorporate_longer_time_deltas() {
+fn calculate_current_from_outdated_should_incorporate_longer_time_deltas() {
     let period = TenMinutes;
     let start_oracle = OracleEntry {
         price: Price::new(4_000, 1),
@@ -492,7 +502,9 @@ fn calculate_new_ema_should_incorporate_longer_time_deltas() {
         liquidity: Liquidity::new(8_000, 1),
         timestamp: 1_000,
     };
-    let next_oracle = start_oracle.combine_via_ema_with(period, &next_value).unwrap();
+    let next_oracle = start_oracle
+        .calculate_current_from_outdated(period, &next_value)
+        .unwrap();
     assert_price_approx_eq!(
         next_oracle.price,
         next_value.price,
@@ -598,7 +610,7 @@ fn get_price_returns_updated_price() {
                 price: Price::new(500_000, 1),
                 volume: Volume::default(),
                 liquidity: Liquidity::new(2_000_000, 2),
-                timestamp: 10_000,
+                timestamp: 1,
             };
             System::set_block_number(1);
             assert_ok!(EmaOracle::on_trade(SOURCE, ordered_pair(HDX, DOT), on_trade_entry));
@@ -657,17 +669,38 @@ fn ema_update_should_return_none_if_new_entry_is_older() {
         timestamp: 9,
         ..ORACLE_ENTRY_2
     };
-    assert_eq!(entry.combine_via_ema_with(TenMinutes, &outdated_entry), None);
-    assert_eq!(entry.combine_via_ema_with(LastBlock, &outdated_entry), None);
+    assert_eq!(entry.calculate_current_from_outdated(TenMinutes, &outdated_entry), None);
+    assert_eq!(entry.calculate_current_from_outdated(LastBlock, &outdated_entry), None);
+    assert_eq!(
+        entry.calculate_new_by_integrating_incoming(TenMinutes, &outdated_entry),
+        None
+    );
+    assert_eq!(
+        entry.calculate_new_by_integrating_incoming(LastBlock, &outdated_entry),
+        None
+    );
     // same timestamp as current
     let outdated_entry = OracleEntry {
         timestamp: 10,
         ..ORACLE_ENTRY_2
     };
-    assert_eq!(entry.combine_via_ema_with(TenMinutes, &outdated_entry), None);
-    assert_eq!(entry.combine_via_ema_with(LastBlock, &outdated_entry), None);
+    assert_eq!(entry.calculate_current_from_outdated(TenMinutes, &outdated_entry), None);
+    assert_eq!(entry.calculate_current_from_outdated(LastBlock, &outdated_entry), None);
+    assert_eq!(
+        entry.calculate_new_by_integrating_incoming(TenMinutes, &outdated_entry),
+        None
+    );
+    assert_eq!(
+        entry.calculate_new_by_integrating_incoming(LastBlock, &outdated_entry),
+        None
+    );
 
-    assert_eq!(entry.update_via_ema_with(TenMinutes, &outdated_entry), None);
+    assert_eq!(
+        entry.update_to_new_by_integrating_incoming(TenMinutes, &outdated_entry),
+        None
+    );
+    assert_eq!(entry, original);
+    assert_eq!(entry.update_outdated_to_current(TenMinutes, &outdated_entry), None);
     assert_eq!(entry, original);
 }
 

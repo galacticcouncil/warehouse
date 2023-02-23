@@ -17,9 +17,7 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::sp_runtime::RuntimeDebug;
-use hydra_dx_math::ema::{
-    balance_weighted_average, exp_smoothing, price_weighted_average, volume_weighted_average, EmaPrice,
-};
+use hydra_dx_math::ema::{calculate_new_by_integrating_incoming, update_outdated_to_current, EmaPrice};
 use hydra_dx_math::types::Fraction;
 use hydradx_traits::{AggregatedEntry, Liquidity, Volume};
 use scale_info::TypeInfo;
@@ -61,6 +59,11 @@ where
             liquidity: self.liquidity,
             oracle_age: self.timestamp.saturating_sub(initialized),
         }
+    }
+
+    /// Return the raw data of the entry as a tuple of tuples, excluding the timestamp.
+    pub fn raw_data(&self) -> (Price, (Balance, Balance, Balance, Balance), (Balance, Balance)) {
+        (self.price, self.volume.clone().into(), self.liquidity.into())
     }
 
     /// Return an inverted version of the entry where the meaning of assets a and b are inverted.
@@ -110,21 +113,16 @@ where
         }
     }
 
-    /// Determine a new oracle entry based on a previous (`self`) and an `incoming` entry as well as
+    /// Determine the next oracle entry based on a previous (`self`) and an `incoming` entry as well as
     /// a `period`.
     ///
     /// Returns `None` if any of the calculations fail (including the `incoming` entry not being
-    /// more recent than `self`).
+    /// one iteration (block) more recent than `self`).
     ///
-    /// The period is used to determine the smoothing factor alpha for an exponential moving
-    /// average. The smoothing factor is calculated as `alpha = 2 / (period + 1)`. `alpha = 2 /
-    /// (period + 1)` leads to the "center of mass" of the EMA corresponding to a period-length SMA.
-    ///
-    /// Uses the difference between the `timestamp`s to determine the time to cover and
-    /// exponentiates the complement (`1 - alpha`) with that time difference.
-    pub fn combine_via_ema_with(&self, period: OraclePeriod, incoming: &Self) -> Option<Self> {
-        let iterations = incoming.timestamp.checked_sub(&self.timestamp)?;
-        if iterations.is_zero() {
+    /// The period is used to determine the smoothing factor alpha for an exponential moving average.
+    pub fn calculate_new_by_integrating_incoming(&self, period: OraclePeriod, incoming: &Self) -> Option<Self> {
+        // incoming should be one step ahead of the previous value
+        if !incoming.timestamp.checked_sub(&self.timestamp)?.is_one() {
             return None;
         }
         if period == OraclePeriod::LastBlock {
@@ -132,59 +130,66 @@ where
         }
         // determine smoothing factor
         let smoothing = into_smoothing(period);
-        let exp_smoothing = exp_smoothing(smoothing, iterations.saturated_into::<u32>());
-
-        let price = price_weighted_average(self.price, incoming.price, exp_smoothing);
-        let volume = volume_weighted_average(
-            self.volume.clone().into(),
-            incoming.volume.clone().into(),
-            exp_smoothing,
-        )
-        .into();
-        let liquidity = (
-            balance_weighted_average(self.liquidity.a, incoming.liquidity.a, exp_smoothing),
-            balance_weighted_average(self.liquidity.b, incoming.liquidity.b, exp_smoothing),
-        )
-            .into();
+        let (price, volume, liquidity) =
+            calculate_new_by_integrating_incoming(self.raw_data(), incoming.raw_data(), smoothing);
 
         Some(Self {
             price,
-            volume,
-            liquidity,
+            volume: volume.into(),
+            liquidity: liquidity.into(),
             timestamp: incoming.timestamp,
         })
     }
 
-    /// Update `self` based on a previous (`self`) and an `incoming` entry as well as a `period`.
-    ///
-    /// Returns `None` if any of the calculations fail (including the `incoming` entry not being
-    /// more recent than `self`) or - on success - a reference to `self` for chaining. Use
-    /// [`update_via_ema_with`] if you only care about success and failure without chaining.
-    ///
-    /// The period is used to determine the smoothing factor alpha for an exponential moving
-    /// average. The smoothing factor is calculated as `alpha = 2 / (period + 1)`. `alpha = 2 /
-    /// (period + 1)` leads to the "center of mass" of the EMA corresponding to a period-length SMA.
-    ///
-    /// Uses the difference between the `timestamp`s to determine the time to cover and
-    /// exponentiates the complement (`1 - alpha`) with that time difference.
-    pub fn chained_update_via_ema_with(&mut self, period: OraclePeriod, incoming: &Self) -> Option<&mut Self> {
-        *self = self.combine_via_ema_with(period, incoming)?;
+    /// Update `self` based on a previous (`self`) and an `incoming` oracle entry as well as  a `period`.
+    pub fn update_to_new_by_integrating_incoming(
+        &mut self,
+        period: OraclePeriod,
+        incoming: &Self,
+    ) -> Option<&mut Self> {
+        *self = self.calculate_new_by_integrating_incoming(period, incoming)?;
         Some(self)
     }
 
-    /// Update `self` based on a previous (`self`) and an `incoming` entry as well as a `period`.
+    /// Determine the current intended oracle entry based on a previous (`self`) and an `update_with` entry as well as
+    /// a `period`.
     ///
-    /// Returns `None` if any of the calculations fail (including the `incoming` entry not being
-    /// more recent than `self`) or `()` on success.
+    /// Returns `None` if any of the calculations fail (including the `update_with` entry not being
+    /// more recent than `self`).
     ///
-    /// The period is used to determine the smoothing factor alpha for an exponential moving
-    /// average. The smoothing factor is calculated as `alpha = 2 / (period + 1)`. `alpha = 2 /
-    /// (period + 1)` leads to the "center of mass" of the EMA corresponding to a period-length SMA.
+    /// The period is used to determine the smoothing factor alpha for an exponential moving average.
     ///
-    /// Uses the difference between the `timestamp`s to determine the time to cover and
-    /// exponentiates the complement (`1 - alpha`) with that time difference.
-    pub fn update_via_ema_with(&mut self, period: OraclePeriod, incoming: &Self) -> Option<()> {
-        self.chained_update_via_ema_with(period, incoming).map(|_| ())
+    /// Uses the difference between the `timestamp`s to determine the time (i.e. iterations) to cover.
+    pub fn calculate_current_from_outdated(&self, period: OraclePeriod, update_with: &Self) -> Option<Self> {
+        let iterations = update_with.timestamp.checked_sub(&self.timestamp)?;
+        if iterations.is_zero() {
+            return None;
+        }
+        if period == OraclePeriod::LastBlock {
+            return Some(update_with.clone());
+        }
+        // determine smoothing factor
+        let smoothing = into_smoothing(period);
+        let (price, volume, liquidity) = update_outdated_to_current(
+            iterations.saturated_into(),
+            self.raw_data(),
+            (update_with.price, update_with.liquidity.into()),
+            smoothing,
+        );
+
+        Some(Self {
+            price,
+            volume: volume.into(),
+            liquidity: liquidity.into(),
+            timestamp: update_with.timestamp,
+        })
+    }
+
+    /// Update `self` based on a previous (`self`) and an `update_with` entry as well as a `period`.
+    /// See [`calculate_current_from_outdated`].
+    pub fn update_outdated_to_current(&mut self, period: OraclePeriod, update_with: &Self) -> Option<&mut Self> {
+        *self = self.calculate_current_from_outdated(period, update_with)?;
+        Some(self)
     }
 }
 

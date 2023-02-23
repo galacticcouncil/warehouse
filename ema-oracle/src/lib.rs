@@ -265,6 +265,22 @@ impl<T: Config> Pallet<T> {
             .map_err(|_| (weight, Error::<T>::TooManyUniqueEntries.into()))
     }
 
+    /// Return the current value of the `LastBlock` oracle for the given `source` and `assets`.
+    pub(crate) fn last_block_oracle(
+        source: Source,
+        assets: (AssetId, AssetId),
+        block: T::BlockNumber,
+    ) -> Option<(OracleEntry<T::BlockNumber>, T::BlockNumber)> {
+        Self::oracle((source, assets, LastBlock)).map(|(mut last_block, init)| {
+            // update the `LastBlock` oracle to the last block if it hasn't been updated for a while
+            // price and liquidity stay constant, volume becomes zero
+            if last_block.timestamp != block {
+                last_block.fast_forward_to(block);
+            }
+            (last_block, init)
+        })
+    }
+
     /// Update oracles based on data accumulated during the block.
     fn update_oracles_from_accumulator() {
         for ((src, assets), oracle_entry) in Accumulator::<T>::take().into_iter() {
@@ -283,28 +299,21 @@ impl<T: Config> Pallet<T> {
         src: Source,
         assets: (AssetId, AssetId),
         period: OraclePeriod,
-        oracle_entry: OracleEntry<T::BlockNumber>,
+        incoming_entry: OracleEntry<T::BlockNumber>,
     ) {
         Oracles::<T>::mutate((src, assets, period), |oracle| {
             // initialize the oracle entry if it doesn't exist
             if oracle.is_none() {
-                *oracle = Some((oracle_entry.clone(), T::BlockNumberProvider::current_block_number()));
+                *oracle = Some((incoming_entry.clone(), T::BlockNumberProvider::current_block_number()));
                 return;
             }
             if let Some((prev_entry, _)) = oracle.as_mut() {
                 let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
                 // update the entry to the parent block if it hasn't been updated for a while
-                // skip if we're updating the `LastBlock` event
-                if parent > prev_entry.timestamp && period != LastBlock {
-                    Self::oracle((src, assets, LastBlock))
-                        .and_then(|(mut last_block, _)| -> Option<()> {
-                            // update the `LastBlock` oracle to the last block if it hasn't been updated for a while
-                            // price and liquidity stay constant, volume becomes zero
-                            if last_block.timestamp != parent {
-                                last_block.fast_forward_to(parent);
-                            }
-                            prev_entry.update_via_ema_with(period, &last_block)?;
-                            Some(())
+                if parent > prev_entry.timestamp {
+                    Self::last_block_oracle(src, assets, parent)
+                        .and_then(|(last_block, _)| {
+                            prev_entry.update_outdated_to_current(period, &last_block).map(|_| ())
                         }).unwrap_or_else(|| {
                             log::warn!(
                                 target: LOG_TARGET,
@@ -314,7 +323,8 @@ impl<T: Config> Pallet<T> {
                         })
                 }
                 // calculate the actual update with the new value
-                prev_entry.update_via_ema_with(period, &oracle_entry)
+                prev_entry.update_to_new_by_integrating_incoming(period, &incoming_entry)
+                    .map(|_| ())
                     .unwrap_or_else(|| {
                         log::warn!(
                             target: LOG_TARGET,
@@ -336,22 +346,16 @@ impl<T: Config> Pallet<T> {
         period: OraclePeriod,
     ) -> Option<(OracleEntry<T::BlockNumber>, T::BlockNumber)> {
         let parent = T::BlockNumberProvider::current_block_number().saturating_sub(One::one());
-        // First get the `LastBlock` oracle as we will use it to calculate the updated values for
-        // the others.
-        let (mut last_block, init) = Self::oracle((src, assets, LastBlock))?;
-        // update the `LastBlock` oracle to the last block if it hasn't been updated for a while
-        // price and liquidity stay constant, volume becomes zero
-        if last_block.timestamp != parent {
-            last_block.fast_forward_to(parent);
-        }
-
+        // First get the `LastBlock` oracle to calculate the updated values for the others.
+        let (last_block, last_block_init) = Self::last_block_oracle(src, assets, parent)?;
+        // If it was requested return it directly.
         if period == LastBlock {
-            return Some((last_block, init));
+            return Some((last_block, last_block_init));
         }
 
         let (entry, init) = Self::oracle((src, assets, period))?;
         if entry.timestamp < parent {
-            entry.combine_via_ema_with(period, &last_block)
+            entry.calculate_current_from_outdated(period, &last_block)
         } else {
             Some(entry)
         }
@@ -480,7 +484,7 @@ pub fn determine_normalized_volume(
     }
 }
 
-/// Construct `Volume` based on unordered assets.
+/// Construct `Liquidity` based on unordered assets.
 pub fn determine_normalized_liquidity(
     asset_in: AssetId,
     asset_out: AssetId,

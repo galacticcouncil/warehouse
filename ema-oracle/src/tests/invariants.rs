@@ -51,7 +51,18 @@ fn any_liquidity() -> impl Strategy<Value = Liquidity<Balance>> {
     (any::<Balance>(), any::<Balance>()).prop_map(|l| l.into())
 }
 
-fn oracle_entry(
+fn oracle_entry_with_timestamp(timestamp: BlockNumber) -> impl Strategy<Value = OracleEntry<BlockNumber>> {
+    (any_price(), any_volume(), any_liquidity(), Just(timestamp)).prop_map(|(price, volume, liquidity, timestamp)| {
+        OracleEntry {
+            price,
+            volume,
+            liquidity,
+            timestamp,
+        }
+    })
+}
+
+fn oracle_entry_within_timestamp_range(
     (timestamp_min, timestamp_max): (BlockNumber, BlockNumber),
 ) -> impl Strategy<Value = OracleEntry<BlockNumber>> {
     (any_price(), any_volume(), any_liquidity(), timestamp_min..timestamp_max).prop_map(
@@ -100,14 +111,28 @@ proptest! {
 
 proptest! {
     #[test]
-    fn calculate_new_ema_equals_update_via_ema_with(
-        start_oracle in oracle_entry((0, 1_000)),
-        incoming_value in oracle_entry((1_001, 100_000)),
+    fn update_outdated_to_current_equals_calculate_current_from_outdated(
+        start_oracle in oracle_entry_within_timestamp_range((0, 1_000)),
+        incoming_value in oracle_entry_within_timestamp_range((1_001, 100_000)),
     ) {
-        let next_oracle = start_oracle.combine_via_ema_with(TenMinutes, &incoming_value);
+        let next_oracle = start_oracle.calculate_current_from_outdated(TenMinutes, &incoming_value);
 
         let mut start_oracle = start_oracle;
-        start_oracle.update_via_ema_with(TenMinutes, &incoming_value);
+        start_oracle.update_outdated_to_current(TenMinutes, &incoming_value);
+        prop_assert_eq!(next_oracle, Some(start_oracle));
+    }
+}
+
+proptest! {
+    #[test]
+    fn update_to_new_by_integrating_incoming_equals_calculate_new_by_integrating_incoming(
+        start_oracle in oracle_entry_with_timestamp(10_000),
+        incoming_value in oracle_entry_with_timestamp(10_001),
+    ) {
+        let next_oracle = start_oracle.calculate_new_by_integrating_incoming(TenMinutes, &incoming_value);
+
+        let mut start_oracle = start_oracle;
+        start_oracle.update_to_new_by_integrating_incoming(TenMinutes, &incoming_value);
         prop_assert_eq!(next_oracle, Some(start_oracle));
     }
 }

@@ -1,6 +1,6 @@
 // This file is part of pallet-ema-oracle.
 
-// Copyright (C) 2022 Intergalactic, Limited (GIB).
+// Copyright (C) 2022-2023  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");

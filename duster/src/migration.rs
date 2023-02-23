@@ -17,6 +17,7 @@
 
 use crate::Config;
 use frame_support::weights::Weight;
+use sp_std::vec::Vec;
 
 /// Storage names are changed from Classes to Collections and from Instances to Items.
 pub mod v1 {

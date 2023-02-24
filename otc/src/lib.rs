@@ -155,7 +155,7 @@ pub mod pallet {
         /// Error with math calculations
         MathError,
         /// The caller does not have permission to complete the action
-        NoPermission,
+        Forbidden,
     }
 
     /// ID sequencer for Orders
@@ -284,7 +284,7 @@ pub mod pallet {
             <Orders<T>>::try_mutate_exists(order_id, |maybe_order| -> DispatchResult {
                 let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
 
-                ensure!(order.owner == who, Error::<T>::NoPermission);
+                ensure!(order.owner == who, Error::<T>::Forbidden);
 
                 let amount_out = Self::fetch_amount_out(order_id, order);
                 let reserve_id = Self::named_reserve_identifier(order_id);
@@ -337,9 +337,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::InsufficientBalance
         );
 
-        if !order.partially_fillable {
-            ensure!(amount == order.amount_in, Error::<T>::OrderNotPartiallyFillable)
-        } else {
+        if order.partially_fillable {
             let remaining_amount_in = Self::calculate_difference(order.amount_in, amount)?;
             if remaining_amount_in > 0 {
                 Self::validate_min_order_amount(order.asset_in, remaining_amount_in)?;
@@ -349,6 +347,8 @@ impl<T: Config> Pallet<T> {
             if remaining_amount_out > 0 {
                 Self::validate_min_order_amount(order.asset_out, remaining_amount_out)?;
             }
+        } else {
+            ensure!(amount == order.amount_in, Error::<T>::OrderNotPartiallyFillable)
         }
 
         Ok(())

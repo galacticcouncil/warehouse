@@ -72,7 +72,7 @@ fn cancel_order_should_throw_error_when_called_by_non_owner() {
         ));
 
         // Act
-        assert_noop!(OTC::cancel_order(Origin::signed(BOB), 1), Error::<Test>::NoPermission);
+        assert_noop!(OTC::cancel_order(Origin::signed(BOB), 1), Error::<Test>::Forbidden);
 
         // Assert
         let order = OTC::orders(1);

@@ -24,6 +24,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod migration;
 pub mod weights;
 
 use frame_support::{dispatch::DispatchResult, ensure, traits::Contains, traits::Get};

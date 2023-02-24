@@ -2849,7 +2849,7 @@ dependencies = [
 
 [[package]]
 name = "hydradx-traits"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -4977,7 +4977,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-duster"
-version = "3.1.11"
+version = "3.2.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5133,7 +5133,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-liquidity-mining"
-version = "3.0.1"
+version = "3.1.0"
 dependencies = [
  "fixed",
  "frame-support",

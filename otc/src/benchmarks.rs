@@ -38,7 +38,7 @@ benchmarks! {
         let owner: T::AccountId = create_account_with_balances::<T>("owner", 1, vec!(hdx, dai))?;
   }:  _(RawOrigin::Signed(owner.clone()), dai.into(), hdx.into(), 20 * ONE, 100 * ONE, true)
     verify {
-        let reserve_id = named_reserve_identifier(1);
+        let reserve_id = named_reserve_identifier(0);
         assert_eq!(T::Currency::reserved_balance_named(&reserve_id, hdx.into(), &owner), 100 * ONE);
     }
 
@@ -51,9 +51,9 @@ benchmarks! {
         assert_ok!(
             crate::Pallet::<T>::place_order(RawOrigin::Signed(owner.clone()).into(), dai.into(), hdx.into(), 20 * ONE, 100 * ONE, true)
         );
-  }:  _(RawOrigin::Signed(filler.clone()), 1u32, dai.into(), 10 * ONE)
+  }:  _(RawOrigin::Signed(filler.clone()), 0u32, dai.into(), 10 * ONE)
     verify {
-        let reserve_id = named_reserve_identifier(1);
+        let reserve_id = named_reserve_identifier(0);
         assert_eq!(T::Currency::reserved_balance_named(&reserve_id, hdx.into(), &owner), 50 * ONE);
     }
 
@@ -64,9 +64,9 @@ benchmarks! {
         assert_ok!(
             crate::Pallet::<T>::place_order(RawOrigin::Signed(owner.clone()).into(), dai.into(), hdx.into(), 20 * ONE, 100 * ONE, true)
         );
-  }:  _(RawOrigin::Signed(owner.clone()), 1u32)
+  }:  _(RawOrigin::Signed(owner.clone()), 0u32)
     verify {
-        let reserve_id = named_reserve_identifier(1);
+        let reserve_id = named_reserve_identifier(0);
         assert_eq!(T::Currency::reserved_balance_named(&reserve_id, hdx.into(), &owner), 0);
     }
 }

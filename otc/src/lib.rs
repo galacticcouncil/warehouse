@@ -199,11 +199,13 @@ pub mod pallet {
 
             Self::validate_place_order(&order, amount_out)?;
 
-            let order_id = <NextOrderId<T>>::try_mutate(|current_id| -> result::Result<OrderId, DispatchError> {
-                *current_id = current_id
+            let order_id = <NextOrderId<T>>::try_mutate(|next_id| -> result::Result<OrderId, DispatchError> {
+                let id = *next_id;
+
+                *next_id = next_id
                     .checked_add(One::one())
                     .ok_or(Error::<T>::OrderIdOutOfBound)?;
-                Ok(*current_id)
+                Ok(id)
             })?;
 
             let reserve_id = Self::named_reserve_identifier(order_id);

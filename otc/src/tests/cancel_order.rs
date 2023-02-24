@@ -34,16 +34,16 @@ fn cancel_order_should_work() {
         ));
 
         // Act
-        assert_ok!(OTC::cancel_order(Origin::signed(ALICE), 1));
+        assert_ok!(OTC::cancel_order(Origin::signed(ALICE), 0));
 
         // Assert
-        let order = OTC::orders(1);
+        let order = OTC::orders(0);
         assert!(order.is_none());
 
-        let reserve_id = named_reserve_identifier(1);
+        let reserve_id = named_reserve_identifier(0);
         assert_eq!(Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE), 0);
 
-        expect_events(vec![Event::OrderCancelled { order_id: 1 }.into()]);
+        expect_events(vec![Event::OrderCancelled { order_id: 0 }.into()]);
     });
 }
 
@@ -52,7 +52,7 @@ fn cancel_order_should_throw_error_when_order_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_noop!(
-            OTC::cancel_order(Origin::signed(ALICE), 1),
+            OTC::cancel_order(Origin::signed(ALICE), 0),
             Error::<Test>::OrderNotFound
         );
     });
@@ -72,13 +72,13 @@ fn cancel_order_should_throw_error_when_called_by_non_owner() {
         ));
 
         // Act
-        assert_noop!(OTC::cancel_order(Origin::signed(BOB), 1), Error::<Test>::Forbidden);
+        assert_noop!(OTC::cancel_order(Origin::signed(BOB), 0), Error::<Test>::Forbidden);
 
         // Assert
-        let order = OTC::orders(1);
+        let order = OTC::orders(0);
         assert!(order.is_some());
 
-        let reserve_id = named_reserve_identifier(1);
+        let reserve_id = named_reserve_identifier(0);
         assert_eq!(Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE), 100 * ONE);
     });
 }

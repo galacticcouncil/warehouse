@@ -41,8 +41,8 @@ use frame_support::{pallet_prelude::*, require_transactional, transactional};
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use hydradx_traits::Registry;
 use orml_traits::{GetByKey, MultiCurrency, MultiReservableCurrency, NamedMultiReservableCurrency};
+use sp_core::U256;
 use sp_runtime::{traits::One, DispatchError};
-
 use sp_std::{result, vec::Vec};
 #[cfg(test)]
 mod tests;
@@ -382,10 +382,12 @@ impl<T: Config> Pallet<T> {
         amount_out: Balance,
         amount_fill: Balance,
     ) -> Result<Balance, Error<T>> {
-        amount_out
-            .checked_mul(amount_fill)
-            .and_then(|v| v.checked_div(order.amount_in))
-            .ok_or(Error::<T>::MathError)
+        let calculation = U256::from(amount_out)
+            .checked_mul(U256::from(amount_fill))
+            .and_then(|v| v.checked_div(U256::from(order.amount_in)))
+            .ok_or(Error::<T>::MathError)?;
+
+        Balance::try_from(calculation).map_err(|_| Error::<T>::MathError)
     }
 
     fn calculate_difference(amount_initial: Balance, amount_change: Balance) -> Result<Balance, Error<T>> {

@@ -202,9 +202,7 @@ pub mod pallet {
             let order_id = <NextOrderId<T>>::try_mutate(|next_id| -> result::Result<OrderId, DispatchError> {
                 let id = *next_id;
 
-                *next_id = next_id
-                    .checked_add(One::one())
-                    .ok_or(Error::<T>::OrderIdOutOfBound)?;
+                *next_id = next_id.checked_add(One::one()).ok_or(Error::<T>::OrderIdOutOfBound)?;
                 Ok(id)
             })?;
 
@@ -247,11 +245,19 @@ pub mod pallet {
 
                 let amount_receive = Self::calculate_amount_receive(order, amount_out, amount)?;
 
-                Self::validate_fill_order(order, &who, asset, amount, amount_out, amount_receive)?;
+                let remaining_amount_in = Self::calculate_difference(order.amount_in, amount)?;
+
+                Self::validate_fill_order(
+                    order,
+                    &who,
+                    asset,
+                    amount,
+                    amount_out,
+                    amount_receive,
+                    remaining_amount_in,
+                )?;
 
                 Self::execute_deal(order_id, order, &who, amount, amount_receive)?;
-
-                let remaining_amount_in = Self::calculate_difference(order.amount_in, amount)?;
 
                 if remaining_amount_in > 0 {
                     order.amount_in = remaining_amount_in;
@@ -329,6 +335,7 @@ impl<T: Config> Pallet<T> {
         amount: Balance,
         amount_out: Balance,
         amount_receive: Balance,
+        remaining_amount_in: Balance,
     ) -> DispatchResult {
         ensure!(order.asset_in == asset, Error::<T>::AssetNotInOrder);
 
@@ -340,7 +347,6 @@ impl<T: Config> Pallet<T> {
         );
 
         if order.partially_fillable {
-            let remaining_amount_in = Self::calculate_difference(order.amount_in, amount)?;
             if remaining_amount_in > 0 {
                 Self::validate_min_order_amount(order.asset_in, remaining_amount_in)?;
             }

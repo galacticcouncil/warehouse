@@ -369,7 +369,7 @@ fn fill_order_should_throw_error_when_amount_is_larger_than_order() {
         let amount = 30 * ONE;
         assert_noop!(
             OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
-            Error::<Test>::CannotFillMoreThanOrdered
+            Error::<Test>::MathError
         );
 
         // Assert

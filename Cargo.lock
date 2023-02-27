@@ -1328,7 +1328,7 @@ dependencies = [
  "log",
  "pallet-balances",
  "parity-scale-codec",
- "polkadot-parachain",
+ "polkadot-parachain 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
  "scale-info",
  "serde",
  "sp-core",
@@ -1340,7 +1340,7 @@ dependencies = [
  "sp-std",
  "sp-trie",
  "sp-version",
- "xcm",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
 ]
 
 [[package]]
@@ -1361,8 +1361,8 @@ source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.29#2fa9
 dependencies = [
  "frame-support",
  "parity-scale-codec",
- "polkadot-core-primitives",
- "polkadot-parachain",
+ "polkadot-core-primitives 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
+ "polkadot-parachain 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
  "polkadot-primitives",
  "sp-api",
  "sp-runtime",
@@ -2011,6 +2011,7 @@ dependencies = [
  "az",
  "bytemuck",
  "half",
+ "num-traits",
  "typenum",
 ]
 
@@ -2607,6 +2608,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "gmp-mpfr-sys"
+version = "1.4.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cadbfa1c6e195c872db93b584e63b751f2fc86f59af8d0870d529118e8f1045"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "group"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2807,25 +2818,14 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 [[package]]
 name = "hydra-dx-math"
 version = "5.1.4"
-source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=36432a1b139400eb69b096c32af488d3cf4b20c2#36432a1b139400eb69b096c32af488d3cf4b20c2"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=a0cd48c26dca53e7e351434276c572d70ffd0b72#a0cd48c26dca53e7e351434276c572d70ffd0b72"
 dependencies = [
  "fixed",
  "num-traits",
  "parity-scale-codec",
  "primitive-types 0.12.1",
- "sp-arithmetic",
- "sp-std",
-]
-
-[[package]]
-name = "hydra-dx-math"
-version = "5.1.4"
-source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=fdf7d6cdfb6968b826e6035c20b261a78a733573#fdf7d6cdfb6968b826e6035c20b261a78a733573"
-dependencies = [
- "fixed",
- "num-traits",
- "parity-scale-codec",
- "primitive-types 0.12.1",
+ "scale-info",
+ "serde",
  "sp-arithmetic",
  "sp-std",
 ]
@@ -2842,9 +2842,9 @@ dependencies = [
  "parity-scale-codec",
  "sp-runtime",
  "sp-std",
- "xcm",
- "xcm-builder",
- "xcm-executor",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
+ "xcm-builder 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
+ "xcm-executor 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
 ]
 
 [[package]]
@@ -4645,7 +4645,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
 ]
 
 [[package]]
@@ -4718,7 +4718,7 @@ dependencies = [
  "sp-std",
  "substrate-wasm-builder",
  "test-utils",
- "xcm",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
 ]
 
 [[package]]
@@ -5040,6 +5040,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-ema-oracle"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking",
+ "hydra-dx-math",
+ "hydradx-traits",
+ "log",
+ "parity-scale-codec",
+ "pretty_assertions",
+ "proptest",
+ "rug",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-faucet"
 version = "0.2.2"
 dependencies = [
@@ -5138,7 +5161,7 @@ dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
- "hydra-dx-math 5.1.4 (git+https://github.com/galacticcouncil/HydraDX-math?rev=fdf7d6cdfb6968b826e6035c20b261a78a733573)",
+ "hydra-dx-math",
  "hydradx-traits",
  "orml-currencies",
  "orml-tokens",
@@ -5418,7 +5441,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hydra-dx-math 5.1.4 (git+https://github.com/galacticcouncil/HydraDX-math?rev=36432a1b139400eb69b096c32af488d3cf4b20c2)",
+ "hydra-dx-math",
  "hydradx-traits",
  "orml-tokens",
  "orml-traits",
@@ -5659,8 +5682,8 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "xcm",
- "xcm-executor",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
+ "xcm-executor 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
 ]
 
 [[package]]
@@ -6036,7 +6059,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
- "polkadot-core-primitives",
+ "polkadot-core-primitives 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
  "polkadot-node-core-parachains-inherent",
  "polkadot-primitives",
  "polkadot-runtime",
@@ -6089,6 +6112,19 @@ dependencies = [
 name = "polkadot-core-primitives"
 version = "0.9.29"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.29#94078b44fb6c9767bf60ffcaaa3be40681be5a76"
+dependencies = [
+ "parity-scale-codec",
+ "parity-util-mem",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "polkadot-core-primitives"
+version = "0.9.29"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1#19d59ae2d7735a05c7e208ddd89e39e0a2ec4033"
 dependencies = [
  "parity-scale-codec",
  "parity-util-mem",
@@ -6292,7 +6328,7 @@ dependencies = [
  "polkadot-node-primitives",
  "polkadot-node-subsystem",
  "polkadot-node-subsystem-util",
- "polkadot-parachain",
+ "polkadot-parachain 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
  "polkadot-primitives",
  "sp-maybe-compressed-blob",
  "tracing-gum",
@@ -6397,9 +6433,9 @@ dependencies = [
  "futures-timer",
  "parity-scale-codec",
  "pin-project",
- "polkadot-core-primitives",
+ "polkadot-core-primitives 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
  "polkadot-node-subsystem-util",
- "polkadot-parachain",
+ "polkadot-parachain 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
  "rand 0.8.5",
  "rayon",
  "sc-executor",
@@ -6515,7 +6551,7 @@ dependencies = [
  "bounded-vec",
  "futures",
  "parity-scale-codec",
- "polkadot-parachain",
+ "polkadot-parachain 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
  "polkadot-primitives",
  "schnorrkel",
  "serde",
@@ -6627,7 +6663,24 @@ dependencies = [
  "frame-support",
  "parity-scale-codec",
  "parity-util-mem",
- "polkadot-core-primitives",
+ "polkadot-core-primitives 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "polkadot-parachain"
+version = "0.9.29"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1#19d59ae2d7735a05c7e208ddd89e39e0a2ec4033"
+dependencies = [
+ "derive_more",
+ "frame-support",
+ "parity-scale-codec",
+ "parity-util-mem",
+ "polkadot-core-primitives 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
  "scale-info",
  "serde",
  "sp-core",
@@ -6645,8 +6698,8 @@ dependencies = [
  "hex-literal",
  "parity-scale-codec",
  "parity-util-mem",
- "polkadot-core-primitives",
- "polkadot-parachain",
+ "polkadot-core-primitives 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
+ "polkadot-parachain 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
  "scale-info",
  "serde",
  "sp-api",
@@ -6773,9 +6826,9 @@ dependencies = [
  "sp-version",
  "static_assertions",
  "substrate-wasm-builder",
- "xcm",
- "xcm-builder",
- "xcm-executor",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
+ "xcm-builder 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
+ "xcm-executor 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
 ]
 
 [[package]]
@@ -6820,7 +6873,7 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "static_assertions",
- "xcm",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
 ]
 
 [[package]]
@@ -6883,8 +6936,8 @@ dependencies = [
  "sp-session",
  "sp-staking",
  "sp-std",
- "xcm",
- "xcm-executor",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
+ "xcm-executor 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
 ]
 
 [[package]]
@@ -6935,7 +6988,7 @@ dependencies = [
  "polkadot-node-subsystem-types",
  "polkadot-node-subsystem-util",
  "polkadot-overseer",
- "polkadot-parachain",
+ "polkadot-parachain 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
  "polkadot-primitives",
  "polkadot-rpc",
  "polkadot-runtime",
@@ -7657,6 +7710,19 @@ checksum = "034e22c514f5c0cb8a10ff341b9b048b5ceb21591f31c8f44c43b960f9b3524a"
 dependencies = [
  "libc",
  "winapi",
+]
+
+[[package]]
+name = "rug"
+version = "1.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55313a5bab6820d1439c0266db37f8084e50618d35d16d81f692eee14d8b01b9"
+dependencies = [
+ "az",
+ "gmp-mpfr-sys",
+ "libc",
+ "num-integer",
+ "num-traits",
 ]
 
 [[package]]
@@ -11361,7 +11427,21 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
- "xcm-procedural",
+ "xcm-procedural 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
+]
+
+[[package]]
+name = "xcm"
+version = "0.9.29"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1#19d59ae2d7735a05c7e208ddd89e39e0a2ec4033"
+dependencies = [
+ "derivative",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+ "xcm-procedural 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
 ]
 
 [[package]]
@@ -11374,20 +11454,57 @@ dependencies = [
  "log",
  "pallet-transaction-payment",
  "parity-scale-codec",
- "polkadot-parachain",
+ "polkadot-parachain 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
  "scale-info",
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm",
- "xcm-executor",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
+ "xcm-executor 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
+]
+
+[[package]]
+name = "xcm-builder"
+version = "0.9.29"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1#19d59ae2d7735a05c7e208ddd89e39e0a2ec4033"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "polkadot-parachain 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
+ "xcm-executor 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
 ]
 
 [[package]]
 name = "xcm-executor"
 version = "0.9.29"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.29#94078b44fb6c9767bf60ffcaaa3be40681be5a76"
+dependencies = [
+ "frame-support",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29)",
+]
+
+[[package]]
+name = "xcm-executor"
+version = "0.9.29"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1#19d59ae2d7735a05c7e208ddd89e39e0a2ec4033"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11399,13 +11516,24 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm",
+ "xcm 0.9.29 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1)",
 ]
 
 [[package]]
 name = "xcm-procedural"
 version = "0.9.29"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.29#94078b44fb6c9767bf60ffcaaa3be40681be5a76"
+dependencies = [
+ "Inflector",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "xcm-procedural"
+version = "0.9.29"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.29-1#19d59ae2d7735a05c7e208ddd89e39e0a2ec4033"
 dependencies = [
  "Inflector",
  "proc-macro2",

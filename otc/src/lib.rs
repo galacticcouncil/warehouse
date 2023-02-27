@@ -231,13 +231,12 @@ pub mod pallet {
             Ok(())
         }
 
-        // TODO: change weights
         /// Fill an OTC order (partially)
         ///  
         /// Parameters:
         /// - `order_id`: ID of the order
         /// - `amount_in`: Amount with which the order is being filled
-        #[pallet::weight(<T as Config>::WeightInfo::fill_order())]
+        #[pallet::weight(<T as Config>::WeightInfo::partial_fill_order())]
         #[transactional]
         pub fn partial_fill_order(origin: OriginFor<T>, order_id: OrderId, amount_in: Balance) -> DispatchResult {
             let who = ensure_signed(origin)?;

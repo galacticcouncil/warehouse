@@ -107,22 +107,22 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         /// An Order has been cancelled
-        OrderCancelled { order_id: OrderId },
+        Cancelled { order_id: OrderId },
         /// An Order has been completely filled
-        OrderFilled {
+        Filled {
             order_id: OrderId,
             who: T::AccountId,
             amount: Balance,
         },
         /// An Order has been partially filled
-        OrderPartiallyFilled {
+        PartiallyFilled {
             order_id: OrderId,
             who: T::AccountId,
             amount: Balance,
             amount_receive: Balance,
         },
         /// An Order has been placed
-        OrderPlaced {
+        Placed {
             order_id: OrderId,
             asset_in: T::AssetId,
             asset_out: T::AssetId,
@@ -210,7 +210,7 @@ pub mod pallet {
             T::Currency::reserve_named(&reserve_id, order.asset_out, &order.owner, amount_out)?;
 
             <Orders<T>>::insert(order_id, &order);
-            Self::deposit_event(Event::OrderPlaced {
+            Self::deposit_event(Event::Placed {
                 order_id,
                 asset_in: order.asset_in,
                 asset_out: order.asset_out,
@@ -262,7 +262,7 @@ pub mod pallet {
                 if remaining_amount_in > 0 {
                     order.amount_in = remaining_amount_in;
 
-                    Self::deposit_event(Event::OrderPartiallyFilled {
+                    Self::deposit_event(Event::PartiallyFilled {
                         order_id,
                         who,
                         amount,
@@ -271,7 +271,7 @@ pub mod pallet {
                 } else {
                     // cleanup storage
                     *maybe_order = None;
-                    Self::deposit_event(Event::OrderFilled { order_id, who, amount });
+                    Self::deposit_event(Event::Filled { order_id, who, amount });
                 }
 
                 Ok(())
@@ -300,7 +300,7 @@ pub mod pallet {
 
                 *maybe_order = None;
 
-                Self::deposit_event(Event::OrderCancelled { order_id });
+                Self::deposit_event(Event::Cancelled { order_id });
 
                 Ok(())
             })

@@ -43,7 +43,7 @@ fn cancel_order_should_work() {
         let reserve_id = named_reserve_identifier(0);
         assert_eq!(Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE), 0);
 
-        expect_events(vec![Event::OrderCancelled { order_id: 0 }.into()]);
+        expect_events(vec![Event::Cancelled { order_id: 0 }.into()]);
     });
 }
 

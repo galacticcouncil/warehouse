@@ -41,7 +41,7 @@ fn place_order_should_work() {
         assert_eq!(order.amount_in, 20 * ONE);
         assert_eq!(order.partially_fillable, true);
 
-        expect_events(vec![Event::OrderPlaced {
+        expect_events(vec![Event::Placed {
             order_id: 0,
             asset_in: DAI,
             asset_out: HDX,

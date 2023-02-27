@@ -18,10 +18,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::ensure;
-use frame_support::pallet_prelude::Weight;
+use frame_support::pallet_prelude::{DispatchError, Weight};
 use frame_support::sp_runtime::traits::{CheckedDiv, Zero};
 use frame_support::sp_runtime::{DispatchResult, FixedPointNumber};
-use hydradx_traits::{OnCreatePoolHandler, OnTradeHandler};
+use hydradx_traits::{OnCreatePoolHandler, OnTradeHandler, Source};
 use sp_std::convert::TryInto;
 use sp_std::marker::PhantomData;
 use sp_std::prelude::*;
@@ -318,29 +318,35 @@ impl<T: Config> OnCreatePoolHandler<AssetId> for PriceOracleHandler<T> {
 }
 
 impl<T: Config> OnTradeHandler<AssetId, Balance> for PriceOracleHandler<T> {
-    fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liq_amount: Balance) {
+    fn on_trade(
+        _src: Source,
+        asset_a: AssetId,
+        asset_b: AssetId,
+        amount_in: Balance,
+        amount_out: Balance,
+        liquidity_a: Balance,
+        liquidity_b: Balance,
+    ) -> Result<Weight, (Weight, DispatchError)> {
         let (price, amount) =
             if let Some(price_tuple) = Pallet::<T>::normalize_price(asset_a, asset_b, amount_in, amount_out) {
                 price_tuple
             } else {
-                // We don't want to throw an error here because this method is used in different extrinsics.
-                // Invalid prices are ignored and not added to the queue.
-                return;
+                return Err((Self::on_trade_weight(), DispatchError::Other("Invalid price")));
             };
 
         // We assume that zero values are not valid.
-        // Zero values are ignored and not added to the queue.
-        if price.is_zero() || amount.is_zero() || liq_amount.is_zero() {
-            return;
+        if price.is_zero() || amount.is_zero() || liquidity_a.is_zero() || liquidity_b.is_zero() {
+            return Err((Self::on_trade_weight(), DispatchError::Other("Invalid values")));
         }
 
         let price_entry = PriceEntry {
             price,
             trade_amount: amount,
-            liquidity_amount: liq_amount,
+            liquidity_amount: liquidity_a,
         };
 
         Pallet::<T>::on_trade(asset_a, asset_b, price_entry);
+        Ok(Self::on_trade_weight())
     }
 
     fn on_trade_weight() -> Weight {

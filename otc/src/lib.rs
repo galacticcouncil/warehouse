@@ -297,9 +297,8 @@ pub mod pallet {
 
                 ensure!(order.owner == who, Error::<T>::Forbidden);
 
-                let amount_out = Self::fetch_amount_out(order_id, order);
                 let reserve_id = Self::named_reserve_identifier(order_id);
-                T::Currency::unreserve_named(&reserve_id, order.asset_out, &order.owner, amount_out);
+                T::Currency::unreserve_named(&reserve_id, order.asset_out, &order.owner, Balance::MAX);
 
                 *maybe_order = None;
 

@@ -15,76 +15,14 @@
 
 use crate::tests::mock::*;
 
-use crate::{Error, Event};
+use crate::Event;
 use frame_support::{assert_noop, assert_ok};
 use orml_tokens::Error::BalanceTooLow;
 use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
 use pretty_assertions::assert_eq;
 
 #[test]
-fn partial_fill_order_should_work_when_order_is_partially_fillable() {
-    ExtBuilder::default().build().execute_with(|| {
-        let reserve_id = named_reserve_identifier(0);
-
-        // Arrange
-        assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
-            DAI,
-            HDX,
-            20 * ONE,
-            100 * ONE,
-            true
-        ));
-
-        let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
-
-        let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
-        let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
-
-        // Act
-        let amount = 5 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, amount));
-
-        // Assert
-        let expected_amount_receive = 25_000_000_000_000_u128;
-        let expected_new_amount_in = 15_000_000_000_000_u128;
-
-        let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
-
-        let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);
-        let bob_dai_balance_after = Tokens::free_balance(DAI, &BOB);
-
-        // Alice: HDX *free* balance remains the same, reserved balance decreases with amount_receive; DAI grows
-        assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
-        assert_eq!(
-            alice_reserved_hdx_balance_after,
-            alice_reserved_hdx_balance_before - expected_amount_receive
-        );
-        assert_eq!(alice_dai_balance_after, alice_dai_balance_before + amount);
-
-        // Bob: HDX grows, DAI decreases
-        assert_eq!(bob_hdx_balance_after, bob_hdx_balance_before + expected_amount_receive);
-        assert_eq!(bob_dai_balance_after, bob_dai_balance_before - amount);
-
-        let order = OTC::orders(0).unwrap();
-        assert_eq!(order.amount_in, expected_new_amount_in);
-
-        expect_events(vec![Event::PartiallyFilled {
-            order_id: 0,
-            who: BOB,
-            amount_in: 5 * ONE,
-            amount_out: expected_amount_receive,
-        }
-        .into()]);
-    });
-}
-
-#[test]
-fn complete_fill_order_should_work_when_order_is_partially_fillable() {
+fn complete_fill_order_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         let reserve_id = named_reserve_identifier(0);
 
@@ -107,7 +45,7 @@ fn complete_fill_order_should_work_when_order_is_partially_fillable() {
 
         // Act
         let amount = 20 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, amount));
+        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0));
 
         // Assert
         let order = OTC::orders(0);
@@ -166,7 +104,7 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
 
         // Act
         let amount = 20 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, amount));
+        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0));
 
         // Assert
         let order = OTC::orders(0);
@@ -202,102 +140,6 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
 }
 
 #[test]
-fn partial_fill_order_should_throw_error_when_remaining_amounts_are_too_low() {
-    ExtBuilder::default().build().execute_with(|| {
-        let reserve_id = named_reserve_identifier(0);
-
-        // Arrange
-        assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
-            DAI,
-            HDX,
-            20 * ONE,
-            100 * ONE,
-            true
-        ));
-
-        let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
-
-        let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
-        let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
-
-        // Act
-        let amount = 16 * ONE;
-        assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, amount),
-            Error::<Test>::OrderAmountTooSmall
-        );
-
-        // Assert
-        let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
-
-        let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);
-        let bob_dai_balance_after = Tokens::free_balance(DAI, &BOB);
-
-        // Alice: nothing changes
-        assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
-        assert_eq!(alice_reserved_hdx_balance_after, alice_reserved_hdx_balance_before);
-        assert_eq!(alice_dai_balance_after, alice_dai_balance_before);
-
-        // Bob: nothing changes
-        assert_eq!(bob_hdx_balance_after, bob_hdx_balance_before);
-        assert_eq!(bob_dai_balance_after, bob_dai_balance_before);
-    });
-}
-
-#[test]
-fn partial_fill_order_should_throw_error_when_order_is_not_partially_fillable() {
-    ExtBuilder::default().build().execute_with(|| {
-        let reserve_id = named_reserve_identifier(0);
-
-        // Arrange
-        assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
-            DAI,
-            HDX,
-            20 * ONE,
-            100 * ONE,
-            false
-        ));
-
-        let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
-
-        let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
-        let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
-
-        // Act
-        let amount = 5 * ONE;
-        assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, amount),
-            Error::<Test>::OrderNotPartiallyFillable
-        );
-
-        // Assert
-        let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
-
-        let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);
-        let bob_dai_balance_after = Tokens::free_balance(DAI, &BOB);
-
-        // Alice: nothing changes
-        assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
-        assert_eq!(alice_reserved_hdx_balance_after, alice_reserved_hdx_balance_before);
-        assert_eq!(alice_dai_balance_after, alice_dai_balance_before);
-
-        // Bob: nothing changes
-        assert_eq!(bob_hdx_balance_after, bob_hdx_balance_before);
-        assert_eq!(bob_dai_balance_after, bob_dai_balance_before);
-    });
-}
-
-#[test]
 fn fill_order_should_throw_error_when_insufficient_balance() {
     ExtBuilder::default().build().execute_with(|| {
         let reserve_id = named_reserve_identifier(0);
@@ -320,56 +162,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
         let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
-        let amount = 110 * ONE;
-        assert_noop!(OTC::fill_order(Origin::signed(BOB), 0, amount), BalanceTooLow::<Test>);
-
-        // Assert
-        let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
-
-        let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);
-        let bob_dai_balance_after = Tokens::free_balance(DAI, &BOB);
-
-        // Alice: nothing changes
-        assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
-        assert_eq!(alice_reserved_hdx_balance_after, alice_reserved_hdx_balance_before);
-        assert_eq!(alice_dai_balance_after, alice_dai_balance_before);
-
-        // Bob: nothing changes
-        assert_eq!(bob_hdx_balance_after, bob_hdx_balance_before);
-        assert_eq!(bob_dai_balance_after, bob_dai_balance_before);
-    });
-}
-
-#[test]
-fn fill_order_should_throw_error_when_amount_is_larger_than_order() {
-    ExtBuilder::default().build().execute_with(|| {
-        let reserve_id = named_reserve_identifier(0);
-
-        // Arrange
-        assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
-            DAI,
-            HDX,
-            20 * ONE,
-            100 * ONE,
-            true
-        ));
-
-        let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE);
-        let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
-
-        let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
-        let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
-
-        // Act
-        let amount = 30 * ONE;
-        assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, amount),
-            Error::<Test>::MathError
-        );
+        assert_noop!(OTC::fill_order(Origin::signed(BOB), 0), BalanceTooLow::<Test>);
 
         // Assert
         let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);

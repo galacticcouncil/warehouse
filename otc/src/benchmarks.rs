@@ -42,7 +42,7 @@ benchmarks! {
         assert_eq!(T::Currency::reserved_balance_named(&reserve_id, hdx.into(), &owner), 100 * ONE);
     }
 
-    fill_order {
+    partial_fill_order {
         let (hdx, dai) = prepare::<T>()?;
 
         let owner: T::AccountId = create_account_with_balances::<T>("owner", 1, vec!(hdx, dai))?;
@@ -55,6 +55,21 @@ benchmarks! {
     verify {
         let reserve_id = named_reserve_identifier(0);
         assert_eq!(T::Currency::reserved_balance_named(&reserve_id, hdx.into(), &owner), 50 * ONE);
+    }
+
+    fill_order {
+        let (hdx, dai) = prepare::<T>()?;
+
+        let owner: T::AccountId = create_account_with_balances::<T>("owner", 1, vec!(hdx, dai))?;
+        let filler: T::AccountId = create_account_with_balances::<T>("filler", 2, vec!(hdx, dai))?;
+
+        assert_ok!(
+            crate::Pallet::<T>::place_order(RawOrigin::Signed(owner.clone()).into(), dai.into(), hdx.into(), 20 * ONE, 100 * ONE, true)
+        );
+  }:  _(RawOrigin::Signed(filler.clone()), 0u32)
+    verify {
+        let reserve_id = named_reserve_identifier(0);
+        assert_eq!(T::Currency::reserved_balance_named(&reserve_id, hdx.into(), &owner), 0);
     }
 
     cancel_order {

@@ -26,12 +26,13 @@
 // ## Notes
 // The pallet implements a minimum order size as an alternative to storage fees. The amounts of an open order cannot
 // be lower than the existential deposit for the respective asset, multiplied by `ExistentialDepositMultiplier`.
-// This is validated at `place_order` but also at `fill_order` - meaning that a user cannot leave dust amounts below
-// the defined threshold after filling an order (instead they should fill the order completely).
+// This is validated at `place_order` but also at `partial_fill_order` - meaning that a user cannot leave dust amounts
+// below the defined threshold after filling an order (instead they should fill the order completely).
 //
 // ## Dispatachable functions
 // * `place_order` -  create a new OTC order.
-// * `fill_order` - fill an OTC order (partially or completely) by providing some amount of order.asset_in.
+// * `partial_fill_order` - fill an OTC order (partially).
+// * `fill_order` - fill an OTC order (completely).
 // * `cancel_order` - cancel an open OTC order.
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -230,51 +231,64 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(<T as Config>::WeightInfo::fill_order())]
-        #[transactional]
-        /// Fill an OTC order (partially or completely)
+        // TODO: change weights
+        /// Fill an OTC order (partially)
         ///  
         /// Parameters:
         /// - `order_id`: ID of the order
-        /// - `amount`: amount which is being filled
-        pub fn fill_order(origin: OriginFor<T>, order_id: OrderId, amount_in: Balance) -> DispatchResult {
+        /// - `amount_in`: Amount with which the order is being filled
+        #[pallet::weight(<T as Config>::WeightInfo::fill_order())]
+        #[transactional]
+        pub fn partial_fill_order(origin: OriginFor<T>, order_id: OrderId, amount_in: Balance) -> DispatchResult {
             let who = ensure_signed(origin)?;
-
-            <Orders<T>>::try_mutate_exists(order_id, |maybe_order| -> DispatchResult {
+            <Orders<T>>::try_mutate(order_id, |maybe_order| -> DispatchResult {
                 let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
-
                 let order_amount_out = Self::fetch_amount_out(order_id, order);
 
                 let amount_out = Self::calculate_filled_amount_out(order, order_amount_out, amount_in)?;
-
                 let remaining_amount_in = Self::calculate_difference(order.amount_in, amount_in)?;
 
-                Self::validate_fill_order(order, amount_in, order_amount_out, amount_out, remaining_amount_in)?;
+                Self::validate_partial_fill_order(order, order_amount_out, amount_out, remaining_amount_in)?;
 
                 Self::execute_deal(order_id, order, &who, amount_in, amount_out)?;
 
-                if remaining_amount_in > 0 {
-                    order.amount_in = remaining_amount_in;
+                order.amount_in = remaining_amount_in;
 
-                    Self::deposit_event(Event::PartiallyFilled {
-                        order_id,
-                        who,
-                        amount_in,
-                        amount_out,
-                    });
-                } else {
-                    // cleanup storage
-                    *maybe_order = None;
-                    Self::deposit_event(Event::Filled {
-                        order_id,
-                        who,
-                        amount_in,
-                        amount_out,
-                    });
-                }
+                Self::deposit_event(Event::PartiallyFilled {
+                    order_id,
+                    who,
+                    amount_in,
+                    amount_out,
+                });
 
                 Ok(())
             })
+        }
+
+        #[pallet::weight(<T as Config>::WeightInfo::fill_order())]
+        #[transactional]
+        /// Fill an OTC order (completely)
+        ///  
+        /// Parameters:
+        /// - `order_id`: ID of the order
+        pub fn fill_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            let order = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderNotFound)?;
+            let amount_out = Self::fetch_amount_out(order_id, &order);
+
+            Self::execute_deal(order_id, &order, &who, order.amount_in, amount_out)?;
+
+            <Orders<T>>::remove(order_id);
+
+            Self::deposit_event(Event::Filled {
+                order_id,
+                who,
+                amount_in: order.amount_in,
+                amount_out,
+            });
+
+            Ok(())
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::cancel_order())]
@@ -326,27 +340,17 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    fn validate_fill_order(
+    fn validate_partial_fill_order(
         order: &Order<T::AccountId, T::AssetId>,
-        amount: Balance,
+        order_amount_out: Balance,
         amount_out: Balance,
-        amount_receive: Balance,
         remaining_amount_in: Balance,
     ) -> DispatchResult {
-        ensure!(order.amount_in >= amount, Error::<T>::CannotFillMoreThanOrdered);
+        ensure!(order.partially_fillable, Error::<T>::OrderNotPartiallyFillable);
 
-        if order.partially_fillable {
-            if remaining_amount_in > 0 {
-                Self::validate_min_order_amount(order.asset_in, remaining_amount_in)?;
-            }
-
-            let remaining_amount_out = Self::calculate_difference(amount_out, amount_receive)?;
-            if remaining_amount_out > 0 {
-                Self::validate_min_order_amount(order.asset_out, remaining_amount_out)?;
-            }
-        } else {
-            ensure!(amount == order.amount_in, Error::<T>::OrderNotPartiallyFillable)
-        }
+        let remaining_amount_out = Self::calculate_difference(order_amount_out, amount_out)?;
+        Self::validate_min_order_amount(order.asset_out, remaining_amount_out)?;
+        Self::validate_min_order_amount(order.asset_in, remaining_amount_in)?;
 
         Ok(())
     }

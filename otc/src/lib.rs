@@ -145,8 +145,6 @@ pub mod pallet {
     pub enum Error<T> {
         /// Asset does not exist in registry
         AssetNotRegistered,
-        /// The asset used to fill the order is different than asset_in of the order
-        AssetNotInOrder,
         /// When filling and order, the fill amount cannot be greater than the remaining order amount
         CannotFillMoreThanOrdered,
         /// Free balance is too low to place the order
@@ -237,12 +235,10 @@ pub mod pallet {
         ///  
         /// Parameters:
         /// - `order_id`: ID of the order
-        /// - `asset`: Asset which is being filled
         /// - `amount`: amount which is being filled
         pub fn fill_order(
             origin: OriginFor<T>,
             order_id: OrderId,
-            asset: T::AssetId,
             amount: Balance,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -259,7 +255,6 @@ pub mod pallet {
                 Self::validate_fill_order(
                     order,
                     &who,
-                    asset,
                     amount,
                     amount_out,
                     amount_receive,
@@ -340,18 +335,15 @@ impl<T: Config> Pallet<T> {
     fn validate_fill_order(
         order: &Order<T::AccountId, T::AssetId>,
         who: &T::AccountId,
-        asset: T::AssetId,
         amount: Balance,
         amount_out: Balance,
         amount_receive: Balance,
         remaining_amount_in: Balance,
     ) -> DispatchResult {
-        ensure!(order.asset_in == asset, Error::<T>::AssetNotInOrder);
-
         ensure!(order.amount_in >= amount, Error::<T>::CannotFillMoreThanOrdered);
 
         ensure!(
-            T::Currency::ensure_can_withdraw(asset, who, amount).is_ok(),
+            T::Currency::ensure_can_withdraw(order.asset_in, who, amount).is_ok(),
             Error::<T>::InsufficientBalance
         );
 

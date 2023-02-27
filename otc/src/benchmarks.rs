@@ -51,7 +51,7 @@ benchmarks! {
         assert_ok!(
             crate::Pallet::<T>::place_order(RawOrigin::Signed(owner.clone()).into(), dai.into(), hdx.into(), 20 * ONE, 100 * ONE, true)
         );
-  }:  _(RawOrigin::Signed(filler.clone()), 0u32, dai.into(), 10 * ONE)
+  }:  _(RawOrigin::Signed(filler.clone()), 0u32, 10 * ONE)
     verify {
         let reserve_id = named_reserve_identifier(0);
         assert_eq!(T::Currency::reserved_balance_named(&reserve_id, hdx.into(), &owner), 50 * ONE);

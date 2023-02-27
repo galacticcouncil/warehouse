@@ -45,7 +45,7 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
 
         // Act
         let amount = 5 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount));
+        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, amount));
 
         // Assert
         let expected_amount_receive = 25_000_000_000_000_u128;
@@ -107,7 +107,7 @@ fn complete_fill_order_should_work_when_order_is_partially_fillable() {
 
         // Act
         let amount = 20 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount));
+        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, amount));
 
         // Assert
         let order = OTC::orders(0);
@@ -165,7 +165,7 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
 
         // Act
         let amount = 20 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, DAI, amount));
+        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0, amount));
 
         // Assert
         let order = OTC::orders(0);
@@ -224,7 +224,7 @@ fn partial_fill_order_should_throw_error_when_remaining_amounts_are_too_low() {
         // Act
         let amount = 16 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
+            OTC::fill_order(Origin::signed(BOB), 0, amount),
             Error::<Test>::OrderAmountTooSmall
         );
 
@@ -272,7 +272,7 @@ fn partial_fill_order_should_throw_error_when_order_is_not_partially_fillable() 
         // Act
         let amount = 5 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
+            OTC::fill_order(Origin::signed(BOB), 0, amount),
             Error::<Test>::OrderNotPartiallyFillable
         );
 
@@ -320,7 +320,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
         // Act
         let amount = 110 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
+            OTC::fill_order(Origin::signed(BOB), 0, amount),
             Error::<Test>::InsufficientBalance
         );
 
@@ -368,7 +368,7 @@ fn fill_order_should_throw_error_when_amount_is_larger_than_order() {
         // Act
         let amount = 30 * ONE;
         assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, DAI, amount),
+            OTC::fill_order(Origin::signed(BOB), 0, amount),
             Error::<Test>::MathError
         );
 

@@ -17,8 +17,8 @@ use crate::tests::mock::*;
 
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use orml_traits::MultiCurrency;
-use orml_traits::NamedMultiReservableCurrency;
+use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
+use orml_tokens::Error::BalanceTooLow;
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -321,7 +321,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
         let amount = 110 * ONE;
         assert_noop!(
             OTC::fill_order(Origin::signed(BOB), 0, amount),
-            Error::<Test>::InsufficientBalance
+            BalanceTooLow::<Test>
         );
 
         // Assert

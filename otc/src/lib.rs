@@ -254,7 +254,6 @@ pub mod pallet {
 
                 Self::validate_fill_order(
                     order,
-                    &who,
                     amount,
                     amount_out,
                     amount_receive,
@@ -334,18 +333,12 @@ impl<T: Config> Pallet<T> {
 
     fn validate_fill_order(
         order: &Order<T::AccountId, T::AssetId>,
-        who: &T::AccountId,
         amount: Balance,
         amount_out: Balance,
         amount_receive: Balance,
         remaining_amount_in: Balance,
     ) -> DispatchResult {
         ensure!(order.amount_in >= amount, Error::<T>::CannotFillMoreThanOrdered);
-
-        ensure!(
-            T::Currency::ensure_can_withdraw(order.asset_in, who, amount).is_ok(),
-            Error::<T>::InsufficientBalance
-        );
 
         if order.partially_fillable {
             if remaining_amount_in > 0 {
@@ -412,10 +405,8 @@ impl<T: Config> Pallet<T> {
         amount_receive: Balance,
     ) -> DispatchResult {
         let reserve_id = Self::named_reserve_identifier(order_id);
-        T::Currency::unreserve_named(&reserve_id, order.asset_out, &order.owner, amount_receive);
-
         T::Currency::transfer(order.asset_in, who, &order.owner, amount_fill)?;
-
+        T::Currency::unreserve_named(&reserve_id, order.asset_out, &order.owner, amount_receive);
         T::Currency::transfer(order.asset_out, &order.owner, who, amount_receive)?;
 
         Ok(())

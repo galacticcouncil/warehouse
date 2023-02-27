@@ -121,14 +121,15 @@ pub mod pallet {
         Filled {
             order_id: OrderId,
             who: T::AccountId,
-            amount: Balance,
+            amount_in: Balance,
+            amount_out: Balance,
         },
         /// An Order has been partially filled
         PartiallyFilled {
             order_id: OrderId,
             who: T::AccountId,
-            amount: Balance,
-            amount_receive: Balance,
+            amount_in: Balance,
+            amount_out: Balance,
         },
         /// An Order has been placed
         Placed {
@@ -236,31 +237,21 @@ pub mod pallet {
         /// Parameters:
         /// - `order_id`: ID of the order
         /// - `amount`: amount which is being filled
-        pub fn fill_order(
-            origin: OriginFor<T>,
-            order_id: OrderId,
-            amount: Balance,
-        ) -> DispatchResult {
+        pub fn fill_order(origin: OriginFor<T>, order_id: OrderId, amount_in: Balance) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             <Orders<T>>::try_mutate_exists(order_id, |maybe_order| -> DispatchResult {
                 let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
 
-                let amount_out = Self::fetch_amount_out(order_id, order);
+                let order_amount_out = Self::fetch_amount_out(order_id, order);
 
-                let amount_receive = Self::calculate_amount_receive(order, amount_out, amount)?;
+                let amount_out = Self::calculate_filled_amount_out(order, order_amount_out, amount_in)?;
 
-                let remaining_amount_in = Self::calculate_difference(order.amount_in, amount)?;
+                let remaining_amount_in = Self::calculate_difference(order.amount_in, amount_in)?;
 
-                Self::validate_fill_order(
-                    order,
-                    amount,
-                    amount_out,
-                    amount_receive,
-                    remaining_amount_in,
-                )?;
+                Self::validate_fill_order(order, amount_in, order_amount_out, amount_out, remaining_amount_in)?;
 
-                Self::execute_deal(order_id, order, &who, amount, amount_receive)?;
+                Self::execute_deal(order_id, order, &who, amount_in, amount_out)?;
 
                 if remaining_amount_in > 0 {
                     order.amount_in = remaining_amount_in;
@@ -268,13 +259,18 @@ pub mod pallet {
                     Self::deposit_event(Event::PartiallyFilled {
                         order_id,
                         who,
-                        amount,
-                        amount_receive,
+                        amount_in,
+                        amount_out,
                     });
                 } else {
                     // cleanup storage
                     *maybe_order = None;
-                    Self::deposit_event(Event::Filled { order_id, who, amount });
+                    Self::deposit_event(Event::Filled {
+                        order_id,
+                        who,
+                        amount_in,
+                        amount_out,
+                    });
                 }
 
                 Ok(())
@@ -378,7 +374,7 @@ impl<T: Config> Pallet<T> {
         T::Currency::reserved_balance_named(&reserve_id, order.asset_out, &order.owner)
     }
 
-    fn calculate_amount_receive(
+    fn calculate_filled_amount_out(
         order: &Order<T::AccountId, T::AssetId>,
         amount_out: Balance,
         amount_fill: Balance,

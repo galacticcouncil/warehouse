@@ -17,8 +17,8 @@ use crate::tests::mock::*;
 
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
 use orml_tokens::Error::BalanceTooLow;
+use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -76,8 +76,8 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
         expect_events(vec![Event::PartiallyFilled {
             order_id: 0,
             who: BOB,
-            amount: 5 * ONE,
-            amount_receive: expected_amount_receive,
+            amount_in: 5 * ONE,
+            amount_out: expected_amount_receive,
         }
         .into()]);
     });
@@ -135,7 +135,8 @@ fn complete_fill_order_should_work_when_order_is_partially_fillable() {
         expect_events(vec![Event::Filled {
             order_id: 0,
             who: BOB,
-            amount: 20 * ONE,
+            amount_in: 20 * ONE,
+            amount_out: 100 * ONE,
         }
         .into()]);
     });
@@ -193,7 +194,8 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
         expect_events(vec![Event::Filled {
             order_id: 0,
             who: BOB,
-            amount: 20 * ONE,
+            amount_in: 20 * ONE,
+            amount_out: 100 * ONE,
         }
         .into()]);
     });
@@ -319,10 +321,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
 
         // Act
         let amount = 110 * ONE;
-        assert_noop!(
-            OTC::fill_order(Origin::signed(BOB), 0, amount),
-            BalanceTooLow::<Test>
-        );
+        assert_noop!(OTC::fill_order(Origin::signed(BOB), 0, amount), BalanceTooLow::<Test>);
 
         // Assert
         let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);

@@ -50,7 +50,6 @@ mod tests;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarks;
 
-pub mod types;
 pub mod weights;
 
 use weights::WeightInfo;
@@ -58,8 +57,18 @@ use weights::WeightInfo;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
-use crate::types::*;
+pub type Balance = u128;
+pub type NamedReserveIdentifier = [u8; 8];
+pub type OrderId = u32;
 
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
+pub struct Order<AccountId, AssetId> {
+    pub owner: AccountId,
+    pub asset_in: AssetId,
+    pub asset_out: AssetId,
+    pub amount_in: Balance,
+    pub partially_fillable: bool,
+}
 pub const RESERVE_ID_PREFIX: &[u8] = b"otc";
 
 #[frame_support::pallet]

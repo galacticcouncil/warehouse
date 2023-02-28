@@ -8,7 +8,6 @@ members = [
 	"price-oracle",
 	"route-executor",
 	"transaction-multi-payment",
-	"nft",
 	"asset-registry",
 	"adapters",
 	"collator-rewards",

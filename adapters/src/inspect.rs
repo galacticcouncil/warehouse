@@ -78,4 +78,9 @@ where
             MultiCurrency::can_withdraw(asset, who, amount)
         }
     }
+
+    fn asset_exists(_asset: Self::AssetId) -> bool {
+        //TODO: how ?
+        true
+    }
 }

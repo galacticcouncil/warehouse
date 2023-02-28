@@ -150,8 +150,8 @@ impl system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = BlockNumber;
     type Hash = H256;
@@ -159,7 +159,7 @@ impl system::Config for Test {
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
@@ -280,7 +280,7 @@ parameter_types! {
 }
 
 impl Config<Instance1> for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AssetId = AssetId;
     type MultiCurrency = Tokens;
     type PalletId = LMPalletId;
@@ -303,7 +303,7 @@ parameter_types! {
 }
 
 impl Config<Instance2> for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AssetId = AssetId;
     type MultiCurrency = Tokens;
     type PalletId = LMPalletId2;
@@ -325,7 +325,7 @@ parameter_types! {
 
 impl pallet_balances::Config for Test {
     type Balance = Balance;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = frame_system::Pallet<Test>;
@@ -336,19 +336,17 @@ impl pallet_balances::Config for Test {
 }
 
 impl orml_tokens::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = AssetId;
     type WeightInfo = ();
     type ExistentialDeposits = AssetRegistry;
-    type OnDust = ();
     type MaxLocks = MaxLocks;
     type DustRemovalWhitelist = Whitelist;
-    type OnKilledTokenAccount = ();
-    type OnNewTokenAccount = ();
     type MaxReserves = ConstU32<100_000>;
     type ReserveIdentifier = ();
+    type CurrencyHooks = ();
 }
 
 pub struct Whitelist;

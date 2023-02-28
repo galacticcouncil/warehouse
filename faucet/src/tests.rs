@@ -16,7 +16,7 @@
 // limitations under the License.
 
 use super::*;
-use crate::mock::{expect_events, Currency, ExtBuilder, Faucet, Origin, System, Test, ALICE, HDX};
+use crate::mock::{expect_events, Currency, ExtBuilder, Faucet, RuntimeOrigin, System, Test, ALICE, HDX};
 use frame_support::traits::OnFinalize;
 use frame_support::{assert_noop, assert_ok};
 
@@ -27,7 +27,7 @@ fn rampage_mints() {
         System::set_block_number(1); //For event emitting
 
         //Act
-        assert_ok!(Faucet::rampage_mint(Origin::signed(ALICE), HDX, 1000));
+        assert_ok!(Faucet::rampage_mint(RuntimeOrigin::signed(ALICE), HDX, 1000));
 
         //Assert
         assert_eq!(Currency::free_balance(HDX, &ALICE), 2000);
@@ -49,7 +49,7 @@ fn mints() {
         assert_eq!(Currency::free_balance(2000, &ALICE), 0);
 
         //Act
-        assert_ok!(Faucet::mint(Origin::signed(ALICE)));
+        assert_ok!(Faucet::mint(RuntimeOrigin::signed(ALICE)));
 
         //Assert
         assert_eq!(Currency::free_balance(2000, &ALICE), 1_000_000_000_000_000);
@@ -64,7 +64,7 @@ fn mints() {
 fn rampage_disabled() {
     ExtBuilder::default().build_live().execute_with(|| {
         assert_noop!(
-            Faucet::rampage_mint(Origin::signed(ALICE), HDX, 1000),
+            Faucet::rampage_mint(RuntimeOrigin::signed(ALICE), HDX, 1000),
             Error::<Test>::RampageMintNotAllowed
         );
     });
@@ -73,20 +73,20 @@ fn rampage_disabled() {
 #[test]
 fn mint_limit() {
     ExtBuilder::default().build_live().execute_with(|| {
-        assert_ok!(Faucet::mint(Origin::signed(ALICE)));
-        assert_ok!(Faucet::mint(Origin::signed(ALICE)));
-        assert_ok!(Faucet::mint(Origin::signed(ALICE)));
-        assert_ok!(Faucet::mint(Origin::signed(ALICE)));
-        assert_ok!(Faucet::mint(Origin::signed(ALICE)));
+        assert_ok!(Faucet::mint(RuntimeOrigin::signed(ALICE)));
+        assert_ok!(Faucet::mint(RuntimeOrigin::signed(ALICE)));
+        assert_ok!(Faucet::mint(RuntimeOrigin::signed(ALICE)));
+        assert_ok!(Faucet::mint(RuntimeOrigin::signed(ALICE)));
+        assert_ok!(Faucet::mint(RuntimeOrigin::signed(ALICE)));
 
         assert_noop!(
-            Faucet::mint(Origin::signed(ALICE)),
+            Faucet::mint(RuntimeOrigin::signed(ALICE)),
             Error::<Test>::MaximumMintLimitReached
         );
 
         <Faucet as OnFinalize<u64>>::on_finalize(1);
 
-        assert_ok!(Faucet::mint(Origin::signed(ALICE)));
+        assert_ok!(Faucet::mint(RuntimeOrigin::signed(ALICE)));
 
         assert_eq!(Currency::free_balance(2000, &ALICE), 6_000_000_000_000_000);
     });

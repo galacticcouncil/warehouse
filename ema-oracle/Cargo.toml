@@ -17,16 +17,16 @@ codec = { package = 'parity-scale-codec', version = '3.2.1', default-features = 
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "a0cd48c26dca53e7e351434276c572d70ffd0b72", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "0309d06ff0b4d22d3d2db2352fe4f51fc5650f18", default-features = false }
 
 # Substrate dependencies
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false, optional = true }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
-frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false, optional = true }
-sp-arithmetic = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.29", default-features = false }
-sp-core = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.29", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false, optional = true }
+sp-arithmetic = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.37", default-features = false }
+sp-core = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.37", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 
 log = { version = "0.4.14", default-features = false }
 
@@ -34,7 +34,7 @@ log = { version = "0.4.14", default-features = false }
 pretty_assertions = "1.3.0"
 proptest = "1.0.0"
 rug = { version = "1.17.0", features = ["num-traits"] }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 
 [features]
 default = ['std']

@@ -72,7 +72,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_uniques::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type WeightInfo: WeightInfo;
         type NftCollectionId: Member
             + Parameter
@@ -124,6 +124,7 @@ pub mod pallet {
         /// - `metadata`: Arbitrary data about a collection, e.g. IPFS hash or name.
         ///
         /// Emits CollectionCreated event
+        #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::create_collection())]
         pub fn create_collection(
             origin: OriginFor<T>,
@@ -150,6 +151,7 @@ pub mod pallet {
         /// - `collection_id`: The collection of the asset to be minted.
         /// - `item_id`: The item of the asset to be minted.
         /// - `metadata`: Arbitrary data about an item, e.g. IPFS hash or symbol.
+        #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::mint())]
         pub fn mint(
             origin: OriginFor<T>,
@@ -181,6 +183,7 @@ pub mod pallet {
         /// - `collection_id`: The collection of the asset to be transferred.
         /// - `item_id`: The instance of the asset to be transferred.
         /// - `dest`: The account to receive ownership of the asset.
+        #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::transfer())]
         pub fn transfer(
             origin: OriginFor<T>,
@@ -210,6 +213,7 @@ pub mod pallet {
         /// - `origin`: The NFT owner.
         /// - `collection_id`: The collection of the asset to be burned.
         /// - `item_id`: The instance of the asset to be burned.
+        #[pallet::call_index(3)]
         #[pallet::weight(<T as Config>::WeightInfo::burn())]
         pub fn burn(origin: OriginFor<T>, collection_id: T::NftCollectionId, item_id: T::NftItemId) -> DispatchResult {
             let sender = ensure_signed(origin)?;
@@ -233,6 +237,7 @@ pub mod pallet {
         /// Parameters:
         /// - `origin`: The collection owner.
         /// - `collection_id`: The identifier of the asset collection to be destroyed.
+        #[pallet::call_index(4)]
         #[pallet::weight(<T as Config>::WeightInfo::destroy_collection())]
         pub fn destroy_collection(origin: OriginFor<T>, collection_id: T::NftCollectionId) -> DispatchResult {
             let sender = ensure_signed(origin)?;
@@ -479,37 +484,41 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
     }
 }
 
+
+use frame_support::storage::KeyPrefixIterator;
+
 impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
+    type CollectionsIterator = KeyPrefixIterator<<T as pallet_uniques::Config>::CollectionId>;
+    type ItemsIterator = KeyPrefixIterator<<T as pallet_uniques::Config>::ItemId>;
+    type OwnedIterator = KeyPrefixIterator<(<T as pallet_uniques::Config>::CollectionId, <T as pallet_uniques::Config>::ItemId)>;
+    type OwnedInCollectionIterator = KeyPrefixIterator<<T as pallet_uniques::Config>::ItemId>;
+
     /// Returns an iterator of the collections in existence.
-    fn collections() -> Box<dyn Iterator<Item = Self::CollectionId>> {
-        Box::new(Collections::<T>::iter_keys())
+    fn collections() -> Self::CollectionsIterator {
+        //Collections::<T>::iter_keys()
+        pallet_uniques::Pallet::<T>::collections()
     }
 
     /// Returns an iterator of the items of a `collection` in existence.
-    fn items(collection: &Self::CollectionId) -> Box<dyn Iterator<Item = Self::ItemId>> {
-        Box::new(Items::<T>::iter_key_prefix(collection))
+    fn items(collection: &Self::CollectionId) -> Self::ItemsIterator{
+        //Items::<T>::iter_key_prefix(collection)
+        pallet_uniques::Pallet::<T>::items(collection)
     }
 
     /// Returns an iterator of the items of all collections owned by `who`.
-    fn owned(who: &T::AccountId) -> Box<dyn Iterator<Item = (Self::CollectionId, Self::ItemId)>> {
-        Box::new(
+    fn owned(who: &T::AccountId) -> Self::OwnedIterator {
             pallet_uniques::Pallet::<T>::owned(who)
-                .map(|(collection_id, item_id)| (collection_id.into(), item_id.into())),
-        )
     }
 
     /// Returns an iterator of the items of `collection` owned by `who`.
     fn owned_in_collection(
         collection: &Self::CollectionId,
         who: &T::AccountId,
-    ) -> Box<dyn Iterator<Item = Self::ItemId>> {
-        Box::new(
+    ) -> Self::OwnedInCollectionIterator {
             pallet_uniques::Pallet::<T>::owned_in_collection(
                 &(Into::<<T as pallet_uniques::Config>::CollectionId>::into(*collection)),
                 who,
             )
-            .map(|i| i.into()),
-        )
     }
 }
 

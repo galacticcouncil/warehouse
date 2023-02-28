@@ -30,10 +30,9 @@ mod tests;
 mod traits;
 
 use frame_support::{
-    dispatch::DispatchResult,
+    dispatch::{DispatchResult, Pays, DispatchClass},
     ensure,
     traits::{Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, WithdrawReasons},
-    weights::{DispatchClass, WeightToFee},
 };
 use frame_system::ensure_signed;
 use sp_runtime::{
@@ -48,7 +47,7 @@ use sp_std::marker::PhantomData;
 
 use frame_support::sp_runtime::FixedPointNumber;
 use frame_support::sp_runtime::FixedPointOperand;
-use frame_support::weights::{Pays, Weight};
+use frame_support::weights::{Weight, WeightToFee};
 use hydradx_traits::{pools::SpotPriceProvider, NativePriceOracle};
 use orml_traits::{Happened, MultiCurrency, MultiCurrencyExtended};
 
@@ -76,6 +75,7 @@ pub use pallet::*;
 pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
+    use frame_support::weights::WeightToFee;
     use frame_system::pallet_prelude::OriginFor;
 
     #[pallet::pallet]
@@ -110,10 +110,10 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The origin which can add/remove accepted currencies
-        type AcceptedCurrencyOrigin: EnsureOrigin<Self::Origin>;
+        type AcceptedCurrencyOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Multi Currency
         type Currencies: MultiCurrencyExtended<Self::AccountId>;
@@ -251,6 +251,7 @@ pub mod pallet {
         /// When currency is set, fixed fee is withdrawn from the account to pay for the currency change
         ///
         /// Emits `CurrencySet` event when successful.
+        #[pallet::call_index(0)]
         #[pallet::weight((<T as Config>::WeightInfo::set_currency(), DispatchClass::Normal, Pays::No))]
         pub fn set_currency(origin: OriginFor<T>, currency: AssetIdOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -284,6 +285,7 @@ pub mod pallet {
         /// Currency must not be already accepted. Core asset id cannot be explicitly added.
         ///
         /// Emits `CurrencyAdded` event when successful.
+        #[pallet::call_index(1)]
         #[pallet::weight((<T as Config>::WeightInfo::add_currency(), DispatchClass::Normal, Pays::No))]
         pub fn add_currency(origin: OriginFor<T>, currency: AssetIdOf<T>, price: Price) -> DispatchResult {
             T::AcceptedCurrencyOrigin::ensure_origin(origin)?;
@@ -307,6 +309,7 @@ pub mod pallet {
         /// Core asset cannot be removed.
         ///
         /// Emits `CurrencyRemoved` when successful.
+        #[pallet::call_index(2)]
         #[pallet::weight((<T as Config>::WeightInfo::remove_currency(), DispatchClass::Normal, Pays::No))]
         pub fn remove_currency(origin: OriginFor<T>, currency: AssetIdOf<T>) -> DispatchResult {
             T::AcceptedCurrencyOrigin::ensure_origin(origin)?;
@@ -485,8 +488,8 @@ where
     /// Note: The `fee` already includes the `tip`.
     fn withdraw_fee(
         who: &T::AccountId,
-        _call: &T::Call,
-        _info: &DispatchInfoOf<T::Call>,
+        _call: &T::RuntimeCall,
+        _info: &DispatchInfoOf<T::RuntimeCall>,
         fee: Self::Balance,
         _tip: Self::Balance,
     ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
@@ -520,8 +523,8 @@ where
     /// Note: The `fee` already includes the `tip`.
     fn correct_and_deposit_fee(
         who: &T::AccountId,
-        _dispatch_info: &DispatchInfoOf<T::Call>,
-        _post_info: &PostDispatchInfoOf<T::Call>,
+        _dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
+        _post_info: &PostDispatchInfoOf<T::RuntimeCall>,
         corrected_fee: Self::Balance,
         tip: Self::Balance,
         already_withdrawn: Self::LiquidityInfo,
@@ -601,8 +604,8 @@ where
     /// Note: The `fee` already includes the `tip`.
     fn withdraw_fee(
         who: &T::AccountId,
-        _call: &T::Call,
-        _info: &DispatchInfoOf<T::Call>,
+        _call: &T::RuntimeCall,
+        _info: &DispatchInfoOf<T::RuntimeCall>,
         fee: Self::Balance,
         tip: Self::Balance,
     ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
@@ -639,8 +642,8 @@ where
     /// Note: This is the default implementation
     fn correct_and_deposit_fee(
         who: &T::AccountId,
-        _dispatch_info: &DispatchInfoOf<T::Call>,
-        _post_info: &PostDispatchInfoOf<T::Call>,
+        _dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
+        _post_info: &PostDispatchInfoOf<T::RuntimeCall>,
         corrected_fee: Self::Balance,
         tip: Self::Balance,
         already_withdrawn: Self::LiquidityInfo,
@@ -689,12 +692,12 @@ pub fn error_to_invalid<T: Config>(error: Error<T>) -> InvalidTransaction {
 
 impl<T: Config + Send + Sync> SignedExtension for CurrencyBalanceCheck<T>
 where
-    <T as frame_system::Config>::Call: IsSubType<Call<T>>,
+    <T as frame_system::Config>::RuntimeCall: IsSubType<Call<T>>,
     BalanceOf<T>: FixedPointOperand,
 {
     const IDENTIFIER: &'static str = "CurrencyBalanceCheck";
     type AccountId = T::AccountId;
-    type Call = <T as frame_system::Config>::Call;
+    type Call = <T as frame_system::Config>::RuntimeCall;
     type AdditionalSigned = ();
     type Pre = ();
 

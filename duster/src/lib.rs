@@ -73,7 +73,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// Balance type
         type Balance: Parameter
@@ -118,7 +118,7 @@ pub mod pallet {
         type NativeCurrencyId: Get<Self::CurrencyId>;
 
         /// The origin which can manage whiltelist.
-        type BlacklistUpdateOrigin: EnsureOrigin<Self::Origin>;
+        type BlacklistUpdateOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Weight information for extrinsics in this module.
         type WeightInfo: WeightInfo;
@@ -213,6 +213,7 @@ pub mod pallet {
         /// be dusted, the remaining balance is transferred to selected account (usually treasury).
         ///
         /// Caller is rewarded with chosen reward in native currency.
+        #[pallet::call_index(0)]
         #[pallet::weight((<T as Config>::WeightInfo::dust_account(), DispatchClass::Normal, Pays::Yes))]
         pub fn dust_account(origin: OriginFor<T>, account: T::AccountId, currency_id: T::CurrencyId) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -244,6 +245,7 @@ pub mod pallet {
         /// Add account to list of non-dustable account. Account whihc are excluded from udsting.
         /// If such account should be dusted - `AccountBlacklisted` error is returned.
         /// Only root can perform this action.
+        #[pallet::call_index(1)]
         #[pallet::weight((<T as Config>::WeightInfo::add_nondustable_account(), DispatchClass::Normal, Pays::No))]
         pub fn add_nondustable_account(origin: OriginFor<T>, account: T::AccountId) -> DispatchResult {
             T::BlacklistUpdateOrigin::ensure_origin(origin)?;
@@ -256,6 +258,7 @@ pub mod pallet {
         }
 
         /// Remove account from list of non-dustable accounts. That means account can be dusted again.
+        #[pallet::call_index(2)]
         #[pallet::weight((<T as Config>::WeightInfo::remove_nondustable_account(), DispatchClass::Normal, Pays::No))]
         pub fn remove_nondustable_account(origin: OriginFor<T>, account: T::AccountId) -> DispatchResult {
             T::BlacklistUpdateOrigin::ensure_origin(origin)?;
@@ -306,7 +309,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-use orml_traits::OnDust;
+use orml_traits::currency::OnDust;
 
 use sp_std::marker::PhantomData;
 pub struct DusterWhitelist<T>(PhantomData<T>);

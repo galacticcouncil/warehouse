@@ -17,7 +17,7 @@
 
 use super::*;
 pub use crate::mock::{
-    Event as TestEvent, ExtBuilder, Origin, PriceOracle, System, Test, ACA, DOT, ETH, HDX, ORACLE_ENTRY_1,
+    RuntimeEvent as TestEvent, ExtBuilder, RuntimeOrigin, PriceOracle, System, Test, ACA, DOT, ETH, HDX, ORACLE_ENTRY_1,
     ORACLE_ENTRY_2,
 };
 use frame_support::{

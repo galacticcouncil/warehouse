@@ -17,7 +17,7 @@ use crate::tests::mock::*;
 
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use orml_traits::NamedMultiReservableCurrency;
+use orml_traits::MultiReservableCurrency;
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -39,6 +39,7 @@ fn place_order_should_work() {
         assert_eq!(order.asset_in, DAI);
         assert_eq!(order.asset_out, HDX);
         assert_eq!(order.amount_in, 20 * ONE);
+        assert_eq!(order.amount_out, 100 * ONE);
         assert_eq!(order.partially_fillable, true);
 
         expect_events(vec![Event::Placed {
@@ -51,8 +52,7 @@ fn place_order_should_work() {
         }
         .into()]);
 
-        let reserve_id = named_reserve_identifier(0);
-        assert_eq!(Tokens::reserved_balance_named(&reserve_id, HDX, &ALICE), 100 * ONE);
+        assert_eq!(Tokens::reserved_balance(HDX, &ALICE), 100 * ONE);
 
         let next_order_id = OTC::next_order_id();
         assert_eq!(next_order_id, 1);
@@ -82,11 +82,7 @@ fn place_order_should_work_when_user_has_multiple_orders() {
         ));
 
         // Assert
-        let reserve_id_0 = named_reserve_identifier(0);
-        assert_eq!(Tokens::reserved_balance_named(&reserve_id_0, HDX, &ALICE), 100 * ONE);
-
-        let reserve_id_1 = named_reserve_identifier(1);
-        assert_eq!(Tokens::reserved_balance_named(&reserve_id_1, HDX, &ALICE), 50 * ONE);
+        assert_eq!(Tokens::reserved_balance(HDX, &ALICE), 150 * ONE);
     });
 }
 

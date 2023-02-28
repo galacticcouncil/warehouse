@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use crate as otc;
-use crate::{Config, RESERVE_ID_PREFIX};
+use crate::Config;
 use frame_support::{
     parameter_types,
     traits::{Everything, GenesisBuild, Nothing},
@@ -39,7 +39,6 @@ pub type Amount = i128;
 pub type AssetId = u32;
 pub type Balance = u128;
 pub type NamedReserveIdentifier = [u8; 8];
-pub type OrderId = u32;
 
 pub const HDX: AssetId = 0;
 pub const DAI: AssetId = 2;
@@ -227,12 +226,4 @@ thread_local! {
 
 pub fn expect_events(e: Vec<Event>) {
     test_utils::expect_events::<Event, Test>(e);
-}
-
-pub fn named_reserve_identifier(order_id: OrderId) -> [u8; 8] {
-    let mut result = [0; 8];
-    result[0..3].copy_from_slice(RESERVE_ID_PREFIX);
-    result[3..7].copy_from_slice(&order_id.to_be_bytes());
-
-    result
 }

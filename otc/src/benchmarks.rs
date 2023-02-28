@@ -38,8 +38,7 @@ benchmarks! {
         let owner: T::AccountId = create_account_with_balances::<T>("owner", 1, vec!(hdx, dai))?;
   }:  _(RawOrigin::Signed(owner.clone()), dai.into(), hdx.into(), 20 * ONE, 100 * ONE, true)
     verify {
-        let reserve_id = named_reserve_identifier(0);
-        assert_eq!(T::Currency::reserved_balance_named(&reserve_id, hdx.into(), &owner), 100 * ONE);
+        assert_eq!(T::Currency::reserved_balance(hdx.into(), &owner), 100 * ONE);
     }
 
     partial_fill_order {
@@ -53,8 +52,7 @@ benchmarks! {
         );
   }:  _(RawOrigin::Signed(filler.clone()), 0u32, 10 * ONE)
     verify {
-        let reserve_id = named_reserve_identifier(0);
-        assert_eq!(T::Currency::reserved_balance_named(&reserve_id, hdx.into(), &owner), 50 * ONE);
+        assert_eq!(T::Currency::reserved_balance(hdx.into(), &owner), 50 * ONE);
     }
 
     fill_order {
@@ -68,8 +66,7 @@ benchmarks! {
         );
   }:  _(RawOrigin::Signed(filler.clone()), 0u32)
     verify {
-        let reserve_id = named_reserve_identifier(0);
-        assert_eq!(T::Currency::reserved_balance_named(&reserve_id, hdx.into(), &owner), 0);
+        assert_eq!(T::Currency::reserved_balance(hdx.into(), &owner), 0);
     }
 
     cancel_order {
@@ -81,8 +78,7 @@ benchmarks! {
         );
   }:  _(RawOrigin::Signed(owner.clone()), 0u32)
     verify {
-        let reserve_id = named_reserve_identifier(0);
-        assert_eq!(T::Currency::reserved_balance_named(&reserve_id, hdx.into(), &owner), 0);
+        assert_eq!(T::Currency::reserved_balance(hdx.into(), &owner), 0);
     }
 }
 
@@ -116,14 +112,6 @@ where
     }
 
     Ok(account_id)
-}
-
-pub fn named_reserve_identifier(order_id: OrderId) -> [u8; 8] {
-    let mut result = [0; 8];
-    result[0..3].copy_from_slice(RESERVE_ID_PREFIX);
-    result[3..7].copy_from_slice(&order_id.to_be_bytes());
-
-    result
 }
 
 #[cfg(test)]

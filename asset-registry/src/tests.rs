@@ -34,7 +34,7 @@ fn register_asset_works() {
 
         assert_noop!(
             AssetRegistryPallet::register(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 too_long.to_vec(),
                 AssetType::Token,
                 ed,
@@ -48,7 +48,7 @@ fn register_asset_works() {
         let name: Vec<u8> = b"HDX".to_vec();
 
         assert_ok!(AssetRegistryPallet::register(
-            Origin::root(),
+            RuntimeOrigin::root(),
             name.clone(),
             AssetType::Token,
             ed,
@@ -81,7 +81,7 @@ fn register_asset_works() {
         );
 
         assert_noop!(
-            AssetRegistryPallet::register(Origin::root(), name, AssetType::Token, ed, None, None, None),
+            AssetRegistryPallet::register(RuntimeOrigin::root(), name, AssetType::Token, ed, None, None, None),
             Error::<Test>::AssetAlreadyRegistered
         );
     });
@@ -165,7 +165,7 @@ fn location_mapping_works() {
         ));
 
         assert_ok!(AssetRegistryPallet::set_location(
-            Origin::root(),
+            RuntimeOrigin::root(),
             asset_id,
             asset_location.clone()
         ));
@@ -188,7 +188,7 @@ fn location_mapping_works() {
         // asset location for the native asset cannot be changed
         assert_noop!(
             AssetRegistryPallet::set_location(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 <Test as crate::Config>::NativeAssetId::get(),
                 asset_location
             ),
@@ -265,7 +265,7 @@ fn set_metadata_works() {
             let b_symbol: BoundedVec<u8, <Test as crate::Config>::StringLimit> = b"xDOT".to_vec().try_into().unwrap();
 
             assert_ok!(AssetRegistryPallet::set_metadata(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 dot_id,
                 b"xDOT".to_vec(),
                 12u8
@@ -287,7 +287,7 @@ fn set_metadata_works() {
             );
 
             assert_ok!(AssetRegistryPallet::set_metadata(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 dot_id,
                 b"xDOT".to_vec(),
                 30u8
@@ -302,12 +302,12 @@ fn set_metadata_works() {
             );
 
             assert_noop!(
-                AssetRegistryPallet::set_metadata(Origin::root(), dot_id, b"JUST_TOO_LONG".to_vec(), 30u8),
+                AssetRegistryPallet::set_metadata(RuntimeOrigin::root(), dot_id, b"JUST_TOO_LONG".to_vec(), 30u8),
                 Error::<Test>::TooLong
             );
 
             assert_noop!(
-                AssetRegistryPallet::set_metadata(Origin::root(), 100, b"NONE".to_vec(), 30u8),
+                AssetRegistryPallet::set_metadata(RuntimeOrigin::root(), 100, b"NONE".to_vec(), 30u8),
                 Error::<Test>::AssetNotFound
             );
         });
@@ -327,7 +327,7 @@ fn update_asset() {
 
         // set a new name and type for an existing asset
         assert_ok!(AssetRegistryPallet::update(
-            Origin::root(),
+            RuntimeOrigin::root(),
             btc_asset_id,
             b"superBTC".to_vec(),
             AssetType::Token,
@@ -362,7 +362,7 @@ fn update_asset() {
         // cannot set existing name for an existing asset
         assert_noop!(
             (AssetRegistryPallet::update(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 usd_asset_id,
                 b"superBTC".to_vec(),
                 AssetType::Token,
@@ -373,13 +373,13 @@ fn update_asset() {
 
         // cannot set a new name for a non-existent asset
         assert_noop!(
-            (AssetRegistryPallet::update(Origin::root(), next_asset_id, b"VOID".to_vec(), AssetType::Token, None)),
+            (AssetRegistryPallet::update(RuntimeOrigin::root(), next_asset_id, b"VOID".to_vec(), AssetType::Token, None)),
             Error::<Test>::AssetNotFound
         );
 
         // corner case: change the name and also the type for an existing asset (token -> pool share)
         assert_ok!(AssetRegistryPallet::update(
-            Origin::root(),
+            RuntimeOrigin::root(),
             btc_asset_id,
             b"BTCUSD".to_vec(),
             AssetType::PoolShare(btc_asset_id, usd_asset_id),
@@ -388,7 +388,7 @@ fn update_asset() {
 
         // Update ED
         assert_ok!(AssetRegistryPallet::update(
-            Origin::root(),
+            RuntimeOrigin::root(),
             btc_asset_id,
             b"BTCUSD".to_vec(),
             AssetType::PoolShare(btc_asset_id, usd_asset_id),
@@ -409,7 +409,7 @@ fn update_asset() {
 
         // corner case: change the name and also the type for an existing asset (pool share -> token)
         assert_ok!(AssetRegistryPallet::update(
-            Origin::root(),
+            RuntimeOrigin::root(),
             btc_asset_id,
             b"superBTC".to_vec(),
             AssetType::Token,
@@ -465,7 +465,7 @@ fn register_asset_should_work_when_asset_is_provided() {
         .build()
         .execute_with(|| {
             assert_ok!(AssetRegistryPallet::register(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 b"asset_id".to_vec(),
                 AssetType::Token,
                 1_000_000,
@@ -492,7 +492,7 @@ fn register_asset_should_fail_when_provided_asset_is_native_asset() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
             AssetRegistryPallet::register(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 b"asset_id".to_vec(),
                 AssetType::Token,
                 1_000_000,
@@ -509,7 +509,7 @@ fn register_asset_should_fail_when_provided_asset_is_native_asset() {
 fn register_asset_should_fail_when_provided_asset_is_already_registered() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRegistryPallet::register(
-            Origin::root(),
+            RuntimeOrigin::root(),
             b"asset_id".to_vec(),
             AssetType::Token,
             1_000_000,
@@ -519,7 +519,7 @@ fn register_asset_should_fail_when_provided_asset_is_already_registered() {
         ));
         assert_noop!(
             AssetRegistryPallet::register(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 b"asset_id_2".to_vec(),
                 AssetType::Token,
                 1_000_000,
@@ -540,7 +540,7 @@ fn register_asset_should_fail_when_provided_asset_is_outside_reserved_range() {
         .execute_with(|| {
             assert_noop!(
                 AssetRegistryPallet::register(
-                    Origin::root(),
+                    RuntimeOrigin::root(),
                     b"asset_id".to_vec(),
                     AssetType::Token,
                     1_000_000,
@@ -553,7 +553,7 @@ fn register_asset_should_fail_when_provided_asset_is_outside_reserved_range() {
 
             assert_noop!(
                 AssetRegistryPallet::register(
-                    Origin::root(),
+                    RuntimeOrigin::root(),
                     b"asset_id".to_vec(),
                     AssetType::Token,
                     1_000_000,
@@ -571,7 +571,7 @@ fn register_asset_should_work_when_metadata_is_provided() {
     ExtBuilder::default().build().execute_with(|| {
         let asset_id: AssetId = 10;
         assert_ok!(AssetRegistryPallet::register(
-            Origin::root(),
+            RuntimeOrigin::root(),
             b"asset_id".to_vec(),
             AssetType::Token,
             1_000_000,
@@ -617,7 +617,7 @@ fn register_asset_should_work_when_location_is_provided() {
         ));
 
         assert_ok!(AssetRegistryPallet::register(
-            Origin::root(),
+            RuntimeOrigin::root(),
             b"asset_id".to_vec(),
             AssetType::Token,
             1_000_000,
@@ -658,7 +658,7 @@ fn register_asset_should_work_when_all_optional_are_provided() {
         ));
 
         assert_ok!(AssetRegistryPallet::register(
-            Origin::root(),
+            RuntimeOrigin::root(),
             b"asset_id".to_vec(),
             AssetType::Token,
             1_000_000,

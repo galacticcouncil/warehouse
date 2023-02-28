@@ -83,8 +83,8 @@ impl system::Config for Test {
     type BaseCallFilter = Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -92,7 +92,7 @@ impl system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -123,7 +123,7 @@ parameter_type_with_key! {
 }
 
 impl Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = AssetId;
@@ -136,23 +136,21 @@ impl Config for Test {
 }
 
 impl orml_tokens::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = AssetId;
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = ();
     type MaxLocks = ();
     type DustRemovalWhitelist = Nothing;
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
     type ReserveIdentifier = ();
     type MaxReserves = ();
+    type CurrencyHooks = ();
 }
 
 impl pallet_currencies::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, u32>;
     type GetNativeCurrencyId = NativeCurrencyId;
@@ -162,7 +160,7 @@ impl pallet_currencies::Config for Test {
 impl pallet_balances::Config for Test {
     type MaxLocks = MaxLocks;
     type Balance = Balance;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = NativeExistentialDeposit;
     type AccountStore = System;

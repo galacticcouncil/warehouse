@@ -1,6 +1,6 @@
 use super::*;
 use crate::mock::{
-    AssetId, Currencies, Duster, Event as TestEvent, ExtBuilder, Origin, System, Test, Tokens, ALICE, BOB, DUSTER,
+    AssetId, Currencies, Duster, RuntimeEvent as TestEvent, ExtBuilder, RuntimeOrigin, System, Test, Tokens, ALICE, BOB, DUSTER,
     KILLED, TREASURY,
 };
 
@@ -14,7 +14,7 @@ fn dust_account_works() {
         .with_balance(*ALICE, 1, 100)
         .build()
         .execute_with(|| {
-            assert_ok!(Duster::dust_account(Origin::signed(*DUSTER), *ALICE, 1));
+            assert_ok!(Duster::dust_account(RuntimeOrigin::signed(*DUSTER), *ALICE, 1));
             assert_eq!(Tokens::free_balance(1, &*TREASURY), 100);
 
             for (who, _, _) in orml_tokens::Accounts::<Test>::iter() {
@@ -31,9 +31,9 @@ fn reward_duster_can_fail() {
         .with_balance(*ALICE, 1, 100)
         .build()
         .execute_with(|| {
-            assert_ok!(Currencies::transfer(Origin::signed(*TREASURY), *BOB, 0, 1_000_000));
+            assert_ok!(Currencies::transfer(RuntimeOrigin::signed(*TREASURY), *BOB, 0, 1_000_000));
 
-            assert_ok!(Duster::dust_account(Origin::signed(*DUSTER), *ALICE, 1));
+            assert_ok!(Duster::dust_account(RuntimeOrigin::signed(*DUSTER), *ALICE, 1));
             assert_eq!(Tokens::free_balance(1, &*TREASURY), 100);
 
             for (who, _, _) in orml_tokens::Accounts::<Test>::iter() {
@@ -51,7 +51,7 @@ fn dust_account_with_sufficient_balance_fails() {
         .build()
         .execute_with(|| {
             assert_noop!(
-                Duster::dust_account(Origin::signed(*DUSTER), *ALICE, 1),
+                Duster::dust_account(RuntimeOrigin::signed(*DUSTER), *ALICE, 1),
                 Error::<Test>::BalanceSufficient
             );
             assert_eq!(Tokens::free_balance(1, &*TREASURY), 0);
@@ -65,7 +65,7 @@ fn dust_account_with_exact_dust_fails() {
         .build()
         .execute_with(|| {
             assert_noop!(
-                Duster::dust_account(Origin::signed(*DUSTER), *ALICE, 1),
+                Duster::dust_account(RuntimeOrigin::signed(*DUSTER), *ALICE, 1),
                 Error::<Test>::BalanceSufficient
             );
             assert_eq!(Tokens::free_balance(1, &*TREASURY), 0);
@@ -76,7 +76,7 @@ fn dust_account_with_exact_dust_fails() {
 fn dust_nonexisting_account_fails() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Duster::dust_account(Origin::signed(*DUSTER), 123456, 1),
+            Duster::dust_account(RuntimeOrigin::signed(*DUSTER), 123456, 1),
             Error::<Test>::ZeroBalance
         ); // Fails with zero balance because total_balance for non-existing account returns default value = Zero.
         assert_eq!(Tokens::free_balance(1, &*TREASURY), 0);
@@ -87,7 +87,7 @@ fn dust_nonexisting_account_fails() {
 fn dust_treasury_account_fails() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Duster::dust_account(Origin::signed(*DUSTER), *TREASURY, 1),
+            Duster::dust_account(RuntimeOrigin::signed(*DUSTER), *TREASURY, 1),
             Error::<Test>::AccountBlacklisted
         );
     });
@@ -111,7 +111,7 @@ fn dust_account_native_works() {
 
         assert!(KILLED.with(|r| r.borrow().is_empty()));
 
-        assert_ok!(Duster::dust_account(Origin::signed(*DUSTER), *ALICE, currency_id));
+        assert_ok!(Duster::dust_account(RuntimeOrigin::signed(*DUSTER), *ALICE, currency_id));
         assert_eq!(Currencies::free_balance(currency_id, &*TREASURY), 990_500);
 
         assert_eq!(Currencies::free_balance(0, &*DUSTER), 110_000);
@@ -161,13 +161,13 @@ fn native_existential_deposit() {
     ext.execute_with(|| {
         let currency_id: AssetId = 2;
 
-        assert_ok!(Currencies::transfer(Origin::signed(*DUSTER), *ALICE, 2, 20_000));
-        assert_ok!(Currencies::transfer(Origin::signed(*DUSTER), *ALICE, 0, 600));
-        assert_ok!(Currencies::transfer(Origin::signed(*ALICE), *DUSTER, 0, 300));
+        assert_ok!(Currencies::transfer(RuntimeOrigin::signed(*DUSTER), *ALICE, 2, 20_000));
+        assert_ok!(Currencies::transfer(RuntimeOrigin::signed(*DUSTER), *ALICE, 0, 600));
+        assert_ok!(Currencies::transfer(RuntimeOrigin::signed(*ALICE), *DUSTER, 0, 300));
 
         assert_eq!(Currencies::free_balance(0, &*ALICE), 300);
 
-        assert_ok!(Duster::dust_account(Origin::signed(*DUSTER), *ALICE, 0));
+        assert_ok!(Duster::dust_account(RuntimeOrigin::signed(*DUSTER), *ALICE, 0));
 
         assert_eq!(Currencies::free_balance(0, &*ALICE), 0);
 
@@ -235,7 +235,7 @@ fn native_existential_deposit() {
 
         // Transfer all remaining tokens from Alice accounts - should kill the account
 
-        assert_ok!(Currencies::transfer(Origin::signed(*ALICE), *DUSTER, 2, 20_000));
+        assert_ok!(Currencies::transfer(RuntimeOrigin::signed(*ALICE), *DUSTER, 2, 20_000));
 
         assert_eq!(KILLED.with(|r| r.borrow().clone()), vec![*ALICE]);
 
@@ -257,17 +257,17 @@ fn native_existential_deposit() {
 fn add_nondustable_account_works() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Duster::add_nondustable_account(Origin::signed(*DUSTER), *ALICE),
+            Duster::add_nondustable_account(RuntimeOrigin::signed(*DUSTER), *ALICE),
             BadOrigin
         );
 
         assert!(Duster::blacklisted(*ALICE).is_none());
 
-        assert_ok!(Duster::add_nondustable_account(Origin::root(), *ALICE));
+        assert_ok!(Duster::add_nondustable_account(RuntimeOrigin::root(), *ALICE));
 
         assert!(Duster::blacklisted(*ALICE).is_some());
 
-        assert_ok!(Duster::add_nondustable_account(Origin::root(), *ALICE));
+        assert_ok!(Duster::add_nondustable_account(RuntimeOrigin::root(), *ALICE));
 
         assert!(Duster::blacklisted(*ALICE).is_some());
     });
@@ -279,32 +279,32 @@ fn remove_nondustable_account_works() {
         .with_native_balance(*ALICE, 500)
         .build()
         .execute_with(|| {
-            assert_ok!(Duster::add_nondustable_account(Origin::root(), *ALICE));
+            assert_ok!(Duster::add_nondustable_account(RuntimeOrigin::root(), *ALICE));
             assert!(Duster::blacklisted(*ALICE).is_some());
 
-            assert_ok!(Duster::add_nondustable_account(Origin::root(), *ALICE));
+            assert_ok!(Duster::add_nondustable_account(RuntimeOrigin::root(), *ALICE));
 
             // Dust dont work now
             assert_noop!(
-                Duster::dust_account(Origin::signed(*DUSTER), *ALICE, 1),
+                Duster::dust_account(RuntimeOrigin::signed(*DUSTER), *ALICE, 1),
                 Error::<Test>::AccountBlacklisted
             );
 
             assert_noop!(
-                Duster::remove_nondustable_account(Origin::signed(*DUSTER), *ALICE),
+                Duster::remove_nondustable_account(RuntimeOrigin::signed(*DUSTER), *ALICE),
                 BadOrigin
             );
 
             //remove non-existing account
             assert_noop!(
-                Duster::remove_nondustable_account(Origin::root(), 1234556),
+                Duster::remove_nondustable_account(RuntimeOrigin::root(), 1234556),
                 Error::<Test>::AccountNotBlacklisted
             );
 
-            assert_ok!(Duster::remove_nondustable_account(Origin::root(), *ALICE));
+            assert_ok!(Duster::remove_nondustable_account(RuntimeOrigin::root(), *ALICE));
             assert!(Duster::blacklisted(*ALICE).is_none());
 
             // We can dust again
-            assert_ok!(Duster::dust_account(Origin::signed(*DUSTER), *ALICE, 0),);
+            assert_ok!(Duster::dust_account(RuntimeOrigin::signed(*DUSTER), *ALICE, 0),);
         });
 }

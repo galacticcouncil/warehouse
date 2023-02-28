@@ -488,26 +488,25 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 use frame_support::storage::KeyPrefixIterator;
 
 impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
-    type CollectionsIterator = KeyPrefixIterator<<T as pallet_uniques::Config>::CollectionId>;
-    type ItemsIterator = KeyPrefixIterator<<T as pallet_uniques::Config>::ItemId>;
-    type OwnedIterator = KeyPrefixIterator<(<T as pallet_uniques::Config>::CollectionId, <T as pallet_uniques::Config>::ItemId)>;
-    type OwnedInCollectionIterator = KeyPrefixIterator<<T as pallet_uniques::Config>::ItemId>;
+    type CollectionsIterator = KeyPrefixIterator<<T as Config>::NftCollectionId>;
+    type ItemsIterator = KeyPrefixIterator<<T as Config>::NftItemId>;
+    type OwnedIterator = KeyPrefixIterator<(<T as Config>::NftCollectionId, <T as Config>::NftItemId)>;
+    type OwnedInCollectionIterator = KeyPrefixIterator<<T as Config>::NftItemId>;
 
     /// Returns an iterator of the collections in existence.
     fn collections() -> Self::CollectionsIterator {
-        //Collections::<T>::iter_keys()
-        pallet_uniques::Pallet::<T>::collections()
+        Collections::<T>::iter_keys()
     }
 
     /// Returns an iterator of the items of a `collection` in existence.
     fn items(collection: &Self::CollectionId) -> Self::ItemsIterator{
-        //Items::<T>::iter_key_prefix(collection)
-        pallet_uniques::Pallet::<T>::items(collection)
+        Items::<T>::iter_key_prefix(collection)
     }
 
     /// Returns an iterator of the items of all collections owned by `who`.
     fn owned(who: &T::AccountId) -> Self::OwnedIterator {
             pallet_uniques::Pallet::<T>::owned(who)
+                .map(|(collection_id, item_id)| (collection_id.into(), item_id.into()))
     }
 
     /// Returns an iterator of the items of `collection` owned by `who`.
@@ -519,6 +518,7 @@ impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
                 &(Into::<<T as pallet_uniques::Config>::CollectionId>::into(*collection)),
                 who,
             )
+            .map(|i| i.into())
     }
 }
 

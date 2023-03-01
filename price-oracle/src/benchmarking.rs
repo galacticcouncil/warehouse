@@ -27,7 +27,7 @@ use frame_support::traits::{OnFinalize, OnInitialize};
 
 use crate::Pallet as PriceOracle;
 
-pub const PRICE_ENTRY_1: PriceEntry = PriceEntry {
+pub const ORACLE_ENTRY_1: PriceEntry = PriceEntry {
     price: Price::from_inner(2000000000000000000),
     trade_amount: 1_000,
     liquidity_amount: 2_000,
@@ -53,9 +53,9 @@ benchmarks! {
 
         frame_system::Pallet::<T>::set_block_number(block_num.into());
         PriceOracle::<T>::on_initialize(block_num.into());
-        PriceOracle::<T>::on_trade(HDX, DOT, PRICE_ENTRY_1);
+        PriceOracle::<T>::on_trade(HDX, DOT, ORACLE_ENTRY_1);
 
-        assert_eq!(<PriceDataAccumulator<T>>::try_get(hdx_dot_pair_name.clone()), Ok(PRICE_ENTRY_1));
+        assert_eq!(<PriceDataAccumulator<T>>::try_get(hdx_dot_pair_name.clone()), Ok(ORACLE_ENTRY_1));
 
         let price_data = PriceOracle::<T>::price_data_ten();
         let bucket_queue = price_data.iter().find(|&x| x.0 == hdx_dot_pair_name).unwrap().1;
@@ -91,11 +91,11 @@ benchmarks! {
         for i in 0 .. a {
             let asset_a = i * 1_000;
             let asset_b = i * 2_000;
-            PriceOracle::<T>::on_trade(asset_a, asset_b, PRICE_ENTRY_1);
+            PriceOracle::<T>::on_trade(asset_a, asset_b, ORACLE_ENTRY_1);
         }
 
         let asset_pair_name = PriceOracle::<T>::get_name(asset_a, asset_b);
-        assert_eq!(PriceDataAccumulator::<T>::try_get(asset_pair_name), Ok(PRICE_ENTRY_1));
+        assert_eq!(PriceDataAccumulator::<T>::try_get(asset_pair_name), Ok(ORACLE_ENTRY_1));
         let price_data = PriceOracle::<T>::price_data_ten();
         for i in 0 .. a {
             let asset_a = i * 1_000;
@@ -112,10 +112,10 @@ benchmarks! {
             for i in 0 .. a {
                 let asset_a = i * 1_000;
                 let asset_b = i * 2_000;
-                PriceOracle::<T>::on_trade(asset_a, asset_b, PRICE_ENTRY_1);
+                PriceOracle::<T>::on_trade(asset_a, asset_b, ORACLE_ENTRY_1);
             }
 
-            assert_eq!(PriceDataAccumulator::<T>::try_get(PriceOracle::<T>::get_name(asset_a, asset_b)), Ok(PRICE_ENTRY_1));
+            assert_eq!(PriceDataAccumulator::<T>::try_get(PriceOracle::<T>::get_name(asset_a, asset_b)), Ok(ORACLE_ENTRY_1));
         }
 
         frame_system::Pallet::<T>::set_block_number(block_num.into());
@@ -180,8 +180,8 @@ benchmarks! {
         for i in 0 .. b {
             let asset_a = i * 1_000;
             let asset_a = i * 2_000;
-            PriceOracle::<T>::on_trade(asset_a, asset_b, PRICE_ENTRY_1);
-            vec.push(PRICE_ENTRY_1);
+            PriceOracle::<T>::on_trade(asset_a, asset_b, ORACLE_ENTRY_1);
+            vec.push(ORACLE_ENTRY_1);
         }
 
         let price_data = PriceOracle::<T>::price_data_ten();

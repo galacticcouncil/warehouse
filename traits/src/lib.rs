@@ -25,9 +25,11 @@ pub mod registry;
 pub mod router;
 
 pub use registry::*;
+pub mod oracle;
+pub use oracle::*;
 
 use codec::{Decode, Encode};
-use frame_support::dispatch::DispatchResult;
+use frame_support::dispatch::{DispatchError, DispatchResult};
 use frame_support::sp_runtime::traits::Zero;
 use frame_support::sp_runtime::RuntimeDebug;
 use frame_support::traits::LockIdentifier;
@@ -149,7 +151,15 @@ impl<AssetId> OnCreatePoolHandler<AssetId> for () {
 /// Handler used by AMM pools to perform some tasks when a trade is executed.
 pub trait OnTradeHandler<AssetId, Balance> {
     /// Include a trade in the average price calculation of the price-oracle pallet.
-    fn on_trade(asset_a: AssetId, asset_b: AssetId, amount_in: Balance, amount_out: Balance, liq_amount: Balance);
+    fn on_trade(
+        source: Source,
+        asset_a: AssetId,
+        asset_b: AssetId,
+        amount_in: Balance,
+        amount_out: Balance,
+        liq_amount_a: Balance,
+        liq_amount_b: Balance,
+    ) -> Result<Weight, (Weight, DispatchError)>;
     /// Known overhead for a trade in `on_initialize/on_finalize`.
     /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
     /// Add this weight to an extrinsic from which you call `on_trade`.
@@ -157,7 +167,16 @@ pub trait OnTradeHandler<AssetId, Balance> {
 }
 
 impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {
-    fn on_trade(_asset_a: AssetId, _asset_b: AssetId, _amount_in: Balance, _amount_out: Balance, _liq_amount: Balance) {
+    fn on_trade(
+        _source: Source,
+        _asset_a: AssetId,
+        _asset_b: AssetId,
+        _amount_in: Balance,
+        _amount_out: Balance,
+        _liq_amount_a: Balance,
+        _liq_amount_b: Balance,
+    ) -> Result<Weight, (Weight, DispatchError)> {
+        Ok(Weight::zero())
     }
     fn on_trade_weight() -> Weight {
         Weight::zero()
@@ -212,13 +231,40 @@ pub trait LockedBalance<AssetId, AccountId, Balance> {
     fn get_by_lock(lock_id: LockIdentifier, currency_id: AssetId, who: AccountId) -> Balance;
 }
 
-/// Implementers of this trait provide the price of a given asset compared to the native currency.
-///
-/// So if `100` native tokens correspond to `200` ABC tokens, the price returned would be `2.0`.
-///
-/// Should return `None` if no price is available.
-pub trait NativePriceOracle<AssetId, Price> {
-    fn price(currency: AssetId) -> Option<Price>;
+/// Handler used by AMM pools to perform some tasks when liquidity changes outside of trades.
+pub trait OnLiquidityChangedHandler<AssetId, Balance> {
+    /// Notify that the liquidity for a pair of assets has changed.
+    fn on_liquidity_changed(
+        source: Source,
+        asset_a: AssetId,
+        asset_b: AssetId,
+        amount_a: Balance,
+        amount_b: Balance,
+        liquidity_a: Balance,
+        liquidity_b: Balance,
+    ) -> Result<Weight, (Weight, DispatchError)>;
+    /// Known overhead for a liquidity change in `on_initialize/on_finalize`.
+    /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
+    /// Add this weight to an extrinsic from which you call `on_liquidity_changed`.
+    fn on_liquidity_changed_weight() -> Weight;
+}
+
+impl<AssetId, Balance> OnLiquidityChangedHandler<AssetId, Balance> for () {
+    fn on_liquidity_changed(
+        _source: Source,
+        _a: AssetId,
+        _b: AssetId,
+        _amount_a: Balance,
+        _amount_b: Balance,
+        _liq_a: Balance,
+        _liq_b: Balance,
+    ) -> Result<Weight, (Weight, DispatchError)> {
+        Ok(Weight::zero())
+    }
+
+    fn on_liquidity_changed_weight() -> Weight {
+        Weight::zero()
+    }
 }
 
 /// Implementers of this trait provides information about user's position in the AMM pool.

@@ -17,8 +17,8 @@ fn fungibles_inspect_trait_should_work() {
             assert_eq!(FungibleCurrencies::<Runtime>::minimum_balance(NATIVE_CURRENCY_ID), 2);
             assert_eq!(FungibleCurrencies::<Runtime>::minimum_balance(X_TOKEN_ID), 3);
 
-            assert_eq!(FungibleCurrencies::<Runtime>::balance(NATIVE_CURRENCY_ID, &ALICE), 100);
-            assert_eq!(FungibleCurrencies::<Runtime>::balance(X_TOKEN_ID, &BOB), 200);
+            assert_eq!(PalletBalances::free_balance(&ALICE), 100);
+            assert_eq!(Tokens::free_balance(X_TOKEN_ID, &BOB), 200);
 
             assert_eq!(
                 FungibleCurrencies::<Runtime>::reducible_balance(NATIVE_CURRENCY_ID, &ALICE, true),
@@ -41,19 +41,19 @@ fn fungibles_inspect_trait_should_work() {
 fn fungibles_mutate_trait_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(FungibleCurrencies::<Runtime>::mint_into(X_TOKEN_ID, &ALICE, 10));
-        assert_eq!(FungibleCurrencies::<Runtime>::balance(X_TOKEN_ID, &ALICE), 10);
+        assert_eq!(Tokens::free_balance(X_TOKEN_ID, &ALICE), 10);
 
         assert_ok!(FungibleCurrencies::<Runtime>::mint_into(NATIVE_CURRENCY_ID, &BOB, 10));
-        assert_eq!(FungibleCurrencies::<Runtime>::balance(NATIVE_CURRENCY_ID, &BOB), 10);
+        assert_eq!(PalletBalances::free_balance(&BOB), 10);
 
         assert_eq!(FungibleCurrencies::<Runtime>::burn_from(X_TOKEN_ID, &ALICE, 4), Ok(4));
-        assert_eq!(FungibleCurrencies::<Runtime>::balance(X_TOKEN_ID, &ALICE), 6);
+        assert_eq!(Tokens::free_balance(X_TOKEN_ID, &ALICE), 6);
 
         assert_eq!(
             FungibleCurrencies::<Runtime>::burn_from(NATIVE_CURRENCY_ID, &BOB, 4),
             Ok(4)
         );
-        assert_eq!(FungibleCurrencies::<Runtime>::balance(NATIVE_CURRENCY_ID, &BOB), 6);
+        assert_eq!(PalletBalances::free_balance(&BOB), 6);
     });
 }
 
@@ -70,13 +70,13 @@ fn fungibles_transfer_trait_should_work() {
                 10,
                 true
             ));
-            assert_eq!(FungibleCurrencies::<Runtime>::balance(NATIVE_CURRENCY_ID, &ALICE), 90);
-            assert_eq!(FungibleCurrencies::<Runtime>::balance(NATIVE_CURRENCY_ID, &BOB), 10);
+            assert_eq!(PalletBalances::free_balance(&ALICE), 90);
+            assert_eq!(PalletBalances::free_balance(&BOB), 10);
 
             assert_ok!(FungibleCurrencies::<Runtime>::transfer(
                 X_TOKEN_ID, &BOB, &ALICE, 10, true
             ));
-            assert_eq!(FungibleCurrencies::<Runtime>::balance(X_TOKEN_ID, &BOB), 90);
-            assert_eq!(FungibleCurrencies::<Runtime>::balance(X_TOKEN_ID, &ALICE), 10);
+            assert_eq!(Tokens::free_balance(X_TOKEN_ID, &BOB), 90);
+            assert_eq!(Tokens::free_balance(X_TOKEN_ID, &ALICE), 10);
         });
 }

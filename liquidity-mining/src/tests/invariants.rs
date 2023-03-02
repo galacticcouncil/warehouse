@@ -485,33 +485,21 @@ struct Deposit {
     yield_farm_id: YieldFarmId,
     amm_pool_id: AccountId,
     shares: Balance,
+    valued_shares: Balance,
 }
 
 prop_compose! {
     fn arb_deposit()(
         shares in 1_000 * ONE..1_000_000 * ONE,
+        valued_shares in 1..10_000_000 * ONE,
         g_idx in 0..3_usize,
         y_idx in 0..2_usize,
     ) -> Deposit {
         let g_farm = G_FARMS.with(|v| v.borrow()[g_idx].clone());
         let y_farm = &g_farm.yield_farms[y_idx];
 
-        Deposit {global_farm_id: g_farm.id,yield_farm_id: y_farm.0, amm_pool_id: y_farm.1, shares}
+        Deposit {global_farm_id: g_farm.id,yield_farm_id: y_farm.0, amm_pool_id: y_farm.1, shares, valued_shares}
     }
-}
-
-fn fake_token_value_of_lp_shares(
-    _asset: AssetId,
-    _amm_pool_id: AccountId,
-    shares_amount: Balance,
-) -> Result<Balance, DispatchError> {
-    if shares_amount % 2 == 0 {
-        return Ok(shares_amount / 2_0000);
-    } else if shares_amount % 7 == 0 {
-        return Ok(shares_amount / 1_000_000_000);
-    }
-
-    Ok(shares_amount * 10)
 }
 
 #[test]
@@ -555,7 +543,7 @@ fn invariant_1() {
                             d.yield_farm_id,
                             d.amm_pool_id,
                             d.shares,
-                            fake_token_value_of_lp_shares
+                            |_, _, _| -> Result<Balance, DispatchError> { Ok(d.valued_shares) }
                         ));
 
                         set_block_number(mock::System::block_number() + blocks_offset);
@@ -643,7 +631,7 @@ fn invariant_2() {
                             d.yield_farm_id,
                             d.amm_pool_id,
                             d.shares,
-                            fake_token_value_of_lp_shares
+                            |_, _, _| -> Result<Balance, DispatchError> { Ok(d.valued_shares) }
                         ));
 
                         set_block_number(mock::System::block_number() + blocks_offset);
@@ -744,7 +732,7 @@ fn invariant_3() {
                             d.yield_farm_id,
                             d.amm_pool_id,
                             d.shares,
-                            fake_token_value_of_lp_shares
+                            |_, _, _| -> Result<Balance, DispatchError> { Ok(d.valued_shares) }
                         ));
 
                         set_block_number(mock::System::block_number() + blocks_offset);
@@ -846,7 +834,9 @@ fn invariant_4() {
                             d.yield_farm_id,
                             d.amm_pool_id,
                             d.shares,
-                            fake_token_value_of_lp_shares
+                            |_,_,_| -> Result<Balance, DispatchError> {
+                                Ok(d.valued_shares)
+                            }
                         ));
 
                         let g_farm_1 = LiquidityMining::global_farm(g_farm_0.id).unwrap();

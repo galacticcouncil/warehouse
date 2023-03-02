@@ -41,7 +41,7 @@ use codec::MaxEncodedLen;
 use frame_support::{pallet_prelude::*, require_transactional, transactional};
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use hydradx_traits::Registry;
-use orml_traits::{GetByKey, MultiCurrency, MultiReservableCurrency};
+use orml_traits::{GetByKey, MultiCurrency, MultiReservableCurrency, NamedMultiReservableCurrency};
 use sp_core::U256;
 use sp_runtime::{traits::One, DispatchError};
 use sp_std::{result, vec::Vec};
@@ -59,8 +59,10 @@ use weights::WeightInfo;
 pub use pallet::*;
 
 pub type Balance = u128;
-pub type NamedReserveIdentifier = [u8; 8];
 pub type OrderId = u32;
+pub type NamedReserveIdentifier = [u8; 8];
+
+pub const NAMED_RESERVE_ID: NamedReserveIdentifier = *b"otcotcot";
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 pub struct Order<AccountId, AssetId> {
@@ -100,7 +102,7 @@ pub mod pallet {
 
         /// Named reservable multi currency
         type Currency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Balance>
-            + MultiReservableCurrency<Self::AccountId>;
+            + NamedMultiReservableCurrency<Self::AccountId, ReserveIdentifier = NamedReserveIdentifier>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -214,7 +216,7 @@ pub mod pallet {
                 *next_id = next_id.checked_add(One::one()).ok_or(Error::<T>::OrderIdOutOfBound)?;
                 Ok(id)
             })?;
-            T::Currency::reserve(order.asset_out, &order.owner, amount_out)?;
+            T::Currency::reserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, order.amount_out)?;
             <Orders<T>>::insert(order_id, &order);
 
             Self::deposit_event(Event::Placed {
@@ -296,7 +298,7 @@ pub mod pallet {
                 let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
                 ensure!(order.owner == who, Error::<T>::Forbidden);
 
-                T::Currency::unreserve(order.asset_out, &order.owner, order.amount_out);
+                T::Currency::unreserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, order.amount_out);
                 *maybe_order = None;
 
                 Self::deposit_event(Event::Cancelled { order_id });
@@ -373,7 +375,7 @@ impl<T: Config> Pallet<T> {
         amount_out: Balance,
     ) -> DispatchResult {
         T::Currency::transfer(order.asset_in, who, &order.owner, amount_in)?;
-        T::Currency::unreserve(order.asset_out, &order.owner, amount_out);
+        T::Currency::unreserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, amount_out);
         T::Currency::transfer(order.asset_out, &order.owner, who, amount_out)?;
 
         Ok(())

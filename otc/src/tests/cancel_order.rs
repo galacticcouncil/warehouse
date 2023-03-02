@@ -13,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate as otc;
 use crate::tests::mock::*;
-
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use orml_traits::MultiReservableCurrency;
+use orml_traits::NamedMultiReservableCurrency;
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -40,7 +40,7 @@ fn cancel_order_should_work() {
         let order = OTC::orders(0);
         assert!(order.is_none());
 
-        assert_eq!(Tokens::reserved_balance(HDX, &ALICE), 0);
+        assert_eq!(Tokens::reserved_balance_named(&otc::NAMED_RESERVE_ID, HDX, &ALICE), 0);
 
         expect_events(vec![Event::Cancelled { order_id: 0 }.into()]);
     });
@@ -77,6 +77,9 @@ fn cancel_order_should_throw_error_when_called_by_non_owner() {
         let order = OTC::orders(0);
         assert!(order.is_some());
 
-        assert_eq!(Tokens::reserved_balance(HDX, &ALICE), 100 * ONE);
+        assert_eq!(
+            Tokens::reserved_balance_named(&otc::NAMED_RESERVE_ID, HDX, &ALICE),
+            100 * ONE
+        );
     });
 }

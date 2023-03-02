@@ -12,13 +12,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+use crate as otc;
 use crate::tests::mock::*;
-
 use crate::Event;
 use frame_support::{assert_noop, assert_ok};
 use orml_tokens::Error::BalanceTooLow;
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -56,7 +55,7 @@ fn complete_fill_order_should_work() {
 
         // Alice: HDX *free* balance remains the same, reserved balance decreases with amount_receive; DAI grows
         assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
-        assert_eq!(Tokens::reserved_balance(HDX, &ALICE), 0);
+        assert_eq!(Tokens::reserved_balance_named(&otc::NAMED_RESERVE_ID, HDX, &ALICE), 0);
         assert_eq!(alice_dai_balance_after, alice_dai_balance_before + amount);
 
         // Bob: HDX grows, DAI decreases
@@ -108,7 +107,7 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
 
         // Alice: HDX *free* balance remains the same, reserved balance decreases with amount_receive; DAI grows
         assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
-        assert_eq!(Tokens::reserved_balance(HDX, &ALICE), 0);
+        assert_eq!(Tokens::reserved_balance_named(&otc::NAMED_RESERVE_ID, HDX, &ALICE), 0);
         assert_eq!(alice_dai_balance_after, alice_dai_balance_before + amount);
 
         // Bob: HDX grows, DAI decreases
@@ -169,7 +168,10 @@ fn complete_fill_order_should_work_when_there_are_multiple_orders() {
 
         // Alice: HDX *free* balance remains the same, reserved balance decreases with amount_receive; DAI grows
         assert_eq!(alice_free_hdx_balance_after, alice_free_hdx_balance_before);
-        assert_eq!(Tokens::reserved_balance(HDX, &ALICE), 50 * ONE);
+        assert_eq!(
+            Tokens::reserved_balance_named(&otc::NAMED_RESERVE_ID, HDX, &ALICE),
+            50 * ONE
+        );
         assert_eq!(alice_dai_balance_after, alice_dai_balance_before + amount);
 
         // Bob: HDX grows, DAI decreases
@@ -200,7 +202,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
         ));
 
         let alice_free_hdx_balance_before = Tokens::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_before = Tokens::reserved_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_before = Tokens::reserved_balance_named(&otc::NAMED_RESERVE_ID, HDX, &ALICE);
         let bob_hdx_balance_before = Tokens::free_balance(HDX, &BOB);
 
         let alice_dai_balance_before = Tokens::free_balance(DAI, &ALICE);
@@ -211,7 +213,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
 
         // Assert
         let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);
-        let alice_reserved_hdx_balance_after = Tokens::reserved_balance(HDX, &ALICE);
+        let alice_reserved_hdx_balance_after = Tokens::reserved_balance_named(&otc::NAMED_RESERVE_ID, HDX, &ALICE);
         let bob_hdx_balance_after = Tokens::free_balance(HDX, &BOB);
 
         let alice_dai_balance_after = Tokens::free_balance(DAI, &ALICE);

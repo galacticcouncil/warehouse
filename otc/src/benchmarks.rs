@@ -12,11 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 #![cfg(feature = "runtime-benchmarks")]
-
 use super::*;
-
 use frame_benchmarking::{account, benchmarks};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
@@ -38,7 +35,7 @@ benchmarks! {
         let owner: T::AccountId = create_account_with_balances::<T>("owner", 1, vec!(hdx, dai))?;
   }:  _(RawOrigin::Signed(owner.clone()), dai.into(), hdx.into(), 20 * ONE, 100 * ONE, true)
     verify {
-        assert_eq!(T::Currency::reserved_balance(hdx.into(), &owner), 100 * ONE);
+        assert_eq!(T::Currency::reserved_balance_named(&NAMED_RESERVE_ID, hdx.into(), &owner), 100 * ONE);
     }
 
     partial_fill_order {
@@ -52,7 +49,7 @@ benchmarks! {
         );
   }:  _(RawOrigin::Signed(filler.clone()), 0u32, 10 * ONE)
     verify {
-        assert_eq!(T::Currency::reserved_balance(hdx.into(), &owner), 50 * ONE);
+        assert_eq!(T::Currency::reserved_balance_named(&NAMED_RESERVE_ID, hdx.into(), &owner), 50 * ONE);
     }
 
     fill_order {
@@ -66,7 +63,7 @@ benchmarks! {
         );
   }:  _(RawOrigin::Signed(filler.clone()), 0u32)
     verify {
-        assert_eq!(T::Currency::reserved_balance(hdx.into(), &owner), 0);
+        assert_eq!(T::Currency::reserved_balance_named(&NAMED_RESERVE_ID, hdx.into(), &owner), 0);
     }
 
     cancel_order {
@@ -78,7 +75,7 @@ benchmarks! {
         );
   }:  _(RawOrigin::Signed(owner.clone()), 0u32)
     verify {
-        assert_eq!(T::Currency::reserved_balance(hdx.into(), &owner), 0);
+        assert_eq!(T::Currency::reserved_balance_named(&NAMED_RESERVE_ID, hdx.into(), &owner), 0);
     }
 }
 

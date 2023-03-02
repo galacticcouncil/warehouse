@@ -12,12 +12,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+use crate as otc;
 use crate::tests::mock::*;
-
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use orml_traits::MultiReservableCurrency;
+use orml_traits::NamedMultiReservableCurrency;
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -52,7 +51,10 @@ fn place_order_should_work() {
         }
         .into()]);
 
-        assert_eq!(Tokens::reserved_balance(HDX, &ALICE), 100 * ONE);
+        assert_eq!(
+            Tokens::reserved_balance_named(&otc::NAMED_RESERVE_ID, HDX, &ALICE),
+            100 * ONE
+        );
 
         let next_order_id = OTC::next_order_id();
         assert_eq!(next_order_id, 1);
@@ -82,7 +84,10 @@ fn place_order_should_work_when_user_has_multiple_orders() {
         ));
 
         // Assert
-        assert_eq!(Tokens::reserved_balance(HDX, &ALICE), 150 * ONE);
+        assert_eq!(
+            Tokens::reserved_balance_named(&otc::NAMED_RESERVE_ID, HDX, &ALICE),
+            150 * ONE
+        );
     });
 }
 

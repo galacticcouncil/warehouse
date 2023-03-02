@@ -56,7 +56,7 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ConstU64<2>;
     type AccountStore = frame_system::Pallet<Runtime>;
     type MaxLocks = ();
-    type MaxReserves = ();
+    type MaxReserves = ConstU32<2>;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
@@ -126,6 +126,8 @@ pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 pub const BOB: AccountId = AccountId32::new([2u8; 32]);
 pub const EVA: AccountId = AccountId32::new([5u8; 32]);
 pub const ID_1: LockIdentifier = *b"1       ";
+pub const RID_1: ReserveIdentifier = [1u8; 8];
+pub const RID_2: ReserveIdentifier = [2u8; 8];
 
 #[derive(Default)]
 pub struct ExtBuilder {

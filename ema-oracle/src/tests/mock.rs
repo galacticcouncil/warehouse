@@ -1,6 +1,6 @@
-// This file is part of pallet-price-oracle.
+// This file is part of pallet-ema-oracle.
 
-// Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
+// Copyright (C) 2022-2023  Intergalactic, Limited (GIB).
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,40 +15,57 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate as price_oracle;
+use crate as ema_oracle;
 use crate::Config;
+use ema_oracle::OracleEntry;
+use frame_support::bounded_vec;
+use frame_support::pallet_prelude::ConstU32;
 use frame_support::parameter_types;
 use frame_support::sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    FixedU128,
 };
-use frame_support::traits::{Everything, GenesisBuild, Get};
-use hydradx_traits::AssetPairAccountIdFor;
-use price_oracle::PriceEntry;
+use frame_support::traits::{Everything, GenesisBuild};
+use frame_support::BoundedVec;
+use hydradx_traits::OraclePeriod::{self, *};
+use hydradx_traits::{AssetPairAccountIdFor, Liquidity, Volume};
 use sp_core::H256;
 
-pub type AssetId = u32;
-pub type Balance = u128;
-pub type Price = FixedU128;
+pub use hydradx_traits::Source;
+
+use crate::types::{AssetId, Balance, Price};
+pub type BlockNumber = u64;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
+use crate::MAX_PERIODS;
+use crate::MAX_UNIQUE_ENTRIES;
 pub const HDX: AssetId = 1_000;
 pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
-pub const ETH: AssetId = 4_000;
 
-pub const ORACLE_ENTRY_1: PriceEntry = PriceEntry {
-    price: Price::from_inner(2000000000000000000),
-    trade_amount: 1_000,
-    liquidity_amount: 2_000,
+pub const ORACLE_ENTRY_1: OracleEntry<BlockNumber> = OracleEntry {
+    price: Price::new(1_000, 500),
+    volume: Volume {
+        a_in: 1_000,
+        b_out: 500,
+        a_out: 0,
+        b_in: 0,
+    },
+    liquidity: Liquidity::new(2_000, 1_000),
+    timestamp: 5,
 };
-pub const ORACLE_ENTRY_2: PriceEntry = PriceEntry {
-    price: Price::from_inner(5000000000000000000),
-    trade_amount: 3_000,
-    liquidity_amount: 4_000,
+pub const ORACLE_ENTRY_2: OracleEntry<BlockNumber> = OracleEntry {
+    price: Price::new(2_000, 2_000),
+    volume: Volume {
+        a_in: 0,
+        b_out: 0,
+        a_out: 2_000,
+        b_in: 2_000,
+    },
+    liquidity: Liquidity::new(4_000, 4_000),
+    timestamp: 5,
 };
 
 frame_support::construct_runtime!(
@@ -57,14 +74,14 @@ frame_support::construct_runtime!(
      NodeBlock = Block,
      UncheckedExtrinsic = UncheckedExtrinsic,
      {
-         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-         PriceOracle: price_oracle::{Pallet, Call, Storage, Event<T>},
+         System: frame_system,
+         EmaOracle: ema_oracle,
      }
 
 );
 
 parameter_types! {
-    pub const BlockHashCount: u64 = 250;
+    pub const BlockHashCount: BlockNumber = 250;
 }
 
 impl frame_system::Config for Test {
@@ -74,7 +91,7 @@ impl frame_system::Config for Test {
     type Origin = Origin;
     type Call = Call;
     type Index = u64;
-    type BlockNumber = u64;
+    type BlockNumber = BlockNumber;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u64;
@@ -107,28 +124,28 @@ impl AssetPairAccountIdFor<AssetId, u64> for AssetPairAccountIdTest {
     }
 }
 
-pub const EXCHANGE_FEE: (u32, u32) = (2, 1_000);
-
-struct ExchangeFee;
-impl Get<(u32, u32)> for ExchangeFee {
-    fn get() -> (u32, u32) {
-        EXCHANGE_FEE
-    }
+parameter_types! {
+    pub SupportedPeriods: BoundedVec<OraclePeriod, ConstU32<MAX_PERIODS>> = bounded_vec![LastBlock, TenMinutes, Day, Week];
 }
 
 impl Config for Test {
     type Event = Event;
     type WeightInfo = ();
+    type BlockNumberProvider = System;
+    type SupportedPeriods = SupportedPeriods;
+    type MaxUniqueEntries = ConstU32<MAX_UNIQUE_ENTRIES>;
 }
+
+pub type InitialDataEntry = (Source, (AssetId, AssetId), Price, Liquidity<Balance>);
 
 #[derive(Default)]
 pub struct ExtBuilder {
-    pub price_data: Vec<((AssetId, AssetId), Price, Balance)>,
+    pub initial_data: Vec<InitialDataEntry>,
 }
 
 impl ExtBuilder {
-    pub fn with_price_data(mut self, data: Vec<((AssetId, AssetId), Price, Balance)>) -> Self {
-        self.price_data = data;
+    pub fn with_initial_data(mut self, data: Vec<InitialDataEntry>) -> Self {
+        self.initial_data = data;
         self
     }
 
@@ -136,11 +153,15 @@ impl ExtBuilder {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
         GenesisBuild::<Test>::assimilate_storage(
             &crate::GenesisConfig {
-                price_data: self.price_data,
+                initial_data: self.initial_data,
             },
             &mut t,
         )
         .unwrap();
-        t.into()
+        let mut ext: sp_io::TestExternalities = t.into();
+        ext.execute_with(|| {
+            System::set_block_number(0);
+        });
+        ext
     }
 }

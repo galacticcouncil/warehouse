@@ -159,9 +159,10 @@ pub mod pallet {
     pub type AssetMetadataMap<T: Config> =
         StorageMap<_, Twox64Concat, T::AssetId, AssetMetadata<BoundedVec<u8, T::StringLimit>>, OptionQuery>;
 
+    #[allow(clippy::type_complexity)]
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
-        pub asset_names: Vec<(Vec<u8>, T::Balance)>,
+        pub registered_assets: Vec<(Vec<u8>, T::Balance, Option<T::AssetId>)>,
         pub native_asset_name: Vec<u8>,
         pub native_existential_deposit: T::Balance,
     }
@@ -170,7 +171,7 @@ pub mod pallet {
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             GenesisConfig::<T> {
-                asset_names: vec![],
+                registered_assets: vec![],
                 native_asset_name: b"BSX".to_vec(),
                 native_existential_deposit: Default::default(),
             }
@@ -195,11 +196,11 @@ pub mod pallet {
 
             Assets::<T>::insert(T::NativeAssetId::get(), details);
 
-            self.asset_names.iter().for_each(|(name, ed)| {
+            self.registered_assets.iter().for_each(|(name, ed, id)| {
                 let bounded_name = Pallet::<T>::to_bounded_name(name.to_vec())
                     .map_err(|_| panic!("Invalid asset name!"))
                     .unwrap();
-                let _ = Pallet::<T>::register_asset(bounded_name, AssetType::Token, *ed, None)
+                let _ = Pallet::<T>::register_asset(bounded_name, AssetType::Token, *ed, *id)
                     .map_err(|_| panic!("Failed to register asset"));
             })
         }

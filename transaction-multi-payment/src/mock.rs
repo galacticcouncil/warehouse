@@ -18,23 +18,23 @@
 use super::*;
 pub use crate as multi_payment;
 use crate::{Config, TransferFees};
-use frame_support::{parameter_types, weights::DispatchClass};
+
+use frame_support::{
+    parameter_types,
+    traits::{Everything, GenesisBuild, Get, Nothing},
+    weights::{DispatchClass, IdentityFee, Weight},
+};
 use frame_system as system;
+use hydradx_traits::{pools::SpotPriceProvider, AssetPairAccountIdFor};
 use orml_traits::parameter_type_with_key;
+use pallet_currencies::BasicCurrencyAdapter;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
-
-use frame_support::weights::{IdentityFee, Weight};
-use hydradx_traits::AssetPairAccountIdFor;
-use pallet_currencies::BasicCurrencyAdapter;
-use std::cell::RefCell;
-
-use frame_support::traits::{Everything, GenesisBuild, Get, Nothing};
-use hydradx_traits::pools::SpotPriceProvider;
+use sp_std::cell::RefCell;
 
 pub type AccountId = u64;
 pub type Balance = u128;

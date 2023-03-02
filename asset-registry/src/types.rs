@@ -16,11 +16,11 @@
 // limitations under the License.
 
 use frame_support::pallet_prelude::*;
+use scale_info::TypeInfo;
+use sp_std::vec::Vec;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-
-use scale_info::TypeInfo;
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -50,7 +50,8 @@ pub struct AssetMetadata<BoundedString> {
     pub(super) decimals: u8,
 }
 
-#[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Metadata {
     pub(super) symbol: Vec<u8>,
     pub(super) decimals: u8,

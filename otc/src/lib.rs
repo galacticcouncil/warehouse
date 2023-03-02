@@ -62,7 +62,7 @@ pub type Balance = u128;
 pub type OrderId = u32;
 pub type NamedReserveIdentifier = [u8; 8];
 
-pub const NAMED_RESERVE_ID: NamedReserveIdentifier = *b"otcotcot";
+pub const NAMED_RESERVE_ID: NamedReserveIdentifier = *b"otcorder";
 
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 pub struct Order<AccountId, AssetId> {

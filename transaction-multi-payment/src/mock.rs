@@ -20,12 +20,14 @@ pub use crate as multi_payment;
 use crate::{Config, TransferFees};
 
 use frame_support::{
+    dispatch::DispatchClass,
     parameter_types,
     traits::{Everything, GenesisBuild, Get, Nothing},
-    weights::{DispatchClass, IdentityFee, Weight},
+    weights::{IdentityFee, Weight},
 };
 use frame_system as system;
 use hydradx_traits::{pools::SpotPriceProvider, AssetPairAccountIdFor};
+use orml_traits::currency::MutationHooks;
 use orml_traits::parameter_type_with_key;
 use pallet_currencies::BasicCurrencyAdapter;
 use sp_core::H256;
@@ -89,8 +91,8 @@ where
 
     fn withdraw_fee(
         who: &T::AccountId,
-        call: &T::Call,
-        dispatch_info: &DispatchInfoOf<T::Call>,
+        call: &T::RuntimeCall,
+        dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
         fee: Self::Balance,
         tip: Self::Balance,
     ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
@@ -106,8 +108,8 @@ where
 
     fn correct_and_deposit_fee(
         who: &T::AccountId,
-        dispatch_info: &DispatchInfoOf<T::Call>,
-        post_info: &PostDispatchInfoOf<T::Call>,
+        dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
+        post_info: &PostDispatchInfoOf<T::RuntimeCall>,
         corrected_fee: Self::Balance,
         tip: Self::Balance,
         already_withdrawn: Self::LiquidityInfo,
@@ -165,18 +167,18 @@ parameter_types! {
     pub const FeeReceiver: AccountId = FEE_RECEIVER;
 
     pub RuntimeBlockWeights: system::limits::BlockWeights = system::limits::BlockWeights::builder()
-        .base_block(Weight::from_ref_time(10))
+        .base_block(Weight::from_ref_time(0))
         .for_class(DispatchClass::all(), |weights| {
             weights.base_extrinsic = ExtrinsicBaseWeight::get();
         })
         .for_class(DispatchClass::Normal, |weights| {
-            weights.max_total = Some(NORMAL_DISPATCH_RATIO * MAX_BLOCK_WEIGHT);
+            weights.max_total = (NORMAL_DISPATCH_RATIO * MAX_BLOCK_WEIGHT).set_proof_size(u64::MAX).into();
         })
         .for_class(DispatchClass::Operational, |weights| {
-            weights.max_total = Some(MAX_BLOCK_WEIGHT);
-            weights.reserved = Some(
-                MAX_BLOCK_WEIGHT - NORMAL_DISPATCH_RATIO * MAX_BLOCK_WEIGHT
-            );
+            weights.max_total = (NORMAL_DISPATCH_RATIO * MAX_BLOCK_WEIGHT).set_proof_size(u64::MAX).into();
+        })
+        .for_class(DispatchClass::Operational, |weights| {
+            weights.max_total = MAX_BLOCK_WEIGHT.set_proof_size(u64::MAX).into();
         })
         .avg_block_initialization(Perbill::from_percent(0))
         .build_or_panic();
@@ -189,8 +191,8 @@ impl system::Config for Test {
     type BaseCallFilter = Everything;
     type BlockWeights = RuntimeBlockWeights;
     type BlockLength = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -198,7 +200,7 @@ impl system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -213,7 +215,7 @@ impl system::Config for Test {
 }
 
 impl Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AcceptedCurrencyOrigin = frame_system::EnsureRoot<u64>;
     type Currencies = Currencies;
     type SpotPriceProvider = SpotPrice;
@@ -229,7 +231,7 @@ impl pallet_balances::Config for Test {
     /// The type for recording an account's balance.
     type Balance = Balance;
     /// The ubiquitous event type.
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -239,7 +241,7 @@ impl pallet_balances::Config for Test {
 }
 
 impl pallet_transaction_payment::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type OnChargeTransaction = ChargeAdapter<
         TransferFees<Currencies, PaymentPallet, DepositAll<Test>>,
         WithdrawFees<Balances, (), PaymentPallet>,
@@ -292,24 +294,34 @@ parameter_types! {
     pub const MaxReserves: u32 = 50;
 }
 
+pub struct CurrencyHooks;
+impl MutationHooks<AccountId, AssetId, Balance> for CurrencyHooks {
+    type OnDust = ();
+    type OnSlash = ();
+    type PreDeposit = ();
+    type PostDeposit = ();
+    type PreTransfer = ();
+    type PostTransfer = ();
+    type OnNewTokenAccount = AddTxAssetOnAccount<Test>;
+    type OnKilledTokenAccount = RemoveTxAssetOnKilled<Test>;
+}
+
 impl orml_tokens::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = AssetId;
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = ();
     type MaxLocks = ();
     type DustRemovalWhitelist = Nothing;
-    type OnNewTokenAccount = AddTxAssetOnAccount<Test>;
-    type OnKilledTokenAccount = RemoveTxAssetOnKilled<Test>;
     type ReserveIdentifier = ();
     type MaxReserves = MaxReserves;
+    type CurrencyHooks = CurrencyHooks;
 }
 
 impl pallet_currencies::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, u32>;
     type GetNativeCurrencyId = HdxAssetId;
@@ -410,6 +422,6 @@ impl ExtBuilder {
     }
 }
 
-pub fn expect_events(e: Vec<Event>) {
-    test_utils::expect_events::<Event, Test>(e);
+pub fn expect_events(e: Vec<RuntimeEvent>) {
+    test_utils::expect_events::<RuntimeEvent, Test>(e);
 }

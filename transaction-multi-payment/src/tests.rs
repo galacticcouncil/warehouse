@@ -24,19 +24,21 @@ pub use crate::{mock::*, Config, Error};
 use frame_support::{
     assert_err, assert_noop, assert_ok,
     dispatch::{DispatchError, Dispatchable},
+    dispatch::{DispatchInfo, PostDispatchInfo},
     sp_runtime::{
         traits::{BadOrigin, SignedExtension},
         transaction_validity::ValidTransaction,
     },
     traits::Hooks,
-    weights::{DispatchInfo, PostDispatchInfo, Weight},
+    weights::Weight,
 };
 use orml_traits::MultiCurrency;
 use pallet_balances::Call as BalancesCall;
 use pallet_transaction_payment::ChargeTransactionPayment;
 use sp_std::marker::PhantomData;
 
-const CALL: &<Test as frame_system::Config>::Call = &Call::Balances(BalancesCall::transfer { dest: 2, value: 69 });
+const CALL: &<Test as frame_system::Config>::RuntimeCall =
+    &RuntimeCall::Balances(BalancesCall::transfer { dest: 2, value: 69 });
 
 #[test]
 fn on_initialize_should_fill_storage_with_prices() {
@@ -95,7 +97,7 @@ fn on_finalize_should_remove_prices_from_storage() {
 fn set_unsupported_currency() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PaymentPallet::set_currency(Origin::signed(BOB), UNSUPPORTED_CURRENCY),
+            PaymentPallet::set_currency(RuntimeOrigin::signed(BOB), UNSUPPORTED_CURRENCY),
             Error::<Test>::UnsupportedCurrency
         );
 
@@ -106,7 +108,10 @@ fn set_unsupported_currency() {
 #[test]
 fn set_supported_currency_without_spot_price() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        assert_ok!(PaymentPallet::set_currency(Origin::signed(ALICE), SUPPORTED_CURRENCY),);
+        assert_ok!(PaymentPallet::set_currency(
+            RuntimeOrigin::signed(ALICE),
+            SUPPORTED_CURRENCY
+        ),);
 
         assert_eq!(PaymentPallet::get_currency(ALICE), Some(SUPPORTED_CURRENCY));
 
@@ -122,7 +127,7 @@ fn set_supported_currency_without_spot_price() {
 fn set_supported_currency_with_price() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
         assert_ok!(PaymentPallet::set_currency(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             SUPPORTED_CURRENCY_WITH_PRICE
         ),);
 
@@ -139,7 +144,7 @@ fn set_supported_currency_with_price() {
 fn set_supported_currency_with_no_balance() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PaymentPallet::set_currency(Origin::signed(BOB), SUPPORTED_CURRENCY_NO_BALANCE),
+            PaymentPallet::set_currency(RuntimeOrigin::signed(BOB), SUPPORTED_CURRENCY_NO_BALANCE),
             Error::<Test>::ZeroBalance
         );
 
@@ -150,7 +155,7 @@ fn set_supported_currency_with_no_balance() {
 #[test]
 fn set_native_currency() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PaymentPallet::set_currency(Origin::signed(ALICE), HDX),);
+        assert_ok!(PaymentPallet::set_currency(RuntimeOrigin::signed(ALICE), HDX),);
 
         assert_eq!(PaymentPallet::get_currency(ALICE), Some(HDX));
     });
@@ -160,7 +165,7 @@ fn set_native_currency() {
 fn set_native_currency_with_no_balance() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PaymentPallet::set_currency(Origin::signed(BOB), HDX),
+            PaymentPallet::set_currency(RuntimeOrigin::signed(BOB), HDX),
             Error::<Test>::ZeroBalance
         );
     });
@@ -176,17 +181,17 @@ fn set_currency_with_insufficient_balance() {
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10)
         .build()
         .execute_with(|| {
-            let call = Call::PaymentPallet(crate::Call::<Test>::set_currency {
+            let call = RuntimeCall::PaymentPallet(crate::Call::<Test>::set_currency {
                 currency: SUPPORTED_CURRENCY,
             });
             assert_noop!(
-                call.dispatch(Origin::signed(CHARLIE)),
+                call.dispatch(RuntimeOrigin::signed(CHARLIE)),
                 orml_tokens::Error::<Test>::BalanceTooLow
             );
 
-            let call = Call::PaymentPallet(crate::Call::<Test>::set_currency { currency: HDX });
+            let call = RuntimeCall::PaymentPallet(crate::Call::<Test>::set_currency { currency: HDX });
             assert_noop!(
-                call.dispatch(Origin::signed(CHARLIE)),
+                call.dispatch(RuntimeOrigin::signed(CHARLIE)),
                 pallet_balances::Error::<Test>::InsufficientBalance
             );
 
@@ -268,16 +273,20 @@ fn fee_payment_non_native_insufficient_balance() {
 #[test]
 fn add_new_accepted_currency() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        assert_ok!(PaymentPallet::add_currency(Origin::root(), 100, Price::from_float(1.1)));
+        assert_ok!(PaymentPallet::add_currency(
+            RuntimeOrigin::root(),
+            100,
+            Price::from_float(1.1)
+        ));
         expect_events(vec![Event::CurrencyAdded { asset_id: 100 }.into()]);
 
         assert_eq!(PaymentPallet::currencies(100), Some(Price::from_float(1.1)));
         assert_noop!(
-            PaymentPallet::add_currency(Origin::signed(ALICE), 1000, Price::from_float(1.2)),
+            PaymentPallet::add_currency(RuntimeOrigin::signed(ALICE), 1000, Price::from_float(1.2)),
             BadOrigin
         );
         assert_noop!(
-            PaymentPallet::add_currency(Origin::root(), 100, Price::from(10)),
+            PaymentPallet::add_currency(RuntimeOrigin::root(), 100, Price::from(10)),
             Error::<Test>::AlreadyAccepted
         );
         assert_eq!(PaymentPallet::currencies(100), Some(Price::from_float(1.1)));
@@ -287,23 +296,26 @@ fn add_new_accepted_currency() {
 #[test]
 fn removed_accepted_currency() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        assert_ok!(PaymentPallet::add_currency(Origin::root(), 100, Price::from(3)));
+        assert_ok!(PaymentPallet::add_currency(RuntimeOrigin::root(), 100, Price::from(3)));
         assert_eq!(PaymentPallet::currencies(100), Some(Price::from(3)));
 
-        assert_noop!(PaymentPallet::remove_currency(Origin::signed(ALICE), 100), BadOrigin);
+        assert_noop!(
+            PaymentPallet::remove_currency(RuntimeOrigin::signed(ALICE), 100),
+            BadOrigin
+        );
 
         assert_noop!(
-            PaymentPallet::remove_currency(Origin::root(), 1000),
+            PaymentPallet::remove_currency(RuntimeOrigin::root(), 1000),
             Error::<Test>::UnsupportedCurrency
         );
 
-        assert_ok!(PaymentPallet::remove_currency(Origin::root(), 100));
+        assert_ok!(PaymentPallet::remove_currency(RuntimeOrigin::root(), 100));
         expect_events(vec![Event::CurrencyRemoved { asset_id: 100 }.into()]);
 
         assert_eq!(PaymentPallet::currencies(100), None);
 
         assert_noop!(
-            PaymentPallet::remove_currency(Origin::root(), 100),
+            PaymentPallet::remove_currency(RuntimeOrigin::root(), 100),
             Error::<Test>::UnsupportedCurrency
         );
     });
@@ -317,7 +329,7 @@ fn check_balance_extension_works() {
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 1000)
         .build()
         .execute_with(|| {
-            let call = Call::PaymentPallet(multi_payment::Call::set_currency {
+            let call = RuntimeCall::PaymentPallet(multi_payment::Call::set_currency {
                 currency: SUPPORTED_CURRENCY,
             });
             let info = DispatchInfo::default();
@@ -327,7 +339,7 @@ fn check_balance_extension_works() {
                 Ok(ValidTransaction::default())
             );
 
-            let call = Call::PaymentPallet(multi_payment::Call::add_currency {
+            let call = RuntimeCall::PaymentPallet(multi_payment::Call::add_currency {
                 currency: SUPPORTED_CURRENCY,
                 price: Price::from(1),
             });
@@ -344,7 +356,7 @@ fn check_balance_extension_fails() {
     const NOT_CHARLIE: AccountId = 6;
 
     ExtBuilder::default().build().execute_with(|| {
-        let call = Call::PaymentPallet(multi_payment::Call::set_currency {
+        let call = RuntimeCall::PaymentPallet(multi_payment::Call::set_currency {
             currency: SUPPORTED_CURRENCY,
         });
         let info = DispatchInfo::default();
@@ -361,7 +373,10 @@ fn account_currency_works() {
     ExtBuilder::default().build().execute_with(|| {
         assert_eq!(PaymentPallet::account_currency(&ALICE), HDX);
 
-        assert_ok!(PaymentPallet::set_currency(Origin::signed(ALICE), SUPPORTED_CURRENCY));
+        assert_ok!(PaymentPallet::set_currency(
+            RuntimeOrigin::signed(ALICE),
+            SUPPORTED_CURRENCY
+        ));
         expect_events(vec![Event::CurrencySet {
             account_id: ALICE,
             asset_id: SUPPORTED_CURRENCY,
@@ -370,7 +385,7 @@ fn account_currency_works() {
 
         assert_eq!(PaymentPallet::account_currency(&ALICE), SUPPORTED_CURRENCY);
 
-        assert_ok!(PaymentPallet::set_currency(Origin::signed(ALICE), HDX));
+        assert_ok!(PaymentPallet::set_currency(RuntimeOrigin::signed(ALICE), HDX));
         assert_eq!(PaymentPallet::account_currency(&ALICE), HDX);
     });
 }
@@ -396,13 +411,19 @@ fn data_provider_works() {
             Ok((<Test as Config>::NativeAssetId::get(), None))
         );
 
-        assert_ok!(PaymentPallet::set_currency(Origin::signed(ALICE), SUPPORTED_CURRENCY));
+        assert_ok!(PaymentPallet::set_currency(
+            RuntimeOrigin::signed(ALICE),
+            SUPPORTED_CURRENCY
+        ));
         assert_eq!(
             PaymentPallet::get_currency_and_price(&ALICE),
             Ok((SUPPORTED_CURRENCY, Some(Price::from_float(1.5))))
         );
 
-        assert_ok!(PaymentPallet::remove_currency(Origin::root(), SUPPORTED_CURRENCY));
+        assert_ok!(PaymentPallet::remove_currency(
+            RuntimeOrigin::root(),
+            SUPPORTED_CURRENCY
+        ));
         // price is removed at the end of the block
         go_to_next_block();
         assert_err!(
@@ -438,7 +459,7 @@ fn transfer_set_fee_with_core_asset_should_work() {
 fn transfer_set_fee_should_work() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
         assert_ok!(PaymentPallet::set_currency(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             SUPPORTED_CURRENCY_WITH_PRICE
         ));
 
@@ -997,7 +1018,10 @@ fn fee_payment_in_unregistered_currency() {
             let len = 1000;
             let info = info_from_weight(Weight::from_ref_time(5));
 
-            assert_ok!(PaymentPallet::remove_currency(Origin::root(), SUPPORTED_CURRENCY));
+            assert_ok!(PaymentPallet::remove_currency(
+                RuntimeOrigin::root(),
+                SUPPORTED_CURRENCY
+            ));
 
             assert!(ChargeTransactionPayment::<Test>::from(0)
                 .pre_dispatch(&CHARLIE, CALL, &info, len)

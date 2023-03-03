@@ -30,7 +30,7 @@ mod tests;
 mod traits;
 
 use frame_support::{
-    dispatch::{DispatchResult, Pays, DispatchClass},
+    dispatch::{DispatchClass, DispatchResult, Pays},
     ensure,
     traits::{Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, WithdrawReasons},
 };

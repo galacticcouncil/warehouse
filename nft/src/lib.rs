@@ -484,41 +484,39 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
     }
 }
 
-
-use frame_support::storage::KeyPrefixIterator;
-
 impl<T: Config> InspectEnumerable<T::AccountId> for Pallet<T> {
-    type CollectionsIterator = KeyPrefixIterator<<T as Config>::NftCollectionId>;
-    type ItemsIterator = KeyPrefixIterator<<T as Config>::NftItemId>;
-    type OwnedIterator = KeyPrefixIterator<(<T as Config>::NftCollectionId, <T as Config>::NftItemId)>;
-    type OwnedInCollectionIterator = KeyPrefixIterator<<T as Config>::NftItemId>;
+    type CollectionsIterator = Box<dyn Iterator<Item = <T as Config>::NftCollectionId>>;
+    type ItemsIterator = Box<dyn Iterator<Item = <T as Config>::NftItemId>>;
+    type OwnedIterator = Box<dyn Iterator<Item = (<T as Config>::NftCollectionId, <T as Config>::NftItemId)>>;
+    type OwnedInCollectionIterator = Box<dyn Iterator<Item = <T as Config>::NftItemId>>;
 
     /// Returns an iterator of the collections in existence.
     fn collections() -> Self::CollectionsIterator {
-        Collections::<T>::iter_keys()
+        Box::new(Collections::<T>::iter_keys())
     }
 
     /// Returns an iterator of the items of a `collection` in existence.
-    fn items(collection: &Self::CollectionId) -> Self::ItemsIterator{
-        Items::<T>::iter_key_prefix(collection)
+    fn items(collection: &Self::CollectionId) -> Self::ItemsIterator {
+        Box::new(Items::<T>::iter_key_prefix(collection))
     }
 
     /// Returns an iterator of the items of all collections owned by `who`.
     fn owned(who: &T::AccountId) -> Self::OwnedIterator {
+        Box::new(
             pallet_uniques::Pallet::<T>::owned(who)
-                .map(|(collection_id, item_id)| (collection_id.into(), item_id.into()))
+                .map(|(collection_id, item_id)| (collection_id.into(), item_id.into())),
+        )
     }
 
     /// Returns an iterator of the items of `collection` owned by `who`.
-    fn owned_in_collection(
-        collection: &Self::CollectionId,
-        who: &T::AccountId,
-    ) -> Self::OwnedInCollectionIterator {
+    fn owned_in_collection(collection: &Self::CollectionId, who: &T::AccountId) -> Self::OwnedInCollectionIterator {
+        Box::new(
             pallet_uniques::Pallet::<T>::owned_in_collection(
                 &(Into::<<T as pallet_uniques::Config>::CollectionId>::into(*collection)),
                 who,
             )
-            .map(|i| i.into())
+            .map(|i| i.into()),
+        )
     }
 }
 

@@ -302,10 +302,20 @@ macro_rules! impl_fake_executor {
 
                 let amount_out = $sell_calculation_result;
 
-                Currencies::transfer(RuntimeOrigin::signed(ASSET_PAIR_ACCOUNT), ALICE, asset_out, amount_out)
-                    .map_err(|e| ExecutorError::Error(e))?;
-                Currencies::transfer(RuntimeOrigin::signed(ALICE), ASSET_PAIR_ACCOUNT, asset_in, amount_in)
-                    .map_err(|e| ExecutorError::Error(e))?;
+                Currencies::transfer(
+                    RuntimeOrigin::signed(ASSET_PAIR_ACCOUNT),
+                    ALICE,
+                    asset_out,
+                    amount_out,
+                )
+                .map_err(|e| ExecutorError::Error(e))?;
+                Currencies::transfer(
+                    RuntimeOrigin::signed(ALICE),
+                    ASSET_PAIR_ACCOUNT,
+                    asset_in,
+                    amount_in,
+                )
+                .map_err(|e| ExecutorError::Error(e))?;
 
                 Ok(())
             }
@@ -328,10 +338,20 @@ macro_rules! impl_fake_executor {
 
                 let amount_in = $buy_calculation_result;
 
-                Currencies::transfer(RuntimeOrigin::signed(ASSET_PAIR_ACCOUNT), ALICE, asset_out, amount_out)
-                    .map_err(|e| ExecutorError::Error(e))?;
-                Currencies::transfer(RuntimeOrigin::signed(ALICE), ASSET_PAIR_ACCOUNT, asset_in, amount_in)
-                    .map_err(|e| ExecutorError::Error(e))?;
+                Currencies::transfer(
+                    RuntimeOrigin::signed(ASSET_PAIR_ACCOUNT),
+                    ALICE,
+                    asset_out,
+                    amount_out,
+                )
+                .map_err(|e| ExecutorError::Error(e))?;
+                Currencies::transfer(
+                    RuntimeOrigin::signed(ALICE),
+                    ASSET_PAIR_ACCOUNT,
+                    asset_in,
+                    amount_in,
+                )
+                .map_err(|e| ExecutorError::Error(e))?;
 
                 Ok(())
             }

@@ -1,6 +1,6 @@
 [package]
 name = 'pallet-faucet'
-version = '0.2.2'
+version = '0.2.3'
 description = 'Simple token faucet to dispence resource on dev chain'
 authors = ['GalacticCouncil']
 edition = '2021'

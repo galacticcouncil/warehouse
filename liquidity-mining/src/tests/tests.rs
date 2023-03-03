@@ -2506,8 +2506,8 @@ fn sync_global_farm_should_emit_all_rewards_distributed_when_reward_is_zero() {
             Balance::zero()
         );
 
-        frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::LiquidityMining(Event::AllRewardsDistributed {
-            global_farm_id,
-        }));
+        frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::LiquidityMining(
+            Event::AllRewardsDistributed { global_farm_id },
+        ));
     });
 }

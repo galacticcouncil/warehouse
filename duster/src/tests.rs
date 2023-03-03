@@ -1,7 +1,7 @@
 use super::*;
 use crate::mock::{
-    AssetId, Currencies, Duster, RuntimeEvent as TestEvent, ExtBuilder, RuntimeOrigin, System, Test, Tokens, ALICE, BOB, DUSTER,
-    KILLED, TREASURY,
+    AssetId, Currencies, Duster, ExtBuilder, RuntimeEvent as TestEvent, RuntimeOrigin, System, Test, Tokens, ALICE,
+    BOB, DUSTER, KILLED, TREASURY,
 };
 
 use frame_support::{assert_noop, assert_ok};
@@ -31,7 +31,12 @@ fn reward_duster_can_fail() {
         .with_balance(*ALICE, 1, 100)
         .build()
         .execute_with(|| {
-            assert_ok!(Currencies::transfer(RuntimeOrigin::signed(*TREASURY), *BOB, 0, 1_000_000));
+            assert_ok!(Currencies::transfer(
+                RuntimeOrigin::signed(*TREASURY),
+                *BOB,
+                0,
+                1_000_000
+            ));
 
             assert_ok!(Duster::dust_account(RuntimeOrigin::signed(*DUSTER), *ALICE, 1));
             assert_eq!(Tokens::free_balance(1, &*TREASURY), 100);
@@ -111,7 +116,11 @@ fn dust_account_native_works() {
 
         assert!(KILLED.with(|r| r.borrow().is_empty()));
 
-        assert_ok!(Duster::dust_account(RuntimeOrigin::signed(*DUSTER), *ALICE, currency_id));
+        assert_ok!(Duster::dust_account(
+            RuntimeOrigin::signed(*DUSTER),
+            *ALICE,
+            currency_id
+        ));
         assert_eq!(Currencies::free_balance(currency_id, &*TREASURY), 990_500);
 
         assert_eq!(Currencies::free_balance(0, &*DUSTER), 110_000);

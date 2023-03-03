@@ -119,8 +119,8 @@ use hydradx_traits::{pools::DustRemovalAccountWhitelist, registry::Registry};
 use orml_traits::{GetByKey, MultiCurrency};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
-    traits::{CheckedAdd, CheckedDiv, CheckedSub},
     fixed_point::FixedU128,
+    traits::{CheckedAdd, CheckedDiv, CheckedSub},
     Perquintill,
 };
 use sp_std::{

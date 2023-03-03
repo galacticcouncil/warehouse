@@ -334,12 +334,26 @@ fn sell_should_fail_when_insufficient_amount_is_provided() {
             );
 
             assert_noop!(
-                Stableswap::sell(RuntimeOrigin::signed(BOB), pool_id, asset_a, asset_b, 30000 * ONE, 25 * ONE,),
+                Stableswap::sell(
+                    RuntimeOrigin::signed(BOB),
+                    pool_id,
+                    asset_a,
+                    asset_b,
+                    30000 * ONE,
+                    25 * ONE,
+                ),
                 Error::<Test>::InsufficientBalance
             );
 
             assert_noop!(
-                Stableswap::sell(RuntimeOrigin::signed(BOB), pool_id + 1, asset_a, asset_b, 30 * ONE, 25 * ONE,),
+                Stableswap::sell(
+                    RuntimeOrigin::signed(BOB),
+                    pool_id + 1,
+                    asset_a,
+                    asset_b,
+                    30 * ONE,
+                    25 * ONE,
+                ),
                 Error::<Test>::PoolNotFound
             );
             assert_noop!(
@@ -352,7 +366,14 @@ fn sell_should_fail_when_insufficient_amount_is_provided() {
             );
 
             assert_noop!(
-                Stableswap::sell(RuntimeOrigin::signed(BOB), pool_id, asset_a, asset_b, 30 * ONE, 250 * ONE,),
+                Stableswap::sell(
+                    RuntimeOrigin::signed(BOB),
+                    pool_id,
+                    asset_a,
+                    asset_b,
+                    30 * ONE,
+                    250 * ONE,
+                ),
                 Error::<Test>::BuyLimitNotReached
             );
         });
@@ -403,17 +424,38 @@ fn buy_should_fail_when_insufficient_amount_is_provided() {
             );
 
             assert_noop!(
-                Stableswap::buy(RuntimeOrigin::signed(BOB), pool_id, asset_a, asset_b, 30000 * ONE, 25 * ONE,),
+                Stableswap::buy(
+                    RuntimeOrigin::signed(BOB),
+                    pool_id,
+                    asset_a,
+                    asset_b,
+                    30000 * ONE,
+                    25 * ONE,
+                ),
                 Error::<Test>::InsufficientLiquidity
             );
 
             assert_noop!(
-                Stableswap::buy(RuntimeOrigin::signed(BOB), pool_id, asset_a, asset_b, 90 * ONE, 30000 * ONE,),
+                Stableswap::buy(
+                    RuntimeOrigin::signed(BOB),
+                    pool_id,
+                    asset_a,
+                    asset_b,
+                    90 * ONE,
+                    30000 * ONE,
+                ),
                 Error::<Test>::InsufficientBalance
             );
 
             assert_noop!(
-                Stableswap::buy(RuntimeOrigin::signed(BOB), pool_id + 1, asset_a, asset_b, 30 * ONE, 25 * ONE,),
+                Stableswap::buy(
+                    RuntimeOrigin::signed(BOB),
+                    pool_id + 1,
+                    asset_a,
+                    asset_b,
+                    30 * ONE,
+                    25 * ONE,
+                ),
                 Error::<Test>::PoolNotFound
             );
 
@@ -427,7 +469,14 @@ fn buy_should_fail_when_insufficient_amount_is_provided() {
             );
 
             assert_noop!(
-                Stableswap::buy(RuntimeOrigin::signed(BOB), pool_id, asset_a, asset_b, 30 * ONE, 10 * ONE,),
+                Stableswap::buy(
+                    RuntimeOrigin::signed(BOB),
+                    pool_id,
+                    asset_a,
+                    asset_b,
+                    30 * ONE,
+                    10 * ONE,
+                ),
                 Error::<Test>::SellLimitExceeded
             );
         });

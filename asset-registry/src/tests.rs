@@ -373,7 +373,13 @@ fn update_asset() {
 
         // cannot set a new name for a non-existent asset
         assert_noop!(
-            (AssetRegistryPallet::update(RuntimeOrigin::root(), next_asset_id, b"VOID".to_vec(), AssetType::Token, None)),
+            (AssetRegistryPallet::update(
+                RuntimeOrigin::root(),
+                next_asset_id,
+                b"VOID".to_vec(),
+                AssetType::Token,
+                None
+            )),
             Error::<Test>::AssetNotFound
         );
 

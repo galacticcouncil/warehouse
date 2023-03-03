@@ -16,7 +16,7 @@ jobs:
         with:
           profile: minimal
       - name: Install protobuf
-        run: sudo apt-get install -y protobuf
+        run: sudo apt-get install -y protobuf-compiler
       - name: Install clippy
         run: rustup component add clippy
       - name: Run clippy

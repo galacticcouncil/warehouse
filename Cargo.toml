@@ -19,6 +19,7 @@ members = [
 	"test-utils",
 	"duster",
     "nft",
+	"ema-oracle",
 ]
 
 resolver = "2"

@@ -50,5 +50,6 @@ std = [
   'frame-support/std',
   'frame-system/std',
   'orml-tokens/std',
+  "hydradx-adapters/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

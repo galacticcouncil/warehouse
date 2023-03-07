@@ -702,7 +702,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
         multiplier: FarmMultiplier,
     ) -> Result<YieldFarmId, DispatchError> {
-        ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
+        ensure!(
+            multiplier.ge(&MIN_YIELD_FARM_MULTIPLIER),
+            Error::<T, I>::InvalidMultiplier
+        );
 
         let yield_farm_id =
             Self::active_yield_farm(amm_pool_id.clone(), global_farm_id).ok_or(Error::<T, I>::YieldFarmNotFound)?;

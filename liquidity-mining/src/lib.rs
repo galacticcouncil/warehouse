@@ -634,7 +634,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         assets: Vec<T::AssetId>,
     ) -> Result<YieldFarmId, DispatchError> {
         ensure!(
-            multiplier.ge(&MIN_YIELD_FARM_MULTIPLIER),
+            multiplier >= MIN_YIELD_FARM_MULTIPLIER,
             Error::<T, I>::InvalidMultiplier
         );
 
@@ -703,7 +703,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         multiplier: FarmMultiplier,
     ) -> Result<YieldFarmId, DispatchError> {
         ensure!(
-            multiplier.ge(&MIN_YIELD_FARM_MULTIPLIER),
+            multiplier >= MIN_YIELD_FARM_MULTIPLIER,
             Error::<T, I>::InvalidMultiplier
         );
 

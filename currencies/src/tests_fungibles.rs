@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::fungibles::FungibleCurrencies;
-use frame_support::{assert_ok, traits::tokens::fungibles::*};
+use frame_support::{assert_noop, assert_ok, traits::tokens::fungibles::*};
 use mock::*;
 
 #[test]
@@ -25,8 +25,16 @@ fn fungibles_inspect_trait_should_work() {
                 98
             );
             assert_eq!(
+                FungibleCurrencies::<Runtime>::reducible_balance(NATIVE_CURRENCY_ID, &ALICE, false),
+                100
+            );
+            assert_eq!(
                 FungibleCurrencies::<Runtime>::reducible_balance(X_TOKEN_ID, &BOB, true),
                 197
+            );
+            assert_eq!(
+                FungibleCurrencies::<Runtime>::reducible_balance(X_TOKEN_ID, &BOB, false),
+                200
             );
 
             assert_ok!(FungibleCurrencies::<Runtime>::can_deposit(NATIVE_CURRENCY_ID, &ALICE, 1, false).into_result());
@@ -63,6 +71,15 @@ fn fungibles_transfer_trait_should_work() {
         .balances(vec![(ALICE, NATIVE_CURRENCY_ID, 100), (BOB, X_TOKEN_ID, 100)])
         .build()
         .execute_with(|| {
+            assert_noop!(FungibleCurrencies::<Runtime>::transfer(
+                NATIVE_CURRENCY_ID,
+                &ALICE,
+                &BOB,
+                100,
+                true
+            ),
+                pallet_balances::Error::<Runtime>::KeepAlive
+            );
             assert_ok!(FungibleCurrencies::<Runtime>::transfer(
                 NATIVE_CURRENCY_ID,
                 &ALICE,
@@ -73,6 +90,11 @@ fn fungibles_transfer_trait_should_work() {
             assert_eq!(PalletBalances::free_balance(&ALICE), 90);
             assert_eq!(PalletBalances::free_balance(&BOB), 10);
 
+            assert_noop!(FungibleCurrencies::<Runtime>::transfer(
+                X_TOKEN_ID, &BOB, &ALICE, 100, true
+            ),
+                orml_tokens::Error::<Runtime>::KeepAlive
+            );
             assert_ok!(FungibleCurrencies::<Runtime>::transfer(
                 X_TOKEN_ID, &BOB, &ALICE, 10, true
             ));

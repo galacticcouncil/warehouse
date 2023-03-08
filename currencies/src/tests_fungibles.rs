@@ -71,13 +71,8 @@ fn fungibles_transfer_trait_should_work() {
         .balances(vec![(ALICE, NATIVE_CURRENCY_ID, 100), (BOB, X_TOKEN_ID, 100)])
         .build()
         .execute_with(|| {
-            assert_noop!(FungibleCurrencies::<Runtime>::transfer(
-                NATIVE_CURRENCY_ID,
-                &ALICE,
-                &BOB,
-                100,
-                true
-            ),
+            assert_noop!(
+                FungibleCurrencies::<Runtime>::transfer(NATIVE_CURRENCY_ID, &ALICE, &BOB, 100, true),
                 pallet_balances::Error::<Runtime>::KeepAlive
             );
             assert_ok!(FungibleCurrencies::<Runtime>::transfer(
@@ -90,9 +85,8 @@ fn fungibles_transfer_trait_should_work() {
             assert_eq!(PalletBalances::free_balance(&ALICE), 90);
             assert_eq!(PalletBalances::free_balance(&BOB), 10);
 
-            assert_noop!(FungibleCurrencies::<Runtime>::transfer(
-                X_TOKEN_ID, &BOB, &ALICE, 100, true
-            ),
+            assert_noop!(
+                FungibleCurrencies::<Runtime>::transfer(X_TOKEN_ID, &BOB, &ALICE, 100, true),
                 orml_tokens::Error::<Runtime>::KeepAlive
             );
             assert_ok!(FungibleCurrencies::<Runtime>::transfer(

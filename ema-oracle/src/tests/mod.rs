@@ -258,7 +258,7 @@ fn on_trade_should_exclude_zero_values() {
 #[test]
 fn on_entry_should_error_on_accumulator_overflow() {
     new_test_ext().execute_with(|| {
-        let max_entries = MAX_UNIQUE_ENTRIES;
+        let max_entries = <<Test as crate::Config>::MaxUniqueEntries as Get<u32>>::get();
         // let's fill the accumulator
         for i in 0..max_entries {
             assert_ok!(OnActivityHandler::<Test>::on_trade(

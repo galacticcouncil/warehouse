@@ -57,7 +57,7 @@ benchmarks! {
         let trade_fee = Permill::from_percent(1);
         let withdraw_fee = Permill::from_percent(1);
         let caller: T::AccountId = account("caller", 0, 1);
-    }: _(RawOrigin::Signed(caller), pool_id, asset_ids, amplification, trade_fee, withdraw_fee)
+    }: _(RawOrigin::Root, pool_id, asset_ids, amplification, trade_fee, withdraw_fee)
     verify {
         assert!(<Pools<T>>::get(pool_id).is_some());
     }
@@ -93,7 +93,7 @@ benchmarks! {
         let trade_fee = Permill::from_percent(1);
         let withdraw_fee = Permill::from_percent(1);
 
-        crate::Pallet::<T>::create_pool(RawOrigin::Signed(caller.clone()).into(),
+        crate::Pallet::<T>::create_pool(RawOrigin::Root.into(),
             pool_id,
             asset_ids,
             amplification,
@@ -144,7 +144,7 @@ benchmarks! {
         let trade_fee = Permill::from_percent(1);
         let withdraw_fee = Permill::from_percent(1);
 
-        crate::Pallet::<T>::create_pool(RawOrigin::Signed(caller.clone()).into(),
+        crate::Pallet::<T>::create_pool(RawOrigin::Root.into(),
             pool_id,
             asset_ids,
             amplification,
@@ -209,7 +209,7 @@ benchmarks! {
         let asset_in: T::AssetId = *asset_ids.last().unwrap();
         let asset_out: T::AssetId = *asset_ids.first().unwrap();
 
-        crate::Pallet::<T>::create_pool(RawOrigin::Signed(caller.clone()).into(),
+        crate::Pallet::<T>::create_pool(RawOrigin::Root.into(),
             pool_id,
             asset_ids,
             amplification,
@@ -270,7 +270,7 @@ benchmarks! {
         let asset_in: T::AssetId = *asset_ids.last().unwrap();
         let asset_out: T::AssetId = *asset_ids.first().unwrap();
 
-        crate::Pallet::<T>::create_pool(RawOrigin::Signed(caller.clone()).into(),
+        crate::Pallet::<T>::create_pool(RawOrigin::Root.into(),
             pool_id,
             asset_ids,
             amplification,

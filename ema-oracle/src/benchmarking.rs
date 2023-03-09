@@ -269,7 +269,10 @@ benchmarks! {
 
         let res = core::cell::RefCell::new(Err(OracleError::NotPresent));
 
-    }: { let _ = res.replace(EmaOracle::<T>::get_entry(asset_a, asset_b, TenMinutes, SOURCE)); }
+        // aim to find a period that is not `LastBlock`, falling back to `LastBlock` if none is found.
+        let period = T::SupportedPeriods::get().into_iter().find(|p| p != &LastBlock).unwrap_or(LastBlock);
+
+    }: { let _ = res.replace(EmaOracle::<T>::get_entry(asset_a, asset_b, period, SOURCE)); }
     verify {
         assert_eq!(*res.borrow(), Ok(AggregatedEntry {
             price: Price::from((amount_in, amount_out)),

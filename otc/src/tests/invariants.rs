@@ -20,7 +20,6 @@ use pretty_assertions::assert_eq;
 use proptest::prelude::*;
 
 fn asset_amount(min: Balance, max: Balance) -> impl Strategy<Value = Balance> {
-    // ONE..95 * ONE
     min..max
 }
 

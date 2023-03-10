@@ -19,20 +19,33 @@ use crate::tests::mock::*;
 use pretty_assertions::assert_eq;
 use proptest::prelude::*;
 
-fn asset_amount() -> impl Strategy<Value = Balance> {
-    ONE..95 * ONE
+fn asset_amount(min: Balance, max: Balance) -> impl Strategy<Value = Balance> {
+    // ONE..95 * ONE
+    min..max
+}
+
+prop_compose! {
+    fn get_asset_amounts()
+        (
+            amount_in in asset_amount(6 * ONE, 100 * ONE),
+        )
+        (
+            amount_in in Just(amount_in),
+            amount_out in asset_amount(amount_in, 1000 * ONE),
+            amount_fill in asset_amount(ONE, amount_in - 5 * ONE),
+        )
+        -> (Balance, Balance, Balance) {
+            (amount_in, amount_out, amount_fill)
+        }
 }
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
     fn otc_price_invariant(
-        amount_fill in asset_amount(),
+        (initial_amount_in, initial_amount_out, amount_fill) in get_asset_amounts()
     ) {
         ExtBuilder::default().build().execute_with(|| {
-            let initial_amount_in = 100 * ONE;
-            let initial_amount_out = 10_000 * ONE;
-
             OTC::place_order(
                 Origin::signed(ALICE),
                 DAI,

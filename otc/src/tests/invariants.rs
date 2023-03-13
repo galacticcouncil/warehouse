@@ -18,27 +18,37 @@
 use crate::tests::mock::*;
 use proptest::prelude::*;
 use sp_runtime::FixedU128;
+use std::cmp::min;
 use test_utils::assert_eq_approx;
 
+const MIN_ORDER_SIZE: Balance = 5 * ONE;
 const DEVIATION_TOLERANCE: f64 = 0.000_000_000_1;
 
-fn asset_amount(min: Balance, max: Balance) -> impl Strategy<Value = Balance> {
-    min..max
+fn asset_amount(max: Balance) -> impl Strategy<Value = Balance> {
+    (MIN_ORDER_SIZE + ONE)..max
+}
+
+fn amount_fill(amount_in: Balance, amount_out: Balance) -> impl Strategy<Value = Balance> {
+    let max_remaining_amount_out = amount_in - MIN_ORDER_SIZE * amount_in / amount_out;
+    let max_remaining_amount_in = amount_in - MIN_ORDER_SIZE;
+
+    ONE..min(max_remaining_amount_out, max_remaining_amount_in)
 }
 
 prop_compose! {
     fn get_asset_amounts()
-        (
-            amount_in in asset_amount(6 * ONE, 100 * ONE),
-        )
-        (
-            amount_in in Just(amount_in),
-            amount_out in asset_amount(amount_in, 1000 * ONE),
-            amount_fill in asset_amount(ONE, amount_in - 5 * ONE),
-        )
-        -> (Balance, Balance, Balance) {
-            (amount_in, amount_out, amount_fill)
-        }
+    (
+        amount_in in asset_amount(100 * ONE),
+        amount_out in asset_amount(100 * ONE),
+    )
+    (
+        amount_in in Just(amount_in),
+        amount_out in Just(amount_out),
+        amount_fill in amount_fill(amount_in, amount_out),
+    )
+    -> (Balance, Balance, Balance) {
+        (amount_in, amount_out, amount_fill)
+    }
 }
 
 proptest! {

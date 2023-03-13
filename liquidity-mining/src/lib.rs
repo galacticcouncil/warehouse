@@ -58,29 +58,29 @@
 //! resetting loyalty factor for yield farm user is withdrawing from(other farm entries in the
 //! deposit are not affected). If deposit has no more farm entries, deposit is destroyed and LP
 //! shares are returned back to user.
-//! * `YieldFarm` -  can be in the 3 states: [`Active`, `Stopped`, `Deleted`]
+//! * `YieldFarm` -  can be in the 3 states: [`Active`, `Stopped`, `Terminated`]
 //!     * `Active` - liquidity mining is running, users are able to deposit, claim and withdraw LP
 //!     shares. `YieldFarm` is rewarded from `GlobalFarm` in this state.
 //!     * `Stopped` - liquidity mining is stopped. Users can claim and withdraw LP shares from the
 //!     farm. Users CAN'T deposit new LP shares to stopped farm. Stopped farm is not rewarded from the
 //!     `GlobalFarm`.
 //!     Note: stopped farm can be resumed or destroyed.
-//!     * `Deleted` - liquidity mining is ended. User's CAN'T deposit or claim rewards from
+//!     * `Terminated` - liquidity mining is ended. User's CAN'T deposit or claim rewards from
 //!     stopped farm. Users CAN only withdraw LP shares(without rewards).
-//!     `YieldFarm` must be stopped before it can be deleted. Deleted farm stays in the storage
-//!     until last farm's entry is withdrawn. Last withdrawn from yield farm will remove deleted
+//!     `YieldFarm` must be stopped before it can be terminated. Terminated farm stays in the storage
+//!     until last farm's entry is withdrawn. Last withdrawn from yield farm will remove terminated
 //!     farm from the storage.
-//!     Note: Deleted farm CAN'T be resumed.
-//! * `GlobalFarm` - can be in the 2 states: [`Active`, `Deleted`]
+//!     Note: Terminated farm CAN'T be resumed.
+//! * `GlobalFarm` - can be in the 2 states: [`Active`, `Terminated`]
 //!     * `Active` - liquidity mining program is running, new yield farms can be added to the
 //!     global farm.
-//!     * `Deleted` - liquidity mining program is ended. Yield farms can't be added to the global
+//!     * `Terminated` - liquidity mining program is ended. Yield farms can't be added to the global
 //!     farm. Global farm MUST be empty(all yield farms in the global farm must be destroyed)
 //!     before it can be destroyed. Destroying global farm transfer undistributed rewards to farm's
-//!     owner. Deleted global farm stay in the storage until all yield farms are removed from
+//!     owner. Terminated global farm stay in the storage until all yield farms are removed from
 //!     the storage. Last yield farm removal from storage triggers global farm removal from
 //!     storage.
-//!     Note: deleted global farm CAN'T be resumed.
+//!     Note: Terminated global farm CAN'T be resumed.
 //! * Pot - account holding all rewards allocated for all `YieldFarm`s from all `GlobalFarm`s.
 //!   User's rewards are transferred from `pot`'s account to user's accounts.
 //!
@@ -202,7 +202,7 @@ pub mod pallet {
         type MaxFarmEntriesPerDeposit: Get<u32>;
 
         /// Max number of yield farms can exist in global farm. This includes all farms in the
-        /// storage(active, stopped, deleted).
+        /// storage(active, stopped, terminated).
         #[pallet::constant]
         type MaxYieldFarmsPerGlobalFarm: Get<u32>;
 
@@ -1249,7 +1249,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                                 .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidValuedShares.into())?;
 
                             // yield farm's stake in global farm is set to `0` when farm is
-                            // stopped and yield farm have to be stopped before it's deleted so
+                            // stopped and yield farm have to be stopped before it's terminated so
                             // this update is only required for active farms.
                             if yield_farm.state.is_active() {
                                 let deposit_stake_in_global_farm =

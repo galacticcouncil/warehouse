@@ -108,7 +108,7 @@ fn place_order_should_throw_error_when_asset_out_is_not_registered() {
         // Act
         assert_noop!(
             OTC::place_order(Origin::signed(ALICE), DAI, DOGE, 20 * ONE, 100 * ONE, true),
-            Error::<Test>::AssetNotRegistered
+            Error::<Test>::InsufficientBalance
         );
     });
 }

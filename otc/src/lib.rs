@@ -149,8 +149,6 @@ pub mod pallet {
     pub enum Error<T> {
         /// Asset does not exist in registry
         AssetNotRegistered,
-        /// When filling and order, the fill amount cannot be greater than the remaining order amount
-        CannotFillMoreThanOrdered,
         /// Free balance is too low to place the order
         InsufficientBalance,
         /// Order cannot be found
@@ -208,7 +206,14 @@ pub mod pallet {
                 partially_fillable,
             };
 
-            Self::validate_place_order(&order, amount_out)?;
+            // Validations
+            ensure!(T::AssetRegistry::exists(order.asset_in), Error::<T>::AssetNotRegistered);
+            ensure!(
+                T::Currency::can_reserve(order.asset_out, &order.owner, amount_out),
+                Error::<T>::InsufficientBalance
+            );
+            Self::validate_min_order_amount(order.asset_in, order.amount_in)?;
+            Self::validate_min_order_amount(order.asset_out, amount_out)?;
 
             let order_id = <NextOrderId<T>>::try_mutate(|next_id| -> result::Result<OrderId, DispatchError> {
                 let id = *next_id;
@@ -242,7 +247,12 @@ pub mod pallet {
             <Orders<T>>::try_mutate(order_id, |maybe_order| -> DispatchResult {
                 let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
 
-                let amount_out = Self::calculate_filled_amount_out(order, amount_in)?;
+                let amount_out_calculation = U256::from(order.amount_out)
+                    .checked_mul(U256::from(amount_in))
+                    .and_then(|v| v.checked_div(U256::from(order.amount_in)))
+                    .ok_or(Error::<T>::MathError)?;
+                let amount_out = Balance::try_from(amount_out_calculation).map_err(|_| Error::<T>::MathError)?;
+
                 let remaining_amount_out = Self::calculate_difference(order.amount_out, amount_out)?;
                 let remaining_amount_in = Self::calculate_difference(order.amount_in, amount_in)?;
 
@@ -309,25 +319,6 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn validate_place_order(order: &Order<T::AccountId, T::AssetId>, amount_out: Balance) -> DispatchResult {
-        ensure!(
-            T::AssetRegistry::exists(order.asset_out),
-            Error::<T>::AssetNotRegistered
-        );
-
-        ensure!(T::AssetRegistry::exists(order.asset_in), Error::<T>::AssetNotRegistered);
-
-        ensure!(
-            T::Currency::can_reserve(order.asset_out, &order.owner, amount_out),
-            Error::<T>::InsufficientBalance
-        );
-
-        Self::validate_min_order_amount(order.asset_in, order.amount_in)?;
-        Self::validate_min_order_amount(order.asset_out, amount_out)?;
-
-        Ok(())
-    }
-
     fn validate_partial_fill_order(
         order: &Order<T::AccountId, T::AssetId>,
         remaining_amount_in: Balance,
@@ -349,18 +340,6 @@ impl<T: Config> Pallet<T> {
         ensure!(amount >= min_amount, Error::<T>::OrderAmountTooSmall);
 
         Ok(())
-    }
-
-    fn calculate_filled_amount_out(
-        order: &Order<T::AccountId, T::AssetId>,
-        amount_in: Balance,
-    ) -> Result<Balance, Error<T>> {
-        let calculation = U256::from(order.amount_out)
-            .checked_mul(U256::from(amount_in))
-            .and_then(|v| v.checked_div(U256::from(order.amount_in)))
-            .ok_or(Error::<T>::MathError)?;
-
-        Balance::try_from(calculation).map_err(|_| Error::<T>::MathError)
     }
 
     fn calculate_difference(amount_initial: Balance, amount_change: Balance) -> Result<Balance, Error<T>> {

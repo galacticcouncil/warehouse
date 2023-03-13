@@ -1006,7 +1006,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `yield_farm_id`: yield farm identifier depositing to.
     /// - `amm_pool_id`: identifier of the AMM pool.
     /// - `shares_amount`: amount of LP shares user want to deposit.
-    /// - `amm_pool_id`: identifier of the AMM pool.
     /// - `get_token_value_of_lp_shares`: callback function returning amount of
     /// `incentivized_asset` behind `lp_shares`.
     #[require_transactional]

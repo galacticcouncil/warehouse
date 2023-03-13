@@ -889,12 +889,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         .checked_sub(&yield_farm.updated_at)
                         .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?;
 
-                    //NOTE: this is special case. Without this if global-farm has only 1 stopped
-                    //yield-farm and resume_yield_farm() is called, global-farm's update won't happen because it
-                    //has zero shares Z and next global-farm's update will calulate rewards for
-                    //"empty"/stopped periods.
-                    global_farm.updated_at = current_period;
-
                     let new_stake_in_global_farm =
                         math::calculate_global_farm_shares(yield_farm.total_valued_shares, multiplier)
                             .map_err(|_| ArithmeticError::Overflow)?;
@@ -1530,6 +1524,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         // Nothing to update if there is no stake in the farm.
         if global_farm.total_shares_z.is_zero() {
+            global_farm.updated_at = current_period;
             return Ok(Zero::zero());
         }
 
@@ -1638,6 +1633,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         }
 
         if yield_farm.total_valued_shares.is_zero() {
+            yield_farm.updated_at = current_period;
             return Ok(());
         }
 

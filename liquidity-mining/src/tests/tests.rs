@@ -786,7 +786,7 @@ fn sync_global_farm_should_not_update_farm_when_farm_is_not_active() {
 }
 
 #[test]
-fn sync_global_farm_should_not_update_farm_except_updated_at_when_farm_has_no_shares() {
+fn sync_global_farm_should_only_update_updated_at_field_when_farm_has_no_shares() {
     {
         let global_farm_1 = GlobalFarmData {
             id: 1,
@@ -1751,7 +1751,8 @@ fn sync_yield_farm_should_not_update_when_yield_farm_is_not_active() {
 }
 
 #[test]
-fn sync_yield_farm_should_now_update_farm_except_updated_at_when_yield_farm_has_no_valued_shares() {
+
+fn sync_yield_farm_should_only_update_updated_at_field_when_farm_has_no_valued_shares() {
     let global_farm_0 = GlobalFarmData {
         id: 1,
         owner: ALICE,

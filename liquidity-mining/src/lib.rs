@@ -1587,34 +1587,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         Ok(reward)
     }
 
-    /// This function calculates and returns yield-farm's rewards from `GlobalFarm` in the `pot`.
-    fn calculate_rewards_from_pot(
-        global_farm: &mut GlobalFarmData<T, I>,
-        yield_farm: &mut YieldFarmData<T, I>,
-        stake_in_global_farm: Balance,
-    ) -> Result<Balance, ArithmeticError> {
-        let reward = math::calculate_reward(
-            yield_farm.accumulated_rpz,
-            global_farm.accumulated_rpz,
-            stake_in_global_farm,
-        )
-        .map_err(|_| ArithmeticError::Overflow)?;
-
-        yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
-
-        global_farm.accumulated_paid_rewards = global_farm
-            .accumulated_paid_rewards
-            .checked_add(reward)
-            .ok_or(ArithmeticError::Overflow)?;
-
-        global_farm.pending_rewards = global_farm
-            .pending_rewards
-            .checked_sub(reward)
-            .ok_or(ArithmeticError::Overflow)?;
-
-        Ok(reward)
-    }
-
     /// This function calculates and updates `accumulated_rpvz` and all associated properties of
     /// `YieldFarm` if conditions are met. It also calculates yield-farm's rewards from `GlobalFarm`.
     /// NOTE: Yield-farm's rewards are staying in the `pot`.
@@ -1637,18 +1609,31 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             return Ok(());
         }
 
-        let stake_in_global_farm =
-            math::calculate_global_farm_shares(yield_farm.total_valued_shares, yield_farm.multiplier)
-                .map_err(|_| ArithmeticError::Overflow)?;
-
-        let yield_farm_rewards = Self::calculate_rewards_from_pot(global_farm, yield_farm, stake_in_global_farm)?;
-
-        yield_farm.accumulated_rpvs = math::calculate_accumulated_rps(
-            yield_farm.accumulated_rpvs,
+        let (delta_rpvs, yield_farm_rewards) = math::calculate_yield_farm_rewards(
+            yield_farm.accumulated_rpz,
+            global_farm.accumulated_rpz,
+            yield_farm.multiplier,
             yield_farm.total_valued_shares,
-            yield_farm_rewards,
         )
         .map_err(|_| ArithmeticError::Overflow)?;
+
+        yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
+
+        global_farm.accumulated_paid_rewards = global_farm
+            .accumulated_paid_rewards
+            .checked_add(yield_farm_rewards)
+            .ok_or(ArithmeticError::Overflow)?;
+
+        global_farm.pending_rewards = global_farm
+            .pending_rewards
+            .checked_sub(yield_farm_rewards)
+            .ok_or(ArithmeticError::Overflow)?;
+
+        yield_farm.accumulated_rpvs = yield_farm
+            .accumulated_rpvs
+            .checked_add(&delta_rpvs)
+            .ok_or(ArithmeticError::Overflow)?;
+
         yield_farm.updated_at = current_period;
 
         yield_farm.left_to_distribute = yield_farm

@@ -208,7 +208,7 @@ fn resume_yield_farm_same_amm_farm_active_should_not_work() {
 }
 
 #[test]
-fn resume_yiedld_farm_should_not_work_when_multiplier_is_lt_min_yield_farm_multiplier() {
+fn resume_yield_farm_should_not_work_when_multiplier_is_lt_min_yield_farm_multiplier() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
             let new_multiplier = FixedU128::from_inner(1_000_000_000_000_000 - 1);

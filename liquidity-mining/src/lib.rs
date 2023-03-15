@@ -1508,16 +1508,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             return Ok(Zero::zero());
         }
 
-        let total_shares_z_adjusted =
-            math::calculate_adjusted_shares(global_farm.total_shares_z, global_farm.price_adjustment)
-                .map_err(|_| ArithmeticError::Overflow)?;
-
-        let reward_per_period = math::calculate_global_farm_reward_per_period(
-            global_farm.yield_per_period.into(),
-            total_shares_z_adjusted,
-            global_farm.max_reward_per_period,
-        )
-        .map_err(|_| ArithmeticError::Overflow)?;
+        let global_farm_account = Self::farm_account_id(global_farm.id)?;
+        let reward_currency_ed = T::AssetRegistry::get(&global_farm.reward_currency);
+        let left_to_distribute = T::MultiCurrency::free_balance(global_farm.reward_currency, &global_farm_account)
+            .saturating_sub(reward_currency_ed);
 
         // Number of periods since last farm update.
         let periods_since_last_update: Balance = TryInto::<u128>::try_into(
@@ -1527,16 +1521,17 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         )
         .map_err(|_| ArithmeticError::Overflow)?;
 
-        let global_farm_account = Self::farm_account_id(global_farm.id)?;
-        let reward_currency_ed = T::AssetRegistry::get(&global_farm.reward_currency);
-        let left_to_distribute = T::MultiCurrency::free_balance(global_farm.reward_currency, &global_farm_account)
-            .saturating_sub(reward_currency_ed);
-
         // Calculate reward for all periods since last update capped by balance of `GlobalFarm`
         // account.
-        let reward = math::calculate_rewards_for_periods(reward_per_period, periods_since_last_update)
-            .map_err(|_| ArithmeticError::Overflow)?
-            .min(left_to_distribute);
+        let reward = math::calculate_global_farm_rewards(
+            global_farm.total_shares_z,
+            global_farm.price_adjustment,
+            global_farm.yield_per_period.into(),
+            global_farm.max_reward_per_period,
+            periods_since_last_update,
+        )
+        .map_err(|_| ArithmeticError::Overflow)?
+        .min(left_to_distribute);
 
         if !reward.is_zero() {
             let pot = Self::pot_account_id().ok_or(Error::<T, I>::ErrorGetAccountId)?;

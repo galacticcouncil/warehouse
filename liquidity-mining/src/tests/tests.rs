@@ -1620,9 +1620,9 @@ fn sync_yield_farm_should_work() {
 
             //Assert
             //
-            //NOTE: update in the same period should not happen and rpvs is used as starting value
-            //for rpz in this test.
-            let rpz = if current_period == yield_farm_updated_at || yield_farm_total_valued_shares.is_zero() {
+            //NOTE: update in the same period should happen only if farm is empty. RPVS is used as starting value
+            //for yield-farm's rpz in this test.
+            let rpz = if current_period == yield_farm_updated_at {
                 yield_farm_accumulated_rpvs
             } else {
                 global_farm_accumulated_rpz

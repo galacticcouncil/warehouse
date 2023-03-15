@@ -1382,17 +1382,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         math::calculate_global_farm_shares(valued_shares, yield_farm.multiplier)
                             .map_err(|_| ArithmeticError::Overflow)?;
 
-                    // The deposit is the first one for this farm. We pretend that an update already
-                    // happened so the user is not rewarded for the time between creation and this
-                    // first deposit.
-                    // This also avoids the first user getting more rewards than the second because
-                    // of an imbalance in the share accumulation.
-                    if yield_farm.total_shares.is_zero() {
-                        yield_farm.updated_at = current_period;
-                        //This prevents yield farm claiming for periods when it was empty.
-                        yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
-                    }
-
                     yield_farm.total_shares = yield_farm
                         .total_shares
                         .checked_add(deposit.shares)
@@ -1402,15 +1391,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         .total_valued_shares
                         .checked_add(valued_shares)
                         .ok_or(ArithmeticError::Overflow)?;
-
-                    // The deposit is the first one for this farm. We pretend that an update already
-                    // happened so the user is not rewarded for the time between creation and this
-                    // first deposit.
-                    // This also avoids the first user getting more rewards than the second because
-                    // of an imbalance in the share accumulation.
-                    if global_farm.total_shares_z.is_zero() {
-                        global_farm.updated_at = current_period;
-                    }
 
                     global_farm.add_stake(deposit_stake_in_global_farm)?;
 
@@ -1605,7 +1585,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         }
 
         if yield_farm.total_valued_shares.is_zero() {
+            //NOTE: This is important to prevent rewarding of the farms for emtpy periods and it
+            //also prevents the first user getting more rewards than the second user.
+            yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
             yield_farm.updated_at = current_period;
+
             return Ok(());
         }
 

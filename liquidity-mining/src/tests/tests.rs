@@ -786,7 +786,7 @@ fn sync_global_farm_should_not_update_farm_when_farm_is_not_active() {
 }
 
 #[test]
-fn sync_global_farm_should_not_update_farm_except_updated_at_when_farm_has_no_shares() {
+fn sync_global_farm_should_only_update_updated_at_field_when_farm_has_no_shares() {
     {
         let global_farm_1 = GlobalFarmData {
             id: 1,
@@ -1237,9 +1237,9 @@ fn sync_yield_farm_should_work() {
 
             //Assert
             //
-            //NOTE: update in the same period should not happen and rpvs is used as starting value
-            //for rpz in this test.
-            let rpz = if current_period == yield_farm_updated_at || yield_farm_total_valued_shares.is_zero() {
+            //NOTE: update in the same period should happen only if farm is empty. RPVS is used as starting value
+            //for yield-farm's rpz in this test.
+            let rpz = if current_period == yield_farm_updated_at {
                 yield_farm_accumulated_rpvs
             } else {
                 global_farm_accumulated_rpz
@@ -1368,7 +1368,8 @@ fn sync_yield_farm_should_not_update_when_yield_farm_is_not_active() {
 }
 
 #[test]
-fn sync_yield_farm_should_now_update_farm_except_updated_at_when_yield_farm_has_no_valued_shares() {
+
+fn sync_yield_farm_should_only_update_updated_at_field_when_farm_has_no_valued_shares() {
     let global_farm_0 = GlobalFarmData {
         id: 1,
         owner: ALICE,

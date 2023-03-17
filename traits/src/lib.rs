@@ -46,7 +46,7 @@ pub struct AMMTransfer<AccountId, AssetId, AssetPair, Balance> {
     pub origin: AccountId,
     pub assets: AssetPair,
     pub amount: Balance,
-    pub amount_out: Balance,
+    pub amount_b: Balance,
     pub discount: bool,
     pub discount_amount: Balance,
     pub fee: (AssetId, Balance),
@@ -161,10 +161,10 @@ pub trait OnTradeHandler<AssetId, Balance> {
         source: Source,
         asset_a: AssetId,
         asset_b: AssetId,
-        amount_in: Balance,
-        amount_out: Balance,
-        liq_amount_a: Balance,
-        liq_amount_b: Balance,
+        amount_a: Balance,
+        amount_b: Balance,
+        liquidity_a: Balance,
+        liquidity_b: Balance,
     ) -> Result<Weight, (Weight, DispatchError)>;
     /// Known overhead for a trade in `on_initialize/on_finalize`.
     /// Needs to be specified here if we don't want to make AMM pools tightly coupled with the price oracle pallet, otherwise we can't access the weight.
@@ -177,10 +177,10 @@ impl<AssetId, Balance> OnTradeHandler<AssetId, Balance> for () {
         _source: Source,
         _asset_a: AssetId,
         _asset_b: AssetId,
-        _amount_in: Balance,
-        _amount_out: Balance,
-        _liq_amount_a: Balance,
-        _liq_amount_b: Balance,
+        _amount_a: Balance,
+        _amount_b: Balance,
+        _liquidity_a: Balance,
+        _liquidity_b: Balance,
     ) -> Result<Weight, (Weight, DispatchError)> {
         Ok(Weight::zero())
     }

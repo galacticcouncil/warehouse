@@ -30,7 +30,7 @@ benchmarks! {
         u32: From<<T as pallet::Config>::AssetId>,
     }
   place_order {
-        let (hdx, dai) = prepare::<T>()?;
+        let (hdx, dai) = seed_registry::<T>()?;
 
         let owner: T::AccountId = create_account_with_balances::<T>("owner", 1, vec!(hdx, dai))?;
   }:  _(RawOrigin::Signed(owner.clone()), dai.into(), hdx.into(), 20 * ONE, 100 * ONE, true)
@@ -39,7 +39,7 @@ benchmarks! {
     }
 
     partial_fill_order {
-        let (hdx, dai) = prepare::<T>()?;
+        let (hdx, dai) = seed_registry::<T>()?;
 
         let owner: T::AccountId = create_account_with_balances::<T>("owner", 1, vec!(hdx, dai))?;
         let filler: T::AccountId = create_account_with_balances::<T>("filler", 2, vec!(hdx, dai))?;
@@ -53,7 +53,7 @@ benchmarks! {
     }
 
     fill_order {
-        let (hdx, dai) = prepare::<T>()?;
+        let (hdx, dai) = seed_registry::<T>()?;
 
         let owner: T::AccountId = create_account_with_balances::<T>("owner", 1, vec!(hdx, dai))?;
         let filler: T::AccountId = create_account_with_balances::<T>("filler", 2, vec!(hdx, dai))?;
@@ -67,7 +67,7 @@ benchmarks! {
     }
 
     cancel_order {
-        let (hdx, dai) = prepare::<T>()?;
+        let (hdx, dai) = seed_registry::<T>()?;
 
         let owner: T::AccountId = create_account_with_balances::<T>("owner", 1, vec!(hdx, dai))?;
         assert_ok!(
@@ -79,7 +79,7 @@ benchmarks! {
     }
 }
 
-fn prepare<T: Config>() -> Result<(u32, u32), DispatchError>
+fn seed_registry<T: Config>() -> Result<(u32, u32), DispatchError>
 where
     u32: From<<T as pallet::Config>::AssetId>,
 {

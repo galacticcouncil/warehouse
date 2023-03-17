@@ -38,7 +38,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::MaxEncodedLen;
-use frame_support::{pallet_prelude::*, require_transactional, transactional};
+use frame_support::{pallet_prelude::*, require_transactional};
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use hydradx_traits::Registry;
 use orml_traits::{GetByKey, MultiCurrency, MultiReservableCurrency, NamedMultiReservableCurrency};
@@ -76,7 +76,6 @@ pub struct Order<AccountId, AssetId> {
 
 #[frame_support::pallet]
 pub mod pallet {
-
     use super::*;
     use codec::HasCompact;
 
@@ -179,7 +178,6 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(<T as Config>::WeightInfo::place_order())]
-        #[transactional]
         /// Create a new OTC order
         ///  
         /// Parameters:
@@ -188,6 +186,8 @@ pub mod pallet {
         /// - `amount_in`: Amount that the order is seeking to buy
         /// - `amount_out`: Amount that the order is selling
         /// - `partially_fillable`: Flag indicating whether users can fill the order partially
+        ///
+        /// Emits `Placed` event when successful.
         pub fn place_order(
             origin: OriginFor<T>,
             asset_in: T::AssetId,
@@ -240,8 +240,9 @@ pub mod pallet {
         /// Parameters:
         /// - `order_id`: ID of the order
         /// - `amount_in`: Amount with which the order is being filled
+        ///
+        /// Emits `PartiallyFilled` event when successful.
         #[pallet::weight(<T as Config>::WeightInfo::partial_fill_order())]
-        #[transactional]
         pub fn partial_fill_order(origin: OriginFor<T>, order_id: OrderId, amount_in: Balance) -> DispatchResult {
             let who = ensure_signed(origin)?;
             <Orders<T>>::try_mutate(order_id, |maybe_order| -> DispatchResult {
@@ -258,7 +259,7 @@ pub mod pallet {
 
                 Self::validate_partial_fill_order(order, remaining_amount_in, remaining_amount_out)?;
 
-                Self::execute_deal(order, &who, amount_in, amount_out)?;
+                Self::execute_order(order, &who, amount_in, amount_out)?;
                 order.amount_in = remaining_amount_in;
                 order.amount_out = remaining_amount_out;
 
@@ -273,16 +274,17 @@ pub mod pallet {
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::fill_order())]
-        #[transactional]
         /// Fill an OTC order (completely)
         ///  
         /// Parameters:
         /// - `order_id`: ID of the order
+        ///
+        /// Emits `Filled` event when successful.
         pub fn fill_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let order = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderNotFound)?;
 
-            Self::execute_deal(&order, &who, order.amount_in, order.amount_out)?;
+            Self::execute_order(&order, &who, order.amount_in, order.amount_out)?;
             <Orders<T>>::remove(order_id);
 
             Self::deposit_event(Event::Filled {
@@ -295,13 +297,14 @@ pub mod pallet {
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::cancel_order())]
-        #[transactional]
         /// Cancel an open OTC order
         ///  
         /// Parameters:
         /// - `order_id`: ID of the order
         /// - `asset`: Asset which is being filled
         /// - `amount`: Amount which is being filled
+        ///
+        /// Emits `Cancelled` event when successful.
         pub fn cancel_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
             let who = ensure_signed(origin)?;
             <Orders<T>>::try_mutate_exists(order_id, |maybe_order| -> DispatchResult {
@@ -347,7 +350,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[require_transactional]
-    fn execute_deal(
+    fn execute_order(
         order: &Order<T::AccountId, T::AssetId>,
         who: &T::AccountId,
         amount_in: Balance,

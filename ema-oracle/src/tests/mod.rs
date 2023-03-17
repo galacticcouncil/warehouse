@@ -146,7 +146,7 @@ fn on_liquidity_changed_handler_should_work() {
         let timestamp = 5;
         System::set_block_number(timestamp);
         let no_volume_entry = OracleEntry {
-            price: Price::new(1_000, 500),
+            price: Price::new(2_000, 1_000),
             volume: Volume::default(),
             liquidity: Liquidity::new(2_000, 1_000),
             timestamp,
@@ -177,7 +177,7 @@ fn on_liquidity_changed_should_allow_zero_values() {
             liquidity_b,
         ));
         let only_liquidity_entry = OracleEntry {
-            price: Price::zero(),
+            price: Price::new(liquidity_a, liquidity_b),
             volume: Volume::default(),
             liquidity: (liquidity_a, liquidity_b).into(),
             timestamp,
@@ -197,7 +197,7 @@ fn on_liquidity_changed_should_allow_zero_values() {
             liquidity_b,
         ));
         let only_liquidity_entry = OracleEntry {
-            price: Price::zero(),
+            price: Price::new(liquidity_a, liquidity_b),
             volume: Volume::default(),
             liquidity: (liquidity_a, liquidity_b).into(),
             timestamp,
@@ -217,7 +217,7 @@ fn on_liquidity_changed_should_allow_zero_values() {
             Balance::zero(),
         ));
         let only_price_entry = OracleEntry {
-            price: Price::new(amount, amount),
+            price: Price::zero(),
             volume: Volume::default(),
             liquidity: (Balance::zero(), Balance::zero()).into(),
             timestamp,

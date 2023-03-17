@@ -30,9 +30,6 @@ use pretty_assertions::assert_eq;
 
 use crate::Pallet as EmaOracle;
 
-/// Maximum parameter to run the benchmark for.
-pub const MAX_TOKEN_PAIRS: u32 = MAX_UNIQUE_ENTRIES - 1;
-
 /// Default oracle source.
 const SOURCE: Source = *b"dummysrc";
 
@@ -106,7 +103,7 @@ benchmarks! {
     }
 
     on_finalize_multiple_tokens {
-        let b in 1 .. MAX_TOKEN_PAIRS;
+        let b in 1 .. (T::MaxUniqueEntries::get() - 1);
 
         let initial_data_block: T::BlockNumber = 5u32.into();
         let block_num = initial_data_block.saturating_add(1_000_000u32.into());
@@ -146,7 +143,7 @@ benchmarks! {
     }
 
     on_trade_multiple_tokens {
-        let b in 1 .. MAX_TOKEN_PAIRS;
+        let b in 1 .. (T::MaxUniqueEntries::get() - 1);
 
         let initial_data_block: T::BlockNumber = 5u32.into();
         let block_num = initial_data_block.saturating_add(1_000_000u32.into());
@@ -196,7 +193,7 @@ benchmarks! {
     }
 
     on_liquidity_changed_multiple_tokens {
-        let b in 1 .. MAX_TOKEN_PAIRS;
+        let b in 1 .. (T::MaxUniqueEntries::get() - 1);
 
         let initial_data_block: T::BlockNumber = 5u32.into();
         let block_num = initial_data_block.saturating_add(1_000_000u32.into());
@@ -272,7 +269,10 @@ benchmarks! {
 
         let res = core::cell::RefCell::new(Err(OracleError::NotPresent));
 
-    }: { let _ = res.replace(EmaOracle::<T>::get_entry(asset_a, asset_b, TenMinutes, SOURCE)); }
+        // aim to find a period that is not `LastBlock`, falling back to `LastBlock` if none is found.
+        let period = T::SupportedPeriods::get().into_iter().find(|p| p != &LastBlock).unwrap_or(LastBlock);
+
+    }: { let _ = res.replace(EmaOracle::<T>::get_entry(asset_a, asset_b, period, SOURCE)); }
     verify {
         assert_eq!(*res.borrow(), Ok(AggregatedEntry {
             price: Price::from((amount_in, amount_out)),

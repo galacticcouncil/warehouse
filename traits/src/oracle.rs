@@ -34,6 +34,8 @@ where
 pub enum OraclePeriod {
     /// The oracle data is from the last block, thus unaggregated.
     LastBlock,
+    /// The oracle data was aggregated over the last few blocks.
+    Short,
     /// The oracle data was aggregated over the blocks of the last ten minutes.
     TenMinutes,
     /// The oracle data was aggregated over the blocks of the last hour.

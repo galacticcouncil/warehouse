@@ -258,7 +258,7 @@ fn on_trade_should_exclude_zero_values() {
 #[test]
 fn on_entry_should_error_on_accumulator_overflow() {
     new_test_ext().execute_with(|| {
-        let max_entries = MAX_UNIQUE_ENTRIES;
+        let max_entries = <<Test as crate::Config>::MaxUniqueEntries as Get<u32>>::get();
         // let's fill the accumulator
         for i in 0..max_entries {
             assert_ok!(OnActivityHandler::<Test>::on_trade(
@@ -715,22 +715,26 @@ fn check_period_smoothing_factors() {
     let days = 24 * hours;
 
     let last_block = smoothing_from_period(1);
-    println!("Last Block: {}", last_block.to_bits());
+    println!("Last Block: {} (bits: {})", last_block, last_block.to_bits());
     assert_eq!(into_smoothing(LastBlock), last_block);
 
+    let short = smoothing_from_period(9);
+    println!("Short: {} (bits: {})", short, short.to_bits());
+    assert_eq!(into_smoothing(Short), short);
+
     let ten_minutes = smoothing_from_period(10 * minutes);
-    println!("Ten Minutes: {}", ten_minutes.to_bits());
+    println!("Ten Minutes: {} (bits: {})", ten_minutes, ten_minutes.to_bits());
     assert_eq!(into_smoothing(TenMinutes), ten_minutes);
 
     let hour = smoothing_from_period(hours);
-    println!("Hour: {}", hour.to_bits());
+    println!("Hour: {} (bits: {})", hour, hour.to_bits());
     assert_eq!(into_smoothing(Hour), hour);
 
     let day = smoothing_from_period(days);
-    println!("Day: {}", day.to_bits());
+    println!("Day: {} (bits: {})", day, day.to_bits());
     assert_eq!(into_smoothing(Day), day);
 
     let week = smoothing_from_period(7 * days);
-    println!("Week: {}", week.to_bits());
+    println!("Week: {} (bits: {})", week, week.to_bits());
     assert_eq!(into_smoothing(Week), week);
 }

@@ -16,6 +16,7 @@ use crate as otc;
 use crate::tests::mock::*;
 use crate::{Error, Event};
 use frame_support::{assert_noop, assert_ok};
+use orml_tokens::Error::BalanceTooLow;
 use orml_traits::NamedMultiReservableCurrency;
 use pretty_assertions::assert_eq;
 
@@ -97,7 +98,7 @@ fn place_order_should_throw_error_when_amount_is_higher_than_balance() {
         // Act
         assert_noop!(
             OTC::place_order(Origin::signed(ALICE), DAI, HDX, 20 * ONE, 100_000 * ONE, true),
-            Error::<Test>::InsufficientBalance
+            BalanceTooLow::<Test>
         );
     });
 }
@@ -108,7 +109,7 @@ fn place_order_should_throw_error_when_asset_out_is_not_registered() {
         // Act
         assert_noop!(
             OTC::place_order(Origin::signed(ALICE), DAI, DOGE, 20 * ONE, 100 * ONE, true),
-            Error::<Test>::InsufficientBalance
+            BalanceTooLow::<Test>
         );
     });
 }

@@ -19,10 +19,6 @@
 // It allows anyone to `place_order` by specifying a pair of assets (in and out), their respective amounts, and
 // whether the order is partially fillable. The order price is static and calculated as `amount_out / amount_in`.
 //
-// Users can `fill_order` by specifying the order_id, the asset they are filling and the amount.
-//
-// The owner can `cancel_order` at any time.
-//
 // ## Notes
 // The pallet implements a minimum order size as an alternative to storage fees. The amounts of an open order cannot
 // be lower than the existential deposit for the respective asset, multiplied by `ExistentialDepositMultiplier`.
@@ -41,7 +37,7 @@ use codec::MaxEncodedLen;
 use frame_support::{pallet_prelude::*, require_transactional};
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use hydradx_traits::Registry;
-use orml_traits::{GetByKey, MultiCurrency, MultiReservableCurrency, NamedMultiReservableCurrency};
+use orml_traits::{GetByKey, MultiCurrency, NamedMultiReservableCurrency};
 use sp_core::U256;
 use sp_runtime::{traits::One, DispatchError};
 use sp_std::{result, vec::Vec};
@@ -148,8 +144,6 @@ pub mod pallet {
     pub enum Error<T> {
         /// Asset does not exist in registry
         AssetNotRegistered,
-        /// Free balance is too low to place the order
-        InsufficientBalance,
         /// Order cannot be found
         OrderNotFound,
         /// Size of order ID exceeds the bound
@@ -187,7 +181,15 @@ pub mod pallet {
         /// - `amount_out`: Amount that the order is selling
         /// - `partially_fillable`: Flag indicating whether users can fill the order partially
         ///
-        /// Emits `Placed` event when successful.
+        /// Validations:
+        /// - asset_in must be registered
+        /// - amount_in must be higher than the existential deposit of asset_in multiplied by
+        ///   ExistentialDepositMultiplier
+        /// - amount_out must be higher than the existential deposit of asset_out multiplied by
+        ///   ExistentialDepositMultiplier
+        ///
+        /// Events:
+        /// - `Placed` event when successful.
         pub fn place_order(
             origin: OriginFor<T>,
             asset_in: T::AssetId,
@@ -208,10 +210,6 @@ pub mod pallet {
 
             // Validations
             ensure!(T::AssetRegistry::exists(order.asset_in), Error::<T>::AssetNotRegistered);
-            ensure!(
-                T::Currency::can_reserve(order.asset_out, &order.owner, amount_out),
-                Error::<T>::InsufficientBalance
-            );
             Self::validate_min_order_amount(order.asset_in, order.amount_in)?;
             Self::validate_min_order_amount(order.asset_out, amount_out)?;
 
@@ -241,7 +239,15 @@ pub mod pallet {
         /// - `order_id`: ID of the order
         /// - `amount_in`: Amount with which the order is being filled
         ///
-        /// Emits `PartiallyFilled` event when successful.
+        /// Validations:
+        /// - order must be partially_fillable
+        /// - after the partial_fill, the remaining order.amount_in must be higher than the existential deposit
+        ///   of asset_in multiplied by ExistentialDepositMultiplier
+        /// - after the partial_fill, the remaining order.amount_out must be higher than the existential deposit
+        ///   of asset_out multiplied by ExistentialDepositMultiplier
+        ///
+        /// Events:
+        /// `PartiallyFilled` event when successful.
         #[pallet::weight(<T as Config>::WeightInfo::partial_fill_order())]
         pub fn partial_fill_order(origin: OriginFor<T>, order_id: OrderId, amount_in: Balance) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -257,7 +263,10 @@ pub mod pallet {
                 let remaining_amount_out = Self::calculate_difference(order.amount_out, amount_out)?;
                 let remaining_amount_in = Self::calculate_difference(order.amount_in, amount_in)?;
 
-                Self::validate_partial_fill_order(order, remaining_amount_in, remaining_amount_out)?;
+                // Validations
+                ensure!(order.partially_fillable, Error::<T>::OrderNotPartiallyFillable);
+                Self::validate_min_order_amount(order.asset_out, remaining_amount_out)?;
+                Self::validate_min_order_amount(order.asset_in, remaining_amount_in)?;
 
                 Self::execute_order(order, &who, amount_in, amount_out)?;
                 order.amount_in = remaining_amount_in;
@@ -279,7 +288,8 @@ pub mod pallet {
         /// Parameters:
         /// - `order_id`: ID of the order
         ///
-        /// Emits `Filled` event when successful.
+        /// Events:
+        /// `Filled` event when successful.
         pub fn fill_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let order = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderNotFound)?;
@@ -304,11 +314,16 @@ pub mod pallet {
         /// - `asset`: Asset which is being filled
         /// - `amount`: Amount which is being filled
         ///
+        /// Validations:
+        /// - caller is order owner
+        ///
         /// Emits `Cancelled` event when successful.
         pub fn cancel_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
             let who = ensure_signed(origin)?;
             <Orders<T>>::try_mutate_exists(order_id, |maybe_order| -> DispatchResult {
                 let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
+
+                // Validations
                 ensure!(order.owner == who, Error::<T>::Forbidden);
 
                 T::Currency::unreserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, order.amount_out);
@@ -322,19 +337,6 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn validate_partial_fill_order(
-        order: &Order<T::AccountId, T::AssetId>,
-        remaining_amount_in: Balance,
-        remaining_amount_out: Balance,
-    ) -> DispatchResult {
-        ensure!(order.partially_fillable, Error::<T>::OrderNotPartiallyFillable);
-
-        Self::validate_min_order_amount(order.asset_out, remaining_amount_out)?;
-        Self::validate_min_order_amount(order.asset_in, remaining_amount_in)?;
-
-        Ok(())
-    }
-
     fn validate_min_order_amount(asset: T::AssetId, amount: Balance) -> DispatchResult {
         let min_amount = T::ExistentialDeposits::get(&asset)
             .checked_mul(T::ExistentialDepositMultiplier::get().into())

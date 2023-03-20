@@ -166,6 +166,25 @@ fn on_liquidity_changed_handler_should_work() {
 }
 
 #[test]
+fn price_should_be_determined_from_liquidity() {
+    new_test_ext().execute_with(|| {
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
+        assert_ok!(OnActivityHandler::<Test>::on_liquidity_changed(
+            SOURCE, HDX, DOT, 5, 1, 2_000_000, 1_000_000
+        ));
+        let expected = Price::new(2_000_000, 1_000_000);
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap().price, expected);
+
+        assert_eq!(get_accumulator_entry(SOURCE, (DOT, ACA)), None);
+        assert_ok!(OnActivityHandler::<Test>::on_trade(
+            SOURCE, DOT, ACA, 1234, 789, 5_000_000, 500
+        ));
+        let expected = Price::new(5_000_000, 500);
+        assert_eq!(get_accumulator_entry(SOURCE, (DOT, ACA)).unwrap().price, expected);
+    });
+}
+
+#[test]
 fn on_liquidity_changed_should_allow_zero_values() {
     let timestamp = 5;
     let (liquidity_a, liquidity_b) = (2_000, 1_000);

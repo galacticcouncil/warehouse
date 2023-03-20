@@ -131,12 +131,18 @@ fn on_trade_should_work() {
 #[test]
 fn on_trade_handler_should_work() {
     new_test_ext().execute_with(|| {
-        System::set_block_number(ORACLE_ENTRY_1.timestamp);
+        System::set_block_number(5);
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
         assert_ok!(OnActivityHandler::<Test>::on_trade(
             SOURCE, HDX, DOT, 1_000, 500, 2_000, 1_000
         ));
-        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(ORACLE_ENTRY_1));
+        let expected = OracleEntry {
+            price: Price::new(2_000, 1_000),
+            volume: Volume::from_a_in_b_out(1_000, 500),
+            liquidity: Liquidity::new(2_000, 1_000),
+            timestamp: 5,
+        };
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(expected));
     });
 }
 
@@ -156,6 +162,25 @@ fn on_liquidity_changed_handler_should_work() {
             SOURCE, HDX, DOT, 1_000, 500, 2_000, 1_000
         ));
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(no_volume_entry));
+    });
+}
+
+#[test]
+fn price_should_be_determined_from_liquidity() {
+    new_test_ext().execute_with(|| {
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
+        assert_ok!(OnActivityHandler::<Test>::on_liquidity_changed(
+            SOURCE, HDX, DOT, 5, 1, 2_000_000, 1_000_000
+        ));
+        let expected = Price::new(2_000_000, 1_000_000);
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap().price, expected);
+
+        assert_eq!(get_accumulator_entry(SOURCE, (DOT, ACA)), None);
+        assert_ok!(OnActivityHandler::<Test>::on_trade(
+            SOURCE, DOT, ACA, 1234, 789, 5_000_000, 500
+        ));
+        let expected = Price::new(5_000_000, 500);
+        assert_eq!(get_accumulator_entry(SOURCE, (DOT, ACA)).unwrap().price, expected);
     });
 }
 
@@ -319,13 +344,13 @@ fn oracle_volume_should_factor_in_asset_order() {
 
         let price_entry = get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap();
         let first_entry = OracleEntry {
-            price: Price::new(2_000_000, 1_000),
+            price: Price::new(2_000, 1),
             volume: Volume::from_a_in_b_out(2_000_000, 1_000),
             liquidity: (2_000, 1).into(),
             timestamp: 0,
         };
         let second_entry = OracleEntry {
-            price: Price::new(2_000_000, 1_000),
+            price: Price::new(2_000, 1),
             volume: Volume::from_a_out_b_in(2_000_000, 1_000),
             liquidity: (2_000, 1).into(),
             timestamp: 0,
@@ -562,7 +587,7 @@ fn get_entry_works() {
         EmaOracle::on_finalize(1);
         System::set_block_number(100);
         let expected = AggregatedEntry {
-            price: Price::new(1_000, 500),
+            price: Price::new(2_000, 1_000),
             volume: Volume::default(), // volume for new blocks is zero by default
             liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,
@@ -570,7 +595,7 @@ fn get_entry_works() {
         assert_eq!(EmaOracle::get_entry(HDX, DOT, LastBlock, SOURCE), Ok(expected));
 
         let expected_ten_min = AggregatedEntry {
-            price: Price::new(1_000, 500),
+            price: Price::new(2_000, 1_000),
             volume: Volume::from_a_in_b_out(141, 70), // volume oracle gets updated towards zero
             liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,
@@ -578,7 +603,7 @@ fn get_entry_works() {
         assert_eq!(EmaOracle::get_entry(HDX, DOT, TenMinutes, SOURCE), Ok(expected_ten_min));
 
         let expected_day = AggregatedEntry {
-            price: Price::new(1_000, 500),
+            price: Price::new(2_000, 1_000),
             volume: Volume::from_a_in_b_out(986, 493),
             liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,
@@ -586,7 +611,7 @@ fn get_entry_works() {
         assert_eq!(EmaOracle::get_entry(HDX, DOT, Day, SOURCE), Ok(expected_day));
 
         let expected_week = AggregatedEntry {
-            price: Price::new(1_000, 500),
+            price: Price::new(2_000, 1_000),
             volume: Volume::from_a_in_b_out(998, 499),
             liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,

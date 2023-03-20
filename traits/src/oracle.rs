@@ -30,6 +30,9 @@ where
 }
 
 /// Defines the different kinds of aggregation periods for oracles.
+///
+/// Note: Some of the oracles are named after certain periods of time.
+/// This description relies on the mapping of the enum to the internal implementation and can thus not be guaranteed.
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum OraclePeriod {
     /// The oracle data is from the last block, thus unaggregated.

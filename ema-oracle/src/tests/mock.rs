@@ -46,7 +46,7 @@ pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
 
 pub const ORACLE_ENTRY_1: OracleEntry<BlockNumber> = OracleEntry {
-    price: Price::new(1_000, 500),
+    price: Price::new(2_000, 1_000),
     volume: Volume {
         a_in: 1_000,
         b_out: 500,
@@ -57,7 +57,7 @@ pub const ORACLE_ENTRY_1: OracleEntry<BlockNumber> = OracleEntry {
     timestamp: 5,
 };
 pub const ORACLE_ENTRY_2: OracleEntry<BlockNumber> = OracleEntry {
-    price: Price::new(2_000, 2_000),
+    price: Price::new(4_000, 4_000),
     volume: Volume {
         a_in: 0,
         b_out: 0,

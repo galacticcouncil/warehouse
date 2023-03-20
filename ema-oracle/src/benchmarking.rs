@@ -56,7 +56,7 @@ benchmarks! {
         let (liquidity_asset_in, liquidity_asset_out) = (1_000_000_000_000_000, 2_000_000_000_000_000);
         assert_ok!(OnActivityHandler::<T>::on_trade(SOURCE, HDX, DOT, amount_in, amount_out, liquidity_asset_in, liquidity_asset_out));
         let entry = OracleEntry {
-            price: Price::from((amount_in, amount_out)),
+            price: Price::from((liquidity_asset_in, liquidity_asset_out)),
             volume: Volume::from_a_in_b_out(amount_in, amount_out),
             liquidity: Liquidity::new(liquidity_asset_in, liquidity_asset_out),
             timestamp: block_num,
@@ -88,7 +88,7 @@ benchmarks! {
 
         assert_ok!(OnActivityHandler::<T>::on_trade(SOURCE, HDX, DOT, amount_in, amount_out, liquidity_asset_in, liquidity_asset_out));
         let entry = OracleEntry {
-            price: Price::from((amount_in, amount_out)),
+            price: Price::from((liquidity_asset_in, liquidity_asset_out)),
             volume: Volume::from_a_in_b_out(amount_in, amount_out),
             liquidity: Liquidity::new(liquidity_asset_in, liquidity_asset_out),
             timestamp: block_num,
@@ -129,7 +129,7 @@ benchmarks! {
     }: { EmaOracle::<T>::on_finalize(block_num); }
     verify {
         let entry = OracleEntry {
-            price: Price::from((amount_in, amount_out)),
+            price: Price::from((liquidity_asset_in, liquidity_asset_out)),
             volume: Volume::from_a_in_b_out(amount_in, amount_out),
             liquidity: Liquidity::new(liquidity_asset_in, liquidity_asset_out),
             timestamp: block_num,
@@ -164,7 +164,7 @@ benchmarks! {
         frame_system::Pallet::<T>::set_block_number(block_num);
         EmaOracle::<T>::on_initialize(block_num);
         let entry = OracleEntry {
-            price: Price::from((amount_in, amount_out)),
+            price: Price::from((liquidity_asset_in, liquidity_asset_out)),
             volume: Volume::from_a_in_b_out(amount_in, amount_out),
             liquidity: Liquidity::new(liquidity_asset_in, liquidity_asset_out),
             timestamp: block_num,
@@ -214,7 +214,7 @@ benchmarks! {
         frame_system::Pallet::<T>::set_block_number(block_num);
         EmaOracle::<T>::on_initialize(block_num);
         let entry = OracleEntry {
-            price: Price::from((amount_a, amount_b)),
+            price: Price::from((liquidity_asset_a, liquidity_asset_b)),
             volume: Volume::from_a_in_b_out(amount_a, amount_b),
             liquidity: Liquidity::new(liquidity_asset_a, liquidity_asset_b),
             timestamp: block_num,
@@ -273,7 +273,7 @@ benchmarks! {
     }: { let _ = res.replace(EmaOracle::<T>::get_entry(asset_a, asset_b, period, SOURCE)); }
     verify {
         assert_eq!(*res.borrow(), Ok(AggregatedEntry {
-            price: Price::from((amount_in, amount_out)),
+            price: Price::from((liquidity_asset_in, liquidity_asset_out)),
             volume: Volume::default(),
             liquidity: Liquidity::new(liquidity_asset_in, liquidity_asset_out),
             oracle_age,

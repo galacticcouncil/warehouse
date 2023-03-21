@@ -211,7 +211,7 @@ fn resume_yield_farm_same_amm_farm_active_should_not_work() {
 fn resume_yield_farm_should_not_work_when_multiplier_is_lt_min_yield_farm_multiplier() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
-            let new_multiplier = FixedU128::from_inner(1_000_000_000_000_000 - 1);
+            let new_multiplier = MIN_YIELD_FARM_MULTIPLIER - FixedU128::from_inner(1_u128);
 
             //Arrange
             assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));

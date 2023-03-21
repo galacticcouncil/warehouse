@@ -175,7 +175,7 @@ fn redeposit_lp_shares_to_not_active_yield_farm_should_not_work() {
                 yield_farm_id,
                 BSX_TKN1_AMM,
                 1_000,
-                |_, _, _| { Ok(10_u128) }
+                |_, _, _| { Ok(1_000_u128) }
             ));
 
             // Redeposit to stopped farm.
@@ -270,7 +270,7 @@ fn redeposit_lp_shares_same_deposit_should_not_work() {
 }
 
 #[test]
-fn redeposit_lp_shares_should_not_work_when_valued_shares_is_zero() {
+fn redeposit_lp_shares_should_not_work_when_valued_shares_are_bellow_min_deposit() {
     let _ = predefined_test_ext_with_deposits().execute_with(|| {
         with_transaction(|| {
             assert_noop!(
@@ -278,9 +278,9 @@ fn redeposit_lp_shares_should_not_work_when_valued_shares_is_zero() {
                     EVE_FARM,
                     EVE_BSX_TKN1_YIELD_FARM_ID,
                     PREDEFINED_DEPOSIT_IDS[0],
-                    |_, _, _| { Ok(0_u128) }
+                    |_, _, _| { Ok(MIN_DEPOSIT - 1) }
                 ),
-                Error::<Test, Instance1>::ZeroValuedShares
+                Error::<Test, Instance1>::InvalidValuedShares
             );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

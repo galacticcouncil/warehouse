@@ -48,7 +48,7 @@ pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) min_deposit: Balance,
     // This include `active` and `stopped` yield farms.
     pub(super) live_yield_farms_count: u32,
-    // This include `active`, `stopped`, `deleted` - this count is decreased only if yield
+    // This include `active`, `stopped`, `terminated` - this count is decreased only if yield
     // farm is removed from storage.
     pub(super) total_yield_farms_count: u32,
     pub(super) price_adjustment: FixedU128,
@@ -109,7 +109,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
         Ok(())
     }
 
-    /// This function updates `yield_farms_count` when yield farm is deleted from global farm.
+    /// This function updates `yield_farms_count` when yield farm is terminated from global farm.
     /// This function should be called only when yield farm is removed from global farm.
     pub fn decrease_live_yield_farm_count(&mut self) -> Result<(), Error<T, I>> {
         //NOTE: only live count should change
@@ -124,7 +124,7 @@ impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {
 
     /// This function updates `yield_farms_count` when yield farm is removed from storage.
     /// This function should be called only if yield farm was removed from storage.
-    /// !!! DON'T call this function if yield farm is in stopped or deleted.
+    /// !!! DON'T call this function if yield farm is in stopped or terminated.
     pub fn decrease_total_yield_farm_count(&mut self) -> Result<(), Error<T, I>> {
         //NOTE: this counter is managed only by pallet so this sub should never fail.
         self.total_yield_farms_count = self
@@ -391,7 +391,7 @@ impl<T: Config<I>, I: 'static> YieldFarmEntry<T, I> {
 /// An enum whose variants represent the state of the yield or global farm.
 /// - `Active` - farm has full functionality. This state may be used for both farm types.
 /// - `Stopped` - only partial functionality of the farm is available to users. Farm can became
-/// `Active` again or can be `Deleted`. This state can be used only for yield farms.
+/// `Active` again or can be `Terminated`. This state can be used only for yield farms.
 /// - `Terminated` - farm is destroyed and it's waiting to be removed from the storage. This state can't be
 /// reverted and is available for both farm types.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]

@@ -148,7 +148,7 @@ fn update_yield_farm_multiplier_should_not_work_when_multiplier_is_lt_min_yield_
                     GC,
                     GC_FARM,
                     BSX_TKN1_AMM,
-                    FixedU128::from_inner(1_000_000_000_000_000 - 1)
+                    MIN_YIELD_FARM_MULTIPLIER - FixedU128::from_inner(1_u128),
                 ),
                 Error::<Test, Instance1>::InvalidMultiplier
             );

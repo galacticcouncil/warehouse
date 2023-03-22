@@ -786,12 +786,12 @@ fn sync_global_farm_should_not_update_farm_when_farm_is_not_active() {
 }
 
 #[test]
-fn sync_global_farm_should_not_update_farm_when_farm_has_no_shares() {
+fn sync_global_farm_should_only_update_updated_at_field_when_farm_has_no_shares() {
     {
-        let global_farm_0 = GlobalFarmData {
+        let global_farm_1 = GlobalFarmData {
             id: 1,
             owner: ALICE,
-            updated_at: 100,
+            updated_at: 200,
             total_shares_z: Balance::zero(),
             accumulated_rpz: FixedU128::from(5),
             reward_currency: BSX,
@@ -809,17 +809,17 @@ fn sync_global_farm_should_not_update_farm_when_farm_has_no_shares() {
             state: FarmState::Active,
         };
 
-        let mut global_farm = global_farm_0.clone();
+        let mut global_farm = global_farm_1.clone();
 
         new_test_ext().execute_with(|| {
-            let current_period = global_farm_0.updated_at + 100;
+            let current_period = 200;
             let r = with_transaction(|| {
                 TransactionOutcome::Commit(LiquidityMining::sync_global_farm(&mut global_farm, current_period))
             })
             .unwrap();
 
             assert_eq!(r, 0);
-            assert_eq!(global_farm, global_farm_0);
+            assert_eq!(global_farm, global_farm_1);
         });
     }
 }
@@ -1259,7 +1259,7 @@ fn sync_yield_farm_should_work() {
             387_u128,
             BSX,
             299_u128,
-            26_u64,
+            206_u64,
             0_u128,
         ),
         (
@@ -1620,9 +1620,9 @@ fn sync_yield_farm_should_work() {
 
             //Assert
             //
-            //NOTE: update in the same period should not happen and rpvs is used as starting value
-            //for rpz in this test.
-            let rpz = if current_period == yield_farm_updated_at || yield_farm_total_valued_shares.is_zero() {
+            //NOTE: update in the same period should happen only if farm is empty. RPVS is used as starting value
+            //for yield-farm's rpz in this test.
+            let rpz = if current_period == yield_farm_updated_at {
                 yield_farm_accumulated_rpvs
             } else {
                 global_farm_accumulated_rpz
@@ -1670,7 +1670,7 @@ fn sync_yield_farm_should_work() {
 }
 
 #[test]
-fn sync_yield_farm_should_not_update_when_yield_farm_is_not_acitve() {
+fn sync_yield_farm_should_not_update_when_yield_farm_is_not_active() {
     let global_farm_0 = GlobalFarmData {
         id: 1,
         owner: ALICE,
@@ -1751,7 +1751,8 @@ fn sync_yield_farm_should_not_update_when_yield_farm_is_not_acitve() {
 }
 
 #[test]
-fn sync_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
+
+fn sync_yield_farm_should_only_update_updated_at_field_when_farm_has_no_valued_shares() {
     let global_farm_0 = GlobalFarmData {
         id: 1,
         owner: ALICE,
@@ -1773,9 +1774,10 @@ fn sync_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
         state: FarmState::Active,
     };
 
-    let yield_farm_0 = YieldFarmData {
+    //after action
+    let yield_farm_1 = YieldFarmData {
         id: 2,
-        updated_at: 50,
+        updated_at: 1050,
         total_shares: 0,
         total_valued_shares: 0,
         accumulated_rpvs: FixedU128::from(3),
@@ -1790,17 +1792,17 @@ fn sync_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
     };
 
     let mut global_farm = global_farm_0.clone();
-    let mut yield_farm = yield_farm_0.clone();
+    let mut yield_farm = yield_farm_1.clone();
 
     new_test_ext().execute_with(|| {
-        let current_period = yield_farm_0.updated_at + global_farm_0.updated_at;
+        let current_period = 1050;
         assert_transact_ok!(LiquidityMining::sync_yield_farm(
             &mut yield_farm,
             &mut global_farm,
             current_period,
         ));
 
-        assert_eq!(yield_farm, yield_farm_0);
+        assert_eq!(yield_farm, yield_farm_1);
         assert_eq!(global_farm, global_farm_0);
     });
 }

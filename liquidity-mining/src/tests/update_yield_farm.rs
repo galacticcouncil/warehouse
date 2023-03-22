@@ -140,11 +140,16 @@ fn update_yield_farm_should_work() {
 }
 
 #[test]
-fn update_yield_farm_zero_multiplier_should_not_work() {
+fn update_yield_farm_multiplier_should_not_work_when_multiplier_is_lt_min_yield_farm_multiplier() {
     predefined_test_ext_with_deposits().execute_with(|| {
         let _ = with_transaction(|| {
             assert_noop!(
-                LiquidityMining::update_yield_farm_multiplier(GC, GC_FARM, BSX_TKN1_AMM, FixedU128::from(0_u128),),
+                LiquidityMining::update_yield_farm_multiplier(
+                    GC,
+                    GC_FARM,
+                    BSX_TKN1_AMM,
+                    MIN_YIELD_FARM_MULTIPLIER - FixedU128::from_inner(1_u128),
+                ),
                 Error::<Test, Instance1>::InvalidMultiplier
             );
 

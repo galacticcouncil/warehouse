@@ -58,29 +58,29 @@
 //! resetting loyalty factor for yield farm user is withdrawing from(other farm entries in the
 //! deposit are not affected). If deposit has no more farm entries, deposit is destroyed and LP
 //! shares are returned back to user.
-//! * `YieldFarm` -  can be in the 3 states: [`Active`, `Stopped`, `Deleted`]
+//! * `YieldFarm` -  can be in the 3 states: [`Active`, `Stopped`, `Terminated`]
 //!     * `Active` - liquidity mining is running, users are able to deposit, claim and withdraw LP
 //!     shares. `YieldFarm` is rewarded from `GlobalFarm` in this state.
 //!     * `Stopped` - liquidity mining is stopped. Users can claim and withdraw LP shares from the
 //!     farm. Users CAN'T deposit new LP shares to stopped farm. Stopped farm is not rewarded from the
 //!     `GlobalFarm`.
 //!     Note: stopped farm can be resumed or destroyed.
-//!     * `Deleted` - liquidity mining is ended. User's CAN'T deposit or claim rewards from
+//!     * `Terminated` - liquidity mining is ended. User's CAN'T deposit or claim rewards from
 //!     stopped farm. Users CAN only withdraw LP shares(without rewards).
-//!     `YieldFarm` must be stopped before it can be deleted. Deleted farm stays in the storage
-//!     until last farm's entry is withdrawn. Last withdrawn from yield farm will remove deleted
+//!     `YieldFarm` must be stopped before it can be terminated. Terminated farm stays in the storage
+//!     until last farm's entry is withdrawn. Last withdrawn from yield farm will remove terminated
 //!     farm from the storage.
-//!     Note: Deleted farm CAN'T be resumed.
-//! * `GlobalFarm` - can be in the 2 states: [`Active`, `Deleted`]
+//!     Note: Terminated farm CAN'T be resumed.
+//! * `GlobalFarm` - can be in the 2 states: [`Active`, `Terminated`]
 //!     * `Active` - liquidity mining program is running, new yield farms can be added to the
 //!     global farm.
-//!     * `Deleted` - liquidity mining program is ended. Yield farms can't be added to the global
+//!     * `Terminated` - liquidity mining program is ended. Yield farms can't be added to the global
 //!     farm. Global farm MUST be empty(all yield farms in the global farm must be destroyed)
 //!     before it can be destroyed. Destroying global farm transfer undistributed rewards to farm's
-//!     owner. Deleted global farm stay in the storage until all yield farms are removed from
+//!     owner. Terminated global farm stay in the storage until all yield farms are removed from
 //!     the storage. Last yield farm removal from storage triggers global farm removal from
 //!     storage.
-//!     Note: deleted global farm CAN'T be resumed.
+//!     Note: Terminated global farm CAN'T be resumed.
 //! * Pot - account holding all rewards allocated for all `YieldFarm`s from all `GlobalFarm`s.
 //!   User's rewards are transferred from `pot`'s account to user's accounts.
 //!
@@ -202,7 +202,7 @@ pub mod pallet {
         type MaxFarmEntriesPerDeposit: Get<u32>;
 
         /// Max number of yield farms can exist in global farm. This includes all farms in the
-        /// storage(active, stopped, deleted).
+        /// storage(active, stopped, terminated).
         #[pallet::constant]
         type MaxYieldFarmsPerGlobalFarm: Get<u32>;
 
@@ -634,7 +634,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         assets: Vec<T::AssetId>,
     ) -> Result<YieldFarmId, DispatchError> {
         ensure!(
-            multiplier.ge(&MIN_YIELD_FARM_MULTIPLIER),
+            multiplier >= MIN_YIELD_FARM_MULTIPLIER,
             Error::<T, I>::InvalidMultiplier
         );
 
@@ -702,7 +702,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
         multiplier: FarmMultiplier,
     ) -> Result<YieldFarmId, DispatchError> {
-        ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
+        ensure!(
+            multiplier >= MIN_YIELD_FARM_MULTIPLIER,
+            Error::<T, I>::InvalidMultiplier
+        );
 
         let yield_farm_id =
             Self::active_yield_farm(amm_pool_id.clone(), global_farm_id).ok_or(Error::<T, I>::YieldFarmNotFound)?;
@@ -850,7 +853,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amm_pool_id: T::AmmPoolId,
         multiplier: FarmMultiplier,
     ) -> Result<(), DispatchError> {
-        ensure!(!multiplier.is_zero(), Error::<T, I>::InvalidMultiplier);
+        ensure!(
+            multiplier >= MIN_YIELD_FARM_MULTIPLIER,
+            Error::<T, I>::InvalidMultiplier
+        );
 
         <ActiveYieldFarm<T, I>>::try_mutate(amm_pool_id.clone(), global_farm_id, |maybe_active_yield_farm_id| {
             ensure!(
@@ -882,12 +888,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                     let stopped_periods = current_period
                         .checked_sub(&yield_farm.updated_at)
                         .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidPeriod.into())?;
-
-                    //NOTE: this is special case. Without this if global-farm has only 1 stopped
-                    //yield-farm and resume_yield_farm() is called, global-farm's update won't happen because it
-                    //has zero shares Z and next global-farm's update will calulate rewards for
-                    //"empty"/stopped periods.
-                    global_farm.updated_at = current_period;
 
                     let new_stake_in_global_farm =
                         math::calculate_global_farm_shares(yield_farm.total_valued_shares, multiplier)
@@ -1003,7 +1003,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// - `yield_farm_id`: yield farm identifier depositing to.
     /// - `amm_pool_id`: identifier of the AMM pool.
     /// - `shares_amount`: amount of LP shares user want to deposit.
-    /// - `amm_pool_id`: identifier of the AMM pool.
     /// - `get_token_value_of_lp_shares`: callback function returning amount of
     /// `incentivized_asset` behind `lp_shares`.
     #[require_transactional]
@@ -1250,7 +1249,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                                 .defensive_ok_or::<Error<T, I>>(InconsistentStateError::InvalidValuedShares.into())?;
 
                             // yield farm's stake in global farm is set to `0` when farm is
-                            // stopped and yield farm have to be stopped before it's deleted so
+                            // stopped and yield farm have to be stopped before it's terminated so
                             // this update is only required for active farms.
                             if yield_farm.state.is_active() {
                                 let deposit_stake_in_global_farm =
@@ -1383,17 +1382,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         math::calculate_global_farm_shares(valued_shares, yield_farm.multiplier)
                             .map_err(|_| ArithmeticError::Overflow)?;
 
-                    // The deposit is the first one for this farm. We pretend that an update already
-                    // happened so the user is not rewarded for the time between creation and this
-                    // first deposit.
-                    // This also avoids the first user getting more rewards than the second because
-                    // of an imbalance in the share accumulation.
-                    if yield_farm.total_shares.is_zero() {
-                        yield_farm.updated_at = current_period;
-                        //This prevents yield farm claiming for periods when it was empty.
-                        yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
-                    }
-
                     yield_farm.total_shares = yield_farm
                         .total_shares
                         .checked_add(deposit.shares)
@@ -1403,15 +1391,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         .total_valued_shares
                         .checked_add(valued_shares)
                         .ok_or(ArithmeticError::Overflow)?;
-
-                    // The deposit is the first one for this farm. We pretend that an update already
-                    // happened so the user is not rewarded for the time between creation and this
-                    // first deposit.
-                    // This also avoids the first user getting more rewards than the second because
-                    // of an imbalance in the share accumulation.
-                    if global_farm.total_shares_z.is_zero() {
-                        global_farm.updated_at = current_period;
-                    }
 
                     global_farm.add_stake(deposit_stake_in_global_farm)?;
 
@@ -1525,6 +1504,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         // Nothing to update if there is no stake in the farm.
         if global_farm.total_shares_z.is_zero() {
+            global_farm.updated_at = current_period;
             return Ok(Zero::zero());
         }
 
@@ -1633,6 +1613,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         }
 
         if yield_farm.total_valued_shares.is_zero() {
+            //NOTE: This is important to prevent rewarding of the farms for emtpy periods and it
+            //also prevents the first user getting more rewards than the second user.
+            yield_farm.accumulated_rpz = global_farm.accumulated_rpz;
+            yield_farm.updated_at = current_period;
+
             return Ok(());
         }
 

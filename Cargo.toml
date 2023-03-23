@@ -19,6 +19,7 @@ members = [
 	"stableswap",
 	"test-utils",
 	"duster",
+	"otc",
 ]
 
 resolver = "2"

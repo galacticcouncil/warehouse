@@ -99,7 +99,7 @@ pub mod pallet {
         type Currency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Balance>
             + NamedMultiReservableCurrency<Self::AccountId, ReserveIdentifier = NamedReserveIdentifier>;
 
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type ExistentialDeposits: GetByKey<Self::AssetId, Balance>;
 
@@ -171,6 +171,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::place_order())]
         /// Create a new OTC order
         ///  
@@ -248,6 +249,7 @@ pub mod pallet {
         ///
         /// Events:
         /// `PartiallyFilled` event when successful.
+        #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::partial_fill_order())]
         pub fn partial_fill_order(origin: OriginFor<T>, order_id: OrderId, amount_in: Balance) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -282,7 +284,6 @@ pub mod pallet {
             })
         }
 
-        #[pallet::weight(<T as Config>::WeightInfo::fill_order())]
         /// Fill an OTC order (completely)
         ///  
         /// Parameters:
@@ -290,6 +291,9 @@ pub mod pallet {
         ///
         /// Events:
         /// `Filled` event when successful.
+        ///
+        #[pallet::call_index(2)]
+        #[pallet::weight(<T as Config>::WeightInfo::fill_order())]
         pub fn fill_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let order = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderNotFound)?;
@@ -306,7 +310,6 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(<T as Config>::WeightInfo::cancel_order())]
         /// Cancel an open OTC order
         ///  
         /// Parameters:
@@ -318,6 +321,8 @@ pub mod pallet {
         /// - caller is order owner
         ///
         /// Emits `Cancelled` event when successful.
+        #[pallet::call_index(3)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_order())]
         pub fn cancel_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
             let who = ensure_signed(origin)?;
             <Orders<T>>::try_mutate_exists(order_id, |maybe_order| -> DispatchResult {

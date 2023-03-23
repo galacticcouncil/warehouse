@@ -59,7 +59,7 @@ proptest! {
     ) {
         ExtBuilder::default().build().execute_with(|| {
             OTC::place_order(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 DAI,
                 HDX,
                 initial_amount_in,
@@ -69,7 +69,7 @@ proptest! {
 
             let initial_price = FixedU128::from(initial_amount_out) / FixedU128::from(initial_amount_in);
 
-            OTC::partial_fill_order(Origin::signed(BOB), 0, amount_fill).unwrap();
+            OTC::partial_fill_order(RuntimeOrigin::signed(BOB), 0, amount_fill).unwrap();
 
             let order = OTC::orders(0).unwrap();
             let new_price = FixedU128::from(order.amount_out) / FixedU128::from(order.amount_in);

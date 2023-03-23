@@ -131,12 +131,18 @@ fn on_trade_should_work() {
 #[test]
 fn on_trade_handler_should_work() {
     new_test_ext().execute_with(|| {
-        System::set_block_number(ORACLE_ENTRY_1.timestamp);
+        System::set_block_number(5);
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
         assert_ok!(OnActivityHandler::<Test>::on_trade(
             SOURCE, HDX, DOT, 1_000, 500, 2_000, 1_000
         ));
-        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(ORACLE_ENTRY_1));
+        let expected = OracleEntry {
+            price: Price::new(2_000, 1_000),
+            volume: Volume::from_a_in_b_out(1_000, 500),
+            liquidity: Liquidity::new(2_000, 1_000),
+            timestamp: 5,
+        };
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(expected));
     });
 }
 
@@ -146,7 +152,7 @@ fn on_liquidity_changed_handler_should_work() {
         let timestamp = 5;
         System::set_block_number(timestamp);
         let no_volume_entry = OracleEntry {
-            price: Price::new(1_000, 500),
+            price: Price::new(2_000, 1_000),
             volume: Volume::default(),
             liquidity: Liquidity::new(2_000, 1_000),
             timestamp,
@@ -156,6 +162,25 @@ fn on_liquidity_changed_handler_should_work() {
             SOURCE, HDX, DOT, 1_000, 500, 2_000, 1_000
         ));
         assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), Some(no_volume_entry));
+    });
+}
+
+#[test]
+fn price_should_be_determined_from_liquidity() {
+    new_test_ext().execute_with(|| {
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)), None);
+        assert_ok!(OnActivityHandler::<Test>::on_liquidity_changed(
+            SOURCE, HDX, DOT, 5, 1, 2_000_000, 1_000_000
+        ));
+        let expected = Price::new(2_000_000, 1_000_000);
+        assert_eq!(get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap().price, expected);
+
+        assert_eq!(get_accumulator_entry(SOURCE, (DOT, ACA)), None);
+        assert_ok!(OnActivityHandler::<Test>::on_trade(
+            SOURCE, DOT, ACA, 1234, 789, 5_000_000, 500
+        ));
+        let expected = Price::new(5_000_000, 500);
+        assert_eq!(get_accumulator_entry(SOURCE, (DOT, ACA)).unwrap().price, expected);
     });
 }
 
@@ -177,7 +202,7 @@ fn on_liquidity_changed_should_allow_zero_values() {
             liquidity_b,
         ));
         let only_liquidity_entry = OracleEntry {
-            price: Price::zero(),
+            price: Price::new(liquidity_a, liquidity_b),
             volume: Volume::default(),
             liquidity: (liquidity_a, liquidity_b).into(),
             timestamp,
@@ -197,7 +222,7 @@ fn on_liquidity_changed_should_allow_zero_values() {
             liquidity_b,
         ));
         let only_liquidity_entry = OracleEntry {
-            price: Price::zero(),
+            price: Price::new(liquidity_a, liquidity_b),
             volume: Volume::default(),
             liquidity: (liquidity_a, liquidity_b).into(),
             timestamp,
@@ -217,7 +242,7 @@ fn on_liquidity_changed_should_allow_zero_values() {
             Balance::zero(),
         ));
         let only_price_entry = OracleEntry {
-            price: Price::new(amount, amount),
+            price: Price::zero(),
             volume: Volume::default(),
             liquidity: (Balance::zero(), Balance::zero()).into(),
             timestamp,
@@ -258,7 +283,7 @@ fn on_trade_should_exclude_zero_values() {
 #[test]
 fn on_entry_should_error_on_accumulator_overflow() {
     new_test_ext().execute_with(|| {
-        let max_entries = MAX_UNIQUE_ENTRIES;
+        let max_entries = <<Test as crate::Config>::MaxUniqueEntries as Get<u32>>::get();
         // let's fill the accumulator
         for i in 0..max_entries {
             assert_ok!(OnActivityHandler::<Test>::on_trade(
@@ -319,13 +344,13 @@ fn oracle_volume_should_factor_in_asset_order() {
 
         let price_entry = get_accumulator_entry(SOURCE, (HDX, DOT)).unwrap();
         let first_entry = OracleEntry {
-            price: Price::new(2_000_000, 1_000),
+            price: Price::new(2_000, 1),
             volume: Volume::from_a_in_b_out(2_000_000, 1_000),
             liquidity: (2_000, 1).into(),
             timestamp: 0,
         };
         let second_entry = OracleEntry {
-            price: Price::new(2_000_000, 1_000),
+            price: Price::new(2_000, 1),
             volume: Volume::from_a_out_b_in(2_000_000, 1_000),
             liquidity: (2_000, 1).into(),
             timestamp: 0,
@@ -562,7 +587,7 @@ fn get_entry_works() {
         EmaOracle::on_finalize(1);
         System::set_block_number(100);
         let expected = AggregatedEntry {
-            price: Price::new(1_000, 500),
+            price: Price::new(2_000, 1_000),
             volume: Volume::default(), // volume for new blocks is zero by default
             liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,
@@ -570,7 +595,7 @@ fn get_entry_works() {
         assert_eq!(EmaOracle::get_entry(HDX, DOT, LastBlock, SOURCE), Ok(expected));
 
         let expected_ten_min = AggregatedEntry {
-            price: Price::new(1_000, 500),
+            price: Price::new(2_000, 1_000),
             volume: Volume::from_a_in_b_out(141, 70), // volume oracle gets updated towards zero
             liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,
@@ -578,7 +603,7 @@ fn get_entry_works() {
         assert_eq!(EmaOracle::get_entry(HDX, DOT, TenMinutes, SOURCE), Ok(expected_ten_min));
 
         let expected_day = AggregatedEntry {
-            price: Price::new(1_000, 500),
+            price: Price::new(2_000, 1_000),
             volume: Volume::from_a_in_b_out(986, 493),
             liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,
@@ -586,7 +611,7 @@ fn get_entry_works() {
         assert_eq!(EmaOracle::get_entry(HDX, DOT, Day, SOURCE), Ok(expected_day));
 
         let expected_week = AggregatedEntry {
-            price: Price::new(1_000, 500),
+            price: Price::new(2_000, 1_000),
             volume: Volume::from_a_in_b_out(998, 499),
             liquidity: Liquidity::new(2_000, 1_000),
             oracle_age: 98,
@@ -715,22 +740,26 @@ fn check_period_smoothing_factors() {
     let days = 24 * hours;
 
     let last_block = smoothing_from_period(1);
-    println!("Last Block: {}", last_block.to_bits());
+    println!("Last Block: {} (bits: {})", last_block, last_block.to_bits());
     assert_eq!(into_smoothing(LastBlock), last_block);
 
+    let short = smoothing_from_period(9);
+    println!("Short: {} (bits: {})", short, short.to_bits());
+    assert_eq!(into_smoothing(Short), short);
+
     let ten_minutes = smoothing_from_period(10 * minutes);
-    println!("Ten Minutes: {}", ten_minutes.to_bits());
+    println!("Ten Minutes: {} (bits: {})", ten_minutes, ten_minutes.to_bits());
     assert_eq!(into_smoothing(TenMinutes), ten_minutes);
 
     let hour = smoothing_from_period(hours);
-    println!("Hour: {}", hour.to_bits());
+    println!("Hour: {} (bits: {})", hour, hour.to_bits());
     assert_eq!(into_smoothing(Hour), hour);
 
     let day = smoothing_from_period(days);
-    println!("Day: {}", day.to_bits());
+    println!("Day: {} (bits: {})", day, day.to_bits());
     assert_eq!(into_smoothing(Day), day);
 
     let week = smoothing_from_period(7 * days);
-    println!("Week: {}", week.to_bits());
+    println!("Week: {} (bits: {})", week, week.to_bits());
     assert_eq!(into_smoothing(Week), week);
 }

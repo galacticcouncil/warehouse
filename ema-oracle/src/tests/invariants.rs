@@ -152,7 +152,7 @@ proptest! {
             let oracle_age: u32 = 98;
             System::set_block_number(u64::from(oracle_age) + 2);
             let smoothing = into_smoothing(LastBlock);
-            let price = Price::new(amount_hdx, amount_dot);
+            let price = Price::new(liquidity_hdx, liquidity_dot);
             let volume = (amount_hdx, amount_dot, 0, 0);
             let expected = AggregatedEntry {
                 price: iterated_price_ema(oracle_age, price, price, smoothing),

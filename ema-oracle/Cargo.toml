@@ -1,6 +1,6 @@
 [package]
 name = 'pallet-ema-oracle'
-version = '0.1.1'
+version = '0.1.0'
 description = 'Exponential moving average oracle for AMM pools'
 authors = ['GalacticCouncil']
 edition = '2021'
@@ -17,7 +17,7 @@ codec = { package = 'parity-scale-codec', version = '3.2.1', default-features = 
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "0309d06ff0b4d22d3d2db2352fe4f51fc5650f18", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "bcb75f1c2b4f1d859ff133ca663539c59d1ed910", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false, optional = true }

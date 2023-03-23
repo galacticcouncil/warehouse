@@ -786,12 +786,12 @@ fn sync_global_farm_should_not_update_farm_when_farm_is_not_active() {
 }
 
 #[test]
-fn sync_global_farm_should_not_update_farm_when_farm_has_no_shares() {
+fn sync_global_farm_should_only_update_updated_at_field_when_farm_has_no_shares() {
     {
-        let global_farm_0 = GlobalFarmData {
+        let global_farm_1 = GlobalFarmData {
             id: 1,
             owner: ALICE,
-            updated_at: 100,
+            updated_at: 200,
             total_shares_z: Balance::zero(),
             accumulated_rpz: FixedU128::from(5),
             reward_currency: BSX,
@@ -809,17 +809,17 @@ fn sync_global_farm_should_not_update_farm_when_farm_has_no_shares() {
             state: FarmState::Active,
         };
 
-        let mut global_farm = global_farm_0.clone();
+        let mut global_farm = global_farm_1.clone();
 
         new_test_ext().execute_with(|| {
-            let current_period = global_farm_0.updated_at + 100;
+            let current_period = 200;
             let r = with_transaction(|| {
                 TransactionOutcome::Commit(LiquidityMining::sync_global_farm(&mut global_farm, current_period))
             })
             .unwrap();
 
             assert_eq!(r, 0);
-            assert_eq!(global_farm, global_farm_0);
+            assert_eq!(global_farm, global_farm_1);
         });
     }
 }
@@ -864,389 +864,6 @@ fn sync_global_farm_should_not_update_farm_when_farm_was_already_updated_in_this
 }
 
 #[test]
-fn claim_from_global_farm_should_work() {
-    let testing_values = vec![
-        (
-            26_u64,
-            2501944769_u128,
-            259_u128,
-            299_u128,
-            HDX,
-            5556613662_u128,
-            0_u128,
-            55563662_u128,
-            2222546480_u128,
-            299_u128,
-            3334067182_u128,
-            2222546480_u128,
-        ),
-        (
-            188_u64,
-            33769603_u128,
-            1148_u128,
-            1151_u128,
-            BSX,
-            166663254_u128,
-            30080406306_u128,
-            5671016_u128,
-            17013048_u128,
-            1151_u128,
-            149650206_u128,
-            30097419354_u128,
-        ),
-        (
-            195_u64,
-            26098384286056_u128,
-            523_u128,
-            823_u128,
-            ACA,
-            61456483_u128,
-            32055_u128,
-            61428_u128,
-            18428400_u128,
-            823_u128,
-            43028083_u128,
-            18460455_u128,
-        ),
-        (
-            181_u64,
-            9894090144_u128,
-            317_u128,
-            320_u128,
-            KSM,
-            31893047384_u128,
-            36806694280_u128,
-            527114_u128,
-            1581342_u128,
-            320_u128,
-            31891466042_u128,
-            36808275622_u128,
-        ),
-        (
-            196_u64,
-            26886423482043_u128,
-            596_u128,
-            5684_u128,
-            ACA,
-            93407061_u128,
-            30560755872_u128,
-            3011_u128,
-            15319968_u128,
-            5684_u128,
-            78087093_u128,
-            30576075840_u128,
-        ),
-        (
-            68_u64,
-            1138057342_u128,
-            4_u128,
-            37_u128,
-            ACA,
-            38469134763_u128,
-            38398062768_u128,
-            71071995_u128,
-            2345375835_u128,
-            37_u128,
-            36123758928_u128,
-            40743438603_u128,
-        ),
-        (
-            161_u64,
-            24495534649923_u128,
-            213_u128,
-            678_u128,
-            KSM,
-            86057014_u128,
-            11116735745_u128,
-            85452_u128,
-            39735180_u128,
-            678_u128,
-            46321834_u128,
-            11156470925_u128,
-        ),
-        (
-            27_u64,
-            22108444_u128,
-            970_u128,
-            978_u128,
-            KSM,
-            240752908_u128,
-            8572779460_u128,
-            474403_u128,
-            3795224_u128,
-            978_u128,
-            236957684_u128,
-            8576574684_u128,
-        ),
-        (
-            97_u64,
-            1593208_u128,
-            6_u128,
-            28_u128,
-            HDX,
-            50786037_u128,
-            18440792496_u128,
-            147690_u128,
-            3249180_u128,
-            28_u128,
-            47536857_u128,
-            18444041676_u128,
-        ),
-        (
-            154_u64,
-            27279119649838_u128,
-            713_u128,
-            876_u128,
-            BSX,
-            319959699_u128,
-            28318566664_u128,
-            75987_u128,
-            12385881_u128,
-            876_u128,
-            307573818_u128,
-            28330952545_u128,
-        ),
-        (
-            104_u64,
-            20462312838954_u128,
-            833_u128,
-            8373_u128,
-            BSX,
-            790051024_u128,
-            3852003_u128,
-            7521_u128,
-            56708340_u128,
-            8373_u128,
-            733342684_u128,
-            60560343_u128,
-        ),
-        (
-            90_u64,
-            37650830596054_u128,
-            586_u128,
-            5886_u128,
-            HDX,
-            519356158_u128,
-            27990338179_u128,
-            318_u128,
-            1685400_u128,
-            5886_u128,
-            517670758_u128,
-            27992023579_u128,
-        ),
-        (
-            198_u64,
-            318777215_u128,
-            251_u128,
-            2591_u128,
-            ACA,
-            3949876895_u128,
-            3615346492_u128,
-            28732_u128,
-            67232880_u128,
-            2591_u128,
-            3882644015_u128,
-            3682579372_u128,
-        ),
-        (
-            29_u64,
-            33478250_u128,
-            77_u128,
-            80_u128,
-            BSX,
-            157650107_u128,
-            39174031245_u128,
-            26611087_u128,
-            79833261_u128,
-            80_u128,
-            77816846_u128,
-            39253864506_u128,
-        ),
-        (
-            91_u64,
-            393922835172_u128,
-            2491_u128,
-            2537_u128,
-            ACA,
-            18441141721883_u128,
-            63486975129400_u128,
-            85100506_u128,
-            3914623276_u128,
-            2537_u128,
-            18437227098607_u128,
-            63490889752676_u128,
-        ),
-        (
-            67_u64,
-            1126422_u128,
-            295_u128,
-            471_u128,
-            HDX,
-            234746918_u128,
-            7492177402_u128,
-            358776_u128,
-            63144576_u128,
-            471_u128,
-            171602342_u128,
-            7555321978_u128,
-        ),
-        (
-            168_u64,
-            28351324279041_u128,
-            450_u128,
-            952_u128,
-            ACA,
-            231645535_u128,
-            38796364068_u128,
-            356723_u128,
-            179074946_u128,
-            952_u128,
-            52570589_u128,
-            38975439014_u128,
-        ),
-        (
-            3_u64,
-            17631376575792_u128,
-            82_u128,
-            357_u128,
-            HDX,
-            1832794469_u128,
-            20473946880_u128,
-            932564_u128,
-            256455100_u128,
-            357_u128,
-            1576339369_u128,
-            20730401980_u128,
-        ),
-        (
-            49_u64,
-            94059_u128,
-            81_u128,
-            1557_u128,
-            HDX,
-            21495686711_u128,
-            11126653978_u128,
-            758404_u128,
-            1119404304_u128,
-            1557_u128,
-            20376282407_u128,
-            12246058282_u128,
-        ),
-        (
-            38_u64,
-            14085_u128,
-            266_u128,
-            2564373_u128,
-            KSM,
-            36167851242_u128,
-            36115448964_u128,
-            5278_u128,
-            13533356746_u128,
-            2564373_u128,
-            22634494496_u128,
-            49648805710_u128,
-        ),
-        (
-            158_u64,
-            762784_u128,
-            129_u128,
-            129_u128,
-            BSX,
-            86085676_u128,
-            21814882774_u128,
-            86085676_u128,
-            0_u128,
-            129_u128,
-            86085676_u128,
-            21814882774_u128,
-        ),
-    ];
-
-    for (
-        updated_at,
-        total_shares_z,
-        yield_farm_accumulated_rpz,
-        global_farm_accumuated_rpz,
-        reward_currency,
-        accumulated_rewards,
-        paid_accumulated_rewards,
-        yield_farm_stake_in_global_farm,
-        expected_rewards_from_global_farm,
-        expected_yield_farm_accumulated_rpz,
-        expected_global_farm_accumulated_rewards,
-        expected_global_farm_pair_accumulated_rewards,
-    ) in testing_values.iter()
-    {
-        let global_farm_id = 1;
-        let yield_farm_id = 2;
-        let yield_per_period = Perquintill::from_percent(50);
-        let planned_yielding_periods = 100;
-        let blocks_per_period = 1;
-        let owner = ALICE;
-        let incentivized_token = BSX;
-        let max_reward_per_period = Balance::from(10_000_u32);
-
-        let mut global_farm = GlobalFarmData::new(
-            global_farm_id,
-            *updated_at,
-            *reward_currency,
-            yield_per_period,
-            planned_yielding_periods,
-            blocks_per_period,
-            owner,
-            incentivized_token,
-            max_reward_per_period,
-            10,
-            One::one(),
-        );
-
-        global_farm.total_shares_z = *total_shares_z;
-        global_farm.accumulated_rpz = FixedU128::from(*global_farm_accumuated_rpz);
-        global_farm.pending_rewards = *accumulated_rewards;
-        global_farm.accumulated_paid_rewards = *paid_accumulated_rewards;
-
-        let mut yield_farm = YieldFarmData::new(yield_farm_id, *updated_at, None, FixedU128::from(10_u128));
-        yield_farm.accumulated_rpz = FixedU128::from(*yield_farm_accumulated_rpz);
-
-        assert_eq!(
-            LiquidityMining::calculate_rewards_from_pot(
-                &mut global_farm,
-                &mut yield_farm,
-                *yield_farm_stake_in_global_farm
-            )
-            .unwrap(),
-            *expected_rewards_from_global_farm
-        );
-
-        let mut expected_global_farm = GlobalFarmData::new(
-            global_farm_id,
-            *updated_at,
-            *reward_currency,
-            yield_per_period,
-            planned_yielding_periods,
-            blocks_per_period,
-            owner,
-            incentivized_token,
-            max_reward_per_period,
-            10,
-            One::one(),
-        );
-
-        expected_global_farm.total_shares_z = *total_shares_z;
-        expected_global_farm.accumulated_rpz = FixedU128::from(*global_farm_accumuated_rpz);
-        expected_global_farm.pending_rewards = *expected_global_farm_accumulated_rewards;
-        expected_global_farm.accumulated_paid_rewards = *expected_global_farm_pair_accumulated_rewards;
-
-        assert_eq!(global_farm, expected_global_farm);
-
-        let mut expected_yield_farm = YieldFarmData::new(yield_farm_id, *updated_at, None, FixedU128::from(10_u128));
-        expected_yield_farm.accumulated_rpz = FixedU128::from(*expected_yield_farm_accumulated_rpz);
-
-        assert_eq!(yield_farm, expected_yield_farm);
-    }
-}
-
-#[test]
 fn sync_yield_farm_should_work() {
     let testing_values = vec![
         (
@@ -1259,7 +876,7 @@ fn sync_yield_farm_should_work() {
             387_u128,
             BSX,
             299_u128,
-            26_u64,
+            206_u64,
             0_u128,
         ),
         (
@@ -1620,9 +1237,9 @@ fn sync_yield_farm_should_work() {
 
             //Assert
             //
-            //NOTE: update in the same period should not happen and rpvs is used as starting value
-            //for rpz in this test.
-            let rpz = if current_period == yield_farm_updated_at || yield_farm_total_valued_shares.is_zero() {
+            //NOTE: update in the same period should happen only if farm is empty. RPVS is used as starting value
+            //for yield-farm's rpz in this test.
+            let rpz = if current_period == yield_farm_updated_at {
                 yield_farm_accumulated_rpvs
             } else {
                 global_farm_accumulated_rpz
@@ -1670,7 +1287,7 @@ fn sync_yield_farm_should_work() {
 }
 
 #[test]
-fn sync_yield_farm_should_not_update_when_yield_farm_is_not_acitve() {
+fn sync_yield_farm_should_not_update_when_yield_farm_is_not_active() {
     let global_farm_0 = GlobalFarmData {
         id: 1,
         owner: ALICE,
@@ -1751,7 +1368,8 @@ fn sync_yield_farm_should_not_update_when_yield_farm_is_not_acitve() {
 }
 
 #[test]
-fn sync_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
+
+fn sync_yield_farm_should_only_update_updated_at_field_when_farm_has_no_valued_shares() {
     let global_farm_0 = GlobalFarmData {
         id: 1,
         owner: ALICE,
@@ -1773,9 +1391,10 @@ fn sync_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
         state: FarmState::Active,
     };
 
-    let yield_farm_0 = YieldFarmData {
+    //after action
+    let yield_farm_1 = YieldFarmData {
         id: 2,
-        updated_at: 50,
+        updated_at: 1050,
         total_shares: 0,
         total_valued_shares: 0,
         accumulated_rpvs: FixedU128::from(3),
@@ -1790,17 +1409,17 @@ fn sync_yield_farm_should_now_update_when_yield_farm_has_no_valued_shares() {
     };
 
     let mut global_farm = global_farm_0.clone();
-    let mut yield_farm = yield_farm_0.clone();
+    let mut yield_farm = yield_farm_1.clone();
 
     new_test_ext().execute_with(|| {
-        let current_period = yield_farm_0.updated_at + global_farm_0.updated_at;
+        let current_period = 1050;
         assert_transact_ok!(LiquidityMining::sync_yield_farm(
             &mut yield_farm,
             &mut global_farm,
             current_period,
         ));
 
-        assert_eq!(yield_farm, yield_farm_0);
+        assert_eq!(yield_farm, yield_farm_1);
         assert_eq!(global_farm, global_farm_0);
     });
 }

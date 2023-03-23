@@ -384,21 +384,21 @@ pub(crate) fn fractional_on_finalize_weight<T: Config>(max_entries: u32) -> Weig
 impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
     fn on_trade(
         source: Source,
-        asset_in: AssetId,
-        asset_out: AssetId,
-        amount_in: Balance,
-        amount_out: Balance,
+        asset_a: AssetId,
+        asset_b: AssetId,
+        amount_a: Balance,
+        amount_b: Balance,
         liquidity_a: Balance,
         liquidity_b: Balance,
     ) -> Result<Weight, (Weight, DispatchError)> {
         // We assume that zero values are not valid and can be ignored.
-        if liquidity_a.is_zero() || liquidity_b.is_zero() || amount_in.is_zero() || amount_out.is_zero() {
-            log::warn!(target: LOG_TARGET, "Neither liquidity nor amounts should be zero. Ignoring. Source: {source:?}, liquidity: ({liquidity_a},{liquidity_a}) , amount_in/_out: {amount_in}/{amount_out}");
+        if liquidity_a.is_zero() || liquidity_b.is_zero() || amount_a.is_zero() || amount_b.is_zero() {
+            log::warn!(target: LOG_TARGET, "Neither liquidity nor amounts should be zero. Source: {source:?}, liquidity: ({liquidity_a},{liquidity_b}), amounts: {amount_a}/{amount_b}");
             return Err((Self::on_trade_weight(), Error::<T>::OnTradeValueZero.into()));
         }
-        let price = determine_normalized_price(asset_in, asset_out, amount_in, amount_out);
-        let volume = determine_normalized_volume(asset_in, asset_out, amount_in, amount_out);
-        let liquidity = determine_normalized_liquidity(asset_in, asset_out, liquidity_a, liquidity_b);
+        let price = determine_normalized_price(asset_a, asset_b, liquidity_a, liquidity_b);
+        let volume = determine_normalized_volume(asset_a, asset_b, amount_a, amount_b);
+        let liquidity = determine_normalized_liquidity(asset_a, asset_b, liquidity_a, liquidity_b);
 
         let timestamp = T::BlockNumberProvider::current_block_number();
         let entry = OracleEntry {
@@ -407,7 +407,7 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
             liquidity,
             timestamp,
         };
-        Pallet::<T>::on_trade(source, ordered_pair(asset_in, asset_out), entry)
+        Pallet::<T>::on_trade(source, ordered_pair(asset_a, asset_b), entry)
     }
 
     fn on_trade_weight() -> Weight {
@@ -423,18 +423,21 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
         source: Source,
         asset_a: AssetId,
         asset_b: AssetId,
-        amount_a: Balance,
-        amount_b: Balance,
+        _amount_a: Balance,
+        _amount_b: Balance,
         liquidity_a: Balance,
         liquidity_b: Balance,
     ) -> Result<Weight, (Weight, DispatchError)> {
-        if liquidity_a.is_zero() || liquidity_b.is_zero() || amount_a.is_zero() || amount_b.is_zero() {
-            log::trace!(target: LOG_TARGET, "Liquidity or amounts are zero. Source: {source:?}, liquidity: ({liquidity_a},{liquidity_a}) , amount_a: {amount_a}, amount_b: {amount_b}");
+        if liquidity_a.is_zero() || liquidity_b.is_zero() {
+            log::trace!(
+                target: LOG_TARGET,
+                "Liquidity is zero. Source: {source:?}, liquidity: ({liquidity_a},{liquidity_a})"
+            );
         }
-        let price = if amount_a.is_zero() || amount_b.is_zero() {
+        let price = if liquidity_a.is_zero() || liquidity_b.is_zero() {
             Price::zero()
         } else {
-            determine_normalized_price(asset_a, asset_b, amount_a, amount_b)
+            determine_normalized_price(asset_a, asset_b, liquidity_a, liquidity_b)
         };
         let liquidity = determine_normalized_liquidity(asset_a, asset_b, liquidity_a, liquidity_b);
         let timestamp = T::BlockNumberProvider::current_block_number();

@@ -48,6 +48,7 @@ fn create_yield_farm_should_work() {
             ALICE_FARM,
             17_850,
             GlobalFarmData {
+                updated_at: 17,
                 live_yield_farms_count: 1,
                 total_yield_farms_count: 1,
                 ..get_predefined_global_farm_ins1(0)
@@ -78,6 +79,7 @@ fn create_yield_farm_should_work() {
             ALICE_FARM,
             17_850,
             GlobalFarmData {
+                updated_at: 17,
                 live_yield_farms_count: 2,
                 total_yield_farms_count: 2,
                 ..get_predefined_global_farm_ins1(0)
@@ -111,6 +113,7 @@ fn create_yield_farm_should_work() {
             ALICE_FARM,
             20_000,
             GlobalFarmData {
+                updated_at: 20,
                 live_yield_farms_count: 3,
                 total_yield_farms_count: 3,
                 ..get_predefined_global_farm_ins1(0)
@@ -144,6 +147,7 @@ fn create_yield_farm_should_work() {
             BOB_FARM,
             20_000,
             GlobalFarmData {
+                updated_at: 2,
                 live_yield_farms_count: 1,
                 total_yield_farms_count: 1,
                 ..get_predefined_global_farm_ins1(1)
@@ -300,7 +304,7 @@ fn add_yield_farm_invalid_multiplier_should_not_work() {
                 LiquidityMining::create_yield_farm(
                     ALICE,
                     ALICE_FARM,
-                    FixedU128::from_inner(1_000_000_000_000_000 - 1),
+                    MIN_YIELD_FARM_MULTIPLIER - FixedU128::from_inner(1_u128),
                     Some(LoyaltyCurve::default()),
                     BSX_HDX_AMM,
                     vec![BSX, HDX],

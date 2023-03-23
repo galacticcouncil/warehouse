@@ -206,3 +206,28 @@ fn resume_yield_farm_same_amm_farm_active_should_not_work() {
         });
     });
 }
+
+#[test]
+fn resume_yield_farm_should_not_work_when_multiplier_is_lt_min_yield_farm_multiplier() {
+    predefined_test_ext_with_deposits().execute_with(|| {
+        let _ = with_transaction(|| {
+            let new_multiplier = MIN_YIELD_FARM_MULTIPLIER - FixedU128::from_inner(1_u128);
+
+            //Arrange
+            assert_ok!(LiquidityMining::stop_yield_farm(GC, GC_FARM, BSX_TKN1_AMM));
+
+            //Act & assert
+            assert_noop!(
+                LiquidityMining::resume_yield_farm(
+                    GC,
+                    GC_FARM,
+                    GC_BSX_TKN1_YIELD_FARM_ID,
+                    BSX_TKN1_AMM,
+                    new_multiplier
+                ),
+                Error::<Test, Instance1>::InvalidMultiplier
+            );
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    });
+}

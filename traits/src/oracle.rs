@@ -19,6 +19,10 @@ impl<AssetId, Price> NativePriceOracle<AssetId, Price> for () {
     }
 }
 
+pub trait PriceOracle<AssetId, Price> {
+    fn price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod) -> Option<Price>;
+}
+
 pub struct AlwaysPriceOfOne;
 impl<AssetId, Price> NativePriceOracle<AssetId, Price> for AlwaysPriceOfOne
 where

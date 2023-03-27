@@ -280,7 +280,7 @@ fn redeposit_lp_shares_should_not_work_when_valued_shares_are_bellow_min_deposit
                     PREDEFINED_DEPOSIT_IDS[0],
                     |_, _, _| { Ok(MIN_DEPOSIT - 1) }
                 ),
-                Error::<Test, Instance1>::InvalidValuedShares
+                Error::<Test, Instance1>::IncorrectValuedShares
             );
 
             TransactionOutcome::Commit(DispatchResult::Ok(()))

@@ -294,7 +294,7 @@ pub mod pallet {
         ErrorGetAccountId,
 
         /// Value of deposited shares amount in reward currency is bellow min. limit.
-        InvalidValuedShares,
+        IncorrectValuedShares,
 
         /// `reward_currency` is not registered in asset registry.
         RewardCurrencyNotRegistered,
@@ -1376,11 +1376,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                         deposit.shares,
                     )?;
 
-                    //NOTE: this is not InconsistentStateError. This may happen if shares are
-                    //valued too low.
                     ensure!(
                         valued_shares >= global_farm.min_deposit,
-                        Error::<T, I>::InvalidValuedShares
+                        Error::<T, I>::IncorrectValuedShares
                     );
 
                     let deposit_stake_in_global_farm =

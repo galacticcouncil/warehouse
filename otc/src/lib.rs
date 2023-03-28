@@ -39,8 +39,11 @@ use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use hydradx_traits::Registry;
 use orml_traits::{GetByKey, MultiCurrency, NamedMultiReservableCurrency};
 use sp_core::U256;
-use sp_runtime::{traits::One, DispatchError};
-use sp_std::{result, vec::Vec};
+use sp_runtime::{
+    traits::{One, Zero},
+    DispatchError,
+};
+use sp_std::vec::Vec;
 #[cfg(test)]
 mod tests;
 
@@ -82,22 +85,18 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// Identifier for the class of asset.
-        type AssetId: Member
-            + Parameter
-            + Ord
-            + Default
-            + Copy
-            + HasCompact
-            + MaybeSerializeDeserialize
-            + MaxEncodedLen
-            + TypeInfo;
+        type AssetId: Member + Parameter + Copy + HasCompact + MaybeSerializeDeserialize + MaxEncodedLen;
 
         /// Asset Registry mechanism - used to check if asset is correctly registered in asset registry
         type AssetRegistry: Registry<Self::AssetId, Vec<u8>, Balance, DispatchError>;
 
         /// Named reservable multi currency
-        type Currency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Balance>
-            + NamedMultiReservableCurrency<Self::AccountId, ReserveIdentifier = NamedReserveIdentifier>;
+        type Currency: NamedMultiReservableCurrency<
+            Self::AccountId,
+            ReserveIdentifier = NamedReserveIdentifier,
+            CurrencyId = Self::AssetId,
+            Balance = Balance,
+        >;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -158,6 +157,8 @@ pub mod pallet {
         MathError,
         /// The caller does not have permission to complete the action
         Forbidden,
+        /// Reserved amount not sufficient.
+        InsufficientReservedAmount,
     }
 
     /// ID sequencer for Orders
@@ -171,7 +172,6 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(<T as Config>::WeightInfo::place_order())]
         /// Create a new OTC order
         ///  
         /// Parameters:
@@ -190,6 +190,7 @@ pub mod pallet {
         ///
         /// Events:
         /// - `Placed` event when successful.
+        #[pallet::weight(<T as Config>::WeightInfo::place_order())]
         pub fn place_order(
             origin: OriginFor<T>,
             asset_in: T::AssetId,
@@ -208,29 +209,28 @@ pub mod pallet {
                 partially_fillable,
             };
 
-            // Validations
             ensure!(T::AssetRegistry::exists(order.asset_in), Error::<T>::AssetNotRegistered);
-            Self::validate_min_order_amount(order.asset_in, order.amount_in)?;
-            Self::validate_min_order_amount(order.asset_out, amount_out)?;
+            Self::ensure_min_order_amount(order.asset_in, order.amount_in)?;
+            Self::ensure_min_order_amount(order.asset_out, amount_out)?;
 
-            let order_id = <NextOrderId<T>>::try_mutate(|next_id| -> result::Result<OrderId, DispatchError> {
-                let id = *next_id;
+            <NextOrderId<T>>::try_mutate(|next_id| -> DispatchResult {
+                let order_id = *next_id;
+
+                T::Currency::reserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, order.amount_out)?;
+                <Orders<T>>::insert(order_id, &order);
+
+                Self::deposit_event(Event::Placed {
+                    order_id,
+                    asset_in: order.asset_in,
+                    asset_out: order.asset_out,
+                    amount_in: order.amount_in,
+                    amount_out,
+                    partially_fillable: order.partially_fillable,
+                });
 
                 *next_id = next_id.checked_add(One::one()).ok_or(Error::<T>::OrderIdOutOfBound)?;
-                Ok(id)
-            })?;
-            T::Currency::reserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, order.amount_out)?;
-            <Orders<T>>::insert(order_id, &order);
-
-            Self::deposit_event(Event::Placed {
-                order_id,
-                asset_in: order.asset_in,
-                asset_out: order.asset_out,
-                amount_in: order.amount_in,
-                amount_out,
-                partially_fillable: order.partially_fillable,
-            });
-            Ok(())
+                Ok(())
+            })
         }
 
         /// Fill an OTC order (partially)
@@ -254,23 +254,21 @@ pub mod pallet {
             <Orders<T>>::try_mutate(order_id, |maybe_order| -> DispatchResult {
                 let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
 
+                ensure!(order.partially_fillable, Error::<T>::OrderNotPartiallyFillable);
+
                 let amount_out_calculation = U256::from(order.amount_out)
                     .checked_mul(U256::from(amount_in))
                     .and_then(|v| v.checked_div(U256::from(order.amount_in)))
                     .ok_or(Error::<T>::MathError)?;
                 let amount_out = Balance::try_from(amount_out_calculation).map_err(|_| Error::<T>::MathError)?;
 
-                let remaining_amount_out = Self::calculate_difference(order.amount_out, amount_out)?;
-                let remaining_amount_in = Self::calculate_difference(order.amount_in, amount_in)?;
+                order.amount_in = order.amount_in.checked_sub(amount_in).ok_or(Error::<T>::MathError)?;
+                order.amount_out = order.amount_out.checked_sub(amount_out).ok_or(Error::<T>::MathError)?;
 
-                // Validations
-                ensure!(order.partially_fillable, Error::<T>::OrderNotPartiallyFillable);
-                Self::validate_min_order_amount(order.asset_out, remaining_amount_out)?;
-                Self::validate_min_order_amount(order.asset_in, remaining_amount_in)?;
+                Self::ensure_min_order_amount(order.asset_out, order.amount_out)?;
+                Self::ensure_min_order_amount(order.asset_in, order.amount_in)?;
 
                 Self::execute_order(order, &who, amount_in, amount_out)?;
-                order.amount_in = remaining_amount_in;
-                order.amount_out = remaining_amount_out;
 
                 Self::deposit_event(Event::PartiallyFilled {
                     order_id,
@@ -282,7 +280,6 @@ pub mod pallet {
             })
         }
 
-        #[pallet::weight(<T as Config>::WeightInfo::fill_order())]
         /// Fill an OTC order (completely)
         ///  
         /// Parameters:
@@ -290,6 +287,7 @@ pub mod pallet {
         ///
         /// Events:
         /// `Filled` event when successful.
+        #[pallet::weight(<T as Config>::WeightInfo::fill_order())]
         pub fn fill_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let order = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderNotFound)?;
@@ -306,7 +304,6 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(<T as Config>::WeightInfo::cancel_order())]
         /// Cancel an open OTC order
         ///  
         /// Parameters:
@@ -318,15 +315,17 @@ pub mod pallet {
         /// - caller is order owner
         ///
         /// Emits `Cancelled` event when successful.
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_order())]
         pub fn cancel_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
             let who = ensure_signed(origin)?;
             <Orders<T>>::try_mutate_exists(order_id, |maybe_order| -> DispatchResult {
                 let order = maybe_order.as_mut().ok_or(Error::<T>::OrderNotFound)?;
 
-                // Validations
                 ensure!(order.owner == who, Error::<T>::Forbidden);
 
-                T::Currency::unreserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, order.amount_out);
+                let unreserved =
+                    T::Currency::unreserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, order.amount_out);
+                ensure!(unreserved.is_zero(), Error::<T>::InsufficientReservedAmount);
                 *maybe_order = None;
 
                 Self::deposit_event(Event::Cancelled { order_id });
@@ -337,7 +336,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn validate_min_order_amount(asset: T::AssetId, amount: Balance) -> DispatchResult {
+    fn ensure_min_order_amount(asset: T::AssetId, amount: Balance) -> DispatchResult {
         let min_amount = T::ExistentialDeposits::get(&asset)
             .checked_mul(T::ExistentialDepositMultiplier::get().into())
             .ok_or(Error::<T>::MathError)?;
@@ -345,10 +344,6 @@ impl<T: Config> Pallet<T> {
         ensure!(amount >= min_amount, Error::<T>::OrderAmountTooSmall);
 
         Ok(())
-    }
-
-    fn calculate_difference(amount_initial: Balance, amount_change: Balance) -> Result<Balance, Error<T>> {
-        amount_initial.checked_sub(amount_change).ok_or(Error::<T>::MathError)
     }
 
     #[require_transactional]
@@ -359,7 +354,8 @@ impl<T: Config> Pallet<T> {
         amount_out: Balance,
     ) -> DispatchResult {
         T::Currency::transfer(order.asset_in, who, &order.owner, amount_in)?;
-        T::Currency::unreserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, amount_out);
+        let unreserved = T::Currency::unreserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, amount_out);
+        ensure!(unreserved.is_zero(), Error::<T>::InsufficientReservedAmount);
         T::Currency::transfer(order.asset_out, &order.owner, who, amount_out)?;
 
         Ok(())

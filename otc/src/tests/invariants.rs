@@ -32,7 +32,7 @@ fn amount_fill(amount_in: Balance, amount_out: Balance) -> impl Strategy<Value =
     let max_remaining_amount_out = amount_in - MIN_ORDER_SIZE * amount_in / amount_out;
     let max_remaining_amount_in = amount_in - MIN_ORDER_SIZE;
 
-    ONE..min(max_remaining_amount_out, max_remaining_amount_in)
+    0..min(max_remaining_amount_out, max_remaining_amount_in)
 }
 
 prop_compose! {
@@ -67,12 +67,12 @@ proptest! {
                 true
             ).unwrap();
 
-            let initial_price = FixedU128::from(initial_amount_out) / FixedU128::from(initial_amount_in);
+            let initial_price = FixedU128::from_rational(initial_amount_out, initial_amount_in);
 
             OTC::partial_fill_order(Origin::signed(BOB), 0, amount_fill).unwrap();
 
             let order = OTC::orders(0).unwrap();
-            let new_price = FixedU128::from(order.amount_out) / FixedU128::from(order.amount_in);
+            let new_price = FixedU128::from_rational(order.amount_out, order.amount_in);
 
             assert_eq_approx!(
                 initial_price,

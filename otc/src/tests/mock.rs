@@ -64,6 +64,8 @@ frame_support::construct_runtime!(
 
 thread_local! {
     pub static REGISTERED_ASSETS: RefCell<HashMap<AssetId, u32>> = RefCell::new(HashMap::default());
+    pub static EXISTENTIAL_DEPOSIT: RefCell<HashMap<AssetId, u128>>= RefCell::new(HashMap::default());
+    pub static PRECISIONS: RefCell<HashMap<AssetId, u32>>= RefCell::new(HashMap::default());
 }
 
 parameter_types! {
@@ -72,8 +74,8 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-        ONE
+    pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
+        EXISTENTIAL_DEPOSIT.with(|v| *v.borrow().get(&currency_id).unwrap_or(&ONE))
     };
 }
 
@@ -171,13 +173,16 @@ impl Default for ExtBuilder {
         REGISTERED_ASSETS.with(|v| {
             v.borrow_mut().clear();
         });
+        EXISTENTIAL_DEPOSIT.with(|v| {
+            v.borrow_mut().clear();
+        });
 
         Self {
             endowed_accounts: vec![
-                (ALICE, HDX, 10_000 * ONE),
-                (BOB, HDX, 10_000 * ONE),
-                (ALICE, DAI, 100 * ONE),
-                (BOB, DAI, 100 * ONE),
+                (ALICE, HDX, 10_000),
+                (BOB, HDX, 10_000),
+                (ALICE, DAI, 100),
+                (BOB, DAI, 100),
             ],
             registered_assets: vec![HDX, DAI],
         }
@@ -185,6 +190,16 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
+    pub fn with_existential_deposit(self, asset_id: AssetId, precision: u32) -> Self {
+        EXISTENTIAL_DEPOSIT.with(|v| {
+            v.borrow_mut().insert(asset_id, 10u128.pow(precision));
+        });
+        PRECISIONS.with(|v| {
+            v.borrow_mut().insert(asset_id, precision);
+        });
+
+        self
+    }
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
@@ -201,7 +216,7 @@ impl ExtBuilder {
             balances: self
                 .endowed_accounts
                 .iter()
-                .flat_map(|(x, asset, amount)| vec![(*x, *asset, *amount)])
+                .flat_map(|(x, asset, amount)| vec![(*x, *asset, *amount * 10u128.pow(precision(*asset)))])
                 .collect(),
         }
         .assimilate_storage(&mut t)
@@ -223,4 +238,8 @@ thread_local! {
 
 pub fn expect_events(e: Vec<Event>) {
     test_utils::expect_events::<Event, Test>(e);
+}
+
+pub fn precision(asset_id: AssetId) -> u32 {
+    PRECISIONS.with(|v| *v.borrow().get(&asset_id).unwrap_or(&12))
 }

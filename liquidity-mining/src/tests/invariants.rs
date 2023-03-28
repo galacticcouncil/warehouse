@@ -214,21 +214,25 @@ proptest! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
-    fn calculate_rewards_from_pot(
+    fn claim_rewards_should_be_inclued_in_paid_rewards(
         (mut global_farm, mut yield_farm) in get_farms()
     ) {
         new_test_ext().execute_with(|| {
-            //NOTE: _0 - before action, _1 - after action
-            let sum_accumulated_rewards_0 = global_farm.pending_rewards
-                .checked_add(global_farm.accumulated_paid_rewards).unwrap();
+            let _ = with_transaction(|| {
+                //NOTE: _0 - before action, _1 - after action
+                let sum_accumulated_paid_rewards_0 = global_farm.pending_rewards
+                    .checked_add(global_farm.accumulated_paid_rewards).unwrap();
 
-            let stake_in_global_farm = yield_farm.total_valued_shares;  //multiplier == 1 => valued_share == z
-            let _ = LiquidityMining::calculate_rewards_from_pot(&mut global_farm, &mut yield_farm, stake_in_global_farm).unwrap();
+                let current_period = yield_farm.updated_at + 1;
+                LiquidityMining::sync_yield_farm(&mut yield_farm, &mut global_farm,current_period).unwrap();
 
-            let sum_accumulated_rewards_1 = global_farm.pending_rewards
-                .checked_add(global_farm.accumulated_paid_rewards).unwrap();
+                let sum_accumulated_paid_rewards_1 = global_farm.pending_rewards
+                    .checked_add(global_farm.accumulated_paid_rewards).unwrap();
 
-            assert_eq!(sum_accumulated_rewards_0, sum_accumulated_rewards_1);
+                assert_eq!(sum_accumulated_paid_rewards_0, sum_accumulated_paid_rewards_1);
+
+                TransactionOutcome::Commit(DispatchResult::Ok(()))
+            });
         });
     }
 }

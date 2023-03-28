@@ -115,7 +115,7 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::ArithmeticError;
 
 use hydra_dx_math::liquidity_mining as math;
-use hydradx_traits::{pools::DustRemovalAccountWhitelist, registry::Registry};
+use hydradx_traits::{liquidity_mining::PriceAdjustment, pools::DustRemovalAccountWhitelist, registry::Registry};
 use orml_traits::{GetByKey, MultiCurrency};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
@@ -212,6 +212,12 @@ pub mod pallet {
 
         /// Account whitelist manager to exclude pool accounts from dusting mechanism.
         type NonDustableWhitelistHandler: DustRemovalAccountWhitelist<Self::AccountId, Error = DispatchError>;
+
+        type PriceAdjustment: PriceAdjustment<
+            GlobalFarmData<Self, I>,
+            Error = DispatchError,
+            PriceAdjustment = FixedU128,
+        >;
     }
 
     #[pallet::error]
@@ -1526,9 +1532,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         // Calculate reward for all periods since last update capped by balance of `GlobalFarm`
         // account.
+        let price_adjustment = T::PriceAdjustment::get(global_farm).unwrap();
         let reward = math::calculate_global_farm_rewards(
             global_farm.total_shares_z,
-            global_farm.price_adjustment,
+            price_adjustment,
             global_farm.yield_per_period.into(),
             global_farm.max_reward_per_period,
             periods_since_last_update,

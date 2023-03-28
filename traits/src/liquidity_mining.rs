@@ -149,3 +149,30 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     /// Returns `Some(global_farm_id)` for given `deposit_id` and `yield_farm_id` or `None`.
     fn get_global_farm_id(deposit_id: DepositId, yield_farm_id: YieldFarmId) -> Option<u32>;
 }
+
+pub trait DefaultPriceAdjustment<Price> {
+    fn get_price_adjustment(&self) -> Price;
+}
+
+pub trait PriceAdjustment<GlobalFarm>
+where
+    GlobalFarm: DefaultPriceAdjustment<Self::PriceAdjustment>,
+{
+    type Error;
+    type PriceAdjustment;
+
+    /// Returns value of `PriceAdjustment` for given `GlobalFarm`.
+    fn get(global_farm: &GlobalFarm) -> Result<Self::PriceAdjustment, Self::Error>;
+}
+
+impl<GlobalFarm> PriceAdjustment<GlobalFarm> for ()
+where
+    GlobalFarm: DefaultPriceAdjustment<FixedU128>,
+{
+    type Error = sp_runtime::DispatchError;
+    type PriceAdjustment = FixedU128;
+
+    fn get(global_farm: &GlobalFarm) -> Result<Self::PriceAdjustment, Self::Error> {
+        Ok(global_farm.get_price_adjustment())
+    }
+}

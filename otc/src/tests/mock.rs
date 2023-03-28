@@ -75,7 +75,7 @@ parameter_types! {
 
 parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
-        EXISTENTIAL_DEPOSIT.with(|v| *v.borrow().get(&currency_id).unwrap_or(&ONE))
+        EXISTENTIAL_DEPOSIT.with(|v| *v.borrow().get(currency_id).unwrap_or(&ONE))
     };
 }
 
@@ -142,7 +142,7 @@ pub struct DummyRegistry<T>(sp_std::marker::PhantomData<T>);
 
 impl<T: Config> Registry<AssetId, Vec<u8>, Balance, DispatchError> for DummyRegistry<T> {
     fn exists(asset_id: AssetId) -> bool {
-        let asset = REGISTERED_ASSETS.with(|v| v.borrow().get(&(asset_id.into())).copied());
+        let asset = REGISTERED_ASSETS.with(|v| v.borrow().get(&(asset_id)).copied());
         matches!(asset, Some(_))
     }
 

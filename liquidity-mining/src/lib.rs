@@ -1532,7 +1532,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         // Calculate reward for all periods since last update capped by balance of `GlobalFarm`
         // account.
-        let price_adjustment = T::PriceAdjustment::get(global_farm).unwrap();
+        let price_adjustment = T::PriceAdjustment::get(global_farm)?;
         let reward = math::calculate_global_farm_rewards(
             global_farm.total_shares_z,
             price_adjustment,

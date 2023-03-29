@@ -150,14 +150,8 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
     fn get_global_farm_id(deposit_id: DepositId, yield_farm_id: YieldFarmId) -> Option<u32>;
 }
 
-pub trait DefaultPriceAdjustment<Price> {
-    fn get_price_adjustment(&self) -> Price;
-}
-
-pub trait PriceAdjustment<GlobalFarm>
-where
-    GlobalFarm: DefaultPriceAdjustment<Self::PriceAdjustment>,
-{
+/// Implementers of this trait provide `price_adjustment` for given `GlobalFarm`.
+pub trait PriceAdjustment<GlobalFarm> {
     type Error;
     type PriceAdjustment;
 
@@ -165,6 +159,12 @@ where
     fn get(global_farm: &GlobalFarm) -> Result<Self::PriceAdjustment, Self::Error>;
 }
 
+/// Implementers of this trait provide `price_adjustment` from `self`.
+pub trait DefaultPriceAdjustment<Price> {
+    fn get_price_adjustment(&self) -> Price;
+}
+
+/// Default implementation of PriceAdjustment trait that returns value from `GlobalFarm`.
 impl<GlobalFarm> PriceAdjustment<GlobalFarm> for ()
 where
     GlobalFarm: DefaultPriceAdjustment<FixedU128>,

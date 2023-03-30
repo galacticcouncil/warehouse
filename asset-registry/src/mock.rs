@@ -27,7 +27,7 @@ use sp_runtime::{
 
 use frame_support::traits::{Everything, GenesisBuild};
 
-use polkadot_xcm::v0::MultiLocation;
+use polkadot_xcm::v3::MultiLocation;
 
 use crate::{self as asset_registry, Config};
 
@@ -92,7 +92,7 @@ pub struct AssetLocation(pub MultiLocation);
 
 impl Default for AssetLocation {
     fn default() -> Self {
-        AssetLocation(MultiLocation::Null)
+        AssetLocation(MultiLocation::default())
     }
 }
 

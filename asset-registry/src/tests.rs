@@ -16,13 +16,14 @@
 // limitations under the License.
 
 use super::Error;
+use crate::mock::AssetId as RegistryAssetId;
 use crate::mock::*;
 use crate::types::{AssetDetails, AssetMetadata, AssetType, Metadata};
 use crate::Event;
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok, BoundedVec};
 use orml_traits::GetByKey;
-use polkadot_xcm::v0::{Junction::*, MultiLocation::*};
+use polkadot_xcm::v3::prelude::*;
 use sp_std::convert::TryInto;
 
 #[test]
@@ -145,12 +146,12 @@ fn location_mapping_works() {
             ed,
             None,
         ));
-        let asset_id: AssetId =
+        let asset_id: RegistryAssetId =
             AssetRegistryPallet::get_or_create_asset(b"HDX".to_vec(), AssetType::Token, ed, None).unwrap();
 
         crate::Assets::<Test>::insert(
             asset_id,
-            AssetDetails::<AssetId, Balance, BoundedVec<u8, RegistryStringLimit>> {
+            AssetDetails::<RegistryAssetId, Balance, BoundedVec<u8, RegistryStringLimit>> {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: ed,
@@ -158,11 +159,8 @@ fn location_mapping_works() {
             },
         );
 
-        let asset_location = AssetLocation(X3(
-            Parent,
-            Parachain(200),
-            GeneralKey(asset_id.encode().try_into().unwrap()),
-        ));
+        let key = Junction::from(BoundedVec::try_from(asset_id.encode()).unwrap());
+        let asset_location = AssetLocation(MultiLocation::new(0, X2(Parachain(200), key)));
 
         assert_ok!(AssetRegistryPallet::set_location(
             RuntimeOrigin::root(),
@@ -318,9 +316,9 @@ fn update_asset() {
     new_test_ext().execute_with(|| {
         let ed = 1_000_000u128;
 
-        let btc_asset_id: AssetId =
+        let btc_asset_id: RegistryAssetId =
             AssetRegistryPallet::get_or_create_asset(b"BTC".to_vec(), AssetType::Token, ed, None).unwrap();
-        let usd_asset_id: AssetId =
+        let usd_asset_id: RegistryAssetId =
             AssetRegistryPallet::get_or_create_asset(b"USD".to_vec(), AssetType::Token, ed, None).unwrap();
 
         let next_asset_id = AssetRegistryPallet::next_asset_id().unwrap();
@@ -575,7 +573,7 @@ fn register_asset_should_fail_when_provided_asset_is_outside_reserved_range() {
 #[test]
 fn register_asset_should_work_when_metadata_is_provided() {
     ExtBuilder::default().build().execute_with(|| {
-        let asset_id: AssetId = 10;
+        let asset_id: RegistryAssetId = 10;
         assert_ok!(AssetRegistryPallet::register(
             RuntimeOrigin::root(),
             b"asset_id".to_vec(),
@@ -614,13 +612,10 @@ fn register_asset_should_work_when_metadata_is_provided() {
 #[test]
 fn register_asset_should_work_when_location_is_provided() {
     ExtBuilder::default().build().execute_with(|| {
-        let asset_id: AssetId = 10;
+        let asset_id: RegistryAssetId = 10;
 
-        let asset_location = AssetLocation(X3(
-            Parent,
-            Parachain(200),
-            GeneralKey(asset_id.encode().try_into().unwrap()),
-        ));
+        let key = Junction::from(BoundedVec::try_from(asset_id.encode()).unwrap());
+        let asset_location = AssetLocation(MultiLocation::new(0, X2(Parachain(200), key)));
 
         assert_ok!(AssetRegistryPallet::register(
             RuntimeOrigin::root(),
@@ -655,13 +650,10 @@ fn register_asset_should_work_when_location_is_provided() {
 #[test]
 fn register_asset_should_work_when_all_optional_are_provided() {
     ExtBuilder::default().build().execute_with(|| {
-        let asset_id: AssetId = 10;
+        let asset_id: RegistryAssetId = 10;
 
-        let asset_location = AssetLocation(X3(
-            Parent,
-            Parachain(200),
-            GeneralKey(asset_id.encode().try_into().unwrap()),
-        ));
+        let key = Junction::from(BoundedVec::try_from(asset_id.encode()).unwrap());
+        let asset_location = AssetLocation(MultiLocation::new(0, X2(Parachain(200), key)));
 
         assert_ok!(AssetRegistryPallet::register(
             RuntimeOrigin::root(),

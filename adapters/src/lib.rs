@@ -17,11 +17,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::weights::WeightToFee;
+use frame_support::weights::{Weight, WeightToFee};
 use hydradx_traits::NativePriceOracle;
 use pallet_transaction_multi_payment::{DepositFee, TransactionMultiPaymentDataProvider};
-use polkadot_xcm::latest::prelude::*;
-use polkadot_xcm::latest::Weight;
+use polkadot_xcm::v3::prelude::*;
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, Convert, Saturating, Zero},
     FixedPointNumber, FixedPointOperand, SaturatedConversion,
@@ -129,7 +128,7 @@ impl<
             weight, payment
         );
         let (asset_loc, price) = self.get_asset_and_price(&payment).ok_or(XcmError::AssetNotFound)?;
-        let fee = ConvertWeightToFee::weight_to_fee(&frame_support::weights::Weight::from_ref_time(weight));
+        let fee = ConvertWeightToFee::weight_to_fee(&weight);
         let converted_fee = price.checked_mul_int(fee).ok_or(XcmError::Overflow)?;
         let amount: u128 = converted_fee.try_into().map_err(|_| XcmError::Overflow)?;
         let required = (Concrete(asset_loc.clone()), amount).into();
@@ -153,7 +152,7 @@ impl<
         );
         let weight = weight.min(self.weight);
         self.weight -= weight; // Will not underflow because of `min()` above.
-        let fee = ConvertWeightToFee::weight_to_fee(&frame_support::weights::Weight::from_ref_time(weight));
+        let fee = ConvertWeightToFee::weight_to_fee(&weight);
         if let Some(((asset_loc, price), amount)) = self.paid_assets.iter_mut().next() {
             let converted_fee: u128 = price.saturating_mul_int(fee).saturated_into();
             let refund = converted_fee.min(*amount);

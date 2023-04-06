@@ -18,8 +18,12 @@
 use super::*;
 use crate::tests::test_ext::new_test_ext;
 use pretty_assertions::assert_eq;
-use proptest::prelude::*;
+use proptest::{
+    prelude::*,
+    test_runner::{Config, TestRunner},
+};
 use sp_arithmetic::traits::{CheckedAdd, CheckedMul};
+use std::{cell::RefCell, collections::HashMap};
 
 const ONE: Balance = 1_000_000_000_000;
 const TOLERANCE: Balance = 1_000;
@@ -210,21 +214,25 @@ proptest! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1_000))]
     #[test]
-    fn calculate_rewards_from_pot(
+    fn claim_rewards_should_be_inclued_in_paid_rewards(
         (mut global_farm, mut yield_farm) in get_farms()
     ) {
         new_test_ext().execute_with(|| {
-            //NOTE: _0 - before action, _1 - after action
-            let sum_accumulated_rewards_0 = global_farm.pending_rewards
-                .checked_add(global_farm.accumulated_paid_rewards).unwrap();
+            let _ = with_transaction(|| {
+                //NOTE: _0 - before action, _1 - after action
+                let sum_accumulated_paid_rewards_0 = global_farm.pending_rewards
+                    .checked_add(global_farm.accumulated_paid_rewards).unwrap();
 
-            let stake_in_global_farm = yield_farm.total_valued_shares;  //multiplier == 1 => valued_share == z
-            let _ = LiquidityMining::calculate_rewards_from_pot(&mut global_farm, &mut yield_farm, stake_in_global_farm).unwrap();
+                let current_period = yield_farm.updated_at + 1;
+                LiquidityMining::sync_yield_farm(&mut yield_farm, &mut global_farm,current_period).unwrap();
 
-            let sum_accumulated_rewards_1 = global_farm.pending_rewards
-                .checked_add(global_farm.accumulated_paid_rewards).unwrap();
+                let sum_accumulated_paid_rewards_1 = global_farm.pending_rewards
+                    .checked_add(global_farm.accumulated_paid_rewards).unwrap();
 
-            assert_eq!(sum_accumulated_rewards_0, sum_accumulated_rewards_1);
+                assert_eq!(sum_accumulated_paid_rewards_0, sum_accumulated_paid_rewards_1);
+
+                TransactionOutcome::Commit(DispatchResult::Ok(()))
+            });
         });
     }
 }
@@ -324,4 +332,557 @@ proptest! {
             });
         });
     }
+}
+
+#[derive(Clone)]
+pub struct InvTestGFarm {
+    id: GlobalFarmId,
+    total_rewards: Balance,
+    reward_currency: AssetId,
+    yield_farms: Vec<(YieldFarmId, AccountId, Vec<AssetId>)>,
+}
+
+//NOTE: Variables in this block are valid only if creation order in `invariants_externalities` won't change.
+thread_local! {
+    pub static G_FARMS: RefCell<Vec<InvTestGFarm>> = RefCell::new(vec![
+        InvTestGFarm {
+            id: 1,
+            total_rewards: 115_000_000 * ONE,
+            reward_currency: BSX,
+            yield_farms: vec![
+                (4, BSX_TKN1_AMM, vec![BSX, TKN1]),
+                (5, BSX_TKN2_AMM, vec![BSX, TKN2])
+            ]
+        },
+        InvTestGFarm {
+            id: 2,
+            total_rewards: 1_000_000_000 * ONE,
+            reward_currency: BSX,
+            yield_farms: vec![
+                (6, BSX_TKN1_AMM, vec![BSX, TKN1]),
+                (7, BSX_TKN2_AMM, vec![BSX, TKN2])
+            ]
+        },
+        InvTestGFarm {
+            id: 3,
+            //NOTE: `total_rewards` is intentionally small. This represents asses with fewer dec. places.
+            total_rewards: 100_000_000_000_000,
+            reward_currency: TKN1,
+            yield_farms: vec![
+                (8, BSX_TKN1_AMM, vec![BSX, TKN1]),
+                (9, BSX_TKN2_AMM, vec![BSX, TKN2])
+            ]
+        }
+    ])
+}
+
+pub fn invariants_externalities() -> sp_io::TestExternalities {
+    let mut ext = ExtBuilder::default().build();
+
+    ext.execute_with(|| {
+        let _ = with_transaction(|| {
+            //global-farms:
+            assert_ok!(LiquidityMining::create_global_farm(
+                G_FARMS.with(|v| v.borrow()[0].total_rewards),
+                302_400,
+                1,
+                BSX,
+                G_FARMS.with(|v| v.borrow()[0].reward_currency),
+                GC,
+                Perquintill::from_rational(152_207_001_522, FixedU128::DIV), //apr 80%
+                1_000,
+                FixedU128::one()
+            ));
+
+            assert_ok!(LiquidityMining::create_global_farm(
+                G_FARMS.with(|v| v.borrow()[1].total_rewards),
+                500_000,
+                1,
+                BSX,
+                G_FARMS.with(|v| v.borrow()[1].reward_currency),
+                GC,
+                Perquintill::from_rational(951_293_759_512, FixedU128::DIV), //apr 50%
+                1_000,
+                FixedU128::one()
+            ));
+
+            assert_ok!(LiquidityMining::create_global_farm(
+                G_FARMS.with(|v| v.borrow()[2].total_rewards),
+                50_000,
+                1,
+                BSX,
+                G_FARMS.with(|v| v.borrow()[2].reward_currency),
+                GC,
+                Perquintill::from_rational(9_512_937_595, FixedU128::DIV), //apr 5%
+                1_000,
+                FixedU128::from_float(0.5_f64)
+            ));
+
+            //yield-farms
+            let g_farm = G_FARMS.with(|v| v.borrow()[0].clone());
+            assert_ok!(LiquidityMining::create_yield_farm(
+                GC,
+                g_farm.id,
+                FixedU128::one(),
+                Some(LoyaltyCurve::default()),
+                g_farm.yield_farms[0].1,
+                g_farm.yield_farms[0].2.clone(),
+            ));
+
+            assert_ok!(LiquidityMining::create_yield_farm(
+                GC,
+                g_farm.id,
+                FixedU128::one(),
+                None,
+                g_farm.yield_farms[1].1,
+                g_farm.yield_farms[1].2.clone(),
+            ));
+
+            let g_farm = G_FARMS.with(|v| v.borrow()[1].clone());
+            assert_ok!(LiquidityMining::create_yield_farm(
+                GC,
+                g_farm.id,
+                FixedU128::one(),
+                Some(LoyaltyCurve::default()),
+                g_farm.yield_farms[0].1,
+                g_farm.yield_farms[0].2.clone(),
+            ));
+
+            assert_ok!(LiquidityMining::create_yield_farm(
+                GC,
+                g_farm.id,
+                FixedU128::from_float(1.5_f64),
+                None,
+                g_farm.yield_farms[1].1,
+                g_farm.yield_farms[1].2.clone(),
+            ));
+
+            let g_farm = G_FARMS.with(|v| v.borrow()[2].clone());
+            assert_ok!(LiquidityMining::create_yield_farm(
+                GC,
+                g_farm.id,
+                FixedU128::one(),
+                Some(LoyaltyCurve::default()),
+                g_farm.yield_farms[0].1,
+                g_farm.yield_farms[0].2.clone(),
+            ));
+
+            assert_ok!(LiquidityMining::create_yield_farm(
+                GC,
+                g_farm.id,
+                FixedU128::from_float(0.5_f64),
+                Some(LoyaltyCurve::default()),
+                g_farm.yield_farms[1].1,
+                g_farm.yield_farms[1].2.clone(),
+            ));
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    });
+
+    ext
+}
+
+#[derive(Debug, Clone)]
+struct Deposit {
+    global_farm_id: GlobalFarmId,
+    yield_farm_id: YieldFarmId,
+    amm_pool_id: AccountId,
+    shares: Balance,
+    valued_shares: Balance,
+}
+
+prop_compose! {
+    fn arb_deposit()(
+        shares in 1_000 * ONE..1_000_000 * ONE,
+        valued_shares in 1..10_000_000 * ONE,
+        g_idx in 0..3_usize,
+        y_idx in 0..2_usize,
+    ) -> Deposit {
+        let g_farm = G_FARMS.with(|v| v.borrow()[g_idx].clone());
+        let y_farm = &g_farm.yield_farms[y_idx];
+
+        Deposit {global_farm_id: g_farm.id,yield_farm_id: y_farm.0, amm_pool_id: y_farm.1, shares, valued_shares}
+    }
+}
+
+#[test]
+//https://www.notion.so/Liquidity-mining-spec-b30ccfe470a74173b82c3702b1e8fca1#87868f45e4d04ecb92374c5f795a493d
+//
+//For each g\ \in\ GlobalFarms
+//total\_rewards_g = Balance_g + accumulated\_paid\_rewards_g +\ pending\_rewards_g
+//where
+//total\_rewards_g = max\_reward\_per\_period\ *\  planned\_yielding\_periods
+fn invariant_1() {
+    //Number of sucessfull test cases that must execute for the test as a whole to pass.
+    let successfull_cases = 1_000;
+    //Number of blocks added to current block number in each test case run. This number should be
+    //reasonable smaller than total of runned test to make sure lot of claims is executed and
+    //multiple claims for same deposit to happen.
+    let blocks_offset_range = 1..10_u64;
+    //Index of deposit in `deposit` vec. This idx is used in each test case run and execute claim
+    //if deposit exits.
+
+    let deposit_idx_range = 0..500_usize;
+
+    invariants_externalities().execute_with(|| {
+        let mut runner = TestRunner::new(Config {
+            cases: successfull_cases,
+            source_file: Some("liquidity-mining/src/tests/invariants.rs"),
+            test_name: Some("invariant_1"),
+            ..Config::default()
+        });
+        let deposits: RefCell<Vec<Deposit>> = RefCell::new(Vec::new());
+
+        runner
+            .run(
+                &(arb_deposit(), blocks_offset_range, deposit_idx_range),
+                |(d, blocks_offset, deposit_idx)| {
+                    deposits.borrow_mut().push(d.clone());
+
+                    //Act
+                    let _ = with_transaction(|| {
+                        assert_ok!(LiquidityMining::deposit_lp_shares(
+                            d.global_farm_id,
+                            d.yield_farm_id,
+                            d.amm_pool_id,
+                            d.shares,
+                            |_, _, _| -> Result<Balance, DispatchError> { Ok(d.valued_shares) }
+                        ));
+
+                        set_block_number(mock::System::block_number() + blocks_offset);
+
+                        //claim rewards only if deposit exists
+                        if deposit_idx < deposits.borrow().len() {
+                            let d = &deposits.borrow()[deposit_idx];
+                            let deposit_id = deposit_idx as u128 + 1;
+
+                            assert_ok!(LiquidityMining::claim_rewards(ALICE, deposit_id, d.yield_farm_id, true));
+                        }
+
+                        TransactionOutcome::Commit(DispatchResult::Ok(()))
+                    });
+
+                    //Assert:
+                    G_FARMS.with(|v| {
+                        v.borrow().clone().into_iter().for_each(|gf| {
+                            let g_farm_balance = Tokens::free_balance(
+                                gf.reward_currency,
+                                &LiquidityMining::farm_account_id(gf.id).unwrap(),
+                            );
+                            let g_farm_1 = LiquidityMining::global_farm(gf.id).unwrap();
+
+                            //1.1 assert
+                            let s_1 = g_farm_balance + g_farm_1.accumulated_paid_rewards + g_farm_1.pending_rewards;
+                            //NOTE: This should be precise.
+                            assert_eq!(gf.total_rewards, s_1);
+
+                            //1.2 assert
+                            let s_1: u128 = g_farm_1.max_reward_per_period * g_farm_1.planned_yielding_periods as u128;
+                            //NOTE: Approax becasue of div in max_reward_per_period calculation.
+                            assert_eq_approx!(
+                                gf.total_rewards,
+                                s_1,
+                                100_000,
+                                "total_rewards = max_reward_per_period * planned_yielding_periods"
+                            );
+                        })
+                    });
+
+                    Ok(())
+                },
+            )
+            .unwrap();
+    });
+}
+
+#[test]
+//https://www.notion.so/Liquidity-mining-spec-b30ccfe470a74173b82c3702b1e8fca1#422dea2e23744859baeb704dbdb3caca
+//
+//\displaystyle \sum_{g\ \in\ globalFarm} total\_rewards_g = \sum_{g\ \in\ globalFarm} Balance_g + Balance_{pot} + \sum_{d\ \epsilon\ Deposits, y\ \in\ YieldFarm}claimed\_rewards^y_d
+fn invariant_2() {
+    //Number of sucessfull test cases that must execute for the test as a whole to pass.
+    let successfull_cases = 1_000;
+    //Number of blocks added to current block number in each test case run. This number should be
+    //reasonable smaller than total of runned test to make sure lot of claims is executed and
+    //multiple claims for same deposit to happen.
+    let blocks_offset_range = 1..10_u64;
+    //Index of deposit in `deposit` vec. This idx is used in each test case run and execute claim
+    //if deposit exits.
+
+    let deposit_idx_range = 0..500_usize;
+
+    invariants_externalities().execute_with(|| {
+        let mut runner = TestRunner::new(Config {
+            cases: successfull_cases,
+            source_file: Some("liquidity-mining/src/tests/invariants.rs"),
+            test_name: Some("invariant_2"),
+            ..Config::default()
+        });
+        let deposits: RefCell<Vec<Deposit>> = RefCell::new(Vec::new());
+        let pot = LiquidityMining::pot_account_id().unwrap();
+
+        runner
+            .run(
+                &(arb_deposit(), blocks_offset_range, deposit_idx_range),
+                |(d, blocks_offset, deposit_idx)| {
+                    deposits.borrow_mut().push(d.clone());
+
+                    //Act
+                    let _ = with_transaction(|| {
+                        assert_ok!(LiquidityMining::deposit_lp_shares(
+                            d.global_farm_id,
+                            d.yield_farm_id,
+                            d.amm_pool_id,
+                            d.shares,
+                            |_, _, _| -> Result<Balance, DispatchError> { Ok(d.valued_shares) }
+                        ));
+
+                        set_block_number(mock::System::block_number() + blocks_offset);
+
+                        //claim rewards only if deposit exists
+                        if deposit_idx < deposits.borrow().len() {
+                            let d = &deposits.borrow()[deposit_idx];
+                            let deposit_id = deposit_idx as u128 + 1;
+
+                            assert_ok!(LiquidityMining::claim_rewards(ALICE, deposit_id, d.yield_farm_id, true));
+                        }
+
+                        TransactionOutcome::Commit(DispatchResult::Ok(()))
+                    });
+
+                    //Calculate necessary values and assert
+                    let (total_rewards_sum, farm_balances_sum, pot_balance_sum) = G_FARMS.with(|v| {
+                        let mut total_rewards_sum = 0_u128;
+                        let mut farm_balances_sum = 0_u128;
+                        let mut pot_balance_sum = 0_u128;
+                        let mut already_summed_balances: Vec<AssetId> = Vec::new();
+
+                        v.borrow().clone().into_iter().for_each(|gf| {
+                            farm_balances_sum += Tokens::free_balance(
+                                gf.reward_currency,
+                                &LiquidityMining::farm_account_id(gf.id).unwrap(),
+                            );
+
+                            total_rewards_sum += gf.total_rewards;
+
+                            if !already_summed_balances.contains(&gf.reward_currency) {
+                                pot_balance_sum += Tokens::total_balance(gf.reward_currency, &pot);
+                                already_summed_balances.push(gf.reward_currency);
+                            }
+                        });
+                        (total_rewards_sum, farm_balances_sum, pot_balance_sum)
+                    });
+
+                    let last_deposit_id = LiquidityMining::deposit_id();
+                    let mut claimed_by_users_sum = 0_u128;
+                    for i in 1..=last_deposit_id {
+                        let d = LiquidityMining::deposit(i).unwrap();
+
+                        let claimed_amount = d.yield_farm_entries[0].accumulated_claimed_rewards;
+                        claimed_by_users_sum += claimed_amount;
+                    }
+
+                    //WARN: There is no room for rounding errors in this invariant. Any discrepancy
+                    //in this assert means we are loosing tokens somewhere.
+                    assert_eq!(
+                        total_rewards_sum,
+                        farm_balances_sum + pot_balance_sum + claimed_by_users_sum,
+                    );
+
+                    Ok(())
+                },
+            )
+            .unwrap();
+    });
+}
+
+#[test]
+//https://www.notion.so/Liquidity-mining-spec-b30ccfe470a74173b82c3702b1e8fca1#6dd41bee00384293980b7c20d8dc6ec6
+//
+//For each g\ \in\ GlobalFarms
+//\displaystyle accumulated\_paid\_rewards_g = \sum_{y\ \in\ YieldFarms} left\_to\_distribute_y + \sum_{d\ \in\ Deposits,y\ \in\ YielFarm} claimed\_rewards^y_d
+fn invariant_3() {
+    //Number of sucessfull test cases that must execute for the test as a whole to pass.
+    let successfull_cases = 1_000;
+    //Number of blocks added to current block number in each test case run. This number should be
+    //reasonable smaller than total of runned test to make sure lot of claims is executed and
+    //multiple claims for same deposit to happen.
+    let blocks_offset_range = 1..10_u64;
+    //Index of deposit in `deposit` vec. This idx is used in each test case run and execute claim
+    //if deposit exits.
+
+    let deposit_idx_range = 0..500_usize;
+
+    invariants_externalities().execute_with(|| {
+        let mut runner = TestRunner::new(Config {
+            cases: successfull_cases,
+            source_file: Some("liquidity-mining/src/tests/invariants.rs"),
+            test_name: Some("invariant_3"),
+            ..Config::default()
+        });
+        let deposits: RefCell<Vec<Deposit>> = RefCell::new(Vec::new());
+
+        runner
+            .run(
+                &(arb_deposit(), blocks_offset_range, deposit_idx_range),
+                |(d, blocks_offset, deposit_idx)| {
+                    deposits.borrow_mut().push(d.clone());
+
+                    //Act
+                    let _ = with_transaction(|| {
+                        assert_ok!(LiquidityMining::deposit_lp_shares(
+                            d.global_farm_id,
+                            d.yield_farm_id,
+                            d.amm_pool_id,
+                            d.shares,
+                            |_, _, _| -> Result<Balance, DispatchError> { Ok(d.valued_shares) }
+                        ));
+
+                        set_block_number(mock::System::block_number() + blocks_offset);
+
+                        //claim rewards only if deposit exists
+                        if deposit_idx < deposits.borrow().len() {
+                            let d = &deposits.borrow()[deposit_idx];
+                            let deposit_id = deposit_idx as u128 + 1;
+
+                            assert_ok!(LiquidityMining::claim_rewards(ALICE, deposit_id, d.yield_farm_id, true));
+                        }
+
+                        TransactionOutcome::Commit(DispatchResult::Ok(()))
+                    });
+
+                    //Calculate necessary values and assert
+                    let last_deposit_id = LiquidityMining::deposit_id();
+                    let mut claimed_by_user_per_yield_farm: HashMap<(GlobalFarmId, YieldFarmId), u128> = HashMap::new();
+                    for i in 1..=last_deposit_id {
+                        let d = LiquidityMining::deposit(i).unwrap();
+
+                        let claimed_amount = d.yield_farm_entries[0].accumulated_claimed_rewards;
+                        let global_farm_id = d.yield_farm_entries[0].global_farm_id;
+                        let yield_farm_id = d.yield_farm_entries[0].yield_farm_id;
+                        *claimed_by_user_per_yield_farm
+                            .entry((global_farm_id, yield_farm_id))
+                            .or_insert(0) += claimed_amount;
+                    }
+
+                    G_FARMS.with(|v| {
+                        v.borrow().clone().into_iter().for_each(|gf| {
+                            let g_farm = LiquidityMining::global_farm(gf.id).unwrap();
+                            let mut y_farms_let_to_distribute_sum = 0_u128;
+
+                            let mut claimed_by_yield_farms_in_global_farm = 0_u128;
+                            gf.yield_farms.iter().for_each(|yf| {
+                                y_farms_let_to_distribute_sum += LiquidityMining::yield_farm((yf.1, gf.id, yf.0))
+                                    .unwrap()
+                                    .left_to_distribute;
+
+                                //NOTE this run for each iteration of test so record in HashMap may
+                                //not exists if deposit doesn't exists yet.
+                                claimed_by_yield_farms_in_global_farm +=
+                                    claimed_by_user_per_yield_farm.get(&(gf.id, yf.0)).unwrap_or(&0_u128);
+                            });
+
+                            assert_eq!(
+                                g_farm.accumulated_paid_rewards,
+                                y_farms_let_to_distribute_sum + claimed_by_yield_farms_in_global_farm
+                            );
+                        })
+                    });
+
+                    Ok(())
+                },
+            )
+            .unwrap();
+    });
+}
+
+#[test]
+//https://www.notion.so/Liquidity-mining-spec-b30ccfe470a74173b82c3702b1e8fca1#b8cb39a055054198a083c4946110b70d
+//
+//\displaystyle accumulated\_rewards_g + paid\_accumulated\_rewards_g = \sum_{i\ \in\
+//\{\frac{b}{block\_per\_period_g}|b\ \in\ BlockNumber\}}(accumulated\_rpz^i_g -
+//accumulated\_rpz^{i-1}_g) * Z^i_g
+fn invariant_4() {
+    //Number of sucessfull test cases that must execute for the test as a whole to pass.
+    let successfull_cases = 1_000;
+    //Number of blocks added to current block number in each test case run. This number should be
+    //reasonable smaller than total of runned test to make sure lot of claims is executed and
+    //multiple claims for same deposit to happen.
+    let blocks_offset_range = 1..10_u64;
+    //Index of deposit in `deposit` vec. This idx is used in each test case run and execute claim
+    //if deposit exits.
+
+    let deposit_idx_range = 0..500_usize;
+
+    invariants_externalities().execute_with(|| {
+        let mut runner = TestRunner::new(Config {
+            cases: successfull_cases,
+            source_file: Some("liquidity-mining/src/tests/invariants.rs"),
+            test_name: Some("invariant_4"),
+            ..Config::default()
+        });
+        let deposits: RefCell<Vec<Deposit>> = RefCell::new(Vec::new());
+        let paid_until_now: RefCell<HashMap<GlobalFarmId, Balance>> = RefCell::new(HashMap::new());
+
+        runner
+            .run(
+                &(arb_deposit(), blocks_offset_range, deposit_idx_range),
+                |(d, blocks_offset, deposit_idx)| {
+                    deposits.borrow_mut().push(d.clone());
+                    let _ = with_transaction(|| {
+                        let g_farm_0 = LiquidityMining::global_farm(d.global_farm_id).unwrap();
+
+                        assert_ok!(LiquidityMining::deposit_lp_shares(
+                            d.global_farm_id,
+                            d.yield_farm_id,
+                            d.amm_pool_id,
+                            d.shares,
+                            |_,_,_| -> Result<Balance, DispatchError> {
+                                Ok(d.valued_shares)
+                            }
+                        ));
+
+                        let g_farm_1 = LiquidityMining::global_farm(g_farm_0.id).unwrap();
+                        let s_0 = g_farm_1.accumulated_paid_rewards + g_farm_1.pending_rewards;
+                        *paid_until_now.borrow_mut().entry(g_farm_1.id).or_insert(0_u128) += (g_farm_1.accumulated_rpz
+                            - g_farm_0.accumulated_rpz)
+                            .checked_mul_int(g_farm_0.total_shares_z)
+                            .unwrap();
+
+                        //NOTE: global-farm is updated before deposit so in this case we need to
+                        //use Z{now-1} instead of Z{now} which includes deposited shares.
+                        assert_eq_approx!(s_0, *paid_until_now.borrow().get(&d.global_farm_id).unwrap(), 1_000_000, "accumulated_paid_rewards + pending_rewards = sum(rpz{now} - rpz{now-1} * Z{now-1}) for all periods");
+
+                        set_block_number(mock::System::block_number() + blocks_offset);
+
+                        //claim rewards only if deposit exists
+                        if deposit_idx < deposits.borrow().len() {
+                            let d = &deposits.borrow()[deposit_idx];
+                            let deposit_id = deposit_idx as u128 + 1;
+
+                            let g_farm_0 = LiquidityMining::global_farm(d.global_farm_id).unwrap();
+
+                            assert_ok!(LiquidityMining::claim_rewards(ALICE, deposit_id, d.yield_farm_id, true));
+
+                            let g_farm_1 = LiquidityMining::global_farm(g_farm_0.id).unwrap();
+                            let s_0 = g_farm_1.accumulated_paid_rewards + g_farm_1.pending_rewards;
+                            *paid_until_now.borrow_mut().entry(g_farm_1.id).or_insert(0_u128) += (g_farm_1.accumulated_rpz
+                                - g_farm_0.accumulated_rpz)
+                                .checked_mul_int(g_farm_1.total_shares_z)
+                                .unwrap();
+
+                            //NOTE: global-farm is updated before claim so RPZ includes all Z so Z{now}
+                            //must be used in this case.
+                            assert_eq_approx!(s_0, *paid_until_now.borrow().get(&d.global_farm_id).unwrap(), 1_000_000, "accumulated_paid_rewards + pending_rewards = sum(rpz{now} - rpz{now-1} * Z{now}) for all periods");
+                        }
+
+                        TransactionOutcome::Commit(DispatchResult::Ok(()))
+                    });
+
+                    Ok(())
+                },
+            )
+            .unwrap();
+    });
 }

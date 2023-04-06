@@ -22,8 +22,10 @@ impl<AssetId, Price> NativePriceOracle<AssetId, Price> for () {
 /// Implementers of this trait provide the price for an arbitrary asset pair.
 ///
 /// Should return `None` if no price is available.
-pub trait PriceOracle<AssetId, Price> {
-    fn price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod) -> Option<Price>;
+pub trait PriceOracle<AssetId> {
+    type Price;
+
+    fn price(asset_a: AssetId, asset_b: AssetId, period: OraclePeriod) -> Option<Self::Price>;
 }
 
 pub struct AlwaysPriceOfOne;

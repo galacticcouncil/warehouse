@@ -1746,6 +1746,32 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
         )
     }
 
+    /// This function should be used when external source(e.g. oracle) is used for `price_adjustment`
+    /// or if `incentivized_asset` and `reward_currency` can't be different.
+    fn create_global_farm_without_price_adjustment(
+        total_rewards: Self::Balance,
+        planned_yielding_periods: Self::Period,
+        blocks_per_period: BlockNumberFor<T>,
+        incentivized_asset: T::AssetId,
+        reward_currency: T::AssetId,
+        owner: T::AccountId,
+        yield_per_period: Perquintill,
+        min_deposit: Self::Balance,
+    ) -> Result<(GlobalFarmId, Self::Balance), Self::Error> {
+        Self::create_global_farm(
+            total_rewards,
+            planned_yielding_periods,
+            blocks_per_period,
+            incentivized_asset,
+            reward_currency,
+            owner,
+            yield_per_period,
+            min_deposit,
+            //NOTE: `price_adjustment` == 1 is same as no `price_adjustment`
+            FixedU128::one(),
+        )
+    }
+
     fn update_global_farm_price_adjustment(
         who: T::AccountId,
         global_farm_id: GlobalFarmId,

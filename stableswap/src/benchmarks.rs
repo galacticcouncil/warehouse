@@ -303,13 +303,100 @@ benchmarks! {
         assert!(T::Currency::free_balance(asset_out, &buyer) > 0u128);
     }
 
-}
+    set_asset_tradable_state {
+        let caller: T::AccountId = account("caller", 0, 1);
+        let lp_provider: T::AccountId = account("provider", 0, 1);
+        let initial_liquidity = 1_000_000_000_000_000u128;
+        let liquidity_added = 300_000_000_000_000u128;
 
-#[cfg(test)]
-mod tests {
-    use super::Pallet;
-    use crate::tests::mock::*;
-    use frame_benchmarking::impl_benchmark_test_suite;
+        let mut initial: Vec<AssetLiquidity<T::AssetId>> = vec![];
+        let mut added_liquidity: Vec<AssetLiquidity<T::AssetId>> = vec![];
 
-    impl_benchmark_test_suite!(Pallet, super::ExtBuilder::default().build(), super::Test);
+        let mut asset_ids: Vec<T::AssetId> = Vec::new() ;
+        for idx in 0..MAX_ASSETS_IN_POOL {
+            let name: Vec<u8> = idx.to_ne_bytes().to_vec();
+            let asset_id = T::AssetRegistry::create_asset(&name, 1u128)?;
+            asset_ids.push(asset_id);
+            T::Currency::update_balance(asset_id, &caller, 1_000_000_000_000_000i128)?;
+            T::Currency::update_balance(asset_id, &lp_provider, 1_000_000_000_000_000_000_000i128)?;
+            initial.push(AssetLiquidity{
+                asset_id,
+                amount: initial_liquidity
+            });
+            added_liquidity.push(AssetLiquidity{
+                asset_id,
+                amount: liquidity_added
+            });
+        }
+        let pool_id = T::AssetRegistry::create_asset(&b"pool".to_vec(), 1u128)?;
+
+        let amplification = 100u16;
+        let trade_fee = Permill::from_percent(1);
+        let withdraw_fee = Permill::from_percent(1);
+
+        let asset_to_change = asset_ids[0];
+        let successful_origin = T::AuthorityOrigin::try_successful_origin().unwrap();
+        crate::Pallet::<T>::create_pool(successful_origin.clone(),
+            pool_id,
+            asset_ids,
+            amplification,
+            trade_fee,
+            withdraw_fee,
+        )?;
+
+        let asset_tradability_old = crate::Pallet::<T>::asset_tradability(pool_id, asset_to_change,);
+    }: _<T::Origin>(successful_origin, pool_id, asset_to_change, Tradability::FROZEN)
+    verify {
+        let asset_tradability_new = crate::Pallet::<T>::asset_tradability(pool_id, asset_to_change,);
+        assert_ne!(asset_tradability_old, asset_tradability_new);
+    }
+
+    update_pool {
+        let caller: T::AccountId = account("caller", 0, 1);
+        let lp_provider: T::AccountId = account("provider", 0, 1);
+        let initial_liquidity = 1_000_000_000_000_000u128;
+        let liquidity_added = 300_000_000_000_000u128;
+
+        let mut initial: Vec<AssetLiquidity<T::AssetId>> = vec![];
+        let mut added_liquidity: Vec<AssetLiquidity<T::AssetId>> = vec![];
+
+        let mut asset_ids: Vec<T::AssetId> = Vec::new() ;
+        for idx in 0..MAX_ASSETS_IN_POOL {
+            let name: Vec<u8> = idx.to_ne_bytes().to_vec();
+            let asset_id = T::AssetRegistry::create_asset(&name, 1u128)?;
+            asset_ids.push(asset_id);
+            T::Currency::update_balance(asset_id, &caller, 1_000_000_000_000_000i128)?;
+            T::Currency::update_balance(asset_id, &lp_provider, 1_000_000_000_000_000_000_000i128)?;
+            initial.push(AssetLiquidity{
+                asset_id,
+                amount: initial_liquidity
+            });
+            added_liquidity.push(AssetLiquidity{
+                asset_id,
+                amount: liquidity_added
+            });
+        }
+        let pool_id = T::AssetRegistry::create_asset(&b"pool".to_vec(), 1u128)?;
+
+        let successful_origin = T::AuthorityOrigin::try_successful_origin().unwrap();
+        crate::Pallet::<T>::create_pool(successful_origin.clone(),
+            pool_id,
+            asset_ids,
+            100u16,
+            Permill::from_percent(1),
+            Permill::from_percent(1),
+        )?;
+
+        let amplification_new = Some(200_u16);
+        let trade_fee_new = Some(Permill::from_percent(50));
+        let withdraw_fee_new = Some(Permill::from_percent(40));
+    }: _<T::Origin>(successful_origin, pool_id, amplification_new, trade_fee_new, withdraw_fee_new)
+    verify {
+        let pool = crate::Pallet::<T>::pools(pool_id).unwrap();
+        assert_eq!(pool.amplification, amplification_new.unwrap());
+        assert_eq!(pool.trade_fee, trade_fee_new.unwrap());
+        assert_eq!(pool.withdraw_fee, withdraw_fee_new.unwrap());
+    }
+
+    impl_benchmark_test_suite!(Pallet, crate::tests::mock::ExtBuilder::default().build(), crate::tests::mock::Test);
 }

@@ -44,7 +44,7 @@
 //!
 //! ### Update and retrieve fee
 //!
-//! The module provides implemenation of GetByKey trait for `UpdateAndRetrieveFee` struct.
+//! The module provides implementation of GetByKey trait for `UpdateAndRetrieveFee` struct.
 //! This can be used to integrate the dynamic fee mechanism where desired.
 //!
 //! On first retrieve call in a block, the asset fee as well as the protocol are updated and new fees are returned.

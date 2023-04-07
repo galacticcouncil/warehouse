@@ -28,7 +28,7 @@
 //! ### Terminology
 //!
 //! * **Fee:** The type representing a fee. Must implement PerThing.
-//! * **Oracle:** Implementation of an oracle providing volume in and out as wel ass liquidity for an asset.
+//! * **Oracle:** Implementation of an oracle providing volume in and out as well as liquidity for an asset.
 //! * **Asset decay:** The decaying parameter for an asset fee.
 //! * **Protocol decay:** The decaying parameter for a protocol fee.
 //! * **Asset fee amplification:** The amplification parameter for asset fee.
@@ -83,10 +83,11 @@ pub mod pallet {
     use sp_runtime::traits::{BlockNumberProvider, Zero};
 
     #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
-    #[pallet::getter(fn asset_fee)]
+    #[pallet::getter(fn current_fees)]
     /// Stores last calculated fee of an asset and block number in which it was changed..
     /// Stored as (Asset fee, Protocol fee, Block number)
     pub type AssetFee<T: Config> =
@@ -159,7 +160,7 @@ where
         let asset_fee_params = T::AssetFeeParameters::get();
         let protocol_fee_params = T::ProtocolFeeParameters::get();
 
-        let (current_fee, current_protocol_fee, last_block) = Self::asset_fee(asset_id).unwrap_or((
+        let (current_fee, current_protocol_fee, last_block) = Self::current_fees(asset_id).unwrap_or((
             asset_fee_params.min_fee,
             protocol_fee_params.min_fee,
             T::BlockNumber::default(),
@@ -170,40 +171,40 @@ where
         };
 
         // Update only if it has not yet been updated this block
-        if block_number != last_block {
-            let Some(volume) = T::Oracle::asset_volume(asset_id) else {
-                return (current_fee, current_protocol_fee);
-            };
-            let Some(liquidity) = T::Oracle::asset_liquidity(asset_id) else {
-                return (current_fee, current_protocol_fee);
-            };
-
-            let asset_fee = recalculate_asset_fee(
-                OracleEntry {
-                    amount_in: volume.amount_in(),
-                    amount_out: volume.amount_out(),
-                    liquidity,
-                },
-                current_fee,
-                delta_blocks,
-                asset_fee_params,
-            );
-            let protocol_fee = recalculate_protocol_fee(
-                OracleEntry {
-                    amount_in: volume.amount_in(),
-                    amount_out: volume.amount_out(),
-                    liquidity,
-                },
-                current_protocol_fee,
-                delta_blocks,
-                protocol_fee_params,
-            );
-
-            AssetFee::<T>::insert(asset_id, (asset_fee, protocol_fee, block_number));
-            (asset_fee, protocol_fee)
-        } else {
-            (current_fee, current_protocol_fee)
+        if block_number == last_block {
+            return (current_fee, current_protocol_fee);
         }
+
+        let Some(volume) = T::Oracle::asset_volume(asset_id) else {
+            return (current_fee, current_protocol_fee);
+        };
+        let Some(liquidity) = T::Oracle::asset_liquidity(asset_id) else {
+            return (current_fee, current_protocol_fee);
+        };
+
+        let asset_fee = recalculate_asset_fee(
+            OracleEntry {
+                amount_in: volume.amount_in(),
+                amount_out: volume.amount_out(),
+                liquidity,
+            },
+            current_fee,
+            delta_blocks,
+            asset_fee_params,
+        );
+        let protocol_fee = recalculate_protocol_fee(
+            OracleEntry {
+                amount_in: volume.amount_in(),
+                amount_out: volume.amount_out(),
+                liquidity,
+            },
+            current_protocol_fee,
+            delta_blocks,
+            protocol_fee_params,
+        );
+
+        AssetFee::<T>::insert(asset_id, (asset_fee, protocol_fee, block_number));
+        (asset_fee, protocol_fee)
     }
 }
 

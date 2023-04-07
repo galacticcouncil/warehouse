@@ -150,7 +150,7 @@ fn protocol_fee_should_not_change_when_volume_has_not_changed_and_decay_is_0() {
 }
 
 #[test]
-fn fees_should_update_correcty_when_volume_in_increased() {
+fn fees_should_update_correctly_when_volume_in_increased() {
     let initial_fee = Fee::from_percent(10);
 
     ExtBuilder::default()
@@ -183,7 +183,7 @@ fn fees_should_update_correcty_when_volume_in_increased() {
 }
 
 #[test]
-fn fees_should_decrease_when_volume_out_increased() {
+fn fees_should_update_correctly_when_volume_out_increased() {
     let initial_fee = Fee::from_percent(20);
 
     ExtBuilder::default()

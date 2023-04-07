@@ -13,7 +13,7 @@ and integrate provided [`UpdateAndRetrieveFees`]().
 #### Terminology
 
 * **Fee:** The type representing a fee. Must implement PerThing.
-* **Oracle:** Implementation of an oracle providing volume in and out as wel ass liquidity for an asset.
+* **Oracle:** Implementation of an oracle providing volume in and out as well as liquidity for an asset.
 * **Asset decay:** The decaying parameter for an asset fee.
 * **Protocol decay:** The decaying parameter for a protocol fee.
 * **Asset fee amplification:** The amplification parameter for asset fee.

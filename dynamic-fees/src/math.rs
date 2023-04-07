@@ -27,9 +27,12 @@ impl OracleEntry {
     }
 }
 
+/// Internal helper enum to indicate the direction of the liquidity.
 #[derive(PartialEq, Eq, RuntimeDebug)]
 enum NetVolumeDirection {
+    /// Amount Out - Amount in. Used to calculate asset fee.
     OutIn,
+    /// Amount In - Amount Out. Used to calculate protocol fee.
     InOut,
 }
 

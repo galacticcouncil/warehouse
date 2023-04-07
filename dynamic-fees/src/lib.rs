@@ -70,7 +70,7 @@ pub use pallet::*;
 
 use crate::math::{recalculate_asset_fee, recalculate_protocol_fee, OracleEntry};
 use crate::traits::{Volume, VolumeProvider};
-use crate::types::FeeParams;
+use crate::types::{FeeEntry, FeeParams};
 
 type Balance = u128;
 
@@ -78,6 +78,7 @@ type Balance = u128;
 pub mod pallet {
     use super::*;
     use crate::traits::VolumeProvider;
+    use crate::types::FeeEntry;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::BlockNumberFor;
     use sp_runtime::traits::{BlockNumberProvider, Zero};
@@ -91,7 +92,7 @@ pub mod pallet {
     /// Stores last calculated fee of an asset and block number in which it was changed..
     /// Stored as (Asset fee, Protocol fee, Block number)
     pub type AssetFee<T: Config> =
-        StorageMap<_, Twox64Concat, T::AssetId, (T::Fee, T::Fee, T::BlockNumber), OptionQuery>;
+        StorageMap<_, Twox64Concat, T::AssetId, FeeEntry<T::Fee, T::BlockNumber>, OptionQuery>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -160,26 +161,26 @@ where
         let asset_fee_params = T::AssetFeeParameters::get();
         let protocol_fee_params = T::ProtocolFeeParameters::get();
 
-        let (current_fee, current_protocol_fee, last_block) = Self::current_fees(asset_id).unwrap_or((
-            asset_fee_params.min_fee,
-            protocol_fee_params.min_fee,
-            T::BlockNumber::default(),
-        ));
-
-        let Some(delta_blocks) = TryInto::<u128>::try_into(block_number.saturating_sub(last_block)).ok() else {
-            return (current_fee, current_protocol_fee);
-        };
+        let current_fee_entry = Self::current_fees(asset_id).unwrap_or(FeeEntry {
+            asset_fee: asset_fee_params.min_fee,
+            protocol_fee: protocol_fee_params.min_fee,
+            timestamp: T::BlockNumber::default(),
+        });
 
         // Update only if it has not yet been updated this block
-        if block_number == last_block {
-            return (current_fee, current_protocol_fee);
+        if block_number == current_fee_entry.timestamp {
+            return (current_fee_entry.asset_fee, current_fee_entry.protocol_fee);
         }
 
+        let Some(delta_blocks) = TryInto::<u128>::try_into(block_number.saturating_sub(current_fee_entry.timestamp)).ok() else {
+            return (current_fee_entry.asset_fee, current_fee_entry.protocol_fee);
+        };
+
         let Some(volume) = T::Oracle::asset_volume(asset_id) else {
-            return (current_fee, current_protocol_fee);
+            return (current_fee_entry.asset_fee, current_fee_entry.protocol_fee);
         };
         let Some(liquidity) = T::Oracle::asset_liquidity(asset_id) else {
-            return (current_fee, current_protocol_fee);
+            return (current_fee_entry.asset_fee, current_fee_entry.protocol_fee);
         };
 
         let asset_fee = recalculate_asset_fee(
@@ -188,7 +189,7 @@ where
                 amount_out: volume.amount_out(),
                 liquidity,
             },
-            current_fee,
+            current_fee_entry.asset_fee,
             delta_blocks,
             asset_fee_params,
         );
@@ -198,12 +199,19 @@ where
                 amount_out: volume.amount_out(),
                 liquidity,
             },
-            current_protocol_fee,
+            current_fee_entry.protocol_fee,
             delta_blocks,
             protocol_fee_params,
         );
 
-        AssetFee::<T>::insert(asset_id, (asset_fee, protocol_fee, block_number));
+        AssetFee::<T>::insert(
+            asset_id,
+            FeeEntry {
+                asset_fee,
+                protocol_fee,
+                timestamp: block_number,
+            },
+        );
         (asset_fee, protocol_fee)
     }
 }

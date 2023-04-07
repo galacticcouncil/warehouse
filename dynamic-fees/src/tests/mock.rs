@@ -38,7 +38,7 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 use crate::tests::oracle::Oracle;
-use crate::types::FeeParams;
+use crate::types::{FeeEntry, FeeParams};
 use sp_runtime::traits::{One, Zero};
 
 pub type Balance = u128;
@@ -188,7 +188,14 @@ impl ExtBuilder {
             .unwrap()
             .into();
         r.execute_with(|| {
-            crate::AssetFee::<Test>::insert(HDX, (self.initial_fee.0, self.initial_fee.1, self.initial_fee.2));
+            crate::AssetFee::<Test>::insert(
+                HDX,
+                FeeEntry {
+                    asset_fee: self.initial_fee.0,
+                    protocol_fee: self.initial_fee.1,
+                    timestamp: self.initial_fee.2,
+                },
+            );
         });
 
         r

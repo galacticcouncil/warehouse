@@ -13,3 +13,11 @@ pub struct FeeParams<Fee> {
     pub(crate) decay: FixedU128,
     pub(crate) amplification: FixedU128,
 }
+
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct FeeEntry<Fee, Block> {
+    pub asset_fee: Fee,
+    pub protocol_fee: Fee,
+    pub timestamp: Block,
+}

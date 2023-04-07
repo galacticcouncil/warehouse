@@ -13,12 +13,14 @@ members = [
 	"adapters",
 	"collator-rewards",
 	"transaction-pause",
+	"ema-oracle",
 	"liquidity-mining",
 	"currencies",
 	"stableswap",
 	"test-utils",
 	"dynamic-fees",
 	"duster",
+	"otc",
 ]
 
 resolver = "2"

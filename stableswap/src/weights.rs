@@ -51,6 +51,7 @@ pub trait WeightInfo {
     fn remove_liquidity_one_asset() -> Weight;
     fn sell() -> Weight;
     fn buy() -> Weight;
+    fn set_asset_tradable_state() -> Weight;
 }
 
 pub struct BasiliskWeight<T>(PhantomData<T>);
@@ -86,6 +87,10 @@ impl<T: frame_system::Config> WeightInfo for BasiliskWeight<T> {
             .saturating_add(T::DbWeight::get().reads(9 as u64))
             .saturating_add(T::DbWeight::get().writes(5 as u64))
     }
+
+    fn set_asset_tradable_state() -> Weight {
+        Weight::from_ref_time(0)
+    }
 }
 
 // For backwards compatibility and tests
@@ -117,5 +122,9 @@ impl WeightInfo for () {
         Weight::from_ref_time(40_781_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(9 as u64))
             .saturating_add(RocksDbWeight::get().writes(5 as u64))
+    }
+
+    fn set_asset_tradable_state() -> Weight {
+        Weight::from_ref_time(0)
     }
 }

@@ -40,12 +40,12 @@ pub const DOT: AssetId = 2_000;
 pub const ACA: AssetId = 3_000;
 pub const ETH: AssetId = 4_000;
 
-pub const PRICE_ENTRY_1: PriceEntry = PriceEntry {
+pub const ORACLE_ENTRY_1: PriceEntry = PriceEntry {
     price: Price::from_inner(2000000000000000000),
     trade_amount: 1_000,
     liquidity_amount: 2_000,
 };
-pub const PRICE_ENTRY_2: PriceEntry = PriceEntry {
+pub const ORACLE_ENTRY_2: PriceEntry = PriceEntry {
     price: Price::from_inner(5000000000000000000),
     trade_amount: 3_000,
     liquidity_amount: 4_000,

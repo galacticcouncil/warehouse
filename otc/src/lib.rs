@@ -323,9 +323,9 @@ pub mod pallet {
 
                 ensure!(order.owner == who, Error::<T>::Forbidden);
 
-                let unreserved =
+                let remaining_to_unreserve =
                     T::Currency::unreserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, order.amount_out);
-                ensure!(unreserved.is_zero(), Error::<T>::InsufficientReservedAmount);
+                ensure!(remaining_to_unreserve.is_zero(), Error::<T>::InsufficientReservedAmount);
                 *maybe_order = None;
 
                 Self::deposit_event(Event::Cancelled { order_id });
@@ -354,8 +354,9 @@ impl<T: Config> Pallet<T> {
         amount_out: Balance,
     ) -> DispatchResult {
         T::Currency::transfer(order.asset_in, who, &order.owner, amount_in)?;
-        let unreserved = T::Currency::unreserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, amount_out);
-        ensure!(unreserved.is_zero(), Error::<T>::InsufficientReservedAmount);
+        let remaining_to_unreserve =
+            T::Currency::unreserve_named(&NAMED_RESERVE_ID, order.asset_out, &order.owner, amount_out);
+        ensure!(remaining_to_unreserve.is_zero(), Error::<T>::InsufficientReservedAmount);
         T::Currency::transfer(order.asset_out, &order.owner, who, amount_out)?;
 
         Ok(())

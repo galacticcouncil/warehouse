@@ -18,8 +18,8 @@
 #![cfg(test)]
 use super::*;
 
-use crate as liq_mining;
 use crate::Config;
+use crate::{self as liq_mining, types::DefaultPriceAdjustment};
 use frame_support::{
     parameter_types,
     traits::Contains,
@@ -294,7 +294,7 @@ impl Config<Instance1> for Test {
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
     type NonDustableWhitelistHandler = Whitelist;
     type AssetRegistry = AssetRegistry;
-    type PriceAdjustment = ();
+    type PriceAdjustment = DefaultPriceAdjustment;
 }
 
 parameter_types! {
@@ -318,7 +318,7 @@ impl Config<Instance2> for Test {
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
     type NonDustableWhitelistHandler = Whitelist;
     type AssetRegistry = AssetRegistry;
-    type PriceAdjustment = ();
+    type PriceAdjustment = DefaultPriceAdjustment;
 }
 
 parameter_types! {

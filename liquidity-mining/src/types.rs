@@ -17,12 +17,26 @@
 
 use super::*;
 
-use hydradx_traits::liquidity_mining::DefaultPriceAdjustment;
+use hydradx_traits::liquidity_mining::PriceAdjustment;
 pub use hydradx_traits::liquidity_mining::{DepositId, GlobalFarmId, YieldFarmId};
 
 pub type FarmId = u32;
 pub type Balance = u128;
 pub type FarmMultiplier = FixedU128;
+
+/// Default implementation of `PriceAdjustment` trait which returns `price_adjustment` value saved
+/// in `GlobalFarm`.
+pub struct DefaultPriceAdjustment;
+
+impl<T: Config<I>, I: 'static> PriceAdjustment<GlobalFarmData<T, I>> for DefaultPriceAdjustment {
+    type Error = DispatchError;
+
+    type PriceAdjustment = FixedU128;
+
+    fn get(global_farm: &GlobalFarmData<T, I>) -> Result<Self::PriceAdjustment, Self::Error> {
+        Ok(global_farm.price_adjustment)
+    }
+}
 
 /// This struct represents the state a of single liquidity mining program. `YieldFarm`s are rewarded from
 /// `GlobalFarm` based on their stake in `GlobalFarm`. `YieldFarm` stake in `GlobalFarm` is derived from
@@ -54,12 +68,6 @@ pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
     pub(super) total_yield_farms_count: u32,
     pub(super) price_adjustment: FixedU128,
     pub(super) state: FarmState,
-}
-
-impl<T: Config<I>, I: 'static> DefaultPriceAdjustment<FixedU128> for GlobalFarmData<T, I> {
-    fn get_price_adjustment(&self) -> FixedU128 {
-        self.price_adjustment
-    }
 }
 
 impl<T: Config<I>, I: 'static> GlobalFarmData<T, I> {

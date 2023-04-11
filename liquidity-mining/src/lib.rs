@@ -104,7 +104,9 @@ use frame_support::{
     pallet_prelude::*,
     require_transactional,
     sp_runtime::{
-        traits::{AccountIdConversion, BlockNumberProvider, MaybeSerializeDeserialize, One, Zero},
+        traits::{
+            AccountIdConversion, AtLeast32BitUnsigned, BlockNumberProvider, MaybeSerializeDeserialize, One, Zero,
+        },
         RuntimeDebug,
     },
     traits::{Defensive, DefensiveOption},
@@ -173,7 +175,7 @@ pub mod pallet {
         type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// Asset type.
-        type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaxEncodedLen;
+        type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaxEncodedLen + AtLeast32BitUnsigned;
 
         /// Currency for transfers.
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Balance>;

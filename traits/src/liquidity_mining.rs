@@ -173,21 +173,3 @@ pub trait PriceAdjustment<GlobalFarm> {
     /// Returns value of `PriceAdjustment` for given `GlobalFarm`.
     fn get(global_farm: &GlobalFarm) -> Result<Self::PriceAdjustment, Self::Error>;
 }
-
-/// Implementers of this trait provide `price_adjustment` from `self`.
-pub trait DefaultPriceAdjustment<Price> {
-    fn get_price_adjustment(&self) -> Price;
-}
-
-/// Default implementation of PriceAdjustment trait that returns value from `GlobalFarm`.
-impl<GlobalFarm> PriceAdjustment<GlobalFarm> for ()
-where
-    GlobalFarm: DefaultPriceAdjustment<FixedU128>,
-{
-    type Error = sp_runtime::DispatchError;
-    type PriceAdjustment = FixedU128;
-
-    fn get(global_farm: &GlobalFarm) -> Result<Self::PriceAdjustment, Self::Error> {
-        Ok(global_farm.get_price_adjustment())
-    }
-}

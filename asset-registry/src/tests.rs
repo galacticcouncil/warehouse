@@ -647,6 +647,74 @@ fn register_asset_should_work_when_location_is_provided() {
 }
 
 #[test]
+fn register_asset_should_fail_when_location_is_already_registered() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Arrange
+        let asset_id: AssetId = 10;
+        let asset_location = AssetLocation(X3(
+            Parent,
+            Parachain(2021),
+            GeneralKey(asset_id.encode().try_into().unwrap()),
+        ));
+        assert_ok!(AssetRegistryPallet::register(
+            Origin::root(),
+            b"asset_id".to_vec(),
+            AssetType::Token,
+            1_000_000,
+            Some(asset_id),
+            None,
+            Some(asset_location.clone())
+        ),);
+
+        // Act & Assert
+        assert_noop!(
+            AssetRegistryPallet::register(
+                Origin::root(),
+                b"asset_id_2".to_vec(),
+                AssetType::Token,
+                1_000_000,
+                Some(asset_id + 1),
+                None,
+                Some(asset_location.clone())
+            ),
+            Error::<Test>::LocationAlreadyRegistered
+        );
+    });
+}
+
+#[test]
+fn set_location_should_fail_when_location_is_already_registered() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Arrange
+        let asset_id: AssetId = 10;
+        let asset_location = AssetLocation(X3(
+            Parent,
+            Parachain(2021),
+            GeneralKey(asset_id.encode().try_into().unwrap()),
+        ));
+        assert_ok!(AssetRegistryPallet::register(
+            Origin::root(),
+            b"asset_id".to_vec(),
+            AssetType::Token,
+            1_000_000,
+            Some(asset_id),
+            None,
+            Some(asset_location.clone())
+        ),);
+
+        // Act & Assert
+        assert_noop!(
+            AssetRegistryPallet::set_location(
+                Origin::root(),
+                asset_id,
+                asset_location.clone()
+            ),
+            Error::<Test>::LocationAlreadyRegistered
+        );
+    });
+}
+
+#[test]
 fn register_asset_should_work_when_all_optional_are_provided() {
     ExtBuilder::default().build().execute_with(|| {
         let asset_id: AssetId = 10;

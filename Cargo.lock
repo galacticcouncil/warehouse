@@ -2831,6 +2831,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "hydra-dx-math"
+version = "6.1.0"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=2fc83960a78bef9742551c78ae0264aa146d16b2#2fc83960a78bef9742551c78ae0264aa146d16b2"
+dependencies = [
+ "fixed",
+ "num-traits",
+ "parity-scale-codec",
+ "primitive-types 0.12.1",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-std",
+]
+
+[[package]]
 name = "hydradx-adapters"
 version = "0.2.2"
 dependencies = [
@@ -5008,6 +5022,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
+ "hydra-dx-math 6.1.0",
  "hydradx-traits",
  "orml-traits",
  "parity-scale-codec",
@@ -5069,7 +5084,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
- "hydra-dx-math",
+ "hydra-dx-math 6.0.0",
  "hydradx-traits",
  "log",
  "parity-scale-codec",
@@ -5183,7 +5198,7 @@ dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
- "hydra-dx-math",
+ "hydra-dx-math 6.0.0",
  "hydradx-traits",
  "orml-currencies",
  "orml-tokens",
@@ -5485,7 +5500,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hydra-dx-math",
+ "hydra-dx-math 6.0.0",
  "hydradx-traits",
  "orml-tokens",
  "orml-traits",

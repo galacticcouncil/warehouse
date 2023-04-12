@@ -60,7 +60,6 @@ use orml_traits::GetByKey;
 use sp_runtime::traits::{BlockNumberProvider, Saturating};
 use sp_runtime::{FixedPointOperand, PerThing};
 
-mod math;
 #[cfg(test)]
 mod tests;
 pub mod traits;
@@ -68,9 +67,10 @@ pub mod types;
 
 pub use pallet::*;
 
-use crate::math::{recalculate_asset_fee, recalculate_protocol_fee, OracleEntry};
 use crate::traits::{Volume, VolumeProvider};
 use crate::types::{FeeEntry, FeeParams};
+use hydra_dx_math::dynamic_fees::types::OracleEntry;
+use hydra_dx_math::dynamic_fees::{recalculate_asset_fee, recalculate_protocol_fee};
 
 type Balance = u128;
 
@@ -191,7 +191,7 @@ where
             },
             current_fee_entry.asset_fee,
             delta_blocks,
-            asset_fee_params,
+            asset_fee_params.into(),
         );
         let protocol_fee = recalculate_protocol_fee(
             OracleEntry {
@@ -201,7 +201,7 @@ where
             },
             current_fee_entry.protocol_fee,
             delta_blocks,
-            protocol_fee_params,
+            protocol_fee_params.into(),
         );
 
         AssetFee::<T>::insert(

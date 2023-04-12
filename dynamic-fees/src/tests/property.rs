@@ -1,6 +1,6 @@
-use crate::math::{recalculate_asset_fee, recalculate_protocol_fee, OracleEntry};
 use crate::tests::mock::*;
 use crate::types::FeeParams;
+use hydra_dx_math::dynamic_fees::{recalculate_asset_fee, recalculate_protocol_fee, types::OracleEntry};
 use proptest::prelude::*;
 use sp_runtime::traits::{One, Zero};
 use sp_runtime::FixedU128;
@@ -46,8 +46,8 @@ proptest! {
             amplification: FixedU128::one(),
         };
 
-        let asset_fee = recalculate_asset_fee(entry.clone(), previous_fee, block_diff, params);
-        let protocol_fee = recalculate_protocol_fee(entry, previous_fee, block_diff, params);
+        let asset_fee = recalculate_asset_fee(entry.clone(), previous_fee, block_diff, params.into());
+        let protocol_fee = recalculate_protocol_fee(entry, previous_fee, block_diff, params.into());
 
         assert!(
             asset_fee > previous_fee || asset_fee == params.max_fee,
@@ -74,8 +74,8 @@ proptest! {
             amplification: FixedU128::one(),
         };
 
-        let asset_fee = recalculate_asset_fee(entry.clone(), previous_fee, block_diff, params);
-        let protocol_fee= recalculate_protocol_fee(entry, previous_fee, block_diff, params);
+        let asset_fee = recalculate_asset_fee(entry.clone(), previous_fee, block_diff, params.into());
+        let protocol_fee= recalculate_protocol_fee(entry, previous_fee, block_diff, params.into());
 
         assert!(asset_fee < previous_fee || asset_fee == params.min_fee, "Asset fee {previous_fee:?} has not decreased - {asset_fee:?}");
         assert!(protocol_fee > previous_fee || protocol_fee == params.max_fee, "Protocol fee {previous_fee:?} has not increased - {asset_fee:?}");

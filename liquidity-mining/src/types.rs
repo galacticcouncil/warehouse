@@ -17,11 +17,26 @@
 
 use super::*;
 
+use hydradx_traits::liquidity_mining::PriceAdjustment;
 pub use hydradx_traits::liquidity_mining::{DepositId, GlobalFarmId, YieldFarmId};
 
 pub type FarmId = u32;
 pub type Balance = u128;
 pub type FarmMultiplier = FixedU128;
+
+/// Default implementation of `PriceAdjustment` trait which returns `price_adjustment` value saved
+/// in `GlobalFarm`.
+pub struct DefaultPriceAdjustment;
+
+impl<T: Config<I>, I: 'static> PriceAdjustment<GlobalFarmData<T, I>> for DefaultPriceAdjustment {
+    type Error = DispatchError;
+
+    type PriceAdjustment = FixedU128;
+
+    fn get(global_farm: &GlobalFarmData<T, I>) -> Result<Self::PriceAdjustment, Self::Error> {
+        Ok(global_farm.price_adjustment)
+    }
+}
 
 /// This struct represents the state a of single liquidity mining program. `YieldFarm`s are rewarded from
 /// `GlobalFarm` based on their stake in `GlobalFarm`. `YieldFarm` stake in `GlobalFarm` is derived from
@@ -31,18 +46,18 @@ pub type FarmMultiplier = FixedU128;
 #[codec(mel_bound())]
 #[scale_info(skip_type_params(T, I))]
 pub struct GlobalFarmData<T: Config<I>, I: 'static = ()> {
-    pub(super) id: GlobalFarmId,
+    pub id: GlobalFarmId,
     pub(super) owner: T::AccountId,
     pub(super) updated_at: PeriodOf<T>,
     pub(super) total_shares_z: Balance,
     pub(super) accumulated_rpz: FixedU128,
-    pub(super) reward_currency: T::AssetId,
+    pub reward_currency: T::AssetId,
     pub(super) pending_rewards: Balance,
     pub(super) accumulated_paid_rewards: Balance,
     pub(super) yield_per_period: Perquintill,
     pub(super) planned_yielding_periods: PeriodOf<T>,
     pub(super) blocks_per_period: BlockNumberFor<T>,
-    pub(super) incentivized_asset: T::AssetId,
+    pub incentivized_asset: T::AssetId,
     pub(super) max_reward_per_period: Balance,
     // min. LP shares user must deposit to start yield farming.
     pub(super) min_deposit: Balance,

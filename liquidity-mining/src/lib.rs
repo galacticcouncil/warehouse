@@ -115,7 +115,7 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::ArithmeticError;
 
 use hydra_dx_math::liquidity_mining as math;
-use hydradx_traits::{pools::DustRemovalAccountWhitelist, registry::Registry};
+use hydradx_traits::{liquidity_mining::PriceAdjustment, pools::DustRemovalAccountWhitelist, registry::Registry};
 use orml_traits::{GetByKey, MultiCurrency};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
@@ -173,7 +173,7 @@ pub mod pallet {
         type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// Asset type.
-        type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaxEncodedLen;
+        type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaxEncodedLen + Into<u32>;
 
         /// Currency for transfers.
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Balance>;
@@ -212,6 +212,12 @@ pub mod pallet {
 
         /// Account whitelist manager to exclude pool accounts from dusting mechanism.
         type NonDustableWhitelistHandler: DustRemovalAccountWhitelist<Self::AccountId, Error = DispatchError>;
+
+        type PriceAdjustment: PriceAdjustment<
+            GlobalFarmData<Self, I>,
+            Error = DispatchError,
+            PriceAdjustment = FixedU128,
+        >;
     }
 
     #[pallet::error]
@@ -1526,9 +1532,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
         // Calculate reward for all periods since last update capped by balance of `GlobalFarm`
         // account.
+        let price_adjustment = T::PriceAdjustment::get(global_farm)?;
         let reward = math::calculate_global_farm_rewards(
             global_farm.total_shares_z,
-            global_farm.price_adjustment,
+            price_adjustment,
             global_farm.yield_per_period.into(),
             global_farm.max_reward_per_period,
             periods_since_last_update,
@@ -1736,6 +1743,32 @@ impl<T: Config<I>, I: 'static> hydradx_traits::liquidity_mining::Mutate<T::Accou
             yield_per_period,
             min_deposit,
             price_adjustment,
+        )
+    }
+
+    /// This function should be used when external source(e.g. oracle) is used for `price_adjustment`
+    /// or if `incentivized_asset` and `reward_currency` can't be different.
+    fn create_global_farm_without_price_adjustment(
+        total_rewards: Self::Balance,
+        planned_yielding_periods: Self::Period,
+        blocks_per_period: BlockNumberFor<T>,
+        incentivized_asset: T::AssetId,
+        reward_currency: T::AssetId,
+        owner: T::AccountId,
+        yield_per_period: Perquintill,
+        min_deposit: Self::Balance,
+    ) -> Result<(GlobalFarmId, Self::Balance), Self::Error> {
+        Self::create_global_farm(
+            total_rewards,
+            planned_yielding_periods,
+            blocks_per_period,
+            incentivized_asset,
+            reward_currency,
+            owner,
+            yield_per_period,
+            min_deposit,
+            //NOTE: `price_adjustment` == 1 is same as no `price_adjustment`
+            FixedU128::one(),
         )
     }
 

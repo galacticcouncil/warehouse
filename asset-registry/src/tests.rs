@@ -704,11 +704,7 @@ fn set_location_should_fail_when_location_is_already_registered() {
 
         // Act & Assert
         assert_noop!(
-            AssetRegistryPallet::set_location(
-                Origin::root(),
-                asset_id,
-                asset_location.clone()
-            ),
+            AssetRegistryPallet::set_location(Origin::root(), asset_id, asset_location.clone()),
             Error::<Test>::LocationAlreadyRegistered
         );
     });

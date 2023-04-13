@@ -2818,7 +2818,7 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 [[package]]
 name = "hydra-dx-math"
 version = "6.0.0"
-source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=d410fb79c45c38186808444152ebdae3174595f7#d410fb79c45c38186808444152ebdae3174595f7"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=bcb75f1c2b4f1d859ff133ca663539c59d1ed910#bcb75f1c2b4f1d859ff133ca663539c59d1ed910"
 dependencies = [
  "fixed",
  "num-traits",

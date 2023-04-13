@@ -5194,7 +5194,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-duster"
-version = "3.2.1"
+version = "3.2.2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

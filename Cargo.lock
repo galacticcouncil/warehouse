@@ -5312,7 +5312,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-otc"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

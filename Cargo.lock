@@ -2818,7 +2818,7 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 [[package]]
 name = "hydra-dx-math"
 version = "7.0.0"
-source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=6d72acfdd78a849d50c7660190f5463b53800dcd#6d72acfdd78a849d50c7660190f5463b53800dcd"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=84632c3c7b71e16d53240e4bdc2adc693c941916#84632c3c7b71e16d53240e4bdc2adc693c941916"
 dependencies = [
  "fixed",
  "num-traits",
@@ -5042,7 +5042,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-ema-oracle"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5157,7 +5157,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-liquidity-mining"
-version = "4.1.1"
+version = "4.1.2"
 dependencies = [
  "fixed",
  "frame-support",
@@ -5458,7 +5458,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-stableswap"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "bitflags",
  "frame-benchmarking",

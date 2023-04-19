@@ -344,7 +344,8 @@ fn update_asset() {
             btc_asset_id,
             b"superBTC".to_vec(),
             AssetType::Token,
-            None
+            None,
+            None,
         ));
         let bn = AssetRegistryPallet::to_bounded_name(b"superBTC".to_vec()).unwrap();
 
@@ -352,6 +353,8 @@ fn update_asset() {
             asset_id: btc_asset_id,
             asset_name: bn.clone(),
             asset_type: AssetType::Token,
+            existential_deposit: 1_000_000,
+            xcm_rate_limit: None,
         }
         .into()]);
 
@@ -380,7 +383,8 @@ fn update_asset() {
                 usd_asset_id,
                 b"superBTC".to_vec(),
                 AssetType::Token,
-                None
+                None,
+                None,
             )),
             Error::<Test>::AssetAlreadyRegistered
         );
@@ -392,7 +396,8 @@ fn update_asset() {
                 next_asset_id,
                 b"VOID".to_vec(),
                 AssetType::Token,
-                None
+                None,
+                None,
             )),
             Error::<Test>::AssetNotFound
         );
@@ -403,7 +408,8 @@ fn update_asset() {
             btc_asset_id,
             b"BTCUSD".to_vec(),
             AssetType::PoolShare(btc_asset_id, usd_asset_id),
-            None
+            None,
+            None,
         ));
 
         // Update ED
@@ -412,7 +418,8 @@ fn update_asset() {
             btc_asset_id,
             b"BTCUSD".to_vec(),
             AssetType::PoolShare(btc_asset_id, usd_asset_id),
-            Some(1_234_567u128)
+            Some(1_234_567u128),
+            None,
         ));
 
         let btcusd = AssetRegistryPallet::to_bounded_name(b"BTCUSD".to_vec()).unwrap();
@@ -434,7 +441,8 @@ fn update_asset() {
             btc_asset_id,
             b"superBTC".to_vec(),
             AssetType::Token,
-            None
+            None,
+            None,
         ));
 
         let superbtc_name: BoundedVec<u8, <Test as crate::Config>::StringLimit> =
@@ -450,6 +458,47 @@ fn update_asset() {
                 xcm_rate_limit: None,
             }
         );
+    });
+}
+
+#[test]
+fn update_should_update_xcm_rate_limit() {
+    new_test_ext().execute_with(|| {
+        let ed = 1_000_000u128;
+
+        let btc_asset_id: RegistryAssetId =
+            AssetRegistryPallet::get_or_create_asset(b"BTC".to_vec(), AssetType::Token, ed, None).unwrap();
+
+        assert_ok!(AssetRegistryPallet::update(
+            RuntimeOrigin::root(),
+            btc_asset_id,
+            b"superBTC".to_vec(),
+            AssetType::Token,
+            None,
+            Some(1000 * UNIT)
+        ));
+
+        let bn = AssetRegistryPallet::to_bounded_name(b"superBTC".to_vec()).unwrap();
+
+        assert_eq!(
+            AssetRegistryPallet::assets(btc_asset_id).unwrap(),
+            AssetDetails {
+                name: bn.clone(),
+                asset_type: AssetType::Token,
+                existential_deposit: ed,
+                locked: false,
+                xcm_rate_limit: Some(1000 * UNIT),
+            }
+        );
+
+        expect_events(vec![Event::Updated {
+            asset_id: btc_asset_id,
+            asset_name: bn.clone(),
+            asset_type: AssetType::Token,
+            existential_deposit: ed,
+            xcm_rate_limit: Some(1000 * UNIT),
+        }
+        .into()]);
     });
 }
 

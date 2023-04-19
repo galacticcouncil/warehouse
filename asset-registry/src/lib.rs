@@ -222,6 +222,8 @@ pub mod pallet {
             asset_id: T::AssetId,
             asset_name: BoundedVec<u8, T::StringLimit>,
             asset_type: AssetType<T::AssetId>,
+            existential_deposit: T::Balance,
+            xcm_rate_limit: Option<T::Balance>,
         },
 
         /// Metadata set for an asset.
@@ -313,6 +315,7 @@ pub mod pallet {
             name: Vec<u8>,
             asset_type: AssetType<T::AssetId>,
             existential_deposit: Option<T::Balance>,
+            xcm_rate_limit: Option<T::Balance>,
         ) -> DispatchResult {
             T::RegistryOrigin::ensure_origin(origin)?;
 
@@ -336,11 +339,14 @@ pub mod pallet {
                 detail.name = bounded_name.clone();
                 detail.asset_type = asset_type;
                 detail.existential_deposit = existential_deposit.unwrap_or(detail.existential_deposit);
+                detail.xcm_rate_limit = xcm_rate_limit;
 
                 Self::deposit_event(Event::Updated {
                     asset_id,
                     asset_name: bounded_name,
                     asset_type,
+                    existential_deposit: detail.existential_deposit,
+                    xcm_rate_limit: detail.xcm_rate_limit,
                 });
 
                 Ok(())

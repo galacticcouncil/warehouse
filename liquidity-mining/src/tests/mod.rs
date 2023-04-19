@@ -262,6 +262,7 @@ pub mod terminate_yield_farm;
 pub mod test_ext;
 
 pub mod lm_with_oracle;
+pub mod real_data;
 #[allow(clippy::module_inception)]
 pub mod tests;
 pub mod update_global_farm;

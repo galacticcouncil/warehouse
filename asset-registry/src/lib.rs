@@ -192,6 +192,7 @@ pub mod pallet {
                 asset_type: AssetType::Token,
                 existential_deposit: self.native_existential_deposit,
                 locked: false,
+                xcm_rate_limit: None,
             };
 
             Assets::<T>::insert(T::NativeAssetId::get(), details);
@@ -200,7 +201,7 @@ pub mod pallet {
                 let bounded_name = Pallet::<T>::to_bounded_name(name.to_vec())
                     .map_err(|_| panic!("Invalid asset name!"))
                     .unwrap();
-                let _ = Pallet::<T>::register_asset(bounded_name, AssetType::Token, *ed, *id)
+                let _ = Pallet::<T>::register_asset(bounded_name, AssetType::Token, *ed, *id, None)
                     .map_err(|_| panic!("Failed to register asset"));
             })
         }
@@ -258,6 +259,7 @@ pub mod pallet {
             asset_id: Option<T::AssetId>,
             metadata: Option<Metadata>,
             location: Option<T::AssetNativeLocation>,
+            xcm_rate_limit: Option<T::Balance>,
         ) -> DispatchResult {
             T::RegistryOrigin::ensure_origin(origin)?;
 
@@ -268,7 +270,8 @@ pub mod pallet {
                 Error::<T>::AssetAlreadyRegistered
             );
 
-            let asset_id = Self::register_asset(bounded_name, asset_type, existential_deposit, asset_id)?;
+            let asset_id =
+                Self::register_asset(bounded_name, asset_type, existential_deposit, asset_id, xcm_rate_limit)?;
 
             if let Some(meta) = metadata {
                 let symbol = Self::to_bounded_name(meta.symbol)?;
@@ -428,6 +431,7 @@ impl<T: Config> Pallet<T> {
         asset_type: AssetType<T::AssetId>,
         existential_deposit: T::Balance,
         selected_asset_id: Option<T::AssetId>,
+        xcm_rate_limit: Option<T::Balance>,
     ) -> Result<T::AssetId, DispatchError> {
         let asset_id = if let Some(selected_id) = selected_asset_id {
             ensure!(
@@ -471,6 +475,7 @@ impl<T: Config> Pallet<T> {
             asset_type,
             existential_deposit,
             locked: false,
+            xcm_rate_limit,
         };
 
         // Store the details
@@ -499,7 +504,7 @@ impl<T: Config> Pallet<T> {
         if let Some(asset_id) = AssetIds::<T>::get(&bounded_name) {
             Ok(asset_id)
         } else {
-            Self::register_asset(bounded_name, asset_type, existential_deposit, asset_id)
+            Self::register_asset(bounded_name, asset_type, existential_deposit, asset_id, None)
         }
     }
 

@@ -41,6 +41,7 @@ fn register_asset_works() {
                 ed,
                 None,
                 None,
+                None,
                 None
             ),
             Error::<Test>::TooLong
@@ -56,6 +57,7 @@ fn register_asset_works() {
             None,
             None,
             None,
+            None
         ));
 
         let bn = AssetRegistryPallet::to_bounded_name(name.clone()).unwrap();
@@ -77,12 +79,22 @@ fn register_asset_works() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: ed,
-                locked: false
+                locked: false,
+                xcm_rate_limit: None,
             }
         );
 
         assert_noop!(
-            AssetRegistryPallet::register(RuntimeOrigin::root(), name, AssetType::Token, ed, None, None, None),
+            AssetRegistryPallet::register(
+                RuntimeOrigin::root(),
+                name,
+                AssetType::Token,
+                ed,
+                None,
+                None,
+                None,
+                None
+            ),
             Error::<Test>::AssetAlreadyRegistered
         );
     });
@@ -156,6 +168,7 @@ fn location_mapping_works() {
                 asset_type: AssetType::Token,
                 existential_deposit: ed,
                 locked: false,
+                xcm_rate_limit: None,
             },
         );
 
@@ -232,7 +245,8 @@ fn genesis_config_works() {
                     name: one,
                     asset_type: AssetType::Token,
                     existential_deposit: 1_000u128,
-                    locked: false
+                    locked: false,
+                    xcm_rate_limit: None,
                 }
             );
 
@@ -244,7 +258,8 @@ fn genesis_config_works() {
                     name: life,
                     asset_type: AssetType::Token,
                     existential_deposit: 1_000u128,
-                    locked: false
+                    locked: false,
+                    xcm_rate_limit: None,
                 }
             );
         });
@@ -346,7 +361,8 @@ fn update_asset() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: ed,
-                locked: false
+                locked: false,
+                xcm_rate_limit: None,
             }
         );
 
@@ -407,7 +423,8 @@ fn update_asset() {
                 name: btcusd,
                 asset_type: AssetType::PoolShare(btc_asset_id, usd_asset_id),
                 existential_deposit: 1_234_567u128,
-                locked: false
+                locked: false,
+                xcm_rate_limit: None,
             }
         );
 
@@ -429,7 +446,8 @@ fn update_asset() {
                 name: superbtc_name,
                 asset_type: AssetType::Token,
                 locked: false,
-                existential_deposit: 1_234_567u128
+                existential_deposit: 1_234_567u128,
+                xcm_rate_limit: None,
             }
         );
     });
@@ -475,6 +493,7 @@ fn register_asset_should_work_when_asset_is_provided() {
                 1_000_000,
                 Some(1u32),
                 None,
+                None,
                 None
             ),);
 
@@ -485,7 +504,8 @@ fn register_asset_should_work_when_asset_is_provided() {
                     name: bn,
                     asset_type: AssetType::Token,
                     existential_deposit: 1_000_000,
-                    locked: false
+                    locked: false,
+                    xcm_rate_limit: None,
                 }
             );
         });
@@ -501,6 +521,7 @@ fn register_asset_should_fail_when_provided_asset_is_native_asset() {
                 AssetType::Token,
                 1_000_000,
                 Some(NativeAssetId::get()),
+                None,
                 None,
                 None
             ),
@@ -519,6 +540,7 @@ fn register_asset_should_fail_when_provided_asset_is_already_registered() {
             1_000_000,
             Some(10),
             None,
+            None,
             None
         ));
         assert_noop!(
@@ -528,6 +550,7 @@ fn register_asset_should_fail_when_provided_asset_is_already_registered() {
                 AssetType::Token,
                 1_000_000,
                 Some(10),
+                None,
                 None,
                 None
             ),
@@ -550,6 +573,7 @@ fn register_asset_should_fail_when_provided_asset_is_outside_reserved_range() {
                     1_000_000,
                     Some(SequentialIdStart::get()),
                     None,
+                    None,
                     None
                 ),
                 Error::<Test>::NotInReservedRange
@@ -562,6 +586,7 @@ fn register_asset_should_fail_when_provided_asset_is_outside_reserved_range() {
                     AssetType::Token,
                     1_000_000,
                     Some(SequentialIdStart::get() + 100),
+                    None,
                     None,
                     None
                 ),
@@ -584,6 +609,7 @@ fn register_asset_should_work_when_metadata_is_provided() {
                 symbol: b"SYM".to_vec(),
                 decimals: 18
             }),
+            None,
             None
         ),);
 
@@ -594,7 +620,8 @@ fn register_asset_should_work_when_metadata_is_provided() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: 1_000_000,
-                locked: false
+                locked: false,
+                xcm_rate_limit: None,
             }
         );
 
@@ -624,7 +651,8 @@ fn register_asset_should_work_when_location_is_provided() {
             1_000_000,
             Some(asset_id),
             None,
-            Some(asset_location.clone())
+            Some(asset_location.clone()),
+            None
         ),);
 
         let bn = AssetRegistryPallet::to_bounded_name(b"asset_id".to_vec()).unwrap();
@@ -634,7 +662,8 @@ fn register_asset_should_work_when_location_is_provided() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: 1_000_000,
-                locked: false
+                locked: false,
+                xcm_rate_limit: None,
             }
         );
         assert_eq!(
@@ -665,7 +694,8 @@ fn register_asset_should_work_when_all_optional_are_provided() {
                 symbol: b"SYM".to_vec(),
                 decimals: 18
             }),
-            Some(asset_location.clone())
+            Some(asset_location.clone()),
+            Some(1000 * UNIT)
         ),);
 
         let bn = AssetRegistryPallet::to_bounded_name(b"asset_id".to_vec()).unwrap();
@@ -675,7 +705,8 @@ fn register_asset_should_work_when_all_optional_are_provided() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: 1_000_000,
-                locked: false
+                locked: false,
+                xcm_rate_limit: Some(1000 * UNIT),
             }
         );
         assert_eq!(

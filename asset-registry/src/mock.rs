@@ -34,6 +34,8 @@ use crate::{self as asset_registry, Config};
 pub type AssetId = u32;
 pub type Balance = u128;
 
+pub const UNIT: Balance = 1_000_000_000_000;
+
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 

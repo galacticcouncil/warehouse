@@ -17,9 +17,9 @@
 
 use super::Error;
 use crate::mock::AssetId as RegistryAssetId;
-use crate::mock::*;
 use crate::types::{AssetDetails, AssetMetadata, AssetType, Metadata};
 use crate::Event;
+use crate::{mock::*, XcmRateLimitsInRegistry};
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok, BoundedVec};
 use orml_traits::GetByKey;
@@ -490,6 +490,8 @@ fn update_should_update_xcm_rate_limit() {
                 xcm_rate_limit: Some(1000 * UNIT),
             }
         );
+
+        assert_eq!(XcmRateLimitsInRegistry::<Test>::get(&btc_asset_id), Some(1000 * UNIT));
 
         expect_events(vec![Event::Updated {
             asset_id: btc_asset_id,

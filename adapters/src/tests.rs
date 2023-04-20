@@ -217,12 +217,12 @@ fn can_buy_twice() {
     {
         let mut trader = Trader::new();
 
-        let payment1: MultiAsset = (Concrete(core_id.clone()), 1_000_000).into();
+        let payment1: MultiAsset = (Concrete(core_id), 1_000_000).into();
         let res = dbg!(trader.buy_weight(Weight::from_ref_time(1_000_000), payment1.into()));
         assert!(res
             .expect("buy_weight should succeed because payment == weight")
             .is_empty());
-        let payment2: MultiAsset = (Concrete(core_id.clone()), 1_000_000).into();
+        let payment2: MultiAsset = (Concrete(core_id), 1_000_000).into();
         let res = dbg!(trader.buy_weight(Weight::from_ref_time(1_000_000), payment2.into()));
         assert!(res
             .expect("buy_weight should succeed because payment == weight")

@@ -79,7 +79,7 @@ impl<
         if let Some(asset) = payment.fungible_assets_iter().next() {
             ConvertCurrency::convert(asset.clone())
                 .and_then(|currency| AcceptedCurrencyPrices::price(currency))
-                .and_then(|price| match asset.id.clone() {
+                .and_then(|price| match asset.id {
                     Concrete(location) => Some((location, price)),
                     _ => None,
                 })
@@ -131,7 +131,7 @@ impl<
         let fee = ConvertWeightToFee::weight_to_fee(&weight);
         let converted_fee = price.checked_mul_int(fee).ok_or(XcmError::Overflow)?;
         let amount: u128 = converted_fee.try_into().map_err(|_| XcmError::Overflow)?;
-        let required = (Concrete(asset_loc.clone()), amount).into();
+        let required = (Concrete(asset_loc), amount).into();
         let unused = payment.checked_sub(required).map_err(|_| XcmError::TooExpensive)?;
         self.weight = self.weight.saturating_add(weight);
         let key = (asset_loc, price);
@@ -158,9 +158,9 @@ impl<
             let refund = converted_fee.min(*amount);
             *amount -= refund; // Will not underflow because of `min()` above.
 
-            let refund_asset = asset_loc.clone();
+            let refund_asset = *asset_loc;
             if amount.is_zero() {
-                let key = (asset_loc.clone(), *price);
+                let key = (*asset_loc, *price);
                 self.paid_assets.remove(&key);
             }
             Some((Concrete(refund_asset), refund).into())
@@ -193,7 +193,7 @@ impl<
 {
     fn drop(&mut self) {
         for ((asset_loc, _), amount) in self.paid_assets.iter() {
-            Revenue::take_revenue((asset_loc.clone(), *amount).into());
+            Revenue::take_revenue((*asset_loc, *amount).into());
         }
     }
 }

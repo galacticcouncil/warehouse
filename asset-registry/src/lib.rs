@@ -580,7 +580,7 @@ impl<T: Config> GetByKey<T::AssetId, T::Balance> for Pallet<T> {
 }
 
 /// Allows querying the XCM rate limit for an asset by its id.
-struct XcmRateLimitsInRegistry<T>(PhantomData<T>);
+pub struct XcmRateLimitsInRegistry<T>(PhantomData<T>);
 /// Allows querying the XCM rate limit for an asset by its id.
 /// Both a unknown asset and an unset rate limit will return `None`.
 impl<T: Config> GetByKey<T::AssetId, Option<T::Balance>> for XcmRateLimitsInRegistry<T> {

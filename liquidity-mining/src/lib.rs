@@ -95,8 +95,8 @@ mod types;
 pub use pallet::*;
 
 pub use crate::types::{
-    Balance, DepositData, DepositId, FarmId, FarmMultiplier, FarmState, GlobalFarmData, GlobalFarmId, LoyaltyCurve,
-    YieldFarmData, YieldFarmEntry, YieldFarmId,
+    Balance, DefaultPriceAdjustment, DepositData, DepositId, FarmId, FarmMultiplier, FarmState, GlobalFarmData,
+    GlobalFarmId, LoyaltyCurve, YieldFarmData, YieldFarmEntry, YieldFarmId,
 };
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{

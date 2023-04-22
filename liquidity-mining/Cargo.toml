@@ -1,6 +1,6 @@
 [package]
 name = "pallet-liquidity-mining"
-version = "4.2.1"
+version = "4.2.2"
 description = "Liquidity mining"
 authors = ["GalacticCouncil"]
 edition = "2021"
@@ -21,7 +21,7 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "2717dcf804264e6fec56801356efe0b18389442c", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "d11c3da92ac4eb9b503f5e7e8e3710962948ef84", default-features = false }
 
 # Substrate dependencies
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }

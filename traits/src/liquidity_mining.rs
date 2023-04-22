@@ -30,6 +30,21 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
         price_adjustment: FixedU128,
     ) -> Result<(YieldFarmId, Self::Balance), Self::Error>;
 
+    /// Create new global farm without `price_adjustment`.
+    ///
+    /// Returns: `(GlobalFarmId, max reward per period)`
+    #[allow(clippy::too_many_arguments)]
+    fn create_global_farm_without_price_adjustment(
+        total_rewards: Self::Balance,
+        planned_yielding_periods: Self::Period,
+        blocks_per_period: BlockNumber,
+        incentivized_asset: AssetId,
+        reward_currency: AssetId,
+        owner: AccountId,
+        yield_per_period: Perquintill,
+        min_deposit: Self::Balance,
+    ) -> Result<(YieldFarmId, Self::Balance), Self::Error>;
+
     /// Update price adjustment of the existing global farm.
     fn update_global_farm_price_adjustment(
         who: AccountId,
@@ -148,4 +163,13 @@ pub trait Mutate<AccountId, AssetId, BlockNumber> {
 
     /// Returns `Some(global_farm_id)` for given `deposit_id` and `yield_farm_id` or `None`.
     fn get_global_farm_id(deposit_id: DepositId, yield_farm_id: YieldFarmId) -> Option<u32>;
+}
+
+/// Implementers of this trait provide `price_adjustment` for given `GlobalFarm`.
+pub trait PriceAdjustment<GlobalFarm> {
+    type Error;
+    type PriceAdjustment;
+
+    /// Returns value of `PriceAdjustment` for given `GlobalFarm`.
+    fn get(global_farm: &GlobalFarm) -> Result<Self::PriceAdjustment, Self::Error>;
 }

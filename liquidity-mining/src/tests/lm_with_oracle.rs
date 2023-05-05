@@ -248,7 +248,7 @@ fn last_saved_price_adjustment_should_be_used_when_oracle_is_not_available() {
                 GC,
                 Perquintill::from_float(0.5),
                 1_000,
-                FixedU128::from(2_u128), //default price_adjustment, won't be used.
+                FixedU128::from(2_u128), //default price_adjustment
             ));
 
             assert_ok!(LiquidityMining3::create_yield_farm(
@@ -286,7 +286,7 @@ fn last_saved_price_adjustment_should_be_used_when_oracle_is_not_available() {
             //Assert
             assert_eq!(unclaimable, 0);
             assert_eq!(claimed_amount, 5_000 * ONE);
-            //NOTE: global-farm's price_adjustment should be updated
+            //NOTE: oracle is not available so value should not change.
             assert_eq!(
                 LiquidityMining3::global_farm(GLOBAL_FARM).unwrap().price_adjustment,
                 FixedU128::from(2_u128)

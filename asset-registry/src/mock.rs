@@ -89,14 +89,8 @@ impl system::Config for Test {
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 
-#[derive(Debug, Encode, Decode, Clone, PartialEq, Eq, TypeInfo)]
+#[derive(Debug, Default, Encode, Decode, Clone, PartialEq, Eq, TypeInfo)]
 pub struct AssetLocation(pub MultiLocation);
-
-impl Default for AssetLocation {
-    fn default() -> Self {
-        AssetLocation(MultiLocation::default())
-    }
-}
 
 impl Config for Test {
     type RuntimeEvent = RuntimeEvent;

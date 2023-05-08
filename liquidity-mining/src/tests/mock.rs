@@ -18,8 +18,8 @@
 #![cfg(test)]
 use super::*;
 
-use crate as liq_mining;
 use crate::Config;
+use crate::{self as liq_mining, types::DefaultPriceAdjustment};
 use frame_support::{
     parameter_types,
     traits::Contains,
@@ -127,6 +127,8 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         LiquidityMining: liq_mining::<Instance1>::{Pallet, Storage, Event<T>},
         LiquidityMining2: liq_mining::<Instance2>::{Pallet, Storage, Event<T>},
+        //This LM instance is using dummy oracle for price_adjustment
+        LiquidityMining3: liq_mining::<Instance3>::{Pallet, Storage, Event<T>},
         Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
     }
@@ -292,6 +294,7 @@ impl Config<Instance1> for Test {
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
     type NonDustableWhitelistHandler = Whitelist;
     type AssetRegistry = AssetRegistry;
+    type PriceAdjustment = DefaultPriceAdjustment;
 }
 
 parameter_types! {
@@ -315,6 +318,27 @@ impl Config<Instance2> for Test {
     type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
     type NonDustableWhitelistHandler = Whitelist;
     type AssetRegistry = AssetRegistry;
+    type PriceAdjustment = DefaultPriceAdjustment;
+}
+
+parameter_types! {
+    pub const LMPalletId3: PalletId = PalletId(*b"TEST_lm3");
+}
+
+impl Config<Instance3> for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type AssetId = AssetId;
+    type MultiCurrency = Tokens;
+    type PalletId = LMPalletId3;
+    type MinPlannedYieldingPeriods = MinPlannedYieldingPeriods2;
+    type MinTotalFarmRewards = MinTotalFarmRewards;
+    type BlockNumberProvider = MockBlockNumberProvider;
+    type AmmPoolId = AccountId;
+    type MaxFarmEntriesPerDeposit = MaxEntriesPerDeposit;
+    type MaxYieldFarmsPerGlobalFarm = MaxYieldFarmsPerGlobalFarm;
+    type NonDustableWhitelistHandler = Whitelist;
+    type AssetRegistry = AssetRegistry;
+    type PriceAdjustment = DummyOraclePriceAdjustment;
 }
 
 parameter_types! {
@@ -347,6 +371,18 @@ impl orml_tokens::Config for Test {
     type MaxReserves = ConstU32<100_000>;
     type ReserveIdentifier = ();
     type CurrencyHooks = ();
+}
+
+pub struct DummyOraclePriceAdjustment;
+
+impl PriceAdjustment<GlobalFarmData<Test, Instance3>> for DummyOraclePriceAdjustment {
+    type Error = DispatchError;
+
+    type PriceAdjustment = FixedU128;
+
+    fn get(_global_farm: &GlobalFarmData<Test, Instance3>) -> Result<Self::PriceAdjustment, Self::Error> {
+        Ok(FixedU128::from_inner(500_000_000_000_000_000)) //0.5
+    }
 }
 
 pub struct Whitelist;

@@ -251,6 +251,7 @@ pub mod pallet {
         /// Adds mapping between `name` and assigned `asset_id` so asset id can be retrieved by name too (Note: this approach is used in AMM implementation (xyk))
         ///
         /// Emits 'Registered` event when successful.
+        #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::register())]
         pub fn register(
@@ -585,6 +586,6 @@ pub struct XcmRateLimitsInRegistry<T>(PhantomData<T>);
 /// Both a unknown asset and an unset rate limit will return `None`.
 impl<T: Config> GetByKey<T::AssetId, Option<T::Balance>> for XcmRateLimitsInRegistry<T> {
     fn get(k: &T::AssetId) -> Option<T::Balance> {
-        Pallet::<T>::assets(k).map(|details| details.xcm_rate_limit).flatten()
+        Pallet::<T>::assets(k).and_then(|details| details.xcm_rate_limit)
     }
 }

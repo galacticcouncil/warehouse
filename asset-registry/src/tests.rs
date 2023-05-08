@@ -495,7 +495,7 @@ fn update_should_update_xcm_rate_limit() {
 
         expect_events(vec![Event::Updated {
             asset_id: btc_asset_id,
-            asset_name: bn.clone(),
+            asset_name: bn,
             asset_type: AssetType::Token,
             existential_deposit: ed,
             xcm_rate_limit: Some(1000 * UNIT),

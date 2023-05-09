@@ -22,11 +22,11 @@ use hydradx_traits::NativePriceOracle;
 use pallet_transaction_multi_payment::DepositFee;
 use polkadot_xcm::latest::prelude::*;
 use polkadot_xcm::latest::Weight;
+use sp_runtime::traits::Get;
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, Convert, Saturating, Zero},
     FixedPointNumber, FixedPointOperand, SaturatedConversion,
 };
-use sp_runtime::traits::Get;
 use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData};
 use xcm_builder::TakeRevenue;
 use xcm_executor::{traits::WeightTrader, Assets};

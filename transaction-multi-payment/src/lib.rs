@@ -371,7 +371,7 @@ where
 
         let currency = match call.is_sub_type() {
             Some(Call::set_currency { currency }) => *currency,
-            _ => Pallet::<T>::account_currency(&who),
+            _ => Pallet::<T>::account_currency(who),
         };
 
         let price = Pallet::<T>::get_currency_price(currency)

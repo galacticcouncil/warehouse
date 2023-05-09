@@ -20,7 +20,6 @@ use crate::{AcceptedCurrencies, AcceptedCurrencyPrice, Event, PaymentInfo, Price
 
 use frame_support::{
     assert_noop, assert_ok,
-    dispatch::Dispatchable,
     sp_runtime::traits::{BadOrigin, SignedExtension},
     traits::Hooks,
     weights::{DispatchInfo, PostDispatchInfo, Weight},

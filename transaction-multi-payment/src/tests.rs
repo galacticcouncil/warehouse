@@ -96,40 +96,66 @@ fn set_unsupported_currency() {
     });
 }
 
-/*
 #[test]
-fn set_supported_currency_without_spot_price() {
+fn set_supported_currency_without_spot_price_should_charge_fee_in_correct_currency() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        assert_ok!(PaymentPallet::set_currency(Origin::signed(ALICE), SUPPORTED_CURRENCY),);
+        let call = &Call::PaymentPallet(crate::Call::set_currency {
+            currency: SUPPORTED_CURRENCY,
+        });
 
-        assert_eq!(PaymentPallet::get_currency(ALICE), Some(SUPPORTED_CURRENCY));
+        let len = 10;
+        let info = info_from_weight(Weight::from_ref_time(5));
+
+        let pre = ChargeTransactionPayment::<Test>::from(0).pre_dispatch(&ALICE, call, &info, len);
+        assert!(pre.is_ok());
 
         assert_eq!(
             Currencies::free_balance(SUPPORTED_CURRENCY, &ALICE),
-            999_999_999_998_457
+            999_999_999_999_970
         );
-        assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 1_543);
+
+        assert_ok!(ChargeTransactionPayment::<Test>::post_dispatch(
+            Some(pre.unwrap()),
+            &info,
+            &default_post_info(),
+            len,
+            &Ok(())
+        ));
+        assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 30);
     });
 }
 
 #[test]
-fn set_supported_currency_with_price() {
+fn set_supported_currency_with_spot_price_should_charge_fee_in_correct_currency() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        assert_ok!(PaymentPallet::set_currency(
-            Origin::signed(ALICE),
-            SUPPORTED_CURRENCY_WITH_PRICE
-        ),);
+        let call = &Call::PaymentPallet(crate::Call::set_currency {
+            currency: SUPPORTED_CURRENCY_WITH_PRICE,
+        });
 
-        assert_eq!(PaymentPallet::get_currency(ALICE), Some(SUPPORTED_CURRENCY_WITH_PRICE));
+        let len = 10;
+        let info = info_from_weight(Weight::from_ref_time(5));
+
+        let pre = ChargeTransactionPayment::<Test>::from(0).pre_dispatch(&ALICE, call, &info, len);
+        assert!(pre.is_ok());
 
         assert_eq!(
             Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &ALICE),
-            999_999_999_999_898
+            999_999_999_999_998
+        );
+
+        assert_ok!(ChargeTransactionPayment::<Test>::post_dispatch(
+            Some(pre.unwrap()),
+            &info,
+            &default_post_info(),
+            len,
+            &Ok(())
+        ));
+        assert_eq!(
+            Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &FEE_RECEIVER),
+            2
         );
     });
 }
-
- */
 
 #[test]
 fn set_native_currency() {
@@ -139,37 +165,6 @@ fn set_native_currency() {
         assert_eq!(PaymentPallet::get_currency(ALICE), Some(HDX));
     });
 }
-
-/*
-#[test]
-fn set_currency_with_insufficient_balance() {
-    const CHARLIE: AccountId = 5;
-
-    ExtBuilder::default()
-        .base_weight(5)
-        .account_native_balance(CHARLIE, 10)
-        .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10)
-        .build()
-        .execute_with(|| {
-            let call = Call::PaymentPallet(crate::Call::<Test>::set_currency {
-                currency: SUPPORTED_CURRENCY,
-            });
-            assert_noop!(
-                call.dispatch(Origin::signed(CHARLIE)),
-                orml_tokens::Error::<Test>::BalanceTooLow
-            );
-
-            let call = Call::PaymentPallet(crate::Call::<Test>::set_currency { currency: HDX });
-            assert_noop!(
-                call.dispatch(Origin::signed(CHARLIE)),
-                pallet_balances::Error::<Test>::InsufficientBalance
-            );
-
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10);
-            assert_eq!(Currencies::free_balance(HDX, &CHARLIE), 10);
-        });
-}
- */
 
 #[test]
 fn fee_payment_in_native_currency() {

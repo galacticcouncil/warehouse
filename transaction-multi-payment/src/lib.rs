@@ -248,7 +248,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             ensure!(
-                currency == T::NativeAssetId || AcceptedCurrencies::<T>::contains_key(currency),
+                currency == T::NativeAssetId::get() || AcceptedCurrencies::<T>::contains_key(currency),
                 Error::<T>::UnsupportedCurrency
             );
 
@@ -398,14 +398,6 @@ where
 
         match MC::withdraw(currency.into(), who, converted_fee) {
             Ok(()) => {
-                Self::deposit_event(Event::FeeWithdrawn {
-                    account_id: who.clone(),
-                    asset_id: currency,
-                    native_fee_amount: fee,
-                    non_native_fee_amount: converted_fee,
-                    destination_account_id: FR::get(),
-                });
-
                 if currency == T::NativeAssetId::get() {
                     Ok(Some(PaymentInfo::Native(fee)))
                 } else {

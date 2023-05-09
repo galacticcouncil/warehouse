@@ -15,10 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-    AcceptedCurrencies, AcceptedCurrencyPrice, Event, PaymentInfo, Price,
-};
 pub use crate::{mock::*, Config, Error};
+use crate::{AcceptedCurrencies, AcceptedCurrencyPrice, Event, PaymentInfo, Price};
 
 use frame_support::{
     assert_err, assert_noop, assert_ok,
@@ -379,10 +377,7 @@ fn fee_should_be_transferred_when_paid_in_native_currency() {
                 .pre_dispatch(&CHARLIE, CALL, &dispatch_info, len)
                 .unwrap();
             // Assert
-            assert_eq!(
-                pre,
-                (tip, CHARLIE, Some(PaymentInfo::Native(5 + 15 + 10)))
-            );
+            assert_eq!(pre, (tip, CHARLIE, Some(PaymentInfo::Native(5 + 15 + 10))));
 
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 30);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
@@ -460,14 +455,7 @@ fn fee_should_be_transferred_when_paid_in_native_currency_work_with_tip() {
                 .pre_dispatch(&CHARLIE, CALL, &dispatch_info, len)
                 .unwrap();
             // Assert
-            assert_eq!(
-                pre,
-                (
-                    tip,
-                    CHARLIE,
-                    Some(PaymentInfo::Native(5 + 15 + 10 + tip))
-                )
-            );
+            assert_eq!(pre, (tip, CHARLIE, Some(PaymentInfo::Native(5 + 15 + 10 + tip))));
 
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 5 - 10 - 15 - tip);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
@@ -554,19 +542,12 @@ fn fee_should_be_transferred_when_paid_in_non_native_currency() {
                 (
                     tip,
                     CHARLIE,
-                        Some(PaymentInfo::NonNative(
-                            45,
-                            SUPPORTED_CURRENCY,
-                            Price::from_float(1.5)
-                        ))
+                    Some(PaymentInfo::NonNative(45, SUPPORTED_CURRENCY, Price::from_float(1.5)))
                 )
             );
 
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
@@ -581,10 +562,7 @@ fn fee_should_be_transferred_when_paid_in_non_native_currency() {
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()),
-                45
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 45);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
         });
@@ -613,10 +591,7 @@ fn fee_should_be_withdrawn_when_paid_in_non_native_currency() {
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
@@ -631,10 +606,7 @@ fn fee_should_be_withdrawn_when_paid_in_non_native_currency() {
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
             assert_eq!(Tokens::total_issuance(SUPPORTED_CURRENCY), previous_total_issuance - 45);
@@ -668,19 +640,12 @@ fn fee_should_be_transferred_when_paid_in_non_native_currency_with_tip() {
                 (
                     tip,
                     CHARLIE,
-                        Some(PaymentInfo::NonNative(
-                            52,
-                            SUPPORTED_CURRENCY,
-                            Price::from_float(1.5)
-                        ))
+                    Some(PaymentInfo::NonNative(52, SUPPORTED_CURRENCY, Price::from_float(1.5)))
                 )
             );
 
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 52);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
@@ -695,10 +660,7 @@ fn fee_should_be_transferred_when_paid_in_non_native_currency_with_tip() {
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()),
-                45
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 45);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
         });
@@ -728,10 +690,7 @@ fn fee_should_be_withdrawn_and_not_refunded_when_paid_in_non_native_currency_wit
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 52);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
@@ -746,10 +705,7 @@ fn fee_should_be_withdrawn_and_not_refunded_when_paid_in_non_native_currency_wit
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 52);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
             assert_eq!(Tokens::total_issuance(SUPPORTED_CURRENCY), previous_total_issuance - 52);
@@ -795,10 +751,7 @@ fn fee_payment_in_non_native_currency_with_no_balance() {
                 .is_err());
 
             assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 100);
-            assert_eq!(
-                Tokens::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
         });
 }
 
@@ -962,11 +915,7 @@ fn fee_transfer_can_kill_account_when_paid_in_non_native() {
                 (
                     tip,
                     ALICE,
-                        Some(PaymentInfo::NonNative(
-                            45,
-                            SUPPORTED_CURRENCY,
-                            Price::from_float(1.5)
-                        ))
+                    Some(PaymentInfo::NonNative(45, SUPPORTED_CURRENCY, Price::from_float(1.5)))
                 )
             );
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &ALICE), 0);

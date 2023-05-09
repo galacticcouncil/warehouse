@@ -2832,7 +2832,7 @@ dependencies = [
 
 [[package]]
 name = "hydradx-adapters"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "hydradx-traits",
@@ -2849,7 +2849,7 @@ dependencies = [
 
 [[package]]
 name = "hydradx-traits"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -4978,7 +4978,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-duster"
-version = "3.2.0"
+version = "3.2.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5548,7 +5548,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-transaction-multi-payment"
-version = "8.0.4"
+version = "9.0.0"
 dependencies = [
  "frame-support",
  "frame-system",

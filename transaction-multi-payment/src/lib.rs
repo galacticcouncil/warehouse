@@ -32,14 +32,14 @@ mod traits;
 use frame_support::{
     dispatch::DispatchResult,
     ensure,
-    traits::{Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, WithdrawReasons},
-    weights::{DispatchClass, WeightToFee},
+    traits::Get,
+    weights::{Weight, WeightToFee},
 };
 use frame_system::ensure_signed;
 use sp_runtime::{
     traits::{DispatchInfoOf, One, PostDispatchInfoOf, Saturating, Zero},
     transaction_validity::{InvalidTransaction, TransactionValidityError},
-    FixedU128, ModuleError,
+    FixedU128,
 };
 use sp_std::prelude::*;
 
@@ -48,23 +48,15 @@ use sp_std::marker::PhantomData;
 
 use frame_support::sp_runtime::FixedPointNumber;
 use frame_support::sp_runtime::FixedPointOperand;
-use frame_support::weights::{Pays, Weight};
 use hydradx_traits::{pools::SpotPriceProvider, NativePriceOracle};
-use orml_traits::{currency, Happened, MultiCurrency, MultiCurrencyExtended};
+use orml_traits::{Happened, MultiCurrency};
 
-use codec::{Decode, Encode};
-use frame_support::sp_runtime::traits::SignedExtension;
-use frame_support::sp_runtime::transaction_validity::{TransactionValidity, ValidTransaction};
 use frame_support::traits::IsSubType;
 
-use scale_info::TypeInfo;
-
 pub use crate::traits::*;
-use frame_support::dispatch::DispatchError;
 
 type AssetIdOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 type BalanceOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
-type NegativeImbalanceOf<C, T> = <C as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
 /// Spot price type
 pub type Price = FixedU128;
@@ -319,13 +311,6 @@ where
 {
     fn account_currency(who: &T::AccountId) -> AssetIdOf<T> {
         Pallet::<T>::get_currency(who).unwrap_or_else(T::NativeAssetId::get)
-    }
-
-    fn weight_to_fee(weight: Weight) -> BalanceOf<T> {
-        // cap the weight to the maximum defined in runtime, otherwise it will be the
-        // `Bounded` maximum of its data type, which is not desired.
-        let capped_weight: Weight = weight.min(T::BlockWeights::get().max_block);
-        <T as Config>::WeightToFee::weight_to_fee(&capped_weight)
     }
 
     fn get_currency_price(currency: AssetIdOf<T>) -> Option<Price> {

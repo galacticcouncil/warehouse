@@ -117,7 +117,6 @@ parameter_types! {
         .build_or_panic();
 
     pub ExchangeFeeRate: (u32, u32) = (2, 1_000);
-    pub PayForSetCurrency : Pays = Pays::Yes;
 }
 
 impl system::Config for Test {

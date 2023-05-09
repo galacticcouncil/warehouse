@@ -379,13 +379,10 @@ fn fee_should_be_transferred_when_paid_in_native_currency() {
                 .pre_dispatch(&CHARLIE, CALL, &dispatch_info, len)
                 .unwrap();
             // Assert
-            /*
             assert_eq!(
                 pre,
-                (tip, CHARLIE, Info(Some(Some(PaymentInfo::Native(5 + 15 + 10))), None))
+                (tip, CHARLIE, Some(PaymentInfo::Native(5 + 15 + 10)))
             );
-
-             */
 
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 30);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
@@ -412,7 +409,6 @@ fn fee_should_be_withdrawn_when_paid_in_native_currency() {
     ExtBuilder::default()
         .account_native_balance(CHARLIE, 100)
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;
@@ -464,17 +460,14 @@ fn fee_should_be_transferred_when_paid_in_native_currency_work_with_tip() {
                 .pre_dispatch(&CHARLIE, CALL, &dispatch_info, len)
                 .unwrap();
             // Assert
-            /*
             assert_eq!(
                 pre,
                 (
                     tip,
                     CHARLIE,
-                    Info(Some(Some(PaymentInfo::Native(5 + 15 + 10 + tip))), None)
+                    Some(PaymentInfo::Native(5 + 15 + 10 + tip))
                 )
             );
-
-             */
 
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 5 - 10 - 15 - tip);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
@@ -502,7 +495,6 @@ fn fee_should_be_withdrawn_when_paid_in_native_currency_work_with_tip() {
     ExtBuilder::default()
         .account_native_balance(CHARLIE, 100)
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;
@@ -557,23 +549,18 @@ fn fee_should_be_transferred_when_paid_in_non_native_currency() {
                 .unwrap();
 
             // Assert
-            /*
             assert_eq!(
                 pre,
                 (
                     tip,
                     CHARLIE,
-                    Info(
-                        Some(Some(PaymentInfo::NonNative(
+                        Some(PaymentInfo::NonNative(
                             45,
                             SUPPORTED_CURRENCY,
                             Price::from_float(1.5)
-                        ))),
-                        None
-                    )
+                        ))
                 )
             );
-             */
 
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
             assert_eq!(
@@ -612,7 +599,6 @@ fn fee_should_be_withdrawn_when_paid_in_non_native_currency() {
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10_000)
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;
@@ -677,25 +663,18 @@ fn fee_should_be_transferred_when_paid_in_non_native_currency_with_tip() {
                 .unwrap();
 
             // Assert
-            /*
-
             assert_eq!(
                 pre,
                 (
                     tip,
                     CHARLIE,
-                    Info(
-                        Some(Some(PaymentInfo::NonNative(
+                        Some(PaymentInfo::NonNative(
                             52,
                             SUPPORTED_CURRENCY,
                             Price::from_float(1.5)
-                        ))),
-                        None
-                    )
+                        ))
                 )
             );
-
-             */
 
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 52);
             assert_eq!(
@@ -734,7 +713,6 @@ fn fee_should_be_withdrawn_and_not_refunded_when_paid_in_non_native_currency_wit
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10_000)
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;
@@ -918,7 +896,7 @@ fn fee_transfer_can_kill_account_when_paid_in_native() {
                 .unwrap();
 
             // Assert
-            //assert_eq!(pre, (tip, CHARLIE, Info(Some(Some(PaymentInfo::Native(30))), None)));
+            assert_eq!(pre, (tip, CHARLIE, Some(PaymentInfo::Native(30))));
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
@@ -945,7 +923,6 @@ fn fee_withdrawal_cannot_kill_account_when_paid_in_native() {
     ExtBuilder::default()
         .account_native_balance(CHARLIE, 30)
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;
@@ -980,24 +957,18 @@ fn fee_transfer_can_kill_account_when_paid_in_non_native() {
                 .unwrap();
 
             // Assert
-            /*
             assert_eq!(
                 pre,
                 (
                     tip,
                     ALICE,
-                    Info(
-                        Some(Some(PaymentInfo::NonNative(
+                        Some(PaymentInfo::NonNative(
                             45,
                             SUPPORTED_CURRENCY,
                             Price::from_float(1.5)
-                        ))),
-                        None
-                    )
+                        ))
                 )
             );
-
-             */
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &ALICE), 0);
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 0);
 
@@ -1022,7 +993,6 @@ fn fee_withdrawal_can_kill_account_when_paid_in_non_native() {
     ExtBuilder::default()
         .with_currencies(vec![(ALICE, SUPPORTED_CURRENCY)])
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;

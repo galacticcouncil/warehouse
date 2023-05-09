@@ -61,7 +61,6 @@ const MAX_BLOCK_WEIGHT: Weight = Weight::from_ref_time(1024);
 
 thread_local! {
     static EXTRINSIC_BASE_WEIGHT: RefCell<Weight> = RefCell::new(Weight::zero());
-    static TRANSFER_FEE: RefCell<bool> = RefCell::new(true);
 }
 
 pub struct ExtrinsicBaseWeight;
@@ -289,10 +288,6 @@ impl ExtBuilder {
     }
     fn set_constants(&self) {
         EXTRINSIC_BASE_WEIGHT.with(|v| *v.borrow_mut() = self.base_weight);
-    }
-    pub fn with_fee_withdrawal(self) -> Self {
-        TRANSFER_FEE.with(|v| *v.borrow_mut() = false);
-        self
     }
     pub fn build(self) -> sp_io::TestExternalities {
         use frame_support::traits::OnInitialize;

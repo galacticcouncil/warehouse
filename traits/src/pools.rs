@@ -5,9 +5,12 @@ pub trait SpotPriceProvider<AssetId> {
 
     fn pair_exists(asset_a: AssetId, asset_b: AssetId) -> bool;
 
-    /// Return spot price for given asset pair
+    /// Return spot price for given asset pair.
     ///
-    /// Returns None if such pair does not exist
+    /// Returns price of the `asset_b` denominated in `asset_a` ( `asset_a / asset_b` ).
+    /// Example: `spot_price(DAI, LRNA) == 25` (you get 25 DAI for each LRNA).
+    ///
+    /// Returns `None` if such pair does not exist.
     fn spot_price(asset_a: AssetId, asset_b: AssetId) -> Option<Self::Price>;
 }
 

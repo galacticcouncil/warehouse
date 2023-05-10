@@ -18,7 +18,7 @@
 use super::*;
 use codec::{Decode, Encode};
 use frame_support::weights::IdentityFee;
-use sp_runtime::{traits::One, DispatchError, DispatchResult, FixedU128};
+use sp_runtime::{traits::One, DispatchResult, FixedU128};
 use sp_std::cell::RefCell;
 use sp_std::collections::btree_set::BTreeSet;
 
@@ -364,12 +364,9 @@ fn revenue_goes_to_fee_receiver() {
     ExpectDeposit::reset();
 
     struct MockFeeReceiver;
-    impl TransactionMultiPaymentDataProvider<AccountId, AssetId, Price> for MockFeeReceiver {
-        fn get_currency_and_price(_who: &AccountId) -> Result<(AssetId, Option<Price>), DispatchError> {
-            Err("not implemented".into())
-        }
 
-        fn get_fee_receiver() -> AccountId {
+    impl Get<AccountId> for MockFeeReceiver {
+        fn get() -> AccountId {
             42
         }
     }

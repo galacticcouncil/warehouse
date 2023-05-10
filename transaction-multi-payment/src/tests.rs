@@ -15,26 +15,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::traits::TransactionMultiPaymentDataProvider;
-use crate::{
-    error_to_invalid, AcceptedCurrencies, AcceptedCurrencyPrice, CurrencyBalanceCheck, Event, PaymentInfo, Price,
-};
 pub use crate::{mock::*, Config, Error};
+use crate::{AcceptedCurrencies, AcceptedCurrencyPrice, Event, PaymentInfo, Price};
 
 use frame_support::{
-    assert_err, assert_noop, assert_ok,
-    dispatch::{DispatchError, Dispatchable},
-    sp_runtime::{
-        traits::{BadOrigin, SignedExtension},
-        transaction_validity::ValidTransaction,
-    },
+    assert_noop, assert_ok,
+    sp_runtime::traits::{BadOrigin, SignedExtension},
     traits::Hooks,
     weights::{DispatchInfo, PostDispatchInfo, Weight},
 };
 use orml_traits::MultiCurrency;
 use pallet_balances::Call as BalancesCall;
 use pallet_transaction_payment::ChargeTransactionPayment;
-use sp_std::marker::PhantomData;
 
 const CALL: &<Test as frame_system::Config>::Call = &Call::Balances(BalancesCall::transfer { dest: 2, value: 69 });
 
@@ -104,46 +96,63 @@ fn set_unsupported_currency() {
 }
 
 #[test]
-fn set_supported_currency_without_spot_price() {
+fn set_supported_currency_without_spot_price_should_charge_fee_in_correct_currency() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        assert_ok!(PaymentPallet::set_currency(Origin::signed(ALICE), SUPPORTED_CURRENCY),);
+        let call = &Call::PaymentPallet(crate::Call::set_currency {
+            currency: SUPPORTED_CURRENCY,
+        });
 
-        assert_eq!(PaymentPallet::get_currency(ALICE), Some(SUPPORTED_CURRENCY));
+        let len = 10;
+        let info = info_from_weight(Weight::from_ref_time(5));
+
+        let pre = ChargeTransactionPayment::<Test>::from(0).pre_dispatch(&ALICE, call, &info, len);
+        assert!(pre.is_ok());
 
         assert_eq!(
             Currencies::free_balance(SUPPORTED_CURRENCY, &ALICE),
-            999_999_999_998_457
+            999_999_999_999_970
         );
-        assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 1_543);
+
+        assert_ok!(ChargeTransactionPayment::<Test>::post_dispatch(
+            Some(pre.unwrap()),
+            &info,
+            &default_post_info(),
+            len,
+            &Ok(())
+        ));
+        assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 30);
     });
 }
 
 #[test]
-fn set_supported_currency_with_price() {
+fn set_supported_currency_with_spot_price_should_charge_fee_in_correct_currency() {
     ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        assert_ok!(PaymentPallet::set_currency(
-            Origin::signed(ALICE),
-            SUPPORTED_CURRENCY_WITH_PRICE
-        ),);
+        let call = &Call::PaymentPallet(crate::Call::set_currency {
+            currency: SUPPORTED_CURRENCY_WITH_PRICE,
+        });
 
-        assert_eq!(PaymentPallet::get_currency(ALICE), Some(SUPPORTED_CURRENCY_WITH_PRICE));
+        let len = 10;
+        let info = info_from_weight(Weight::from_ref_time(5));
+
+        let pre = ChargeTransactionPayment::<Test>::from(0).pre_dispatch(&ALICE, call, &info, len);
+        assert!(pre.is_ok());
 
         assert_eq!(
             Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &ALICE),
-            999_999_999_999_898
-        );
-    });
-}
-
-#[test]
-fn set_supported_currency_with_no_balance() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(
-            PaymentPallet::set_currency(Origin::signed(BOB), SUPPORTED_CURRENCY_NO_BALANCE),
-            Error::<Test>::ZeroBalance
+            999_999_999_999_998
         );
 
-        assert_eq!(PaymentPallet::get_currency(BOB), None);
+        assert_ok!(ChargeTransactionPayment::<Test>::post_dispatch(
+            Some(pre.unwrap()),
+            &info,
+            &default_post_info(),
+            len,
+            &Ok(())
+        ));
+        assert_eq!(
+            Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &FEE_RECEIVER),
+            2
+        );
     });
 }
 
@@ -154,45 +163,6 @@ fn set_native_currency() {
 
         assert_eq!(PaymentPallet::get_currency(ALICE), Some(HDX));
     });
-}
-
-#[test]
-fn set_native_currency_with_no_balance() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(
-            PaymentPallet::set_currency(Origin::signed(BOB), HDX),
-            Error::<Test>::ZeroBalance
-        );
-    });
-}
-
-#[test]
-fn set_currency_with_insufficient_balance() {
-    const CHARLIE: AccountId = 5;
-
-    ExtBuilder::default()
-        .base_weight(5)
-        .account_native_balance(CHARLIE, 10)
-        .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10)
-        .build()
-        .execute_with(|| {
-            let call = Call::PaymentPallet(crate::Call::<Test>::set_currency {
-                currency: SUPPORTED_CURRENCY,
-            });
-            assert_noop!(
-                call.dispatch(Origin::signed(CHARLIE)),
-                orml_tokens::Error::<Test>::BalanceTooLow
-            );
-
-            let call = Call::PaymentPallet(crate::Call::<Test>::set_currency { currency: HDX });
-            assert_noop!(
-                call.dispatch(Origin::signed(CHARLIE)),
-                pallet_balances::Error::<Test>::InsufficientBalance
-            );
-
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10);
-            assert_eq!(Currencies::free_balance(HDX, &CHARLIE), 10);
-        });
 }
 
 #[test]
@@ -310,53 +280,6 @@ fn removed_accepted_currency() {
 }
 
 #[test]
-fn check_balance_extension_works() {
-    const CHARLIE: AccountId = 5;
-
-    ExtBuilder::default()
-        .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 1000)
-        .build()
-        .execute_with(|| {
-            let call = Call::PaymentPallet(multi_payment::Call::set_currency {
-                currency: SUPPORTED_CURRENCY,
-            });
-            let info = DispatchInfo::default();
-
-            assert_eq!(
-                CurrencyBalanceCheck::<Test>(PhantomData).validate(&CHARLIE, &call, &info, 150),
-                Ok(ValidTransaction::default())
-            );
-
-            let call = Call::PaymentPallet(multi_payment::Call::add_currency {
-                currency: SUPPORTED_CURRENCY,
-                price: Price::from(1),
-            });
-
-            assert_eq!(
-                CurrencyBalanceCheck::<Test>(PhantomData).validate(&CHARLIE, &call, &info, 150),
-                Ok(ValidTransaction::default())
-            );
-        });
-}
-
-#[test]
-fn check_balance_extension_fails() {
-    const NOT_CHARLIE: AccountId = 6;
-
-    ExtBuilder::default().build().execute_with(|| {
-        let call = Call::PaymentPallet(multi_payment::Call::set_currency {
-            currency: SUPPORTED_CURRENCY,
-        });
-        let info = DispatchInfo::default();
-
-        assert_eq!(
-            CurrencyBalanceCheck::<Test>(PhantomData).validate(&NOT_CHARLIE, &call, &info, 150),
-            error_to_invalid(Error::<Test>::ZeroBalance).into()
-        );
-    });
-}
-
-#[test]
 fn account_currency_works() {
     ExtBuilder::default().build().execute_with(|| {
         assert_eq!(PaymentPallet::account_currency(&ALICE), HDX);
@@ -372,110 +295,6 @@ fn account_currency_works() {
 
         assert_ok!(PaymentPallet::set_currency(Origin::signed(ALICE), HDX));
         assert_eq!(PaymentPallet::account_currency(&ALICE), HDX);
-    });
-}
-
-#[test]
-fn data_provider_works() {
-    let go_to_next_block = || {
-        use frame_support::traits::Hooks;
-
-        let current = System::block_number();
-        PaymentPallet::on_finalize(current);
-
-        let next = current + 1;
-        System::set_block_number(next);
-        // Make sure the prices are up-to-date.
-        PaymentPallet::on_initialize(next);
-    };
-
-    ExtBuilder::default().build().execute_with(|| {
-        assert_eq!(PaymentPallet::get_fee_receiver(), FEE_RECEIVER);
-        assert_eq!(
-            PaymentPallet::get_currency_and_price(&ALICE),
-            Ok((<Test as Config>::NativeAssetId::get(), None))
-        );
-
-        assert_ok!(PaymentPallet::set_currency(Origin::signed(ALICE), SUPPORTED_CURRENCY));
-        assert_eq!(
-            PaymentPallet::get_currency_and_price(&ALICE),
-            Ok((SUPPORTED_CURRENCY, Some(Price::from_float(1.5))))
-        );
-
-        assert_ok!(PaymentPallet::remove_currency(Origin::root(), SUPPORTED_CURRENCY));
-        // price is removed at the end of the block
-        go_to_next_block();
-        assert_err!(
-            PaymentPallet::get_currency_and_price(&ALICE),
-            Error::<Test>::FallbackPriceNotFound
-        );
-    });
-}
-
-#[test]
-fn transfer_set_fee_with_core_asset_should_work() {
-    ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        let fb_account = <Test as Config>::FeeReceiver::get();
-        let hdx_balance_before = Currencies::free_balance(HDX, &ALICE);
-        let fb_balance_before = Currencies::free_balance(HDX, &fb_account);
-
-        assert_ok!(PaymentPallet::transfer_set_fee(&ALICE));
-        expect_events(vec![Event::FeeWithdrawn {
-            account_id: ALICE,
-            asset_id: HDX,
-            native_fee_amount: 1029,
-            non_native_fee_amount: 1029,
-            destination_account_id: FEE_RECEIVER,
-        }
-        .into()]);
-
-        assert_eq!(hdx_balance_before - 1029, Currencies::free_balance(HDX, &ALICE));
-        assert_eq!(fb_balance_before + 1029, Currencies::free_balance(HDX, &fb_account));
-    });
-}
-
-#[test]
-fn transfer_set_fee_should_work() {
-    ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        assert_ok!(PaymentPallet::set_currency(
-            Origin::signed(ALICE),
-            SUPPORTED_CURRENCY_WITH_PRICE
-        ));
-
-        let balance_before = Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &ALICE);
-        let fb_acc_balance_before =
-            Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &<Test as Config>::FeeReceiver::get());
-
-        assert_ok!(PaymentPallet::transfer_set_fee(&ALICE));
-        assert_eq!(
-            balance_before - 102,
-            Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &ALICE)
-        );
-        assert_eq!(
-            fb_acc_balance_before + 102,
-            Currencies::free_balance(SUPPORTED_CURRENCY_WITH_PRICE, &<Test as Config>::FeeReceiver::get())
-        );
-    });
-}
-
-#[test]
-fn weight_to_fee_should_work() {
-    ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        assert_eq!(PaymentPallet::weight_to_fee(Weight::from_ref_time(1024)), 1024);
-        assert_eq!(PaymentPallet::weight_to_fee(Weight::from_ref_time(1)), 1);
-        assert_eq!(PaymentPallet::weight_to_fee(Weight::from_ref_time(1025)), 1024);
-        assert_eq!(PaymentPallet::weight_to_fee(Weight::from_ref_time(10000)), 1024);
-    });
-}
-
-#[test]
-fn check_balance_should_work() {
-    ExtBuilder::default().base_weight(5).build().execute_with(|| {
-        assert_ok!(PaymentPallet::check_balance(&ALICE, SUPPORTED_CURRENCY));
-        assert_err!(
-            PaymentPallet::check_balance(&ALICE, SUPPORTED_CURRENCY_NO_BALANCE).map_err(Into::<DispatchError>::into),
-            Error::<Test>::ZeroBalance
-        );
     });
 }
 
@@ -521,10 +340,7 @@ fn fee_should_be_transferred_when_paid_in_native_currency() {
                 .pre_dispatch(&CHARLIE, CALL, &dispatch_info, len)
                 .unwrap();
             // Assert
-            assert_eq!(
-                pre,
-                (tip, CHARLIE, Info(Some(Some(PaymentInfo::Native(5 + 15 + 10))), None))
-            );
+            assert_eq!(pre, (tip, CHARLIE, Some(PaymentInfo::Native(5 + 15 + 10))));
 
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 30);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
@@ -551,7 +367,6 @@ fn fee_should_be_withdrawn_when_paid_in_native_currency() {
     ExtBuilder::default()
         .account_native_balance(CHARLIE, 100)
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;
@@ -578,8 +393,8 @@ fn fee_should_be_withdrawn_when_paid_in_native_currency() {
             ));
             // Assert
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 30);
-            assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
-            assert_eq!(Balances::total_issuance(), previous_total_issuance - 30);
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 30);
+            assert_eq!(Balances::total_issuance(), previous_total_issuance);
         });
 }
 
@@ -603,14 +418,7 @@ fn fee_should_be_transferred_when_paid_in_native_currency_work_with_tip() {
                 .pre_dispatch(&CHARLIE, CALL, &dispatch_info, len)
                 .unwrap();
             // Assert
-            assert_eq!(
-                pre,
-                (
-                    tip,
-                    CHARLIE,
-                    Info(Some(Some(PaymentInfo::Native(5 + 15 + 10 + tip))), None)
-                )
-            );
+            assert_eq!(pre, (tip, CHARLIE, Some(PaymentInfo::Native(5 + 15 + 10 + tip))));
 
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 5 - 10 - 15 - tip);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
@@ -638,7 +446,6 @@ fn fee_should_be_withdrawn_when_paid_in_native_currency_work_with_tip() {
     ExtBuilder::default()
         .account_native_balance(CHARLIE, 100)
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;
@@ -667,8 +474,8 @@ fn fee_should_be_withdrawn_when_paid_in_native_currency_work_with_tip() {
 
             // Assert
             assert_eq!(Balances::free_balance(CHARLIE), 100 - 5 - 10 - 10 - tip);
-            assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
-            assert_eq!(Balances::total_issuance(), previous_total_issuance - 30);
+            assert_eq!(Balances::free_balance(FEE_RECEIVER), 30);
+            assert_eq!(Balances::total_issuance(), previous_total_issuance);
         });
 }
 
@@ -698,22 +505,12 @@ fn fee_should_be_transferred_when_paid_in_non_native_currency() {
                 (
                     tip,
                     CHARLIE,
-                    Info(
-                        Some(Some(PaymentInfo::NonNative(
-                            45,
-                            SUPPORTED_CURRENCY,
-                            Price::from_float(1.5)
-                        ))),
-                        None
-                    )
+                    Some(PaymentInfo::NonNative(45, SUPPORTED_CURRENCY, Price::from_float(1.5)))
                 )
             );
 
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &<Test as Config>::FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
@@ -728,10 +525,7 @@ fn fee_should_be_transferred_when_paid_in_non_native_currency() {
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &<Test as Config>::FeeReceiver::get()),
-                45
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 45);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
         });
@@ -746,7 +540,6 @@ fn fee_should_be_withdrawn_when_paid_in_non_native_currency() {
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10_000)
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;
@@ -761,10 +554,7 @@ fn fee_should_be_withdrawn_when_paid_in_non_native_currency() {
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &<Test as Config>::FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
@@ -779,13 +569,10 @@ fn fee_should_be_withdrawn_when_paid_in_non_native_currency() {
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &<Test as Config>::FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 45);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
-            assert_eq!(Tokens::total_issuance(SUPPORTED_CURRENCY), previous_total_issuance - 45);
+            assert_eq!(Tokens::total_issuance(SUPPORTED_CURRENCY), previous_total_issuance);
         });
 }
 
@@ -816,22 +603,12 @@ fn fee_should_be_transferred_when_paid_in_non_native_currency_with_tip() {
                 (
                     tip,
                     CHARLIE,
-                    Info(
-                        Some(Some(PaymentInfo::NonNative(
-                            52,
-                            SUPPORTED_CURRENCY,
-                            Price::from_float(1.5)
-                        ))),
-                        None
-                    )
+                    Some(PaymentInfo::NonNative(52, SUPPORTED_CURRENCY, Price::from_float(1.5)))
                 )
             );
 
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 52);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &<Test as Config>::FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
@@ -846,10 +623,7 @@ fn fee_should_be_transferred_when_paid_in_non_native_currency_with_tip() {
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &<Test as Config>::FeeReceiver::get()),
-                45
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 45);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
         });
@@ -864,7 +638,6 @@ fn fee_should_be_withdrawn_and_not_refunded_when_paid_in_non_native_currency_wit
         .with_currencies(vec![(CHARLIE, SUPPORTED_CURRENCY)])
         .account_tokens(CHARLIE, SUPPORTED_CURRENCY, 10_000)
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;
@@ -880,10 +653,7 @@ fn fee_should_be_withdrawn_and_not_refunded_when_paid_in_non_native_currency_wit
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 52);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &<Test as Config>::FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
@@ -897,14 +667,11 @@ fn fee_should_be_withdrawn_and_not_refunded_when_paid_in_non_native_currency_wit
             ));
 
             // Assert
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 52);
-            assert_eq!(
-                Currencies::free_balance(SUPPORTED_CURRENCY, &<Test as Config>::FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 10_000 - 45);
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 45);
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
-            assert_eq!(Tokens::total_issuance(SUPPORTED_CURRENCY), previous_total_issuance - 52);
+            assert_eq!(Tokens::total_issuance(SUPPORTED_CURRENCY), previous_total_issuance);
         });
 }
 
@@ -925,7 +692,7 @@ fn fee_payment_in_native_currency_with_no_balance() {
                 .is_err());
 
             assert_eq!(Balances::free_balance(CHARLIE), 10);
-            assert_eq!(Balances::free_balance(<Test as Config>::FeeReceiver::get()), 0);
+            assert_eq!(Balances::free_balance(FeeReceiver::get()), 0);
         });
 }
 
@@ -947,10 +714,7 @@ fn fee_payment_in_non_native_currency_with_no_balance() {
                 .is_err());
 
             assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &CHARLIE), 100);
-            assert_eq!(
-                Tokens::free_balance(SUPPORTED_CURRENCY, &<Test as Config>::FeeReceiver::get()),
-                0
-            );
+            assert_eq!(Tokens::free_balance(SUPPORTED_CURRENCY, &FeeReceiver::get()), 0);
         });
 }
 
@@ -1048,7 +812,7 @@ fn fee_transfer_can_kill_account_when_paid_in_native() {
                 .unwrap();
 
             // Assert
-            assert_eq!(pre, (tip, CHARLIE, Info(Some(Some(PaymentInfo::Native(30))), None)));
+            assert_eq!(pre, (tip, CHARLIE, Some(PaymentInfo::Native(30))));
             assert_eq!(Balances::free_balance(CHARLIE), 0);
             assert_eq!(Balances::free_balance(FEE_RECEIVER), 0);
 
@@ -1073,9 +837,8 @@ fn fee_withdrawal_cannot_kill_account_when_paid_in_native() {
     const CHARLIE: AccountId = 5;
 
     ExtBuilder::default()
-        .account_native_balance(CHARLIE, 30)
+        .account_native_balance(CHARLIE, 3)
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;
@@ -1115,14 +878,7 @@ fn fee_transfer_can_kill_account_when_paid_in_non_native() {
                 (
                     tip,
                     ALICE,
-                    Info(
-                        Some(Some(PaymentInfo::NonNative(
-                            45,
-                            SUPPORTED_CURRENCY,
-                            Price::from_float(1.5)
-                        ))),
-                        None
-                    )
+                    Some(PaymentInfo::NonNative(45, SUPPORTED_CURRENCY, Price::from_float(1.5)))
                 )
             );
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &ALICE), 0);
@@ -1149,7 +905,6 @@ fn fee_withdrawal_can_kill_account_when_paid_in_non_native() {
     ExtBuilder::default()
         .with_currencies(vec![(ALICE, SUPPORTED_CURRENCY)])
         .base_weight(5)
-        .with_fee_withdrawal()
         .build()
         .execute_with(|| {
             let len = 10;
@@ -1178,7 +933,7 @@ fn fee_withdrawal_can_kill_account_when_paid_in_non_native() {
 
             // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &ALICE), 0); // zero balance indicates that the account can be killed
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 0);
+            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 45);
         });
 }
 

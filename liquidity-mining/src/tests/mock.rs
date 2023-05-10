@@ -382,8 +382,15 @@ impl PriceAdjustment<GlobalFarmData<Test, Instance3>> for DummyOraclePriceAdjust
 
     type PriceAdjustment = FixedU128;
 
-    fn get(_global_farm: &GlobalFarmData<Test, Instance3>) -> Result<Self::PriceAdjustment, Self::Error> {
-        Ok(FixedU128::from_inner(500_000_000_000_000_000)) //0.5
+    fn get(global_farm: &GlobalFarmData<Test, Instance3>) -> Result<Self::PriceAdjustment, Self::Error> {
+        //This is special case to test global-fram's fallback when oracle is not available.
+        if global_farm.updated_at == 999_666_333 {
+            Err(sp_runtime::DispatchError::Other(
+                "Oracle is not available - updated_at == 999_666_333 is special case.",
+            ))
+        } else {
+            Ok(FixedU128::from_inner(500_000_000_000_000_000)) //0.5
+        }
     }
 }
 

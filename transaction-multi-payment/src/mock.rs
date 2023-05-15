@@ -63,77 +63,12 @@ const MAX_BLOCK_WEIGHT: Weight = Weight::from_ref_time(1024);
 
 thread_local! {
     static EXTRINSIC_BASE_WEIGHT: RefCell<Weight> = RefCell::new(Weight::zero());
-    static TRANSFER_FEE: RefCell<bool> = RefCell::new(true);
 }
 
 pub struct ExtrinsicBaseWeight;
 impl Get<Weight> for ExtrinsicBaseWeight {
     fn get() -> Weight {
         EXTRINSIC_BASE_WEIGHT.with(|v| *v.borrow())
-    }
-}
-
-pub struct ChargeAdapter<L, R>(PhantomData<L>, PhantomData<R>);
-
-#[derive(Default, Eq, PartialEq, Debug)]
-pub struct Info<L, R>(pub Option<L>, pub Option<R>);
-
-impl<T, L, R> OnChargeTransaction<T> for ChargeAdapter<L, R>
-where
-    L: OnChargeTransaction<T>,
-    R: OnChargeTransaction<T>,
-    T: Config,
-    L::Balance: From<u128>,
-    R::Balance: From<u128>,
-{
-    type Balance = u128;
-    type LiquidityInfo = Info<L::LiquidityInfo, R::LiquidityInfo>;
-
-    fn withdraw_fee(
-        who: &T::AccountId,
-        call: &T::RuntimeCall,
-        dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
-        fee: Self::Balance,
-        tip: Self::Balance,
-    ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
-        let f = TRANSFER_FEE.with(|v| *v.borrow());
-        if f {
-            let r = L::withdraw_fee(who, call, dispatch_info, fee.into(), tip.into())?;
-            Ok(Info(Some(r), None))
-        } else {
-            let r = R::withdraw_fee(who, call, dispatch_info, fee.into(), tip.into())?;
-            Ok(Info(None, Some(r)))
-        }
-    }
-
-    fn correct_and_deposit_fee(
-        who: &T::AccountId,
-        dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
-        post_info: &PostDispatchInfoOf<T::RuntimeCall>,
-        corrected_fee: Self::Balance,
-        tip: Self::Balance,
-        already_withdrawn: Self::LiquidityInfo,
-    ) -> Result<(), TransactionValidityError> {
-        let f = TRANSFER_FEE.with(|v| *v.borrow());
-        if f {
-            L::correct_and_deposit_fee(
-                who,
-                dispatch_info,
-                post_info,
-                corrected_fee.into(),
-                tip.into(),
-                already_withdrawn.0.unwrap(),
-            )
-        } else {
-            R::correct_and_deposit_fee(
-                who,
-                dispatch_info,
-                post_info,
-                corrected_fee.into(),
-                tip.into(),
-                already_withdrawn.1.unwrap(),
-            )
-        }
     }
 }
 
@@ -184,7 +119,6 @@ parameter_types! {
         .build_or_panic();
 
     pub ExchangeFeeRate: (u32, u32) = (2, 1_000);
-    pub PayForSetCurrency : Pays = Pays::Yes;
 }
 
 impl system::Config for Test {
@@ -220,10 +154,8 @@ impl Config for Test {
     type Currencies = Currencies;
     type SpotPriceProvider = SpotPrice;
     type WeightInfo = ();
-    type WithdrawFeeForSetCurrency = PayForSetCurrency;
     type WeightToFee = IdentityFee<Balance>;
     type NativeAssetId = HdxAssetId;
-    type FeeReceiver = FeeReceiver;
 }
 
 impl pallet_balances::Config for Test {
@@ -242,10 +174,7 @@ impl pallet_balances::Config for Test {
 
 impl pallet_transaction_payment::Config for Test {
     type RuntimeEvent = RuntimeEvent;
-    type OnChargeTransaction = ChargeAdapter<
-        TransferFees<Currencies, PaymentPallet, DepositAll<Test>>,
-        WithdrawFees<Balances, (), PaymentPallet>,
-    >;
+    type OnChargeTransaction = TransferFees<Currencies, DepositAll<Test>, FeeReceiver>;
     type LengthToFee = IdentityFee<Balance>;
     type OperationalFeeMultiplier = ();
     type WeightToFee = IdentityFee<Balance>;
@@ -275,7 +204,7 @@ impl SpotPriceProvider<AssetId> for SpotPrice {
 
     fn spot_price(asset_a: AssetId, asset_b: AssetId) -> Option<Self::Price> {
         match (asset_a, asset_b) {
-            (HDX, SUPPORTED_CURRENCY_WITH_PRICE) => Some(FixedU128::from_float(0.1)),
+            (SUPPORTED_CURRENCY_WITH_PRICE, HDX) => Some(FixedU128::from_float(0.1)),
             _ => None,
         }
     }
@@ -370,10 +299,6 @@ impl ExtBuilder {
     }
     fn set_constants(&self) {
         EXTRINSIC_BASE_WEIGHT.with(|v| *v.borrow_mut() = self.base_weight);
-    }
-    pub fn with_fee_withdrawal(self) -> Self {
-        TRANSFER_FEE.with(|v| *v.borrow_mut() = false);
-        self
     }
     pub fn build(self) -> sp_io::TestExternalities {
         use frame_support::traits::OnInitialize;

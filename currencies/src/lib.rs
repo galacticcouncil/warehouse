@@ -63,8 +63,10 @@ use sp_runtime::{
 };
 use sp_std::{fmt::Debug, marker, result};
 
+pub mod fungibles;
 mod mock;
 mod tests;
+mod tests_fungibles;
 mod weights;
 
 pub use module::*;
@@ -842,5 +844,69 @@ impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
             // transfer all free to dest
             T::NativeCurrency::transfer(source, dest, T::NativeCurrency::free_balance(source))
         })
+    }
+}
+
+use frame_support::traits::fungible::{Inspect, Mutate, Transfer};
+use frame_support::traits::tokens::{DepositConsequence, WithdrawConsequence};
+
+impl<T: Config, AccountId, Currency, Amount, Moment> Inspect<AccountId>
+    for BasicCurrencyAdapter<T, Currency, Amount, Moment>
+where
+    Currency: Inspect<AccountId>,
+{
+    type Balance = <Currency as Inspect<AccountId>>::Balance;
+
+    fn total_issuance() -> Self::Balance {
+        <Currency as Inspect<AccountId>>::total_issuance()
+    }
+
+    fn minimum_balance() -> Self::Balance {
+        <Currency as Inspect<AccountId>>::minimum_balance()
+    }
+
+    fn balance(who: &AccountId) -> Self::Balance {
+        <Currency as Inspect<AccountId>>::balance(who)
+    }
+
+    fn reducible_balance(who: &AccountId, keep_alive: bool) -> Self::Balance {
+        <Currency as Inspect<AccountId>>::reducible_balance(who, keep_alive)
+    }
+
+    fn can_deposit(who: &AccountId, amount: Self::Balance, mint: bool) -> DepositConsequence {
+        <Currency as Inspect<AccountId>>::can_deposit(who, amount, mint)
+    }
+
+    fn can_withdraw(who: &AccountId, amount: Self::Balance) -> WithdrawConsequence<Self::Balance> {
+        <Currency as Inspect<AccountId>>::can_withdraw(who, amount)
+    }
+}
+
+impl<T: Config, AccountId, Currency, Amount, Moment> Mutate<AccountId>
+    for BasicCurrencyAdapter<T, Currency, Amount, Moment>
+where
+    Currency: Mutate<AccountId>,
+{
+    fn mint_into(who: &AccountId, amount: Self::Balance) -> DispatchResult {
+        <Currency as Mutate<AccountId>>::mint_into(who, amount)
+    }
+
+    fn burn_from(who: &AccountId, amount: Self::Balance) -> Result<Self::Balance, DispatchError> {
+        <Currency as Mutate<AccountId>>::burn_from(who, amount)
+    }
+}
+
+impl<T: Config, AccountId, Currency, Amount, Moment> Transfer<AccountId>
+    for BasicCurrencyAdapter<T, Currency, Amount, Moment>
+where
+    Currency: Transfer<AccountId>,
+{
+    fn transfer(
+        source: &AccountId,
+        dest: &AccountId,
+        amount: Self::Balance,
+        keep_alive: bool,
+    ) -> Result<Self::Balance, DispatchError> {
+        <Currency as Transfer<AccountId>>::transfer(source, dest, amount, keep_alive)
     }
 }

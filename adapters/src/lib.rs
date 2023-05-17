@@ -19,9 +19,10 @@
 
 use frame_support::weights::WeightToFee;
 use hydradx_traits::NativePriceOracle;
-use pallet_transaction_multi_payment::{DepositFee, TransactionMultiPaymentDataProvider};
+use pallet_transaction_multi_payment::DepositFee;
 use polkadot_xcm::latest::prelude::*;
 use polkadot_xcm::latest::Weight;
+use sp_runtime::traits::Get;
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, Convert, Saturating, Zero},
     FixedPointNumber, FixedPointOperand, SaturatedConversion,
@@ -213,7 +214,7 @@ impl<
         Price,
         C: Convert<MultiLocation, Option<AssetId>>,
         D: DepositFee<AccountId, AssetId, Balance>,
-        F: TransactionMultiPaymentDataProvider<AccountId, AssetId, Price>,
+        F: Get<AccountId>,
     > TakeRevenue for ToFeeReceiver<AccountId, AssetId, Balance, Price, C, D, F>
 {
     fn take_revenue(asset: MultiAsset) {
@@ -223,7 +224,7 @@ impl<
                 fun: Fungibility::Fungible(amount),
             } => {
                 C::convert(loc).and_then(|id| {
-                    let receiver = F::get_fee_receiver();
+                    let receiver = F::get();
                     D::deposit_fee(&receiver, id, amount.saturated_into::<Balance>())
                         .map_err(|e| log::trace!(target: "xcm::take_revenue", "Could not deposit fee: {:?}", e))
                         .ok()

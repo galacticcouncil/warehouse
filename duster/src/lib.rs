@@ -213,7 +213,7 @@ pub mod pallet {
         /// be dusted, the remaining balance is transferred to selected account (usually treasury).
         ///
         /// Caller is rewarded with chosen reward in native currency.
-        #[pallet::weight((<T as Config>::WeightInfo::dust_account(), DispatchClass::Normal, Pays::Yes))]
+        #[pallet::weight(<T as Config>::WeightInfo::dust_account())]
         pub fn dust_account(origin: OriginFor<T>, account: T::AccountId, currency_id: T::CurrencyId) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -244,7 +244,7 @@ pub mod pallet {
         /// Add account to list of non-dustable account. Account whihc are excluded from udsting.
         /// If such account should be dusted - `AccountBlacklisted` error is returned.
         /// Only root can perform this action.
-        #[pallet::weight((<T as Config>::WeightInfo::add_nondustable_account(), DispatchClass::Normal, Pays::No))]
+        #[pallet::weight(<T as Config>::WeightInfo::add_nondustable_account())]
         pub fn add_nondustable_account(origin: OriginFor<T>, account: T::AccountId) -> DispatchResult {
             T::BlacklistUpdateOrigin::ensure_origin(origin)?;
 
@@ -256,7 +256,7 @@ pub mod pallet {
         }
 
         /// Remove account from list of non-dustable accounts. That means account can be dusted again.
-        #[pallet::weight((<T as Config>::WeightInfo::remove_nondustable_account(), DispatchClass::Normal, Pays::No))]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_nondustable_account())]
         pub fn remove_nondustable_account(origin: OriginFor<T>, account: T::AccountId) -> DispatchResult {
             T::BlacklistUpdateOrigin::ensure_origin(origin)?;
 

@@ -2817,8 +2817,8 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "hydra-dx-math"
-version = "6.1.0"
-source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=2fc83960a78bef9742551c78ae0264aa146d16b2#2fc83960a78bef9742551c78ae0264aa146d16b2"
+version = "7.0.0"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=84632c3c7b71e16d53240e4bdc2adc693c941916#84632c3c7b71e16d53240e4bdc2adc693c941916"
 dependencies = [
  "fixed",
  "num-traits",
@@ -2832,7 +2832,7 @@ dependencies = [
 
 [[package]]
 name = "hydradx-adapters"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "hydradx-traits",
@@ -2849,7 +2849,7 @@ dependencies = [
 
 [[package]]
 name = "hydradx-traits"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -4943,7 +4943,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-currencies"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4978,7 +4978,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-duster"
-version = "3.2.0"
+version = "3.2.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4998,28 +4998,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "substrate-wasm-builder",
-]
-
-[[package]]
-name = "pallet-dynamic-fees"
-version = "1.0.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "frame-system-benchmarking",
- "hydra-dx-math",
- "hydradx-traits",
- "orml-traits",
- "parity-scale-codec",
- "pretty_assertions",
- "proptest",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
@@ -5064,7 +5042,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-ema-oracle"
-version = "1.0.1"
+version = "1.0.3"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5179,7 +5157,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-liquidity-mining"
-version = "4.1.0"
+version = "4.2.0"
 dependencies = [
  "fixed",
  "frame-support",
@@ -5334,7 +5312,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-otc"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5480,7 +5458,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-stableswap"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "bitflags",
  "frame-benchmarking",
@@ -5570,7 +5548,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-transaction-multi-payment"
-version = "8.0.4"
+version = "9.0.0"
 dependencies = [
  "frame-support",
  "frame-system",

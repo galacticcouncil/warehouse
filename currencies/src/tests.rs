@@ -231,12 +231,16 @@ fn basic_currency_adapting_pallet_balances_transfer() {
         .one_hundred_for_alice_n_bob()
         .build()
         .execute_with(|| {
-            assert_ok!(AdaptedBasicCurrency::transfer(&ALICE, &BOB, 50));
+            assert_ok!(<AdaptedBasicCurrency as BasicCurrency<AccountId>>::transfer(
+                &ALICE, &BOB, 50
+            ));
             assert_eq!(PalletBalances::total_balance(&ALICE), 50);
             assert_eq!(PalletBalances::total_balance(&BOB), 150);
 
             // creation fee
-            assert_ok!(AdaptedBasicCurrency::transfer(&ALICE, &EVA, 10));
+            assert_ok!(<AdaptedBasicCurrency as BasicCurrency<AccountId>>::transfer(
+                &ALICE, &EVA, 10
+            ));
             assert_eq!(PalletBalances::total_balance(&ALICE), 40);
             assert_eq!(PalletBalances::total_balance(&EVA), 10);
         });
@@ -289,7 +293,10 @@ fn basic_currency_adapting_pallet_balances_slash() {
         .one_hundred_for_alice_n_bob()
         .build()
         .execute_with(|| {
-            assert_eq!(AdaptedBasicCurrency::slash(&ALICE, 101), 1);
+            assert_eq!(
+                <AdaptedBasicCurrency as BasicCurrency<AccountId>>::slash(&ALICE, 101),
+                1
+            );
             assert_eq!(PalletBalances::total_balance(&ALICE), 0);
             assert_eq!(PalletBalances::total_issuance(), 100);
         });

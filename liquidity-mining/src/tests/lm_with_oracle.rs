@@ -162,3 +162,137 @@ fn non_full_farm_should_pay_rewards_with_half_speed_when_price_adjustmnet_is_fro
         });
     });
 }
+
+#[test]
+fn oracles_price_adjustment_should_be_used_and_saved_when_oracle_is_available() {
+    new_test_ext().execute_with(|| {
+        let _ = with_transaction(|| {
+            const GLOBAL_FARM: GlobalFarmId = 1;
+            const YIELD_FARM_A: YieldFarmId = 2;
+
+            const ALICE_DEPOSIT: DepositId = 1;
+
+            const TOTAL_REWARDS: u128 = 200_000 * ONE;
+
+            //Arrange
+            set_block_number(100);
+            assert_ok!(LiquidityMining3::create_global_farm(
+                TOTAL_REWARDS,
+                20,
+                10,
+                BSX,
+                BSX,
+                GC,
+                Perquintill::from_float(0.5),
+                1_000,
+                FixedU128::from_float(5.5_f64), //default price_adjustment, won't be used.
+            ));
+
+            assert_ok!(LiquidityMining3::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                FixedU128::from(2_u128),
+                None,
+                BSX_TKN1_AMM,
+                vec![BSX, TKN1],
+            ));
+
+            set_block_number(120);
+            //alice
+            assert_ok!(LiquidityMining3::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_A,
+                BSX_TKN1_AMM,
+                5_000 * ONE,
+                |_, _, _| { Ok(5_000 * ONE) }
+            ));
+
+            //Act
+            set_block_number(401);
+            let (_, _, claimed_amount, unclaimable) =
+                LiquidityMining3::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
+
+            //Assert
+            assert_eq!(unclaimable, 0);
+            assert_eq!(claimed_amount, 70_000 * ONE);
+            //NOTE: global-farm's price_adjustment should be updated
+            assert_eq!(
+                LiquidityMining3::global_farm(GLOBAL_FARM).unwrap().price_adjustment,
+                FixedU128::from_float(0.5_f64)
+            );
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    });
+}
+
+#[test]
+fn last_saved_price_adjustment_should_be_used_when_oracle_is_not_available() {
+    new_test_ext().execute_with(|| {
+        let _ = with_transaction(|| {
+            const GLOBAL_FARM: GlobalFarmId = 1;
+            const YIELD_FARM_A: YieldFarmId = 2;
+
+            const ALICE_DEPOSIT: DepositId = 1;
+
+            const TOTAL_REWARDS: u128 = 200_000 * ONE;
+
+            //Arrange
+            set_block_number(100);
+            assert_ok!(LiquidityMining3::create_global_farm(
+                TOTAL_REWARDS,
+                20,
+                1,
+                BSX,
+                BSX,
+                GC,
+                Perquintill::from_float(0.5),
+                1_000,
+                FixedU128::from(2_u128), //default price_adjustment
+            ));
+
+            assert_ok!(LiquidityMining3::create_yield_farm(
+                GC,
+                GLOBAL_FARM,
+                FixedU128::one(),
+                None,
+                BSX_TKN1_AMM,
+                vec![BSX, TKN1],
+            ));
+
+            //NOTE: This is special period. Oracle will fail if global-farm was updated in this
+            //period.
+            set_block_number(999_666_333);
+            //alice
+            assert_ok!(LiquidityMining3::deposit_lp_shares(
+                GLOBAL_FARM,
+                YIELD_FARM_A,
+                BSX_TKN1_AMM,
+                5_000 * ONE,
+                |_, _, _| { Ok(5_000 * ONE) }
+            ));
+
+            assert_eq!(
+                LiquidityMining3::global_farm(GLOBAL_FARM).unwrap().price_adjustment,
+                FixedU128::from(2_u128)
+            );
+            //Act
+            set_block_number(999_666_334);
+            //NOTE: Oracle will fail because global_farm.updated_at == 999_666_333 when oracle is
+            //called.
+            let (_, _, claimed_amount, unclaimable) =
+                LiquidityMining3::claim_rewards(ALICE, ALICE_DEPOSIT, YIELD_FARM_A, false).unwrap();
+
+            //Assert
+            assert_eq!(unclaimable, 0);
+            assert_eq!(claimed_amount, 5_000 * ONE);
+            //NOTE: oracle is not available so value should not change.
+            assert_eq!(
+                LiquidityMining3::global_farm(GLOBAL_FARM).unwrap().price_adjustment,
+                FixedU128::from(2_u128)
+            );
+
+            TransactionOutcome::Commit(DispatchResult::Ok(()))
+        });
+    });
+}

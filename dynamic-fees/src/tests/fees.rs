@@ -273,3 +273,29 @@ fn fees_should_not_change_when_already_update_within_same_block() {
             assert_eq!(fee.1, initial_fee);
         });
 }
+
+#[test]
+fn fees_should_be_minimum_when_nothing_in_storage() {
+    ExtBuilder::default()
+        .with_oracle(SingleValueOracle::new(ONE, 2 * ONE, 50 * ONE))
+        .with_asset_fee_params(
+            Fee::from_percent(1),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
+        .with_protocol_fee_params(
+            Fee::from_percent(2),
+            Fee::from_percent(40),
+            FixedU128::zero(),
+            FixedU128::one(),
+        )
+        .build()
+        .execute_with(|| {
+            System::set_block_number(1);
+
+            let (asset_fee, protocol_fee) = retrieve_fee_entry(HDX);
+            assert_eq!(asset_fee, Fee::from_percent(1));
+            assert_eq!(protocol_fee, Fee::from_percent(2));
+        });
+}

@@ -52,7 +52,6 @@ pub const ONE: Balance = 1_000_000_000_000;
 pub(crate) type Fee = Perquintill;
 
 thread_local! {
-    pub static PAIRS: RefCell<Vec<(AssetId, AssetId)>> = RefCell::new(vec![]);
     pub static ORACLE: RefCell<Box<dyn CustomOracle>> = RefCell::new(Box::new(Oracle::new()));
     pub static BLOCK: RefCell<usize> = RefCell::new(0);
     pub static ASSET_FEE_PARAMS: RefCell<FeeParams<Fee>> = RefCell::new(fee_params_default());
@@ -122,7 +121,7 @@ impl Config for Test {
 }
 
 pub struct ExtBuilder {
-    initial_fee: (Fee, Fee, u64),
+    initial_fee: Option<(Fee, Fee, u64)>,
 }
 
 impl Default for ExtBuilder {
@@ -131,9 +130,7 @@ impl Default for ExtBuilder {
             *v.borrow_mut() = Box::new(Oracle::new());
         });
 
-        Self {
-            initial_fee: (Fee::zero(), Fee::zero(), 0),
-        }
+        Self { initial_fee: None }
     }
 }
 
@@ -178,7 +175,7 @@ impl ExtBuilder {
     }
 
     pub fn with_initial_fees(mut self, asset_fee: Fee, protocol_fee: Fee, block_number: u64) -> Self {
-        self.initial_fee = (asset_fee, protocol_fee, block_number);
+        self.initial_fee = Some((asset_fee, protocol_fee, block_number));
         self
     }
 
@@ -188,14 +185,16 @@ impl ExtBuilder {
             .unwrap()
             .into();
         r.execute_with(|| {
-            crate::AssetFee::<Test>::insert(
-                HDX,
-                FeeEntry {
-                    asset_fee: self.initial_fee.0,
-                    protocol_fee: self.initial_fee.1,
-                    timestamp: self.initial_fee.2,
-                },
-            );
+            if let Some(initial_fee) = self.initial_fee {
+                crate::AssetFee::<Test>::insert(
+                    HDX,
+                    FeeEntry {
+                        asset_fee: initial_fee.0,
+                        protocol_fee: initial_fee.1,
+                        timestamp: initial_fee.2,
+                    },
+                );
+            }
         });
 
         r

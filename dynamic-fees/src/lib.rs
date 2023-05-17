@@ -58,7 +58,7 @@
 use frame_support::traits::Get;
 use orml_traits::GetByKey;
 use sp_runtime::traits::{BlockNumberProvider, Saturating};
-use sp_runtime::{FixedPointOperand, PerThing};
+use sp_runtime::{FixedPointOperand, PerThing, SaturatedConversion};
 
 #[cfg(test)]
 mod tests;
@@ -164,7 +164,7 @@ where
         let current_fee_entry = Self::current_fees(asset_id).unwrap_or(FeeEntry {
             asset_fee: asset_fee_params.min_fee,
             protocol_fee: protocol_fee_params.min_fee,
-            timestamp: T::BlockNumber::default(),
+            timestamp: block_number,
         });
 
         // Update only if it has not yet been updated this block
@@ -172,9 +172,9 @@ where
             return (current_fee_entry.asset_fee, current_fee_entry.protocol_fee);
         }
 
-        let Some(delta_blocks) = TryInto::<u128>::try_into(block_number.saturating_sub(current_fee_entry.timestamp)).ok() else {
-            return (current_fee_entry.asset_fee, current_fee_entry.protocol_fee);
-        };
+        let delta_blocks: u128 = block_number
+            .saturating_sub(current_fee_entry.timestamp)
+            .saturated_into();
 
         let Some(volume) = T::Oracle::asset_volume(asset_id) else {
             return (current_fee_entry.asset_fee, current_fee_entry.protocol_fee);

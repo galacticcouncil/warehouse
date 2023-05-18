@@ -35,8 +35,8 @@ pub type Balance = u128;
 /// A price is a tuple of two `u128`s representing the numerator and denominator of a rational number.
 pub type Price = EmaPrice;
 
-/// A type representing data produced by a trade or liquidity event. Timestamped to the block where
-/// it was created.
+/// A type representing data produced by a trade or liquidity event.
+/// Timestamped to the block where it was created.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(RuntimeDebug, Encode, Decode, Clone, PartialEq, Eq, Default, TypeInfo, MaxEncodedLen)]
 pub struct OracleEntry<BlockNumber> {
@@ -44,6 +44,25 @@ pub struct OracleEntry<BlockNumber> {
     pub volume: Volume<Balance>,
     pub liquidity: Liquidity<Balance>,
     pub timestamp: BlockNumber,
+    pub inverted_price: Price,
+}
+
+impl<BlockNumber> OracleEntry<BlockNumber> {
+    /// Construct a new `OracleEntry`. Will invert the price to determine `inverted_price`.
+    pub const fn new(
+        price: Price,
+        volume: Volume<Balance>,
+        liquidity: Liquidity<Balance>,
+        timestamp: BlockNumber,
+    ) -> Self {
+        Self {
+            price,
+            volume,
+            liquidity,
+            timestamp,
+            inverted_price: price.inverted(),
+        }
+    }
 }
 
 impl<BlockNumber> OracleEntry<BlockNumber>
@@ -62,19 +81,23 @@ where
     }
 
     /// Return the raw data of the entry as a tuple of tuples, excluding the timestamp.
-    pub fn raw_data(&self) -> (Price, (Balance, Balance, Balance, Balance), (Balance, Balance)) {
-        (self.price, self.volume.clone().into(), self.liquidity.into())
+    pub fn raw_data(&self) -> (Price, (Balance, Balance, Balance, Balance), (Balance, Balance), Price) {
+        (
+            self.price,
+            self.volume.clone().into(),
+            self.liquidity.into(),
+            self.inverted_price,
+        )
     }
 
     /// Return an inverted version of the entry where the meaning of assets a and b are inverted.
     /// So the price of a/b become the price b/a and the volume switches correspondingly.
     pub fn inverted(self) -> Self {
         // It makes sense for the reciprocal of zero to be zero here.
-        let price = if self.price.is_zero() {
-            self.price
+        let (price, inverted_price) = if self.price.is_zero() {
+            (self.price, self.inverted_price)
         } else {
-            let (a, b) = self.price.into();
-            (b, a).into()
+            (self.inverted_price, self.price)
         };
         let volume = self.volume.inverted();
         let liquidity = self.liquidity.inverted();
@@ -83,6 +106,7 @@ where
             volume,
             liquidity,
             timestamp: self.timestamp,
+            inverted_price,
         }
     }
 
@@ -93,6 +117,7 @@ where
         self.price = incoming.price;
         self.liquidity = incoming.liquidity;
         self.timestamp = incoming.timestamp;
+        self.inverted_price = incoming.inverted_price;
     }
 
     /// Fast forward the oracle value to `new_timestamp`. Updates the timestamp and resets the volume.
@@ -110,6 +135,7 @@ where
             volume,
             liquidity: self.liquidity,
             timestamp: self.timestamp,
+            inverted_price: self.inverted_price,
         }
     }
 
@@ -130,7 +156,7 @@ where
         }
         // determine smoothing factor
         let smoothing = into_smoothing(period);
-        let (price, volume, liquidity) =
+        let (price, volume, liquidity, inverted_price) =
             calculate_new_by_integrating_incoming(self.raw_data(), incoming.raw_data(), smoothing);
 
         Some(Self {
@@ -138,6 +164,7 @@ where
             volume: volume.into(),
             liquidity: liquidity.into(),
             timestamp: incoming.timestamp,
+            inverted_price,
         })
     }
 
@@ -170,10 +197,14 @@ where
         }
         // determine smoothing factor
         let smoothing = into_smoothing(period);
-        let (price, volume, liquidity) = update_outdated_to_current(
+        let (price, volume, liquidity, inverted_price) = update_outdated_to_current(
             iterations.saturated_into(),
             self.raw_data(),
-            (update_with.price, update_with.liquidity.into()),
+            (
+                update_with.price,
+                update_with.liquidity.into(),
+                update_with.inverted_price,
+            ),
             smoothing,
         );
 
@@ -182,6 +213,7 @@ where
             volume: volume.into(),
             liquidity: liquidity.into(),
             timestamp: update_with.timestamp,
+            inverted_price,
         })
     }
 
@@ -208,11 +240,6 @@ pub fn into_smoothing(period: OraclePeriod) -> Fraction {
 
 impl<BlockNumber> From<(Price, Volume<Balance>, Liquidity<Balance>, BlockNumber)> for OracleEntry<BlockNumber> {
     fn from((price, volume, liquidity, timestamp): (Price, Volume<Balance>, Liquidity<Balance>, BlockNumber)) -> Self {
-        Self {
-            price,
-            volume,
-            liquidity,
-            timestamp,
-        }
+        Self::new(price, volume, liquidity, timestamp)
     }
 }

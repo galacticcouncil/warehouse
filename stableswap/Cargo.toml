@@ -29,7 +29,7 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 
 # Math
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "84632c3c7b71e16d53240e4bdc2adc693c941916", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "8dc699a6dcd2246a79493702992824eba98b25ac", default-features = false }
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }

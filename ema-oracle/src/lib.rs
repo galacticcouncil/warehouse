@@ -175,12 +175,7 @@ pub mod pallet {
         fn build(&self) {
             for &(source, (asset_a, asset_b), price, liquidity) in self.initial_data.iter() {
                 let entry: OracleEntry<T::BlockNumber> = {
-                    let e = OracleEntry {
-                        price,
-                        volume: Volume::default(),
-                        liquidity,
-                        timestamp: T::BlockNumber::zero(),
-                    };
+                    let e = OracleEntry::new(price, Volume::default(), liquidity, T::BlockNumber::zero());
                     if ordered_pair(asset_a, asset_b) == (asset_a, asset_b) {
                         e
                     } else {
@@ -406,6 +401,7 @@ impl<T: Config> OnTradeHandler<AssetId, Balance> for OnActivityHandler<T> {
             volume,
             liquidity,
             timestamp,
+            inverted_price: price.inverted(),
         };
         Pallet::<T>::on_trade(source, ordered_pair(asset_a, asset_b), entry)
     }
@@ -447,6 +443,7 @@ impl<T: Config> OnLiquidityChangedHandler<AssetId, Balance> for OnActivityHandle
             volume: Volume::default(),
             liquidity,
             timestamp,
+            inverted_price: price.inverted(),
         };
         Pallet::<T>::on_liquidity_changed(source, ordered_pair(asset_a, asset_b), entry)
     }
@@ -557,6 +554,10 @@ impl<T: Config> AggregatedOracle<AssetId, Balance, T::BlockNumber, Price> for Pa
 impl<T: Config> AggregatedPriceOracle<AssetId, T::BlockNumber, Price> for Pallet<T> {
     type Error = OracleError;
 
+    /// Returns the price of `asset_a/asset_b` aggregated over `period` for `source`.
+    ///
+    /// NOTE: `get_price(asset_one, asset_two, period, source).inverted()` is not guaranteed to be (and in fact will often in
+    /// practice not be) the same as `get_price(asset_two, asset_one, period, source)`.
     fn get_price(
         asset_a: AssetId,
         asset_b: AssetId,

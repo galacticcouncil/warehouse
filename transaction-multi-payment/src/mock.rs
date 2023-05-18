@@ -211,9 +211,9 @@ impl SpotPriceProvider<AssetId> for SpotPrice {
 
 parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
-        match currency_id {
-            &HIGH_ED_CURRENCY => HIGH_ED,
-            &HIGH_VALUE_CURRENCY => 1u128,
+        match *currency_id {
+            HIGH_ED_CURRENCY => HIGH_ED,
+            HIGH_VALUE_CURRENCY => 1u128,
             _ => 2u128
         }
     };

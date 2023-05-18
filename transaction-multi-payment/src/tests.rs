@@ -215,7 +215,7 @@ fn fee_payment_in_non_native_currency() {
 }
 
 #[test]
-fn fee_payment_in_expensive_non_native_currency() {
+fn fee_payment_in_expensive_non_native_currency_should_be_non_zero() {
     const CHARLIE: AccountId = 5;
 
     ExtBuilder::default()

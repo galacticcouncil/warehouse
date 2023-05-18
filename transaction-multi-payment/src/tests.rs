@@ -215,6 +215,40 @@ fn fee_payment_in_non_native_currency() {
 }
 
 #[test]
+fn fee_payment_in_expensive_non_native_currency() {
+    const CHARLIE: AccountId = 5;
+
+    ExtBuilder::default()
+        .base_weight(5)
+        .account_tokens(CHARLIE, HIGH_VALUE_CURRENCY, 10_000)
+        .with_currencies(vec![(CHARLIE, HIGH_VALUE_CURRENCY)])
+        .build()
+        .execute_with(|| {
+            // Make sure Charlie ain't got a penny!
+            assert_eq!(Balances::free_balance(CHARLIE), 0);
+
+            let len = 1000;
+            let info = info_from_weight(Weight::from_ref_time(5));
+
+            assert_eq!(Tokens::free_balance(HIGH_VALUE_CURRENCY, &CHARLIE), 10_000);
+
+            let pre = ChargeTransactionPayment::<Test>::from(0)
+                .pre_dispatch(&CHARLIE, CALL, &info, len)
+                .unwrap();
+
+            // Charlie should be charged at least 1 token
+            assert_eq!(Tokens::free_balance(HIGH_VALUE_CURRENCY, &CHARLIE), 9999);
+
+            let post_info = post_info_from_weight(Weight::from_ref_time(3));
+            assert!(
+                ChargeTransactionPayment::<Test>::post_dispatch(Some(pre), &info, &post_info, len, &Ok(())).is_ok()
+            );
+            // Charlie should not be refunded in case he payed only 1 token
+            assert_eq!(Tokens::free_balance(HIGH_VALUE_CURRENCY, &CHARLIE), 9999);
+        });
+}
+
+#[test]
 fn fee_payment_non_native_insufficient_balance() {
     const CHARLIE: AccountId = 5;
 

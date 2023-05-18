@@ -53,6 +53,7 @@ pub const SUPPORTED_CURRENCY_WITH_PRICE: AssetId = 3000;
 pub const UNSUPPORTED_CURRENCY: AssetId = 4000;
 pub const SUPPORTED_CURRENCY_NO_BALANCE: AssetId = 5000; // Used for insufficient balance testing
 pub const HIGH_ED_CURRENCY: AssetId = 6000;
+pub const HIGH_VALUE_CURRENCY: AssetId = 7000;
 
 pub const HIGH_ED: Balance = 5;
 
@@ -212,6 +213,7 @@ parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
         match currency_id {
             &HIGH_ED_CURRENCY => HIGH_ED,
+            &HIGH_VALUE_CURRENCY => 1u128,
             _ => 2u128
         }
     };
@@ -319,6 +321,7 @@ impl ExtBuilder {
                 (SUPPORTED_CURRENCY, Price::from_float(1.5)),
                 (SUPPORTED_CURRENCY_WITH_PRICE, Price::from_float(0.5)),
                 (HIGH_ED_CURRENCY, Price::from(3)),
+                (HIGH_VALUE_CURRENCY, Price::from_inner(100)),
             ],
             account_currencies: self.account_currencies,
         }

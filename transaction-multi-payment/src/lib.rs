@@ -328,6 +328,14 @@ where
     }
 }
 
+fn convert_fee_with_price<B>(fee: B, price: FixedU128) -> Option<B>
+where
+    B: FixedPointOperand + Ord + One,
+{
+    // Make sure that the fee is never less than 1
+    price.checked_mul_int(fee).map(|f| f.max(One::one()))
+}
+
 /// Deposits all fees to some account
 pub struct DepositAll<T>(PhantomData<T>);
 
@@ -377,9 +385,8 @@ where
         let price = Pallet::<T>::get_currency_price(currency)
             .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
-        let converted_fee = price
-            .checked_mul_int(fee)
-            .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+        let converted_fee =
+            convert_fee_with_price(fee, price).ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
         match MC::withdraw(currency.into(), who, converted_fee) {
             Ok(()) => {
@@ -418,8 +425,7 @@ where
                 ),
                 PaymentInfo::NonNative(paid_fee, currency, price) => {
                     // calculate corrected_fee in the non-native currency
-                    let converted_corrected_fee = price
-                        .checked_mul_int(corrected_fee)
+                    let converted_corrected_fee = convert_fee_with_price(corrected_fee, price)
                         .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
                     let refund = paid_fee.saturating_sub(converted_corrected_fee);
                     let converted_tip = price

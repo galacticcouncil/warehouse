@@ -89,6 +89,7 @@ pub mod weights;
 use weights::WeightInfo;
 
 mod benchmarking;
+pub mod migration;
 
 /// Maximum number of unique oracle entries expected in one block. Empirically determined by running
 /// `trades_estimation.py` and rounding up from 212 to 300. Not necessarily representative for all

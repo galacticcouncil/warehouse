@@ -79,8 +79,11 @@ where
         }
     }
 
-    fn asset_exists(_asset: Self::AssetId) -> bool {
-        //TODO: how ?
-        true
+    fn asset_exists(asset: Self::AssetId) -> bool {
+        if GetNativeCurrencyId::get() == asset {
+            true
+        } else {
+            MultiCurrency::asset_exists(asset)
+        }
     }
 }

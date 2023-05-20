@@ -1,4 +1,4 @@
-// RuntimeOriginally created by Acala. Modified by GalacticCouncil.
+// Originally created by Acala. Modified by GalacticCouncil.
 
 // Copyright (C) 2020-2022 Acala Foundation, GalacticCouncil.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0

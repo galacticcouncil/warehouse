@@ -81,6 +81,7 @@ where
     }
 
     /// Return the raw data of the entry as a tuple of tuples, excluding the timestamp.
+    #[allow(clippy::type_complexity)]
     pub fn raw_data(&self) -> (Price, (Balance, Balance, Balance, Balance), (Balance, Balance), Price) {
         (
             self.price,

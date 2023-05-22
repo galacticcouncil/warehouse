@@ -56,7 +56,7 @@ fn remove_liquidity_should_work_when_withdrawing_all_shares() {
             let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
 
             assert_ok!(Stableswap::add_liquidity(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 vec![AssetLiquidity {
                     asset_id: asset_a,
@@ -67,7 +67,7 @@ fn remove_liquidity_should_work_when_withdrawing_all_shares() {
             let shares = Tokens::free_balance(pool_id, &BOB);
 
             assert_ok!(Stableswap::remove_liquidity_one_asset(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 asset_c,
                 shares,
@@ -133,7 +133,7 @@ fn remove_liquidity_should_apply_fee_when_withdrawing_all_shares() {
             let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
 
             assert_ok!(Stableswap::add_liquidity(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 vec![AssetLiquidity {
                     asset_id: asset_a,
@@ -144,7 +144,7 @@ fn remove_liquidity_should_apply_fee_when_withdrawing_all_shares() {
             let shares = Tokens::free_balance(pool_id, &BOB);
 
             assert_ok!(Stableswap::remove_liquidity_one_asset(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 asset_c,
                 shares,
@@ -163,7 +163,7 @@ fn remove_liquidity_should_apply_fee_when_withdrawing_all_shares() {
 fn remove_liquidity_should_fail_when_shares_is_zero() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Stableswap::remove_liquidity_one_asset(Origin::signed(ALICE), 0u32, 1u32, 0u128),
+            Stableswap::remove_liquidity_one_asset(RuntimeOrigin::signed(ALICE), 0u32, 1u32, 0u128),
             Error::<Test>::InvalidAssetAmount
         );
     });
@@ -177,7 +177,7 @@ fn remove_liquidity_should_fail_when_shares_is_insufficient() {
         .build()
         .execute_with(|| {
             assert_noop!(
-                Stableswap::remove_liquidity_one_asset(Origin::signed(BOB), pool_id, 1u32, 200 * ONE),
+                Stableswap::remove_liquidity_one_asset(RuntimeOrigin::signed(BOB), pool_id, 1u32, 200 * ONE),
                 Error::<Test>::InsufficientShares
             );
         });
@@ -192,7 +192,7 @@ fn remove_liquidity_should_fail_when_remaining_shares_is_below_min_limit() {
         .execute_with(|| {
             assert_noop!(
                 Stableswap::remove_liquidity_one_asset(
-                    Origin::signed(BOB),
+                    RuntimeOrigin::signed(BOB),
                     pool_id,
                     1u32,
                     100 * ONE - MinimumLiquidity::get() + 1
@@ -210,7 +210,7 @@ fn remove_liquidity_should_fail_when_pool_does_not_exists() {
         .build()
         .execute_with(|| {
             assert_noop!(
-                Stableswap::remove_liquidity_one_asset(Origin::signed(BOB), pool_id, 1u32, 100 * ONE),
+                Stableswap::remove_liquidity_one_asset(RuntimeOrigin::signed(BOB), pool_id, 1u32, 100 * ONE),
                 Error::<Test>::PoolNotFound
             );
         });
@@ -266,7 +266,7 @@ fn remove_liquidity_should_fail_when_requested_asset_not_in_pool() {
             let amount_added = 200 * ONE;
 
             assert_ok!(Stableswap::add_liquidity(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 vec![AssetLiquidity {
                     asset_id: asset_a,
@@ -277,7 +277,7 @@ fn remove_liquidity_should_fail_when_requested_asset_not_in_pool() {
             let shares = Tokens::free_balance(pool_id, &BOB);
 
             assert_noop!(
-                Stableswap::remove_liquidity_one_asset(Origin::signed(BOB), pool_id, asset_d, shares,),
+                Stableswap::remove_liquidity_one_asset(RuntimeOrigin::signed(BOB), pool_id, asset_d, shares,),
                 Error::<Test>::AssetNotInPool
             );
         });
@@ -332,7 +332,7 @@ fn remove_liquidity_should_fail_when_remaining_shares_below_min_liquidity() {
             let amount_added = 200 * ONE;
 
             assert_ok!(Stableswap::add_liquidity(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 vec![AssetLiquidity {
                     asset_id: asset_a,
@@ -344,7 +344,7 @@ fn remove_liquidity_should_fail_when_remaining_shares_below_min_liquidity() {
 
             assert_noop!(
                 Stableswap::remove_liquidity_one_asset(
-                    Origin::signed(BOB),
+                    RuntimeOrigin::signed(BOB),
                     pool_id,
                     asset_c,
                     shares - MinimumLiquidity::get() + 1,
@@ -412,7 +412,7 @@ fn verify_remove_liquidity_against_research_impl() {
             let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b, asset_c, asset_d], None);
 
             assert_ok!(Stableswap::add_liquidity(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 vec![AssetLiquidity {
                     asset_id: asset_a,
@@ -423,7 +423,7 @@ fn verify_remove_liquidity_against_research_impl() {
             let shares = Tokens::free_balance(pool_id, &BOB);
 
             assert_ok!(Stableswap::remove_liquidity_one_asset(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 asset_b,
                 shares,

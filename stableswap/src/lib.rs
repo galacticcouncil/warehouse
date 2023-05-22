@@ -95,7 +95,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// The overarching event type.
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// Identifier for the class of asset.
         type AssetId: Member
@@ -118,7 +118,7 @@ pub mod pallet {
         type AssetRegistry: Registry<Self::AssetId, Vec<u8>, Balance, DispatchError>;
 
         /// The origin which can create a new pool
-        type AuthorityOrigin: EnsureOrigin<Self::Origin>;
+        type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Minimum pool liquidity
         #[pallet::constant]
@@ -300,6 +300,7 @@ pub mod pallet {
         /// - `withdraw_fee`: fee to be applied when removing liquidity
         ///
         /// Emits `PoolCreated` event if successful.
+        #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::create_pool())]
         #[transactional]
         pub fn create_pool(
@@ -341,6 +342,7 @@ pub mod pallet {
         /// - `withdraw_fee`: new withdraw fee or None
         ///
         /// Emits `PoolUpdated` event if successful.
+        #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::update_pool())]
         #[transactional]
         pub fn update_pool(
@@ -393,6 +395,7 @@ pub mod pallet {
         /// - `assets`: asset id and liquidity amount provided
         ///
         /// Emits `LiquidityAdded` event when successful.
+        #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::add_liquidity())]
         #[transactional]
         pub fn add_liquidity(
@@ -429,6 +432,7 @@ pub mod pallet {
         /// - 'share_amount': amount of shares to withdraw
         ///
         /// Emits `LiquidityRemoved` event when successful.
+        #[pallet::call_index(3)]
         #[pallet::weight(<T as Config>::WeightInfo::remove_liquidity_one_asset())]
         #[transactional]
         pub fn remove_liquidity_one_asset(
@@ -505,6 +509,7 @@ pub mod pallet {
         ///
         /// Emits `SellExecuted` event when successful.
         ///
+        #[pallet::call_index(4)]
         #[pallet::weight(<T as Config>::WeightInfo::sell())]
         #[transactional]
         pub fn sell(
@@ -568,6 +573,7 @@ pub mod pallet {
         ///
         /// Emits `BuyExecuted` event when successful.
         ///
+        #[pallet::call_index(5)]
         #[pallet::weight(<T as Config>::WeightInfo::buy())]
         #[transactional]
         pub fn buy(
@@ -619,6 +625,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::set_asset_tradable_state())]
         #[transactional]
         pub fn set_asset_tradable_state(

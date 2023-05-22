@@ -719,7 +719,7 @@ fn sync_global_farm_should_work() {
             .unwrap();
 
             if r.is_zero() && updated_at != current_period {
-                frame_system::Pallet::<Test>::assert_has_event(mock::Event::LiquidityMining(
+                frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::LiquidityMining(
                     Event::AllRewardsDistributed { global_farm_id: *id },
                 ));
             }
@@ -734,7 +734,7 @@ fn sync_global_farm_should_work() {
             assert_eq!(global_farm, expected_global_farm);
 
             if updated_at != current_period {
-                frame_system::Pallet::<Test>::assert_has_event(mock::Event::LiquidityMining(
+                frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::LiquidityMining(
                     Event::GlobalFarmAccRPZUpdated {
                         global_farm_id: *id,
                         accumulated_rpz: *expected_accumulated_rpz,
@@ -1273,7 +1273,7 @@ fn sync_yield_farm_should_work() {
             );
 
             if current_period != yield_farm_updated_at && !yield_farm_total_valued_shares.is_zero() {
-                frame_system::Pallet::<Test>::assert_has_event(mock::Event::LiquidityMining(
+                frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::LiquidityMining(
                     Event::YieldFarmAccRPVSUpdated {
                         global_farm_id: global_farm_0.id,
                         yield_farm_id: yield_farm_0.id,
@@ -2125,8 +2125,8 @@ fn sync_global_farm_should_emit_all_rewards_distributed_when_reward_is_zero() {
             Balance::zero()
         );
 
-        frame_system::Pallet::<Test>::assert_has_event(mock::Event::LiquidityMining(Event::AllRewardsDistributed {
-            global_farm_id,
-        }));
+        frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::LiquidityMining(
+            Event::AllRewardsDistributed { global_farm_id },
+        ));
     });
 }

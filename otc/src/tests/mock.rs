@@ -83,7 +83,7 @@ impl Config for Test {
     type AssetId = AssetId;
     type AssetRegistry = DummyRegistry<Test>;
     type Currency = Tokens;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
     type ExistentialDepositMultiplier = ExistentialDepositMultiplier;
     type WeightInfo = ();
@@ -99,8 +99,8 @@ impl system::Config for Test {
     type BaseCallFilter = Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -108,7 +108,7 @@ impl system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -123,19 +123,17 @@ impl system::Config for Test {
 }
 
 impl orml_tokens::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = AssetId;
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = ();
     type MaxLocks = ();
     type DustRemovalWhitelist = Nothing;
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
     type ReserveIdentifier = NamedReserveIdentifier;
     type MaxReserves = MaxReserves;
+    type CurrencyHooks = ();
 }
 
 pub struct DummyRegistry<T>(sp_std::marker::PhantomData<T>);
@@ -236,8 +234,8 @@ thread_local! {
     pub static DUMMYTHREADLOCAL: RefCell<u128> = RefCell::new(100);
 }
 
-pub fn expect_events(e: Vec<Event>) {
-    test_utils::expect_events::<Event, Test>(e);
+pub fn expect_events(e: Vec<RuntimeEvent>) {
+    test_utils::expect_events::<RuntimeEvent, Test>(e);
 }
 
 pub fn precision(asset_id: AssetId) -> u32 {

@@ -25,7 +25,7 @@ fn cancel_order_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -34,7 +34,7 @@ fn cancel_order_should_work() {
         ));
 
         // Act
-        assert_ok!(OTC::cancel_order(Origin::signed(ALICE), 0));
+        assert_ok!(OTC::cancel_order(RuntimeOrigin::signed(ALICE), 0));
 
         // Assert
         let order = OTC::orders(0);
@@ -51,7 +51,7 @@ fn cancel_order_should_throw_error_when_order_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_noop!(
-            OTC::cancel_order(Origin::signed(ALICE), 0),
+            OTC::cancel_order(RuntimeOrigin::signed(ALICE), 0),
             Error::<Test>::OrderNotFound
         );
     });
@@ -62,7 +62,7 @@ fn cancel_order_should_throw_error_when_called_by_non_owner() {
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -71,7 +71,10 @@ fn cancel_order_should_throw_error_when_called_by_non_owner() {
         ));
 
         // Act
-        assert_noop!(OTC::cancel_order(Origin::signed(BOB), 0), Error::<Test>::Forbidden);
+        assert_noop!(
+            OTC::cancel_order(RuntimeOrigin::signed(BOB), 0),
+            Error::<Test>::Forbidden
+        );
 
         // Assert
         let order = OTC::orders(0);

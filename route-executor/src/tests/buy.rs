@@ -34,7 +34,7 @@ fn buy_should_work_when_route_has_single_trade() {
 
         //Act
         assert_ok!(Router::buy(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             BSX,
             AUSD,
             amount_to_buy,
@@ -72,7 +72,7 @@ fn buy_should_work_when_route_has_single_trade_without_native_balance() {
 
             //Act
             assert_ok!(Router::buy(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 AUSD,
                 KSM,
                 amount_to_buy,
@@ -116,7 +116,7 @@ fn buy_should_fail_when_max_limit_for_trade_reached() {
 
             //Act and Assert
             assert_noop!(
-                Router::buy(Origin::signed(ALICE), BSX, RMRK, 10, 5, trades),
+                Router::buy(RuntimeOrigin::signed(ALICE), BSX, RMRK, 10, 5, trades),
                 Error::<Test>::MaxTradesExceeded
             );
         });
@@ -136,7 +136,7 @@ fn buy_should_fail_when_route_has_single_trade_producing_calculation_error() {
             //Act and Assert
             assert_noop!(
                 Router::buy(
-                    Origin::signed(ALICE),
+                    RuntimeOrigin::signed(ALICE),
                     BSX,
                     AUSD,
                     INVALID_CALCULATION_AMOUNT,
@@ -176,7 +176,7 @@ fn buy_should_when_route_has_multiple_trades_with_same_pool_type() {
 
             //Act
             assert_ok!(Router::buy(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 BSX,
                 KSM,
                 amount_to_buy,
@@ -229,7 +229,7 @@ fn buy_should_work_when_route_has_multiple_trades_with_different_pool_type() {
 
             //Act
             assert_ok!(Router::buy(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 BSX,
                 KSM,
                 amount_to_buy,
@@ -277,7 +277,7 @@ fn buy_should_work_when_first_trade_is_not_supported_in_the_first_pool() {
 
             //Act
             assert_ok!(Router::buy(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 BSX,
                 KSM,
                 amount_to_buy,
@@ -307,7 +307,7 @@ fn buy_should_fail_when_called_with_non_signed_origin() {
 
             //Act and Assert
             assert_noop!(
-                Router::buy(Origin::none(), BSX, AUSD, amount_to_buy, limit, trades),
+                Router::buy(RuntimeOrigin::none(), BSX, AUSD, amount_to_buy, limit, trades),
                 BadOrigin
             );
         });
@@ -324,7 +324,7 @@ fn buy_should_fail_when_route_has_no_trades() {
 
             //Act and Assert
             assert_noop!(
-                Router::buy(Origin::signed(ALICE), BSX, AUSD, 10, 5, trades),
+                Router::buy(RuntimeOrigin::signed(ALICE), BSX, AUSD, 10, 5, trades),
                 Error::<Test>::RouteHasNoTrades
             );
         });
@@ -344,7 +344,7 @@ fn buy_should_fail_when_max_limit_to_spend_is_reached() {
 
             //Act and Assert
             assert_noop!(
-                Router::buy(Origin::signed(ALICE), BSX, AUSD, amount_to_buy, limit, trades),
+                Router::buy(RuntimeOrigin::signed(ALICE), BSX, AUSD, amount_to_buy, limit, trades),
                 Error::<Test>::TradingLimitReached
             );
         });

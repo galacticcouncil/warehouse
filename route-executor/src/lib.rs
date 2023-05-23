@@ -40,6 +40,18 @@ use weights::WeightInfo;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
+pub struct AmountInAndOut<Balance> {
+    pub amount_in: Balance,
+    pub amount_out: Balance,
+}
+
+pub trait TradeAmountsCalculator<AssetId, Balance> {
+    fn calculate_buy_trade_amounts(
+        route: &Vec<Trade<AssetId>>,
+        amount_out: Balance,
+    ) -> Result<Vec<AmountInAndOut<Balance>>, DispatchError>;
+}
+
 ///A single trade for buy/sell, describing the asset pair and the pool type in which the trade is executed
 #[derive(Encode, Decode, Debug, Eq, PartialEq, Copy, Clone, TypeInfo, MaxEncodedLen)]
 pub struct Trade<AssetId> {
@@ -279,11 +291,6 @@ pub mod pallet {
     }
 }
 
-struct AmountInAndOut<T: Config> {
-    pub amount_in: T::Balance,
-    pub amount_out: T::Balance,
-}
-
 impl<T: Config> Pallet<T> {
     fn ensure_route_size(route_length: usize) -> Result<(), DispatchError> {
         ensure!(route_length > 0, Error::<T>::RouteHasNoTrades);
@@ -298,8 +305,8 @@ impl<T: Config> Pallet<T> {
     fn calculate_sell_trade_amounts(
         route: &Vec<Trade<T::AssetId>>,
         amount_in: T::Balance,
-    ) -> Result<Vec<AmountInAndOut<T>>, DispatchError> {
-        let mut amount_in_and_outs = Vec::<AmountInAndOut<T>>::with_capacity(route.len());
+    ) -> Result<Vec<AmountInAndOut<T::Balance>>, DispatchError> {
+        let mut amount_in_and_outs = Vec::<AmountInAndOut<T::Balance>>::with_capacity(route.len());
         let mut amount_in = amount_in;
 
         for trade in route.iter() {
@@ -310,29 +317,6 @@ impl<T: Config> Pallet<T> {
                 Ok(amount_out) => {
                     amount_in_and_outs.push(AmountInAndOut { amount_in, amount_out });
                     amount_in = amount_out;
-                }
-            }
-        }
-
-        Ok(amount_in_and_outs)
-    }
-
-    fn calculate_buy_trade_amounts(
-        route: &Vec<Trade<T::AssetId>>,
-        amount_out: T::Balance,
-    ) -> Result<Vec<AmountInAndOut<T>>, DispatchError> {
-        let mut amount_in_and_outs = Vec::<AmountInAndOut<T>>::with_capacity(route.len());
-        let mut amount_out = amount_out;
-
-        for trade in route.iter().rev() {
-            let result = T::AMM::calculate_buy(trade.pool, trade.asset_in, trade.asset_out, amount_out);
-
-            match result {
-                Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
-                Err(ExecutorError::Error(dispatch_error)) => return Err(dispatch_error),
-                Ok(amount_in) => {
-                    amount_in_and_outs.push(AmountInAndOut { amount_in, amount_out });
-                    amount_out = amount_in;
                 }
             }
         }
@@ -376,6 +360,31 @@ impl<T: Config> Pallet<T> {
         );
 
         Ok(())
+    }
+}
+
+impl<T: Config> TradeAmountsCalculator<T::AssetId, T::Balance> for Pallet<T> {
+    fn calculate_buy_trade_amounts(
+        route: &Vec<Trade<T::AssetId>>,
+        amount_out: T::Balance,
+    ) -> Result<Vec<AmountInAndOut<T::Balance>>, DispatchError> {
+        let mut amount_in_and_outs = Vec::<AmountInAndOut<T::Balance>>::with_capacity(route.len());
+        let mut amount_out = amount_out;
+
+        for trade in route.iter().rev() {
+            let result = T::AMM::calculate_buy(trade.pool, trade.asset_in, trade.asset_out, amount_out);
+
+            match result {
+                Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
+                Err(ExecutorError::Error(dispatch_error)) => return Err(dispatch_error),
+                Ok(amount_in) => {
+                    amount_in_and_outs.push(AmountInAndOut { amount_in, amount_out });
+                    amount_out = amount_in;
+                }
+            }
+        }
+
+        Ok(amount_in_and_outs)
     }
 }
 

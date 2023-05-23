@@ -17,7 +17,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::ensure;
 use frame_support::traits::fungibles::Inspect;
 use frame_support::traits::Get;
@@ -41,7 +41,7 @@ use weights::WeightInfo;
 pub use pallet::*;
 
 ///A single trade for buy/sell, describing the asset pair and the pool type in which the trade is executed
-#[derive(Encode, Decode, Debug, Eq, PartialEq, Copy, Clone, TypeInfo)]
+#[derive(Encode, Decode, Debug, Eq, PartialEq, Copy, Clone, TypeInfo, MaxEncodedLen)]
 pub struct Trade<AssetId> {
     pub pool: PoolType<AssetId>,
     pub asset_in: AssetId,

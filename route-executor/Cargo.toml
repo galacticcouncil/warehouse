@@ -47,7 +47,9 @@ std = [
   'serde/std',
   'codec/std',
   'sp-std/std',
+  'sp-core/std',
   'frame-support/std',
+  'frame-benchmarking/std',
   'frame-system/std',
   'orml-tokens/std',
 ]

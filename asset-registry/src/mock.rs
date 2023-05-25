@@ -27,7 +27,7 @@ use sp_runtime::{
 
 use frame_support::traits::{Everything, GenesisBuild};
 
-use polkadot_xcm::v0::MultiLocation;
+use polkadot_xcm::v3::MultiLocation;
 
 use crate::{self as asset_registry, Config};
 
@@ -61,8 +61,8 @@ impl system::Config for Test {
     type BaseCallFilter = Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -70,7 +70,7 @@ impl system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -87,17 +87,11 @@ impl system::Config for Test {
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 
-#[derive(Debug, Encode, Decode, Clone, PartialEq, Eq, TypeInfo)]
+#[derive(Debug, Default, Encode, Decode, Clone, PartialEq, Eq, TypeInfo)]
 pub struct AssetLocation(pub MultiLocation);
 
-impl Default for AssetLocation {
-    fn default() -> Self {
-        AssetLocation(MultiLocation::Null)
-    }
-}
-
 impl Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type RegistryOrigin = frame_system::EnsureRoot<u64>;
     type AssetId = u32;
     type Balance = Balance;
@@ -153,6 +147,6 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     ext
 }
 
-pub fn expect_events(e: Vec<Event>) {
-    test_utils::expect_events::<Event, Test>(e);
+pub fn expect_events(e: Vec<RuntimeEvent>) {
+    test_utils::expect_events::<RuntimeEvent, Test>(e);
 }

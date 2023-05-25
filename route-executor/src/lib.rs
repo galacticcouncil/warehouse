@@ -72,7 +72,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// Asset id type
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
@@ -96,7 +96,7 @@ pub mod pallet {
 
         /// Handlers for AMM pools to calculate and execute trades
         type AMM: TradeExecution<
-            <Self as frame_system::Config>::Origin,
+            <Self as frame_system::Config>::RuntimeOrigin,
             Self::AccountId,
             Self::AssetId,
             Self::Balance,
@@ -148,6 +148,7 @@ pub mod pallet {
         /// - `route`: Series of [`Trade<AssetId>`] to be executed. A [`Trade<AssetId>`] specifies the asset pair (`asset_in`, `asset_out`) and the AMM (`pool`) in which the trade is executed.
         ///
         /// Emits `RouteExecuted` when successful.
+        #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::sell(route.len() as u32))]
         #[transactional]
         pub fn sell(
@@ -226,6 +227,7 @@ pub mod pallet {
         /// - `route`: Series of [`Trade<AssetId>`] to be executed. A [`Trade<AssetId>`] specifies the asset pair (`asset_in`, `asset_out`) and the AMM (`pool`) in which the trade is executed.
         ///
         /// Emits `RouteExecuted` when successful.
+        #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::buy(route.len() as u32))]
         #[transactional]
         pub fn buy(

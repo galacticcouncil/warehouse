@@ -45,7 +45,7 @@ fn update_global_farm_price_adjustment_should_work() {
                 },
             );
 
-            frame_system::Pallet::<Test>::assert_has_event(mock::Event::LiquidityMining(
+            frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::LiquidityMining(
                 Event::GlobalFarmAccRPZUpdated {
                     global_farm_id: global_farm_0.id,
                     accumulated_rpz: FixedU128::from_inner(491_000_000_000_000_000_000_u128),
@@ -71,7 +71,7 @@ fn update_global_farm_price_adjustment_in_same_period_should_work() {
                 new_price_adjustment
             ));
 
-            frame_system::Pallet::<Test>::assert_has_event(mock::Event::LiquidityMining(
+            frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::LiquidityMining(
                 Event::GlobalFarmAccRPZUpdated {
                     global_farm_id: GC_FARM,
                     accumulated_rpz: FixedU128::from_inner(41_000_000_000_000_000_000_u128),

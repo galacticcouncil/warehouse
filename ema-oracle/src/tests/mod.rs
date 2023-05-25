@@ -20,8 +20,8 @@ mod mock;
 
 use super::*;
 pub use mock::{
-    BlockNumber, EmaOracle, Event as TestEvent, ExtBuilder, Origin, System, Test, ACA, DOT, HDX, ORACLE_ENTRY_1,
-    ORACLE_ENTRY_2,
+    BlockNumber, EmaOracle, ExtBuilder, RuntimeEvent as TestEvent, RuntimeOrigin, System, Test, ACA, DOT, HDX,
+    ORACLE_ENTRY_1, ORACLE_ENTRY_2,
 };
 
 use frame_support::{assert_noop, assert_ok};

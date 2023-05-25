@@ -60,7 +60,7 @@ benchmarks! {
         let caller: T::AccountId = account("caller", 0, 1);
 
         let successful_origin = T::AuthorityOrigin::try_successful_origin().unwrap();
-    }: _<T::Origin>(successful_origin, pool_id, asset_ids, amplification, trade_fee, withdraw_fee)
+    }: _<T::RuntimeOrigin>(successful_origin, pool_id, asset_ids, amplification, trade_fee, withdraw_fee)
     verify {
         assert!(<Pools<T>>::get(pool_id).is_some());
     }
@@ -345,7 +345,7 @@ benchmarks! {
         )?;
 
         let asset_tradability_old = crate::Pallet::<T>::asset_tradability(pool_id, asset_to_change,);
-    }: _<T::Origin>(successful_origin, pool_id, asset_to_change, Tradability::FROZEN)
+    }: _<T::RuntimeOrigin>(successful_origin, pool_id, asset_to_change, Tradability::FROZEN)
     verify {
         let asset_tradability_new = crate::Pallet::<T>::asset_tradability(pool_id, asset_to_change,);
         assert_ne!(asset_tradability_old, asset_tradability_new);
@@ -390,7 +390,7 @@ benchmarks! {
         let amplification_new = Some(200_u16);
         let trade_fee_new = Some(Permill::from_percent(50));
         let withdraw_fee_new = Some(Permill::from_percent(40));
-    }: _<T::Origin>(successful_origin, pool_id, amplification_new, trade_fee_new, withdraw_fee_new)
+    }: _<T::RuntimeOrigin>(successful_origin, pool_id, amplification_new, trade_fee_new, withdraw_fee_new)
     verify {
         let pool = crate::Pallet::<T>::pools(pool_id).unwrap();
         assert_eq!(pool.amplification, amplification_new.unwrap());

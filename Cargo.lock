@@ -2823,6 +2823,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "hydra-dx-math"
+version = "7.0.2"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=5cfeb0dfdce6ad06c81ac1aa27f0cba50992a503#5cfeb0dfdce6ad06c81ac1aa27f0cba50992a503"
+dependencies = [
+ "fixed",
+ "num-traits",
+ "parity-scale-codec",
+ "primitive-types",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-std",
+]
+
+[[package]]
 name = "hydradx-adapters"
 version = "0.3.0"
 dependencies = [
@@ -4858,7 +4873,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
- "hydra-dx-math",
+ "hydra-dx-math 7.0.1",
  "hydradx-traits",
  "log",
  "parity-scale-codec",
@@ -4898,7 +4913,7 @@ dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
- "hydra-dx-math",
+ "hydra-dx-math 7.0.1",
  "hydradx-traits",
  "orml-currencies",
  "orml-tokens",
@@ -5039,13 +5054,13 @@ dependencies = [
 
 [[package]]
 name = "pallet-stableswap"
-version = "1.1.1"
+version = "1.2.0"
 dependencies = [
  "bitflags",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hydra-dx-math",
+ "hydra-dx-math 7.0.2",
  "hydradx-traits",
  "orml-tokens",
  "orml-traits",

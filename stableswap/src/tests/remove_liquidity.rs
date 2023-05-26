@@ -2,7 +2,6 @@ use crate::tests::mock::*;
 use crate::types::{AssetLiquidity, PoolInfo};
 use crate::{assert_balance, Error};
 use frame_support::{assert_noop, assert_ok};
-use hydradx_traits::AccountIdFor;
 use sp_runtime::Permill;
 
 #[test]
@@ -53,7 +52,7 @@ fn remove_liquidity_should_work_when_withdrawing_all_shares() {
 
             let amount_added = 200 * ONE;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+            let pool_account = pool_account(pool_id);
 
             assert_ok!(Stableswap::add_liquidity(
                 RuntimeOrigin::signed(BOB),
@@ -130,7 +129,7 @@ fn remove_liquidity_should_apply_fee_when_withdrawing_all_shares() {
 
             let amount_added = 200 * ONE;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+            let pool_account = pool_account(pool_id);
 
             assert_ok!(Stableswap::add_liquidity(
                 RuntimeOrigin::signed(BOB),
@@ -409,7 +408,7 @@ fn verify_remove_liquidity_against_research_impl() {
 
             let amount_added = 100_000 * ONE;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b, asset_c, asset_d], None);
+            let pool_account = pool_account(pool_id);
 
             assert_ok!(Stableswap::add_liquidity(
                 RuntimeOrigin::signed(BOB),

@@ -68,14 +68,12 @@ benchmarks! {
 
         let expected = AssetDetails{
             asset_type: AssetType::PoolShare(T::AssetId::from(10u8), T::AssetId::from(20u8)),
-            locked: false,
             existential_deposit: new_ed,
             name: bname,
             xcm_rate_limit: Some(rate_limit),
         };
 
         assert_eq!(stored.asset_type, expected.asset_type);
-        assert_eq!(stored.locked, expected.locked);
         assert_eq!(stored.existential_deposit, expected.existential_deposit);
         assert_eq!(stored.name.to_vec(), expected.name.to_vec());
     }

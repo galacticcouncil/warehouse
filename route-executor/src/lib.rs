@@ -177,6 +177,7 @@ pub mod pallet {
             let trade_amounts = Self::calculate_sell_trade_amounts(&route, amount_in)?;
 
             let last_trade_amount = trade_amounts.last().ok_or(Error::<T>::UnexpectedError)?;
+            assert_eq!(last_trade_amount.amount_out, min_amount_out);
             ensure!(
                 last_trade_amount.amount_out >= min_amount_out,
                 Error::<T>::TradingLimitReached

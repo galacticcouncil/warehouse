@@ -1,3 +1,5 @@
+// SBP-M3+ review: missing benchmarking
+
 //! # Currencies Module
 //!
 //! ## Overview
@@ -180,6 +182,7 @@ pub mod module {
         /// transactor.
         #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::transfer_native_currency())]
+        // SBP-M3+ review: make sure that proper Weight for `T::NativeCurrency::transfer` is applied.
         pub fn transfer_native_currency(
             origin: OriginFor<T>,
             dest: <T::Lookup as StaticLookup>::Source,
@@ -209,6 +212,9 @@ pub mod module {
             currency_id: CurrencyIdOf<T>,
             amount: AmountOf<T>,
         ) -> DispatchResult {
+            // SBP-M3+ review: it would be better to provide trait for UpdateBalance action
+            // That can be implemented/provided in Runtime
+            // Usage of Pallet Sudo is not fully decentralized...
             ensure_root(origin)?;
             let dest = T::Lookup::lookup(who)?;
             <Self as MultiCurrencyExtended<T::AccountId>>::update_balance(currency_id, &dest, amount)?;
@@ -217,6 +223,7 @@ pub mod module {
     }
 }
 
+// SBP-M3+ review: pattern matching instead of if else is much cleaner
 impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
     type CurrencyId = CurrencyIdOf<T>;
     type Balance = BalanceOf<T>;

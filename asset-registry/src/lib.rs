@@ -184,6 +184,7 @@ pub mod pallet {
             // It is to make sure that native is registered as any other asset
             let native_asset_name = Pallet::<T>::to_bounded_name(self.native_asset_name.to_vec())
                 .map_err(|_| panic!("Invalid native asset name!"))
+                // SBP-M3+ review: how about `expect`? It can display error message for debugging.
                 .unwrap();
 
             AssetIds::<T>::insert(&native_asset_name, T::NativeAssetId::get());
@@ -270,6 +271,7 @@ pub mod pallet {
 
             let asset_id = Self::register_asset(bounded_name, asset_type, existential_deposit, asset_id)?;
 
+            // SBP-M3+ review: Make sure these execution paths are included in Benchmarks & Weights.
             if let Some(meta) = metadata {
                 let symbol = Self::to_bounded_name(meta.symbol)?;
                 AssetMetadataMap::<T>::insert(
@@ -307,6 +309,8 @@ pub mod pallet {
         pub fn update(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
+            // SBP-M3 review: use BoundedVec instead of Vec<u8>
+            // This is a security issue.
             name: Vec<u8>,
             asset_type: AssetType<T::AssetId>,
             existential_deposit: Option<T::Balance>,
@@ -356,6 +360,7 @@ pub mod pallet {
         pub fn set_metadata(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
+            // SBP-M3+ review: use BoundedVec
             symbol: Vec<u8>,
             decimals: u8,
         ) -> DispatchResult {
@@ -489,6 +494,7 @@ impl<T: Config> Pallet<T> {
 
     /// Create asset for given name or return existing AssetId if such asset already exists.
     pub fn get_or_create_asset(
+        // SBP-M3+ review: use BoundedVec as extrinsic's parameter.
         name: Vec<u8>,
         asset_type: AssetType<T::AssetId>,
         existential_deposit: T::Balance,

@@ -53,6 +53,7 @@ pub struct AssetMetadata<BoundedString> {
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Metadata {
+    // SBP-M3+ review: why not BoundedVec?
     pub(super) symbol: Vec<u8>,
     pub(super) decimals: u8,
 }

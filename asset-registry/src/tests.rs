@@ -723,7 +723,8 @@ fn register_asset_should_fail_when_location_is_already_registered() {
             1_000_000,
             Some(asset_id),
             None,
-            Some(asset_location.clone())
+            Some(asset_location.clone()),
+            None
         ),);
 
         // Act & Assert
@@ -735,7 +736,8 @@ fn register_asset_should_fail_when_location_is_already_registered() {
                 1_000_000,
                 Some(asset_id + 1),
                 None,
-                Some(asset_location)
+                Some(asset_location),
+                None
             ),
             Error::<Test>::LocationAlreadyRegistered
         );
@@ -756,7 +758,8 @@ fn set_location_should_fail_when_location_is_already_registered() {
             1_000_000,
             Some(asset_id),
             None,
-            Some(asset_location.clone())
+            Some(asset_location.clone()),
+            None
         ),);
 
         // Act & Assert
@@ -781,7 +784,8 @@ fn set_location_should_remove_old_location() {
             1_000_000,
             Some(asset_id),
             None,
-            Some(old_asset_location.clone())
+            Some(old_asset_location.clone()),
+            None
         ),);
 
         // Act

@@ -50,6 +50,11 @@ pub trait TradeAmountsCalculator<AssetId, Balance> {
         route: &[Trade<AssetId>],
         amount_out: Balance,
     ) -> Result<Vec<AmountInAndOut<Balance>>, DispatchError>;
+
+    fn calculate_sell_trade_amounts(
+        route: &[Trade<AssetId>],
+        amount_in: Balance,
+    ) -> Result<Vec<AmountInAndOut<Balance>>, DispatchError>;
 }
 
 ///A single trade for buy/sell, describing the asset pair and the pool type in which the trade is executed
@@ -304,28 +309,6 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    fn calculate_sell_trade_amounts(
-        route: &Vec<Trade<T::AssetId>>,
-        amount_in: T::Balance,
-    ) -> Result<Vec<AmountInAndOut<T::Balance>>, DispatchError> {
-        let mut amount_in_and_outs = Vec::<AmountInAndOut<T::Balance>>::with_capacity(route.len());
-        let mut amount_in = amount_in;
-
-        for trade in route.iter() {
-            let result = T::AMM::calculate_sell(trade.pool, trade.asset_in, trade.asset_out, amount_in);
-            match result {
-                Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
-                Err(ExecutorError::Error(dispatch_error)) => return Err(dispatch_error),
-                Ok(amount_out) => {
-                    amount_in_and_outs.push(AmountInAndOut { amount_in, amount_out });
-                    amount_in = amount_out;
-                }
-            }
-        }
-
-        Ok(amount_in_and_outs)
-    }
-
     fn ensure_that_user_received_asset_out(
         who: T::AccountId,
         asset_out: T::AssetId,
@@ -366,6 +349,28 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> TradeAmountsCalculator<T::AssetId, T::Balance> for Pallet<T> {
+    fn calculate_sell_trade_amounts(
+        route: &[Trade<T::AssetId>],
+        amount_in: T::Balance,
+    ) -> Result<Vec<AmountInAndOut<T::Balance>>, DispatchError> {
+        let mut amount_in_and_outs = Vec::<AmountInAndOut<T::Balance>>::with_capacity(route.len());
+        let mut amount_in = amount_in;
+
+        for trade in route.iter() {
+            let result = T::AMM::calculate_sell(trade.pool, trade.asset_in, trade.asset_out, amount_in);
+            match result {
+                Err(ExecutorError::NotSupported) => return Err(Error::<T>::PoolNotSupported.into()),
+                Err(ExecutorError::Error(dispatch_error)) => return Err(dispatch_error),
+                Ok(amount_out) => {
+                    amount_in_and_outs.push(AmountInAndOut { amount_in, amount_out });
+                    amount_in = amount_out;
+                }
+            }
+        }
+
+        Ok(amount_in_and_outs)
+    }
+
     fn calculate_buy_trade_amounts(
         route: &[Trade<T::AssetId>],
         amount_out: T::Balance,

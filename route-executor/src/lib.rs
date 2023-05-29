@@ -47,7 +47,7 @@ pub struct AmountInAndOut<Balance> {
 
 pub trait TradeAmountsCalculator<AssetId, Balance> {
     fn calculate_buy_trade_amounts(
-        route: &Vec<Trade<AssetId>>,
+        route: &[Trade<AssetId>],
         amount_out: Balance,
     ) -> Result<Vec<AmountInAndOut<Balance>>, DispatchError>;
 }
@@ -367,7 +367,7 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> TradeAmountsCalculator<T::AssetId, T::Balance> for Pallet<T> {
     fn calculate_buy_trade_amounts(
-        route: &Vec<Trade<T::AssetId>>,
+        route: &[Trade<T::AssetId>],
         amount_out: T::Balance,
     ) -> Result<Vec<AmountInAndOut<T::Balance>>, DispatchError> {
         let mut amount_in_and_outs = Vec::<AmountInAndOut<T::Balance>>::with_capacity(route.len());

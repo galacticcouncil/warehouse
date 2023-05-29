@@ -33,6 +33,7 @@ mod mock;
 mod tests;
 
 mod benchmarking;
+pub mod migration;
 mod types;
 pub mod weights;
 
@@ -191,7 +192,7 @@ pub mod pallet {
                 name: native_asset_name,
                 asset_type: AssetType::Token,
                 existential_deposit: self.native_existential_deposit,
-                locked: false,
+
                 xcm_rate_limit: None,
             };
 
@@ -481,7 +482,6 @@ impl<T: Config> Pallet<T> {
             name: name.clone(),
             asset_type,
             existential_deposit,
-            locked: false,
             xcm_rate_limit,
         };
 

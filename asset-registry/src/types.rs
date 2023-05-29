@@ -39,8 +39,6 @@ pub struct AssetDetails<AssetId, Balance, BoundedString> {
 
     pub(super) existential_deposit: Balance,
 
-    pub(super) locked: bool,
-
     pub(super) xcm_rate_limit: Option<Balance>,
 }
 

@@ -79,7 +79,6 @@ fn register_asset_works() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: ed,
-                locked: false,
                 xcm_rate_limit: None,
             }
         );
@@ -167,7 +166,6 @@ fn location_mapping_works() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: ed,
-                locked: false,
                 xcm_rate_limit: None,
             },
         );
@@ -245,7 +243,6 @@ fn genesis_config_works() {
                     name: one,
                     asset_type: AssetType::Token,
                     existential_deposit: 1_000u128,
-                    locked: false,
                     xcm_rate_limit: None,
                 }
             );
@@ -258,7 +255,6 @@ fn genesis_config_works() {
                     name: life,
                     asset_type: AssetType::Token,
                     existential_deposit: 1_000u128,
-                    locked: false,
                     xcm_rate_limit: None,
                 }
             );
@@ -364,7 +360,6 @@ fn update_asset() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: ed,
-                locked: false,
                 xcm_rate_limit: None,
             }
         );
@@ -430,7 +425,6 @@ fn update_asset() {
                 name: btcusd,
                 asset_type: AssetType::PoolShare(btc_asset_id, usd_asset_id),
                 existential_deposit: 1_234_567u128,
-                locked: false,
                 xcm_rate_limit: None,
             }
         );
@@ -453,7 +447,6 @@ fn update_asset() {
             AssetDetails {
                 name: superbtc_name,
                 asset_type: AssetType::Token,
-                locked: false,
                 existential_deposit: 1_234_567u128,
                 xcm_rate_limit: None,
             }
@@ -486,7 +479,6 @@ fn update_should_update_xcm_rate_limit() {
                 name: bn.clone(),
                 asset_type: AssetType::Token,
                 existential_deposit: ed,
-                locked: false,
                 xcm_rate_limit: Some(1000 * UNIT),
             }
         );
@@ -501,13 +493,6 @@ fn update_should_update_xcm_rate_limit() {
             xcm_rate_limit: Some(1000 * UNIT),
         }
         .into()]);
-    });
-}
-
-#[test]
-fn native_asset_should_be_not_locked_when_genesis_block_built() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert!(!AssetRegistryPallet::assets(0u32).unwrap().locked);
     });
 }
 
@@ -555,7 +540,6 @@ fn register_asset_should_work_when_asset_is_provided() {
                     name: bn,
                     asset_type: AssetType::Token,
                     existential_deposit: 1_000_000,
-                    locked: false,
                     xcm_rate_limit: None,
                 }
             );
@@ -671,7 +655,6 @@ fn register_asset_should_work_when_metadata_is_provided() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: 1_000_000,
-                locked: false,
                 xcm_rate_limit: None,
             }
         );
@@ -713,7 +696,6 @@ fn register_asset_should_work_when_location_is_provided() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: 1_000_000,
-                locked: false,
                 xcm_rate_limit: None,
             }
         );
@@ -756,7 +738,6 @@ fn register_asset_should_work_when_all_optional_are_provided() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: 1_000_000,
-                locked: false,
                 xcm_rate_limit: Some(1000 * UNIT),
             }
         );

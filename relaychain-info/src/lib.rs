@@ -46,6 +46,7 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {}
 
+    ///Hash of current relay chain (parent) block, to be used for providing randomness in our runtimes
     #[pallet::storage]
     #[pallet::getter(fn parent_hash)]
     pub(super) type ParentHash<T> = StorageValue<_, Hash, ValueQuery>;

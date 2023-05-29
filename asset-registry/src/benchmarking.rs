@@ -38,7 +38,7 @@ benchmarks! {
             decimals: 100,
         };
 
-    }: _(RawOrigin::Root, name.clone(), AssetType::Token, ed, None, Some(metadata), Some(Default::default()))
+    }: _(RawOrigin::Root, name.clone(), AssetType::Token, ed, None, Some(metadata), Some(Default::default()), None)
     verify {
         let bname = crate::Pallet::<T>::to_bounded_name(name).unwrap();
         assert!(crate::Pallet::<T>::asset_ids(bname).is_some());
@@ -48,13 +48,15 @@ benchmarks! {
         let name = b"NAME".to_vec();
         let ed = T::Balance::from(1_000_000u32);
         let asset_id = T::AssetId::from(10u8);
-        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name, AssetType::Token, ed, Some(asset_id),None,None);
+        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name, AssetType::Token, ed, Some(asset_id), None, None, None);
 
         let new_name= vec![1; T::StringLimit::get() as usize];
 
         let new_ed = T::Balance::from(2_000_000u32);
 
-    }: _(RawOrigin::Root, asset_id, new_name.clone(), AssetType::PoolShare(T::AssetId::from(10u8),T::AssetId::from(20u8)), Some(new_ed))
+        let rate_limit = T::Balance::from(10_000_000u32);
+
+    }: _(RawOrigin::Root, asset_id, new_name.clone(), AssetType::PoolShare(T::AssetId::from(10u8),T::AssetId::from(20u8)), Some(new_ed), Some(rate_limit))
     verify {
         let bname = crate::Pallet::<T>::to_bounded_name(new_name).unwrap();
         assert_eq!(crate::Pallet::<T>::asset_ids(&bname), Some(asset_id));
@@ -66,12 +68,12 @@ benchmarks! {
 
         let expected = AssetDetails{
             asset_type: AssetType::PoolShare(T::AssetId::from(10u8), T::AssetId::from(20u8)),
-            locked: false,
             existential_deposit: new_ed,
-            name: bname,};
+            name: bname,
+            xcm_rate_limit: Some(rate_limit),
+        };
 
         assert_eq!(stored.asset_type, expected.asset_type);
-        assert_eq!(stored.locked, expected.locked);
         assert_eq!(stored.existential_deposit, expected.existential_deposit);
         assert_eq!(stored.name.to_vec(), expected.name.to_vec());
     }
@@ -80,7 +82,7 @@ benchmarks! {
         let name = b"NAME".to_vec();
         let bname = crate::Pallet::<T>::to_bounded_name(name.clone()).unwrap();
         let ed = T::Balance::from(1_000_000u32);
-        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name, AssetType::Token, ed, None, None, None);
+        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name, AssetType::Token, ed, None, None, None, None);
 
         let asset_id = crate::Pallet::<T>::asset_ids(bname).unwrap();
 
@@ -109,7 +111,7 @@ benchmarks! {
         let name = b"NAME".to_vec();
         let ed = T::Balance::from(1_000_000u32);
         let asset_id = T::AssetId::from(10u8);
-        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name.clone(), AssetType::Token, ed, Some(asset_id), None, None);
+        let _ = crate::Pallet::<T>::register(RawOrigin::Root.into(), name.clone(), AssetType::Token, ed, Some(asset_id), None, None, None);
 
     }: _(RawOrigin::Root, asset_id, Default::default())
     verify {

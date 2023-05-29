@@ -33,6 +33,7 @@ mod mock;
 mod tests;
 
 mod benchmarking;
+pub mod migration;
 mod types;
 pub mod weights;
 
@@ -194,7 +195,8 @@ pub mod pallet {
                 name: native_asset_name,
                 asset_type: AssetType::Token,
                 existential_deposit: self.native_existential_deposit,
-                locked: false,
+
+                xcm_rate_limit: None,
             };
 
             Assets::<T>::insert(T::NativeAssetId::get(), details);
@@ -203,7 +205,7 @@ pub mod pallet {
                 let bounded_name = Pallet::<T>::to_bounded_name(name.to_vec())
                     .map_err(|_| panic!("Invalid asset name!"))
                     .unwrap();
-                let _ = Pallet::<T>::register_asset(bounded_name, AssetType::Token, *ed, *id)
+                let _ = Pallet::<T>::register_asset(bounded_name, AssetType::Token, *ed, *id, None)
                     .map_err(|_| panic!("Failed to register asset"));
             })
         }
@@ -224,6 +226,8 @@ pub mod pallet {
             asset_id: T::AssetId,
             asset_name: BoundedVec<u8, T::StringLimit>,
             asset_type: AssetType<T::AssetId>,
+            existential_deposit: T::Balance,
+            xcm_rate_limit: Option<T::Balance>,
         },
 
         /// Metadata set for an asset.
@@ -251,6 +255,7 @@ pub mod pallet {
         /// Adds mapping between `name` and assigned `asset_id` so asset id can be retrieved by name too (Note: this approach is used in AMM implementation (xyk))
         ///
         /// Emits 'Registered` event when successful.
+        #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::register())]
         pub fn register(
@@ -261,6 +266,7 @@ pub mod pallet {
             asset_id: Option<T::AssetId>,
             metadata: Option<Metadata>,
             location: Option<T::AssetNativeLocation>,
+            xcm_rate_limit: Option<T::Balance>,
         ) -> DispatchResult {
             T::RegistryOrigin::ensure_origin(origin)?;
 
@@ -271,7 +277,8 @@ pub mod pallet {
                 Error::<T>::AssetAlreadyRegistered
             );
 
-            let asset_id = Self::register_asset(bounded_name, asset_type, existential_deposit, asset_id)?;
+            let asset_id =
+                Self::register_asset(bounded_name, asset_type, existential_deposit, asset_id, xcm_rate_limit)?;
 
             if let Some(meta) = metadata {
                 let symbol = Self::to_bounded_name(meta.symbol)?;
@@ -317,6 +324,7 @@ pub mod pallet {
             name: Vec<u8>,
             asset_type: AssetType<T::AssetId>,
             existential_deposit: Option<T::Balance>,
+            xcm_rate_limit: Option<T::Balance>,
         ) -> DispatchResult {
             T::RegistryOrigin::ensure_origin(origin)?;
 
@@ -340,11 +348,14 @@ pub mod pallet {
                 detail.name = bounded_name.clone();
                 detail.asset_type = asset_type;
                 detail.existential_deposit = existential_deposit.unwrap_or(detail.existential_deposit);
+                detail.xcm_rate_limit = xcm_rate_limit;
 
                 Self::deposit_event(Event::Updated {
                     asset_id,
                     asset_name: bounded_name,
                     asset_type,
+                    existential_deposit: detail.existential_deposit,
+                    xcm_rate_limit: detail.xcm_rate_limit,
                 });
 
                 Ok(())
@@ -442,6 +453,7 @@ impl<T: Config> Pallet<T> {
         asset_type: AssetType<T::AssetId>,
         existential_deposit: T::Balance,
         selected_asset_id: Option<T::AssetId>,
+        xcm_rate_limit: Option<T::Balance>,
     ) -> Result<T::AssetId, DispatchError> {
         let asset_id = if let Some(selected_id) = selected_asset_id {
             ensure!(
@@ -484,7 +496,7 @@ impl<T: Config> Pallet<T> {
             name: name.clone(),
             asset_type,
             existential_deposit,
-            locked: false,
+            xcm_rate_limit,
         };
 
         // Store the details
@@ -513,7 +525,7 @@ impl<T: Config> Pallet<T> {
         if let Some(asset_id) = AssetIds::<T>::get(&bounded_name) {
             Ok(asset_id)
         } else {
-            Self::register_asset(bounded_name, asset_type, existential_deposit, asset_id)
+            Self::register_asset(bounded_name, asset_type, existential_deposit, asset_id, None)
         }
     }
 
@@ -579,5 +591,15 @@ impl<T: Config> GetByKey<T::AssetId, T::Balance> for Pallet<T> {
             // Asset does not exist - not supported
             T::Balance::max_value()
         }
+    }
+}
+
+/// Allows querying the XCM rate limit for an asset by its id.
+pub struct XcmRateLimitsInRegistry<T>(PhantomData<T>);
+/// Allows querying the XCM rate limit for an asset by its id.
+/// Both a unknown asset and an unset rate limit will return `None`.
+impl<T: Config> GetByKey<T::AssetId, Option<T::Balance>> for XcmRateLimitsInRegistry<T> {
+    fn get(k: &T::AssetId) -> Option<T::Balance> {
+        Pallet::<T>::assets(k).and_then(|details| details.xcm_rate_limit)
     }
 }

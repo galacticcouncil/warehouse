@@ -1,7 +1,6 @@
 use crate::tests::mock::*;
 use crate::types::{AssetLiquidity, PoolInfo};
 use frame_support::assert_ok;
-use hydradx_traits::AccountIdFor;
 use sp_runtime::{FixedU128, Permill};
 
 use hydra_dx_math::stableswap::calculate_d;
@@ -83,7 +82,7 @@ proptest! {
             .execute_with(|| {
                 let pool_id = get_pool_id_at(0);
 
-                let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+                let pool_account = pool_account(pool_id);
 
                 let asset_a_reserve = Tokens::free_balance(asset_a, &pool_account);
                 let asset_b_reserve = Tokens::free_balance(asset_b, &pool_account);
@@ -158,7 +157,7 @@ proptest! {
             .execute_with(|| {
                 let pool_id = get_pool_id_at(0);
 
-                let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+                let pool_account = pool_account(pool_id);
 
                 let asset_a_reserve = Tokens::free_balance(asset_a, &pool_account);
                 let asset_b_reserve = Tokens::free_balance(asset_b, &pool_account);
@@ -227,7 +226,7 @@ proptest! {
 
                 let pool_id = get_pool_id_at(0);
 
-                let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+                let pool_account = pool_account(pool_id);
 
                 let asset_a_reserve = Tokens::free_balance(asset_a, &pool_account);
                 let asset_b_reserve = Tokens::free_balance(asset_b, &pool_account);

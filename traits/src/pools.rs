@@ -43,12 +43,3 @@ pub trait AMMTrader<Origin, AssetId, Balance> {
         max_sell_amount: Balance,
     ) -> DispatchResult;
 }
-
-pub trait PriceProvider<AssetId> {
-    type Price;
-
-    /// Return spot price for given asset pair
-    ///
-    /// Returns None if such pair does not exist
-    fn spot_price(asset_a: AssetId, asset_b: AssetId) -> Option<Self::Price>;
-}

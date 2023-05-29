@@ -2824,8 +2824,8 @@ dependencies = [
 
 [[package]]
 name = "hydra-dx-math"
-version = "7.0.2"
-source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=5cfeb0dfdce6ad06c81ac1aa27f0cba50992a503#5cfeb0dfdce6ad06c81ac1aa27f0cba50992a503"
+version = "7.1.0"
+source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=380b80b59bbf62abb8848fb8a10bb206861eab41#380b80b59bbf62abb8848fb8a10bb206861eab41"
 dependencies = [
  "fixed",
  "num-traits",
@@ -4866,6 +4866,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-dynamic-fees"
+version = "1.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking",
+ "hydra-dx-math 7.1.0",
+ "hydradx-traits",
+ "orml-traits",
+ "parity-scale-codec",
+ "pretty_assertions",
+ "proptest",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-ema-oracle"
 version = "1.0.3"
 dependencies = [
@@ -4873,7 +4895,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
- "hydra-dx-math 7.0.1",
+ "hydra-dx-math 7.1.0",
  "hydradx-traits",
  "log",
  "parity-scale-codec",
@@ -5060,7 +5082,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hydra-dx-math 7.0.2",
+ "hydra-dx-math 7.1.0",
  "hydradx-traits",
  "orml-tokens",
  "orml-traits",

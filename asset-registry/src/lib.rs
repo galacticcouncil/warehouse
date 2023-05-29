@@ -126,6 +126,9 @@ pub mod pallet {
 
         /// Selected asset id is out of reserved range.
         NotInReservedRange,
+
+        /// Location already registered with different asset
+        LocationAlreadyRegistered,
     }
 
     #[pallet::storage]
@@ -290,6 +293,10 @@ pub mod pallet {
 
             if let Some(loc) = location {
                 ensure!(asset_id != T::NativeAssetId::get(), Error::<T>::CannotUpdateLocation);
+                ensure!(
+                    Self::location_assets(&loc).is_none(),
+                    Error::<T>::LocationAlreadyRegistered
+                );
                 AssetLocations::<T>::insert(asset_id, &loc);
                 LocationAssets::<T>::insert(&loc, asset_id);
 
@@ -410,7 +417,14 @@ pub mod pallet {
 
             ensure!(asset_id != T::NativeAssetId::get(), Error::<T>::CannotUpdateLocation);
             ensure!(Self::assets(asset_id).is_some(), Error::<T>::AssetNotRegistered);
+            ensure!(
+                Self::location_assets(&location).is_none(),
+                Error::<T>::LocationAlreadyRegistered
+            );
 
+            if let Some(old_location) = AssetLocations::<T>::take(asset_id) {
+                LocationAssets::<T>::remove(&old_location);
+            }
             AssetLocations::<T>::insert(asset_id, &location);
             LocationAssets::<T>::insert(&location, asset_id);
 

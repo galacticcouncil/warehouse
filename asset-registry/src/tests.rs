@@ -306,7 +306,7 @@ fn set_metadata_works() {
                 AssetRegistryPallet::asset_metadata(dot_id).unwrap(),
                 AssetMetadata {
                     decimals: 30u8,
-                    symbol: b_symbol
+                    symbol: b_symbol,
                 }
             );
 
@@ -706,6 +706,93 @@ fn register_asset_should_work_when_location_is_provided() {
         assert_eq!(AssetRegistryPallet::asset_to_location(asset_id), Some(asset_location));
 
         assert!(AssetRegistryPallet::asset_metadata(asset_id).is_none(),);
+    });
+}
+
+#[test]
+fn register_asset_should_fail_when_location_is_already_registered() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Arrange
+        let asset_id: RegistryAssetId = 10;
+        let key = Junction::from(BoundedVec::try_from(asset_id.encode()).unwrap());
+        let asset_location = AssetLocation(MultiLocation::new(0, X2(Parachain(2021), key)));
+        assert_ok!(AssetRegistryPallet::register(
+            RuntimeOrigin::root(),
+            b"asset_id".to_vec(),
+            AssetType::Token,
+            1_000_000,
+            Some(asset_id),
+            None,
+            Some(asset_location.clone())
+        ),);
+
+        // Act & Assert
+        assert_noop!(
+            AssetRegistryPallet::register(
+                RuntimeOrigin::root(),
+                b"asset_id_2".to_vec(),
+                AssetType::Token,
+                1_000_000,
+                Some(asset_id + 1),
+                None,
+                Some(asset_location)
+            ),
+            Error::<Test>::LocationAlreadyRegistered
+        );
+    });
+}
+
+#[test]
+fn set_location_should_fail_when_location_is_already_registered() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Arrange
+        let asset_id: RegistryAssetId = 10;
+        let key = Junction::from(BoundedVec::try_from(asset_id.encode()).unwrap());
+        let asset_location = AssetLocation(MultiLocation::new(0, X2(Parachain(2021), key)));
+        assert_ok!(AssetRegistryPallet::register(
+            RuntimeOrigin::root(),
+            b"asset_id".to_vec(),
+            AssetType::Token,
+            1_000_000,
+            Some(asset_id),
+            None,
+            Some(asset_location.clone())
+        ),);
+
+        // Act & Assert
+        assert_noop!(
+            AssetRegistryPallet::set_location(RuntimeOrigin::root(), asset_id, asset_location),
+            Error::<Test>::LocationAlreadyRegistered
+        );
+    });
+}
+
+#[test]
+fn set_location_should_remove_old_location() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Arrange
+        let asset_id: RegistryAssetId = 10;
+        let key = Junction::from(BoundedVec::try_from(asset_id.encode()).unwrap());
+        let old_asset_location = AssetLocation(MultiLocation::new(0, X2(Parachain(2021), key)));
+        assert_ok!(AssetRegistryPallet::register(
+            RuntimeOrigin::root(),
+            b"asset_id".to_vec(),
+            AssetType::Token,
+            1_000_000,
+            Some(asset_id),
+            None,
+            Some(old_asset_location.clone())
+        ),);
+
+        // Act
+        assert_ok!(AssetRegistryPallet::set_location(
+            RuntimeOrigin::root(),
+            asset_id,
+            AssetLocation(MultiLocation::new(0, X2(Parachain(2022), key)))
+        ));
+
+        // Assert
+        assert_eq!(AssetRegistryPallet::location_to_asset(old_asset_location), None);
     });
 }
 

@@ -4741,7 +4741,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-asset-registry"
-version = "2.1.1"
+version = "2.2.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

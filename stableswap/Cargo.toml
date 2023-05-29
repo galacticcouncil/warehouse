@@ -1,6 +1,6 @@
 [package]
 name = 'pallet-stableswap'
-version = '1.1.1'
+version = '1.2.0'
 description = 'AMM for correlated assets'
 authors = ['GalacticCouncil']
 edition = '2021'
@@ -29,7 +29,7 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 
 # Math
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "3a4e017ad42c297fbe7928dc72ea6499a9260f10", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-math", rev = "380b80b59bbf62abb8848fb8a10bb206861eab41", default-features = false }
 
 # HydraDX dependencies
 hydradx-traits = { path = "../traits", default-features = false }

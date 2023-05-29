@@ -673,7 +673,7 @@ fn register_asset_should_fail_when_location_is_already_registered() {
                 1_000_000,
                 Some(asset_id + 1),
                 None,
-                Some(asset_location.clone())
+                Some(asset_location)
             ),
             Error::<Test>::LocationAlreadyRegistered
         );
@@ -699,7 +699,7 @@ fn set_location_should_fail_when_location_is_already_registered() {
 
         // Act & Assert
         assert_noop!(
-            AssetRegistryPallet::set_location(RuntimeOrigin::root(), asset_id, asset_location.clone()),
+            AssetRegistryPallet::set_location(RuntimeOrigin::root(), asset_id, asset_location),
             Error::<Test>::LocationAlreadyRegistered
         );
     });
@@ -730,7 +730,7 @@ fn set_location_should_remove_old_location() {
         ));
 
         // Assert
-        assert_eq!(AssetRegistryPallet::location_to_asset(old_asset_location.clone()), None);
+        assert_eq!(AssetRegistryPallet::location_to_asset(old_asset_location), None);
     });
 }
 

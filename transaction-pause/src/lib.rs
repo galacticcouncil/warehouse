@@ -42,10 +42,10 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The origin which may set filter.
-        type UpdateOrigin: EnsureOrigin<Self::Origin>;
+        type UpdateOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Weight information for the extrinsics in this module.
         type WeightInfo: WeightInfo;
@@ -90,6 +90,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::pause_transaction())]
         pub fn pause_transaction(origin: OriginFor<T>, pallet_name: Vec<u8>, function_name: Vec<u8>) -> DispatchResult {
             T::UpdateOrigin::ensure_origin(origin)?;
@@ -113,6 +114,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::unpause_transaction())]
         pub fn unpause_transaction(
             origin: OriginFor<T>,
@@ -132,11 +134,11 @@ pub mod pallet {
 }
 
 pub struct PausedTransactionFilter<T>(sp_std::marker::PhantomData<T>);
-impl<T: Config> Contains<T::Call> for PausedTransactionFilter<T>
+impl<T: Config> Contains<T::RuntimeCall> for PausedTransactionFilter<T>
 where
-    <T as frame_system::Config>::Call: GetCallMetadata,
+    <T as frame_system::Config>::RuntimeCall: GetCallMetadata,
 {
-    fn contains(call: &T::Call) -> bool {
+    fn contains(call: &T::RuntimeCall) -> bool {
         let CallMetadata {
             function_name,
             pallet_name,

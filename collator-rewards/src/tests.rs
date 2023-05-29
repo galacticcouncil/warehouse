@@ -59,22 +59,22 @@ fn reward_collator_on_end_session_should_work() {
         assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &BOB), COLLATOR_REWARD);
         assert_eq!(Tokens::free_balance(NATIVE_TOKEN, &DAVE), COLLATOR_REWARD);
 
-        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
+        frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::CollatorRewards(Event::CollatorRewarded {
             who: ALICE,
             amount: COLLATOR_REWARD,
             currency: NATIVE_TOKEN,
         }));
-        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
+        frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::CollatorRewards(Event::CollatorRewarded {
             who: BOB,
             amount: COLLATOR_REWARD,
             currency: NATIVE_TOKEN,
         }));
-        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
+        frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::CollatorRewards(Event::CollatorRewarded {
             who: CHARLIE,
             amount: COLLATOR_REWARD,
             currency: NATIVE_TOKEN,
         }));
-        frame_system::Pallet::<Test>::assert_has_event(mock::Event::CollatorRewards(Event::CollatorRewarded {
+        frame_system::Pallet::<Test>::assert_has_event(mock::RuntimeEvent::CollatorRewards(Event::CollatorRewarded {
             who: DAVE,
             amount: COLLATOR_REWARD,
             currency: NATIVE_TOKEN,

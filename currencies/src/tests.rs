@@ -4,7 +4,7 @@
 
 use super::*;
 use frame_support::{assert_noop, assert_ok};
-use mock::{Event, *};
+use mock::{RuntimeEvent, *};
 use sp_runtime::traits::BadOrigin;
 
 #[test]
@@ -231,12 +231,16 @@ fn basic_currency_adapting_pallet_balances_transfer() {
         .one_hundred_for_alice_n_bob()
         .build()
         .execute_with(|| {
-            assert_ok!(AdaptedBasicCurrency::transfer(&ALICE, &BOB, 50));
+            assert_ok!(<AdaptedBasicCurrency as BasicCurrency<AccountId>>::transfer(
+                &ALICE, &BOB, 50
+            ));
             assert_eq!(PalletBalances::total_balance(&ALICE), 50);
             assert_eq!(PalletBalances::total_balance(&BOB), 150);
 
             // creation fee
-            assert_ok!(AdaptedBasicCurrency::transfer(&ALICE, &EVA, 10));
+            assert_ok!(<AdaptedBasicCurrency as BasicCurrency<AccountId>>::transfer(
+                &ALICE, &EVA, 10
+            ));
             assert_eq!(PalletBalances::total_balance(&ALICE), 40);
             assert_eq!(PalletBalances::total_balance(&EVA), 10);
         });
@@ -289,7 +293,10 @@ fn basic_currency_adapting_pallet_balances_slash() {
         .one_hundred_for_alice_n_bob()
         .build()
         .execute_with(|| {
-            assert_eq!(AdaptedBasicCurrency::slash(&ALICE, 101), 1);
+            assert_eq!(
+                <AdaptedBasicCurrency as BasicCurrency<AccountId>>::slash(&ALICE, 101),
+                1
+            );
             assert_eq!(PalletBalances::total_balance(&ALICE), 0);
             assert_eq!(PalletBalances::total_issuance(), 100);
         });
@@ -314,14 +321,14 @@ fn update_balance_call_should_work() {
         .build()
         .execute_with(|| {
             assert_ok!(Currencies::update_balance(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 ALICE,
                 NATIVE_CURRENCY_ID,
                 -10
             ));
             assert_eq!(NativeCurrency::free_balance(&ALICE), 90);
             assert_eq!(Currencies::free_balance(X_TOKEN_ID, &ALICE), 100);
-            assert_ok!(Currencies::update_balance(Origin::root(), ALICE, X_TOKEN_ID, 10));
+            assert_ok!(Currencies::update_balance(RuntimeOrigin::root(), ALICE, X_TOKEN_ID, 10));
             assert_eq!(Currencies::free_balance(X_TOKEN_ID, &ALICE), 110);
         });
 }
@@ -347,7 +354,7 @@ fn call_event_should_work() {
             assert_ok!(Currencies::transfer(Some(ALICE).into(), BOB, X_TOKEN_ID, 50));
             assert_eq!(Currencies::free_balance(X_TOKEN_ID, &ALICE), 50);
             assert_eq!(Currencies::free_balance(X_TOKEN_ID, &BOB), 150);
-            System::assert_last_event(Event::Currencies(crate::Event::Transferred {
+            System::assert_last_event(RuntimeEvent::Currencies(crate::Event::Transferred {
                 currency_id: X_TOKEN_ID,
                 from: ALICE,
                 to: BOB,
@@ -359,7 +366,7 @@ fn call_event_should_work() {
             ));
             assert_eq!(Currencies::free_balance(X_TOKEN_ID, &ALICE), 40);
             assert_eq!(Currencies::free_balance(X_TOKEN_ID, &BOB), 160);
-            System::assert_last_event(Event::Currencies(crate::Event::Transferred {
+            System::assert_last_event(RuntimeEvent::Currencies(crate::Event::Transferred {
                 currency_id: X_TOKEN_ID,
                 from: ALICE,
                 to: BOB,
@@ -370,7 +377,7 @@ fn call_event_should_work() {
                 X_TOKEN_ID, &ALICE, 100
             ));
             assert_eq!(Currencies::free_balance(X_TOKEN_ID, &ALICE), 140);
-            System::assert_last_event(Event::Currencies(crate::Event::Deposited {
+            System::assert_last_event(RuntimeEvent::Currencies(crate::Event::Deposited {
                 currency_id: X_TOKEN_ID,
                 who: ALICE,
                 amount: 100,
@@ -380,7 +387,7 @@ fn call_event_should_work() {
                 X_TOKEN_ID, &ALICE, 20
             ));
             assert_eq!(Currencies::free_balance(X_TOKEN_ID, &ALICE), 120);
-            System::assert_last_event(Event::Currencies(crate::Event::Withdrawn {
+            System::assert_last_event(RuntimeEvent::Currencies(crate::Event::Withdrawn {
                 currency_id: X_TOKEN_ID,
                 who: ALICE,
                 amount: 20,

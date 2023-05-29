@@ -64,6 +64,8 @@ frame_support::construct_runtime!(
 
 thread_local! {
     pub static REGISTERED_ASSETS: RefCell<HashMap<AssetId, u32>> = RefCell::new(HashMap::default());
+    pub static EXISTENTIAL_DEPOSIT: RefCell<HashMap<AssetId, u128>>= RefCell::new(HashMap::default());
+    pub static PRECISIONS: RefCell<HashMap<AssetId, u32>>= RefCell::new(HashMap::default());
 }
 
 parameter_types! {
@@ -72,8 +74,8 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
-        ONE
+    pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
+        EXISTENTIAL_DEPOSIT.with(|v| *v.borrow().get(currency_id).unwrap_or(&ONE))
     };
 }
 
@@ -81,7 +83,7 @@ impl Config for Test {
     type AssetId = AssetId;
     type AssetRegistry = DummyRegistry<Test>;
     type Currency = Tokens;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
     type ExistentialDepositMultiplier = ExistentialDepositMultiplier;
     type WeightInfo = ();
@@ -97,8 +99,8 @@ impl system::Config for Test {
     type BaseCallFilter = Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -106,7 +108,7 @@ impl system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -121,43 +123,38 @@ impl system::Config for Test {
 }
 
 impl orml_tokens::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = AssetId;
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = ();
     type MaxLocks = ();
     type DustRemovalWhitelist = Nothing;
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
     type ReserveIdentifier = NamedReserveIdentifier;
     type MaxReserves = MaxReserves;
+    type CurrencyHooks = ();
 }
 
 pub struct DummyRegistry<T>(sp_std::marker::PhantomData<T>);
 
-impl<T: Config> Registry<T::AssetId, Vec<u8>, Balance, DispatchError> for DummyRegistry<T>
-where
-    T::AssetId: Into<AssetId> + From<u32>,
-{
-    fn exists(asset_id: T::AssetId) -> bool {
-        let asset = REGISTERED_ASSETS.with(|v| v.borrow().get(&(asset_id.into())).copied());
+impl<T: Config> Registry<AssetId, Vec<u8>, Balance, DispatchError> for DummyRegistry<T> {
+    fn exists(asset_id: AssetId) -> bool {
+        let asset = REGISTERED_ASSETS.with(|v| v.borrow().get(&(asset_id)).copied());
         matches!(asset, Some(_))
     }
 
-    fn retrieve_asset(_name: &Vec<u8>) -> Result<T::AssetId, DispatchError> {
-        Ok(T::AssetId::default())
+    fn retrieve_asset(_name: &Vec<u8>) -> Result<AssetId, DispatchError> {
+        Ok(0)
     }
 
-    fn create_asset(_name: &Vec<u8>, _existential_deposit: Balance) -> Result<T::AssetId, DispatchError> {
+    fn create_asset(_name: &Vec<u8>, _existential_deposit: Balance) -> Result<AssetId, DispatchError> {
         let assigned = REGISTERED_ASSETS.with(|v| {
             let l = v.borrow().len();
             v.borrow_mut().insert(l as u32, l as u32);
             l as u32
         });
-        Ok(T::AssetId::from(assigned))
+        Ok(assigned)
     }
 }
 
@@ -174,13 +171,16 @@ impl Default for ExtBuilder {
         REGISTERED_ASSETS.with(|v| {
             v.borrow_mut().clear();
         });
+        EXISTENTIAL_DEPOSIT.with(|v| {
+            v.borrow_mut().clear();
+        });
 
         Self {
             endowed_accounts: vec![
-                (ALICE, HDX, 10_000 * ONE),
-                (BOB, HDX, 10_000 * ONE),
-                (ALICE, DAI, 100 * ONE),
-                (BOB, DAI, 100 * ONE),
+                (ALICE, HDX, 10_000),
+                (BOB, HDX, 10_000),
+                (ALICE, DAI, 100),
+                (BOB, DAI, 100),
             ],
             registered_assets: vec![HDX, DAI],
         }
@@ -188,6 +188,16 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
+    pub fn with_existential_deposit(self, asset_id: AssetId, precision: u32) -> Self {
+        EXISTENTIAL_DEPOSIT.with(|v| {
+            v.borrow_mut().insert(asset_id, 10u128.pow(precision));
+        });
+        PRECISIONS.with(|v| {
+            v.borrow_mut().insert(asset_id, precision);
+        });
+
+        self
+    }
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
@@ -204,7 +214,7 @@ impl ExtBuilder {
             balances: self
                 .endowed_accounts
                 .iter()
-                .flat_map(|(x, asset, amount)| vec![(*x, *asset, *amount)])
+                .flat_map(|(x, asset, amount)| vec![(*x, *asset, *amount * 10u128.pow(precision(*asset)))])
                 .collect(),
         }
         .assimilate_storage(&mut t)
@@ -224,6 +234,10 @@ thread_local! {
     pub static DUMMYTHREADLOCAL: RefCell<u128> = RefCell::new(100);
 }
 
-pub fn expect_events(e: Vec<Event>) {
-    test_utils::expect_events::<Event, Test>(e);
+pub fn expect_events(e: Vec<RuntimeEvent>) {
+    test_utils::expect_events::<RuntimeEvent, Test>(e);
+}
+
+pub fn precision(asset_id: AssetId) -> u32 {
+    PRECISIONS.with(|v| *v.borrow().get(&asset_id).unwrap_or(&12))
 }

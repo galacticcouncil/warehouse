@@ -8,7 +8,6 @@ members = [
 	"price-oracle",
 	"route-executor",
 	"transaction-multi-payment",
-	"nft",
 	"asset-registry",
 	"adapters",
 	"collator-rewards",
@@ -18,7 +17,10 @@ members = [
 	"currencies",
 	"stableswap",
 	"test-utils",
+	"dynamic-fees",
 	"duster",
+    "nft",
+	"ema-oracle",
 	"otc",
 ]
 

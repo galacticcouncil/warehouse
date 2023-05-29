@@ -87,8 +87,8 @@ impl frame_system::Config for Test {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -96,7 +96,7 @@ impl frame_system::Config for Test {
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = ConstU64<250>;
     type DbWeight = ();
     type Version = ();
@@ -117,15 +117,13 @@ parameter_type_with_key! {
 }
 
 impl orml_tokens::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = i128;
     type CurrencyId = AssetId;
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = ();
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
+    type CurrencyHooks = ();
     type MaxLocks = ();
     type MaxReserves = ();
     type ReserveIdentifier = ();
@@ -141,7 +139,7 @@ parameter_types! {
 }
 
 impl Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AssetId = AssetId;
     type Currency = Tokens;
     type ShareAccountId = AccountIdConstructor;
@@ -240,7 +238,7 @@ impl ExtBuilder {
                 });
 
                 assert_ok!(Stableswap::create_pool(
-                    Origin::signed(who),
+                    RuntimeOrigin::signed(who),
                     pool_id,
                     pool.assets.clone().into(),
                     pool.amplification,
@@ -253,7 +251,7 @@ impl ExtBuilder {
 
                 if initial_liquid.assets.len() as u128 > Balance::zero() {
                     assert_ok!(Stableswap::add_liquidity(
-                        Origin::signed(initial_liquid.account),
+                        RuntimeOrigin::signed(initial_liquid.account),
                         pool_id,
                         initial_liquid.assets
                     ));

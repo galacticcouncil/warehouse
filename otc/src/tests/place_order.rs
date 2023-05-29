@@ -25,7 +25,7 @@ fn place_order_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -67,7 +67,7 @@ fn place_order_should_work_when_user_has_multiple_orders() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -76,7 +76,7 @@ fn place_order_should_work_when_user_has_multiple_orders() {
         ));
 
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             10 * ONE,
@@ -97,7 +97,7 @@ fn place_order_should_throw_error_when_amount_is_higher_than_balance() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_noop!(
-            OTC::place_order(Origin::signed(ALICE), DAI, HDX, 20 * ONE, 100_000 * ONE, true),
+            OTC::place_order(RuntimeOrigin::signed(ALICE), DAI, HDX, 20 * ONE, 100_000 * ONE, true),
             BalanceTooLow::<Test>
         );
     });
@@ -108,7 +108,7 @@ fn place_order_should_throw_error_when_asset_out_is_not_registered() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_noop!(
-            OTC::place_order(Origin::signed(ALICE), DAI, DOGE, 20 * ONE, 100 * ONE, true),
+            OTC::place_order(RuntimeOrigin::signed(ALICE), DAI, DOGE, 20 * ONE, 100 * ONE, true),
             BalanceTooLow::<Test>
         );
     });
@@ -119,7 +119,7 @@ fn place_order_should_throw_error_when_asset_in_is_not_registered() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_noop!(
-            OTC::place_order(Origin::signed(ALICE), DOGE, HDX, 20 * ONE, 100 * ONE, true),
+            OTC::place_order(RuntimeOrigin::signed(ALICE), DOGE, HDX, 20 * ONE, 100 * ONE, true),
             Error::<Test>::AssetNotRegistered
         );
     });
@@ -130,7 +130,7 @@ fn place_order_should_throw_error_when_amount_in_is_too_low() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_noop!(
-            OTC::place_order(Origin::signed(ALICE), DAI, HDX, 4 * ONE, 100 * ONE, true),
+            OTC::place_order(RuntimeOrigin::signed(ALICE), DAI, HDX, 4 * ONE, 100 * ONE, true),
             Error::<Test>::OrderAmountTooSmall
         );
     });
@@ -141,7 +141,7 @@ fn place_order_should_throw_error_when_amount_out_is_too_low() {
     ExtBuilder::default().build().execute_with(|| {
         // Act
         assert_noop!(
-            OTC::place_order(Origin::signed(ALICE), DAI, HDX, 20 * ONE, 4 * ONE, true),
+            OTC::place_order(RuntimeOrigin::signed(ALICE), DAI, HDX, 20 * ONE, 4 * ONE, true),
             Error::<Test>::OrderAmountTooSmall
         );
     });

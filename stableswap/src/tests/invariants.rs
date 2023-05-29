@@ -89,7 +89,7 @@ proptest! {
                 let asset_b_reserve = Tokens::free_balance(asset_b, &pool_account);
 
                 assert_ok!(Stableswap::add_liquidity(
-                    Origin::signed(BOB),
+                    RuntimeOrigin::signed(BOB),
                     pool_id,
                     vec![AssetLiquidity{
                         asset_id: asset_a,
@@ -165,7 +165,7 @@ proptest! {
                 let d_prev = calculate_d::<128u8>(&[asset_a_reserve,asset_b_reserve], amplification.into()).unwrap();
 
                 assert_ok!(Stableswap::sell(
-                    Origin::signed(BOB),
+                    RuntimeOrigin::signed(BOB),
                     pool_id,
                     asset_a,
                     asset_b,
@@ -234,7 +234,7 @@ proptest! {
                 let d_prev = calculate_d::<128u8>(&[asset_a_reserve,asset_b_reserve], amplification.into()).unwrap();
 
                 assert_ok!(Stableswap::buy(
-                    Origin::signed(BOB),
+                    RuntimeOrigin::signed(BOB),
                     pool_id,
                     asset_b,
                     asset_a,

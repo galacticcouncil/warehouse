@@ -18,7 +18,7 @@ fn update_pool_should_work_when_all_parames_are_updated() {
         .build()
         .execute_with(|| {
             assert_ok!(Stableswap::create_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 vec![asset_a, asset_b],
                 100u16,
@@ -27,7 +27,7 @@ fn update_pool_should_work_when_all_parames_are_updated() {
             ));
 
             assert_ok!(Stableswap::update_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 Some(55u16),
                 Some(Permill::from_percent(10)),
@@ -60,7 +60,7 @@ fn update_pool_should_work_when_only_amplification_is_updated() {
         .build()
         .execute_with(|| {
             assert_ok!(Stableswap::create_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 vec![asset_a, asset_b],
                 100u16,
@@ -69,7 +69,7 @@ fn update_pool_should_work_when_only_amplification_is_updated() {
             ));
 
             assert_ok!(Stableswap::update_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 Some(55u16),
                 None,
@@ -102,7 +102,7 @@ fn update_pool_should_work_when_only_trade_fee_is_updated() {
         .build()
         .execute_with(|| {
             assert_ok!(Stableswap::create_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 vec![asset_a, asset_b],
                 100u16,
@@ -111,7 +111,7 @@ fn update_pool_should_work_when_only_trade_fee_is_updated() {
             ));
 
             assert_ok!(Stableswap::update_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 None,
                 Some(Permill::from_percent(20)),
@@ -144,7 +144,7 @@ fn update_pool_should_work_when_only_withdraw_fee_is_updated() {
         .build()
         .execute_with(|| {
             assert_ok!(Stableswap::create_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 vec![asset_a, asset_b],
                 100u16,
@@ -153,7 +153,7 @@ fn update_pool_should_work_when_only_withdraw_fee_is_updated() {
             ));
 
             assert_ok!(Stableswap::update_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 None,
                 None,
@@ -186,7 +186,7 @@ fn update_pool_should_work_when_only_fees_is_updated() {
         .build()
         .execute_with(|| {
             assert_ok!(Stableswap::create_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 vec![asset_a, asset_b],
                 100u16,
@@ -195,7 +195,7 @@ fn update_pool_should_work_when_only_fees_is_updated() {
             ));
 
             assert_ok!(Stableswap::update_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 None,
                 Some(Permill::from_percent(11)),
@@ -228,7 +228,7 @@ fn update_pool_should_fail_when_nothing_is_to_update() {
         .build()
         .execute_with(|| {
             assert_ok!(Stableswap::create_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 vec![asset_a, asset_b],
                 100u16,
@@ -237,7 +237,7 @@ fn update_pool_should_fail_when_nothing_is_to_update() {
             ));
 
             assert_noop!(
-                Stableswap::update_pool(Origin::signed(ALICE), pool_id, None, None, None),
+                Stableswap::update_pool(RuntimeOrigin::signed(ALICE), pool_id, None, None, None),
                 Error::<Test>::NothingToUpdate
             );
 
@@ -267,7 +267,7 @@ fn update_pool_should_fail_when_pool_does_not_exists() {
             let pool_id = retrieve_current_asset_id();
 
             assert_noop!(
-                Stableswap::update_pool(Origin::signed(ALICE), pool_id, Some(100u16), None, None),
+                Stableswap::update_pool(RuntimeOrigin::signed(ALICE), pool_id, Some(100u16), None, None),
                 Error::<Test>::PoolNotFound
             );
         });
@@ -287,7 +287,7 @@ fn update_pool_should_fail_when_amplification_is_outside_allowed_range() {
         .build()
         .execute_with(|| {
             assert_ok!(Stableswap::create_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 vec![asset_a, asset_b],
                 100u16,
@@ -296,7 +296,7 @@ fn update_pool_should_fail_when_amplification_is_outside_allowed_range() {
             ));
 
             assert_noop!(
-                Stableswap::update_pool(Origin::signed(ALICE), pool_id, Some(20_000u16), None, None),
+                Stableswap::update_pool(RuntimeOrigin::signed(ALICE), pool_id, Some(20_000u16), None, None),
                 Error::<Test>::InvalidAmplification
             );
         });

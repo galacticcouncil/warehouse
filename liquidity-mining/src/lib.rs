@@ -95,8 +95,8 @@ mod types;
 pub use pallet::*;
 
 pub use crate::types::{
-    Balance, DepositData, DepositId, FarmId, FarmMultiplier, FarmState, GlobalFarmData, GlobalFarmId, LoyaltyCurve,
-    YieldFarmData, YieldFarmEntry, YieldFarmId,
+    Balance, DefaultPriceAdjustment, DepositData, DepositId, FarmId, FarmMultiplier, FarmState, GlobalFarmData,
+    GlobalFarmId, LoyaltyCurve, YieldFarmData, YieldFarmEntry, YieldFarmId,
 };
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
@@ -119,8 +119,9 @@ use hydradx_traits::{liquidity_mining::PriceAdjustment, pools::DustRemovalAccoun
 use orml_traits::{GetByKey, MultiCurrency};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
+    fixed_point::FixedU128,
     traits::{CheckedAdd, CheckedDiv, CheckedSub},
-    FixedU128, Perquintill,
+    Perquintill,
 };
 use sp_std::{
     convert::{From, Into, TryInto},
@@ -170,7 +171,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config + TypeInfo {
-        type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// Asset type.
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaxEncodedLen + Into<u32>;
@@ -1530,12 +1531,16 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         )
         .map_err(|_| ArithmeticError::Overflow)?;
 
+        if let Ok(price_adjustment) = T::PriceAdjustment::get(global_farm) {
+            global_farm.price_adjustment = price_adjustment;
+        }
+
         // Calculate reward for all periods since last update capped by balance of `GlobalFarm`
         // account.
-        let price_adjustment = T::PriceAdjustment::get(global_farm)?;
         let reward = math::calculate_global_farm_rewards(
             global_farm.total_shares_z,
-            price_adjustment,
+            //NOTE: Fallback. Last saved value should be used if oracle is not available.
+            global_farm.price_adjustment,
             global_farm.yield_per_period.into(),
             global_farm.max_reward_per_period,
             periods_since_last_update,

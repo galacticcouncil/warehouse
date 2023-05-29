@@ -17,8 +17,8 @@
 
 use super::*;
 use codec::{Decode, Encode};
-use frame_support::weights::IdentityFee;
-use sp_runtime::{traits::One, DispatchError, DispatchResult, FixedU128};
+use frame_support::{weights::IdentityFee, BoundedVec};
+use sp_runtime::{traits::One, DispatchResult, FixedU128};
 use sp_std::cell::RefCell;
 use sp_std::collections::btree_set::BTreeSet;
 
@@ -51,7 +51,8 @@ impl Convert<AssetId, Option<MultiLocation>> for MockConvert {
     fn convert(id: AssetId) -> Option<MultiLocation> {
         match id {
             CORE_ASSET_ID | TEST_ASSET_ID | CHEAP_ASSET_ID | OVERFLOW_ASSET_ID => {
-                Some(MultiLocation::new(0, X1(GeneralKey(id.encode().try_into().unwrap()))))
+                let junction = Junction::from(BoundedVec::try_from(id.encode()).unwrap());
+                Some(polkadot_xcm::v3::MultiLocation::new(0, X1(junction)))
             }
             _ => None,
         }
@@ -63,9 +64,9 @@ impl Convert<MultiLocation, Option<AssetId>> for MockConvert {
         match location {
             MultiLocation {
                 parents: 0,
-                interior: X1(GeneralKey(key)),
+                interior: X1(GeneralKey { data, .. }),
             } => {
-                if let Ok(currency_id) = AssetId::decode(&mut &key[..]) {
+                if let Ok(currency_id) = AssetId::decode(&mut &data[..]) {
                     // we currently have only one native asset
                     match currency_id {
                         CORE_ASSET_ID | TEST_ASSET_ID | CHEAP_ASSET_ID | OVERFLOW_ASSET_ID => Some(currency_id),
@@ -182,21 +183,21 @@ fn can_buy_weight() {
         let mut trader = Trader::new();
 
         let core_payment: MultiAsset = (Concrete(core_id), 1_000_000).into();
-        let res = dbg!(trader.buy_weight(1_000_000, core_payment.clone().into()));
+        let res = dbg!(trader.buy_weight(Weight::from_ref_time(1_000_000), core_payment.clone().into()));
         assert!(res
             .expect("buy_weight should succeed because payment == weight")
             .is_empty());
         ExpectRevenue::register_expected_asset(core_payment);
 
         let test_payment: MultiAsset = (Concrete(test_id), 500_000).into();
-        let res = dbg!(trader.buy_weight(1_000_000, test_payment.clone().into()));
+        let res = dbg!(trader.buy_weight(Weight::from_ref_time(1_000_000), test_payment.clone().into()));
         assert!(res
             .expect("buy_weight should succeed because payment == 0.5 * weight")
             .is_empty());
         ExpectRevenue::register_expected_asset(test_payment);
 
         let cheap_payment: MultiAsset = (Concrete(cheap_id), 4_000_000).into();
-        let res = dbg!(trader.buy_weight(1_000_000, cheap_payment.clone().into()));
+        let res = dbg!(trader.buy_weight(Weight::from_ref_time(1_000_000), cheap_payment.clone().into()));
         assert!(res
             .expect("buy_weight should succeed because payment == 4 * weight")
             .is_empty());
@@ -216,13 +217,13 @@ fn can_buy_twice() {
     {
         let mut trader = Trader::new();
 
-        let payment1: MultiAsset = (Concrete(core_id.clone()), 1_000_000).into();
-        let res = dbg!(trader.buy_weight(1_000_000, payment1.into()));
+        let payment1: MultiAsset = (Concrete(core_id), 1_000_000).into();
+        let res = dbg!(trader.buy_weight(Weight::from_ref_time(1_000_000), payment1.into()));
         assert!(res
             .expect("buy_weight should succeed because payment == weight")
             .is_empty());
-        let payment2: MultiAsset = (Concrete(core_id.clone()), 1_000_000).into();
-        let res = dbg!(trader.buy_weight(1_000_000, payment2.into()));
+        let payment2: MultiAsset = (Concrete(core_id), 1_000_000).into();
+        let res = dbg!(trader.buy_weight(Weight::from_ref_time(1_000_000), payment2.into()));
         assert!(res
             .expect("buy_weight should succeed because payment == weight")
             .is_empty());
@@ -241,7 +242,7 @@ fn cannot_buy_with_too_few_tokens() {
     let mut trader = Trader::new();
 
     let payment: MultiAsset = (Concrete(core_id), 69).into();
-    let res = dbg!(trader.buy_weight(1_000_000, payment.into()));
+    let res = dbg!(trader.buy_weight(Weight::from_ref_time(1_000_000), payment.into()));
     assert_eq!(res, Err(XcmError::TooExpensive));
 }
 
@@ -249,11 +250,11 @@ fn cannot_buy_with_too_few_tokens() {
 fn cannot_buy_with_unknown_token() {
     type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
 
-    let unknown_token = GeneralKey(9876u32.encode().try_into().unwrap());
+    let unknown_token = Junction::from(BoundedVec::try_from(9876u32.encode()).unwrap());
 
     let mut trader = Trader::new();
     let payment: MultiAsset = (Concrete(unknown_token.into()), 1_000_000).into();
-    let res = dbg!(trader.buy_weight(1_000_000, payment.into()));
+    let res = dbg!(trader.buy_weight(Weight::from_ref_time(1_000_000), payment.into()));
     assert_eq!(res, Err(XcmError::AssetNotFound));
 }
 
@@ -261,11 +262,11 @@ fn cannot_buy_with_unknown_token() {
 fn cannot_buy_with_non_fungible() {
     type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
 
-    let unknown_token = GeneralKey(9876u32.encode().try_into().unwrap());
+    let unknown_token = Junction::from(BoundedVec::try_from(9876u32.encode()).unwrap());
 
     let mut trader = Trader::new();
     let payment: MultiAsset = (Concrete(unknown_token.into()), NonFungible(AssetInstance::Undefined)).into();
-    let res = dbg!(trader.buy_weight(1_000_000, payment.into()));
+    let res = dbg!(trader.buy_weight(Weight::from_ref_time(1_000_000), payment.into()));
     assert_eq!(res, Err(XcmError::AssetNotFound));
 }
 
@@ -290,7 +291,7 @@ fn overflow_errors() {
 
     let amount = 1_000;
     let payment: MultiAsset = (Concrete(overflow_id), amount).into();
-    let weight = 1_000;
+    let weight = Weight::from_ref_time(1_000);
     let res = dbg!(trader.buy_weight(weight, payment.into()));
     assert_eq!(res, Err(XcmError::Overflow));
 }
@@ -307,7 +308,7 @@ fn refunds_first_asset_completely() {
     {
         let mut trader = Trader::new();
 
-        let weight = 1_000_000;
+        let weight = Weight::from_ref_time(1_000_000);
         let tokens = 1_000_000;
         let core_payment: MultiAsset = (Concrete(core_id), tokens).into();
         let res = dbg!(trader.buy_weight(weight, core_payment.clone().into()));
@@ -324,7 +325,7 @@ fn does_not_refund_if_empty() {
     type Trader = MultiCurrencyTrader<AssetId, Balance, Price, IdentityFee<Balance>, MockOracle, MockConvert, ()>;
 
     let mut trader = Trader::new();
-    assert_eq!(trader.refund_weight(100), None);
+    assert_eq!(trader.refund_weight(Weight::from_ref_time(100)), None);
 }
 
 #[test]
@@ -340,7 +341,7 @@ fn needs_multiple_refunds_for_multiple_currencies() {
     {
         let mut trader = Trader::new();
 
-        let weight = 1_000_000;
+        let weight = Weight::from_ref_time(1_000_000);
         let core_payment: MultiAsset = (Concrete(core_id), 1_000_000).into();
         let res = dbg!(trader.buy_weight(weight, core_payment.clone().into()));
         assert!(res
@@ -364,12 +365,9 @@ fn revenue_goes_to_fee_receiver() {
     ExpectDeposit::reset();
 
     struct MockFeeReceiver;
-    impl TransactionMultiPaymentDataProvider<AccountId, AssetId, Price> for MockFeeReceiver {
-        fn get_currency_and_price(_who: &AccountId) -> Result<(AssetId, Option<Price>), DispatchError> {
-            Err("not implemented".into())
-        }
 
-        fn get_fee_receiver() -> AccountId {
+    impl Get<AccountId> for MockFeeReceiver {
+        fn get() -> AccountId {
             42
         }
     }

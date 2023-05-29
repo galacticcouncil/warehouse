@@ -25,7 +25,7 @@ fn complete_fill_order_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -41,7 +41,7 @@ fn complete_fill_order_should_work() {
 
         // Act
         let amount = 20 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0));
+        assert_ok!(OTC::fill_order(RuntimeOrigin::signed(BOB), 0));
 
         // Assert
         let order = OTC::orders(0);
@@ -77,7 +77,7 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -93,7 +93,7 @@ fn complete_fill_order_should_work_when_order_is_not_partially_fillable() {
 
         // Act
         let amount = 20 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0));
+        assert_ok!(OTC::fill_order(RuntimeOrigin::signed(BOB), 0));
 
         // Assert
         let order = OTC::orders(0);
@@ -129,7 +129,7 @@ fn complete_fill_order_should_work_when_there_are_multiple_orders() {
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -138,7 +138,7 @@ fn complete_fill_order_should_work_when_there_are_multiple_orders() {
         ));
 
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             10 * ONE,
@@ -154,7 +154,7 @@ fn complete_fill_order_should_work_when_there_are_multiple_orders() {
 
         // Act
         let amount = 20 * ONE;
-        assert_ok!(OTC::fill_order(Origin::signed(BOB), 0));
+        assert_ok!(OTC::fill_order(RuntimeOrigin::signed(BOB), 0));
 
         // Assert
         let order = OTC::orders(0);
@@ -193,7 +193,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             200 * ONE,
@@ -209,7 +209,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
         let bob_dai_balance_before = Tokens::free_balance(DAI, &BOB);
 
         // Act
-        assert_noop!(OTC::fill_order(Origin::signed(BOB), 0), BalanceTooLow::<Test>);
+        assert_noop!(OTC::fill_order(RuntimeOrigin::signed(BOB), 0), BalanceTooLow::<Test>);
 
         // Assert
         let alice_free_hdx_balance_after = Tokens::free_balance(HDX, &ALICE);

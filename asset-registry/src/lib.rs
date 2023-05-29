@@ -58,10 +58,10 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The origin which can work with asset-registry.
-        type RegistryOrigin: EnsureOrigin<Self::Origin>;
+        type RegistryOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Asset type
         type AssetId: Parameter
@@ -251,6 +251,7 @@ pub mod pallet {
         /// Adds mapping between `name` and assigned `asset_id` so asset id can be retrieved by name too (Note: this approach is used in AMM implementation (xyk))
         ///
         /// Emits 'Registered` event when successful.
+        #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::register())]
         pub fn register(
             origin: OriginFor<T>,
@@ -308,6 +309,7 @@ pub mod pallet {
         /// Emits `Updated` event when successful.
 
         // TODO: No tests
+        #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::update())]
         pub fn update(
             origin: OriginFor<T>,
@@ -356,6 +358,7 @@ pub mod pallet {
         /// - `decimals`: The number of decimals this asset uses to represent one unit.
         ///
         /// Emits `MetadataSet` event when successful.
+        #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::set_metadata())]
         pub fn set_metadata(
             origin: OriginFor<T>,
@@ -392,6 +395,7 @@ pub mod pallet {
         /// Mainly used in XCM.
         ///
         /// Emits `LocationSet` event when successful.
+        #[pallet::call_index(3)]
         #[pallet::weight(<T as Config>::WeightInfo::set_location())]
         pub fn set_location(
             origin: OriginFor<T>,

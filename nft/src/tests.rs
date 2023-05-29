@@ -29,7 +29,7 @@ fn create_collection_works() {
             b"metadata".to_vec().try_into().unwrap();
 
         assert_ok!(NFTPallet::create_collection(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             COLLECTION_ID_0,
             Default::default(), // Marketplace
             metadata.clone()
@@ -53,7 +53,7 @@ fn create_collection_works() {
         // not allowed in Permissions
         assert_noop!(
             NFTPallet::create_collection(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 COLLECTION_ID_2,
                 CollectionType::LiquidityMining,
                 metadata.clone()
@@ -64,7 +64,7 @@ fn create_collection_works() {
         // existing collection ID
         assert_noop!(
             NFTPallet::create_collection(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 COLLECTION_ID_0,
                 CollectionType::Marketplace,
                 metadata.clone()
@@ -75,7 +75,7 @@ fn create_collection_works() {
         // reserved collection ID
         assert_noop!(
             NFTPallet::create_collection(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 COLLECTION_ID_RESERVED,
                 CollectionType::Marketplace,
                 metadata
@@ -105,7 +105,7 @@ fn mint_works() {
         ));
 
         assert_ok!(NFTPallet::mint(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             COLLECTION_ID_0,
             ITEM_ID_0,
             metadata.clone()
@@ -127,25 +127,40 @@ fn mint_works() {
 
         // duplicate item
         assert_noop!(
-            NFTPallet::mint(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0, metadata.clone()),
+            NFTPallet::mint(
+                RuntimeOrigin::signed(ALICE),
+                COLLECTION_ID_0,
+                ITEM_ID_0,
+                metadata.clone()
+            ),
             pallet_uniques::Error::<Test>::AlreadyExists
         );
 
         // not allowed in Permissions
         assert_noop!(
-            NFTPallet::mint(Origin::signed(ALICE), COLLECTION_ID_1, ITEM_ID_0, metadata.clone()),
+            NFTPallet::mint(
+                RuntimeOrigin::signed(ALICE),
+                COLLECTION_ID_1,
+                ITEM_ID_0,
+                metadata.clone()
+            ),
             Error::<Test>::NotPermitted
         );
 
         // not owner
         assert_noop!(
-            NFTPallet::mint(Origin::signed(BOB), COLLECTION_ID_0, ITEM_ID_1, metadata.clone()),
+            NFTPallet::mint(RuntimeOrigin::signed(BOB), COLLECTION_ID_0, ITEM_ID_1, metadata.clone()),
             Error::<Test>::NotPermitted
         );
 
         // invalid collection ID
         assert_noop!(
-            NFTPallet::mint(Origin::signed(ALICE), NON_EXISTING_COLLECTION_ID, ITEM_ID_0, metadata),
+            NFTPallet::mint(
+                RuntimeOrigin::signed(ALICE),
+                NON_EXISTING_COLLECTION_ID,
+                ITEM_ID_0,
+                metadata
+            ),
             Error::<Test>::CollectionUnknown
         );
     });
@@ -174,24 +189,24 @@ fn transfer_works() {
 
         // not existing
         assert_noop!(
-            NFTPallet::transfer(Origin::signed(CHARLIE), COLLECTION_ID_2, ITEM_ID_0, ALICE),
+            NFTPallet::transfer(RuntimeOrigin::signed(CHARLIE), COLLECTION_ID_2, ITEM_ID_0, ALICE),
             Error::<Test>::CollectionUnknown
         );
 
         // not owner
         assert_noop!(
-            NFTPallet::transfer(Origin::signed(CHARLIE), COLLECTION_ID_0, ITEM_ID_0, ALICE),
+            NFTPallet::transfer(RuntimeOrigin::signed(CHARLIE), COLLECTION_ID_0, ITEM_ID_0, ALICE),
             Error::<Test>::NotPermitted
         );
 
         // not allowed in Permissions
         assert_noop!(
-            NFTPallet::transfer(Origin::signed(ALICE), COLLECTION_ID_1, ITEM_ID_0, BOB),
+            NFTPallet::transfer(RuntimeOrigin::signed(ALICE), COLLECTION_ID_1, ITEM_ID_0, BOB),
             Error::<Test>::NotPermitted
         );
 
         assert_ok!(NFTPallet::transfer(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             COLLECTION_ID_0,
             ITEM_ID_0,
             ALICE
@@ -199,7 +214,7 @@ fn transfer_works() {
         assert_eq!(NFTPallet::owner(&COLLECTION_ID_0, &ITEM_ID_0).unwrap(), ALICE);
 
         assert_ok!(NFTPallet::transfer(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             COLLECTION_ID_0,
             ITEM_ID_0,
             BOB
@@ -239,17 +254,21 @@ fn burn_works() {
 
         // not owner
         assert_noop!(
-            NFTPallet::burn(Origin::signed(BOB), COLLECTION_ID_0, ITEM_ID_0),
+            NFTPallet::burn(RuntimeOrigin::signed(BOB), COLLECTION_ID_0, ITEM_ID_0),
             Error::<Test>::NotPermitted
         );
 
         // not allowed in Permissions
         assert_noop!(
-            NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_1, ITEM_ID_0),
+            NFTPallet::burn(RuntimeOrigin::signed(ALICE), COLLECTION_ID_1, ITEM_ID_0),
             Error::<Test>::NotPermitted
         );
 
-        assert_ok!(NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0));
+        assert_ok!(NFTPallet::burn(
+            RuntimeOrigin::signed(ALICE),
+            COLLECTION_ID_0,
+            ITEM_ID_0
+        ));
         assert!(!<Items<Test>>::contains_key(COLLECTION_ID_0, ITEM_ID_0));
 
         expect_events(vec![crate::Event::ItemBurned {
@@ -261,7 +280,7 @@ fn burn_works() {
 
         // not existing
         assert_noop!(
-            NFTPallet::burn(Origin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0),
+            NFTPallet::burn(RuntimeOrigin::signed(ALICE), COLLECTION_ID_0, ITEM_ID_0),
             Error::<Test>::ItemUnknown
         );
     });
@@ -289,24 +308,27 @@ fn destroy_collection_works() {
 
         // existing item
         assert_noop!(
-            NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0),
+            NFTPallet::destroy_collection(RuntimeOrigin::signed(ALICE), COLLECTION_ID_0),
             Error::<Test>::TokenCollectionNotEmpty
         );
         assert_ok!(NFTPallet::do_burn(ALICE, COLLECTION_ID_0, ITEM_ID_0));
 
         // not allowed in Permissions
         assert_noop!(
-            NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_1),
+            NFTPallet::destroy_collection(RuntimeOrigin::signed(ALICE), COLLECTION_ID_1),
             Error::<Test>::NotPermitted
         );
 
         // not owner
         assert_noop!(
-            NFTPallet::destroy_collection(Origin::signed(CHARLIE), COLLECTION_ID_0),
+            NFTPallet::destroy_collection(RuntimeOrigin::signed(CHARLIE), COLLECTION_ID_0),
             pallet_uniques::Error::<Test>::NoPermission
         );
 
-        assert_ok!(NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0));
+        assert_ok!(NFTPallet::destroy_collection(
+            RuntimeOrigin::signed(ALICE),
+            COLLECTION_ID_0
+        ));
         assert_eq!(NFTPallet::collections(COLLECTION_ID_0), None);
 
         expect_events(vec![crate::Event::CollectionDestroyed {
@@ -317,7 +339,7 @@ fn destroy_collection_works() {
 
         // not existing
         assert_noop!(
-            NFTPallet::destroy_collection(Origin::signed(ALICE), COLLECTION_ID_0),
+            NFTPallet::destroy_collection(RuntimeOrigin::signed(ALICE), COLLECTION_ID_0),
             Error::<Test>::CollectionUnknown
         );
     });

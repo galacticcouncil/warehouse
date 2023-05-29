@@ -77,7 +77,7 @@ fn register_asset_works() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: ed,
-                locked: false
+                locked: false,
             }
         );
 
@@ -232,7 +232,7 @@ fn genesis_config_works() {
                     name: one,
                     asset_type: AssetType::Token,
                     existential_deposit: 1_000u128,
-                    locked: false
+                    locked: false,
                 }
             );
 
@@ -244,7 +244,7 @@ fn genesis_config_works() {
                     name: life,
                     asset_type: AssetType::Token,
                     existential_deposit: 1_000u128,
-                    locked: false
+                    locked: false,
                 }
             );
         });
@@ -295,7 +295,7 @@ fn set_metadata_works() {
                 AssetRegistryPallet::asset_metadata(dot_id).unwrap(),
                 AssetMetadata {
                     decimals: 30u8,
-                    symbol: b_symbol
+                    symbol: b_symbol,
                 }
             );
 
@@ -346,7 +346,7 @@ fn update_asset() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: ed,
-                locked: false
+                locked: false,
             }
         );
 
@@ -407,7 +407,7 @@ fn update_asset() {
                 name: btcusd,
                 asset_type: AssetType::PoolShare(btc_asset_id, usd_asset_id),
                 existential_deposit: 1_234_567u128,
-                locked: false
+                locked: false,
             }
         );
 
@@ -429,7 +429,7 @@ fn update_asset() {
                 name: superbtc_name,
                 asset_type: AssetType::Token,
                 locked: false,
-                existential_deposit: 1_234_567u128
+                existential_deposit: 1_234_567u128,
             }
         );
     });
@@ -485,7 +485,7 @@ fn register_asset_should_work_when_asset_is_provided() {
                     name: bn,
                     asset_type: AssetType::Token,
                     existential_deposit: 1_000_000,
-                    locked: false
+                    locked: false,
                 }
             );
         });
@@ -594,7 +594,7 @@ fn register_asset_should_work_when_metadata_is_provided() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: 1_000_000,
-                locked: false
+                locked: false,
             }
         );
 
@@ -634,7 +634,7 @@ fn register_asset_should_work_when_location_is_provided() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: 1_000_000,
-                locked: false
+                locked: false,
             }
         );
         assert_eq!(
@@ -644,6 +644,93 @@ fn register_asset_should_work_when_location_is_provided() {
         assert_eq!(AssetRegistryPallet::asset_to_location(asset_id), Some(asset_location));
 
         assert!(AssetRegistryPallet::asset_metadata(asset_id).is_none(),);
+    });
+}
+
+#[test]
+fn register_asset_should_fail_when_location_is_already_registered() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Arrange
+        let asset_id: RegistryAssetId = 10;
+        let key = Junction::from(BoundedVec::try_from(asset_id.encode()).unwrap());
+        let asset_location = AssetLocation(MultiLocation::new(0, X2(Parachain(2021), key)));
+        assert_ok!(AssetRegistryPallet::register(
+            RuntimeOrigin::root(),
+            b"asset_id".to_vec(),
+            AssetType::Token,
+            1_000_000,
+            Some(asset_id),
+            None,
+            Some(asset_location.clone())
+        ),);
+
+        // Act & Assert
+        assert_noop!(
+            AssetRegistryPallet::register(
+                RuntimeOrigin::root(),
+                b"asset_id_2".to_vec(),
+                AssetType::Token,
+                1_000_000,
+                Some(asset_id + 1),
+                None,
+                Some(asset_location)
+            ),
+            Error::<Test>::LocationAlreadyRegistered
+        );
+    });
+}
+
+#[test]
+fn set_location_should_fail_when_location_is_already_registered() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Arrange
+        let asset_id: RegistryAssetId = 10;
+        let key = Junction::from(BoundedVec::try_from(asset_id.encode()).unwrap());
+        let asset_location = AssetLocation(MultiLocation::new(0, X2(Parachain(2021), key)));
+        assert_ok!(AssetRegistryPallet::register(
+            RuntimeOrigin::root(),
+            b"asset_id".to_vec(),
+            AssetType::Token,
+            1_000_000,
+            Some(asset_id),
+            None,
+            Some(asset_location.clone())
+        ),);
+
+        // Act & Assert
+        assert_noop!(
+            AssetRegistryPallet::set_location(RuntimeOrigin::root(), asset_id, asset_location),
+            Error::<Test>::LocationAlreadyRegistered
+        );
+    });
+}
+
+#[test]
+fn set_location_should_remove_old_location() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Arrange
+        let asset_id: RegistryAssetId = 10;
+        let key = Junction::from(BoundedVec::try_from(asset_id.encode()).unwrap());
+        let old_asset_location = AssetLocation(MultiLocation::new(0, X2(Parachain(2021), key)));
+        assert_ok!(AssetRegistryPallet::register(
+            RuntimeOrigin::root(),
+            b"asset_id".to_vec(),
+            AssetType::Token,
+            1_000_000,
+            Some(asset_id),
+            None,
+            Some(old_asset_location.clone())
+        ),);
+
+        // Act
+        assert_ok!(AssetRegistryPallet::set_location(
+            RuntimeOrigin::root(),
+            asset_id,
+            AssetLocation(MultiLocation::new(0, X2(Parachain(2022), key)))
+        ));
+
+        // Assert
+        assert_eq!(AssetRegistryPallet::location_to_asset(old_asset_location), None);
     });
 }
 
@@ -675,7 +762,7 @@ fn register_asset_should_work_when_all_optional_are_provided() {
                 name: bn,
                 asset_type: AssetType::Token,
                 existential_deposit: 1_000_000,
-                locked: false
+                locked: false,
             }
         );
         assert_eq!(

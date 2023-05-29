@@ -411,6 +411,9 @@ pub mod pallet {
                 Error::<T>::LocationAlreadyRegistered
             );
 
+            if let Some(old_location) = AssetLocations::<T>::take(asset_id) {
+                LocationAssets::<T>::remove(&old_location);
+            }
             AssetLocations::<T>::insert(asset_id, &location);
             LocationAssets::<T>::insert(&location, asset_id);
 

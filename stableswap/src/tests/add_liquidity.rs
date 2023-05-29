@@ -25,7 +25,7 @@ fn add_initial_liquidity_should_work_when_called_first_time() {
             let amplification: u16 = 100;
 
             assert_ok!(Stableswap::create_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 vec![asset_a, asset_b],
                 amplification,
@@ -38,7 +38,7 @@ fn add_initial_liquidity_should_work_when_called_first_time() {
             let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
 
             assert_ok!(Stableswap::add_liquidity(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 vec![
                     AssetLiquidity {
@@ -80,7 +80,7 @@ fn add_initial_liquidity_should_fail_when_lp_has_insufficient_balance() {
             let amplification: u16 = 100;
 
             assert_ok!(Stableswap::create_pool(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 vec![asset_a, asset_b],
                 amplification,
@@ -94,7 +94,7 @@ fn add_initial_liquidity_should_fail_when_lp_has_insufficient_balance() {
 
             assert_noop!(
                 Stableswap::add_liquidity(
-                    Origin::signed(BOB),
+                    RuntimeOrigin::signed(BOB),
                     pool_id,
                     vec![
                         AssetLiquidity {
@@ -162,7 +162,7 @@ fn add_liquidity_should_work_when_initial_liquidity_has_been_provided() {
             let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
 
             assert_ok!(Stableswap::add_liquidity(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 vec![
                     AssetLiquidity {
@@ -229,7 +229,7 @@ fn add_liquidity_should_work_when_order_is_not_sorted() {
             let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
 
             assert_ok!(Stableswap::add_liquidity(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 vec![
                     AssetLiquidity {
@@ -294,7 +294,7 @@ fn add_liquidity_should_fail_when_providing_insufficient_liquidity() {
 
             assert_noop!(
                 Stableswap::add_liquidity(
-                    Origin::signed(BOB),
+                    RuntimeOrigin::signed(BOB),
                     pool_id,
                     vec![
                         AssetLiquidity {
@@ -367,7 +367,7 @@ fn add_liquidity_should_work_when_providing_one_asset_only() {
             let amount_added = 200 * ONE;
 
             assert_ok!(Stableswap::add_liquidity(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 vec![AssetLiquidity {
                     asset_id: asset_a,
@@ -436,7 +436,7 @@ fn add_liquidity_should_fail_when_providing_one_asset_not_in_pool() {
 
             assert_noop!(
                 Stableswap::add_liquidity(
-                    Origin::signed(BOB),
+                    RuntimeOrigin::signed(BOB),
                     pool_id,
                     vec![
                         AssetLiquidity {

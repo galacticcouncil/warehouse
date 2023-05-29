@@ -78,4 +78,12 @@ where
             MultiCurrency::can_withdraw(asset, who, amount)
         }
     }
+
+    fn asset_exists(asset: Self::AssetId) -> bool {
+        if GetNativeCurrencyId::get() == asset {
+            true
+        } else {
+            MultiCurrency::asset_exists(asset)
+        }
+    }
 }

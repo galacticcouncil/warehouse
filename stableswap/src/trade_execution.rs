@@ -2,7 +2,7 @@ use crate::{Balance, Config, Pallet};
 use hydradx_traits::router::{ExecutorError, PoolType, TradeExecution};
 use sp_runtime::DispatchError;
 
-impl<T: Config> TradeExecution<T::Origin, T::AccountId, T::AssetId, Balance> for Pallet<T> {
+impl<T: Config> TradeExecution<T::RuntimeOrigin, T::AccountId, T::AssetId, Balance> for Pallet<T> {
     type Error = DispatchError;
 
     fn calculate_sell(
@@ -40,7 +40,7 @@ impl<T: Config> TradeExecution<T::Origin, T::AccountId, T::AssetId, Balance> for
     }
 
     fn execute_sell(
-        who: T::Origin,
+        who: T::RuntimeOrigin,
         pool_type: PoolType<T::AssetId>,
         asset_in: T::AssetId,
         asset_out: T::AssetId,
@@ -56,7 +56,7 @@ impl<T: Config> TradeExecution<T::Origin, T::AccountId, T::AssetId, Balance> for
     }
 
     fn execute_buy(
-        who: T::Origin,
+        who: T::RuntimeOrigin,
         pool_type: PoolType<T::AssetId>,
         asset_in: T::AssetId,
         asset_out: T::AssetId,

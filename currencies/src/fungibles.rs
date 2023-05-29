@@ -69,6 +69,14 @@ where
                 .into()
         }
     }
+
+    fn asset_exists(asset: Self::AssetId) -> bool {
+        if asset == T::GetNativeCurrencyId::get() {
+            true
+        } else {
+            <T::MultiCurrency as fungibles::Inspect<T::AccountId>>::asset_exists(asset.into())
+        }
+    }
 }
 
 impl<T: Config> fungibles::Mutate<T::AccountId> for FungibleCurrencies<T>

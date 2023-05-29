@@ -42,6 +42,10 @@ fn fungibles_inspect_trait_should_work() {
 
             assert_ok!(FungibleCurrencies::<Runtime>::can_withdraw(NATIVE_CURRENCY_ID, &ALICE, 1).into_result());
             assert_ok!(FungibleCurrencies::<Runtime>::can_withdraw(X_TOKEN_ID, &BOB, 1).into_result());
+
+            assert!(FungibleCurrencies::<Runtime>::asset_exists(NATIVE_CURRENCY_ID));
+            assert!(FungibleCurrencies::<Runtime>::asset_exists(X_TOKEN_ID));
+            assert!(!FungibleCurrencies::<Runtime>::asset_exists(100));
         });
 }
 

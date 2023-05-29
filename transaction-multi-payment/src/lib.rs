@@ -29,12 +29,7 @@ mod mock;
 mod tests;
 mod traits;
 
-use frame_support::{
-    dispatch::DispatchResult,
-    ensure,
-    traits::Get,
-    weights::{Weight, WeightToFee},
-};
+use frame_support::{dispatch::DispatchResult, ensure, traits::Get, weights::Weight};
 use frame_system::ensure_signed;
 use sp_runtime::{
     traits::{DispatchInfoOf, One, PostDispatchInfoOf, Saturating, Zero},
@@ -68,6 +63,7 @@ pub use pallet::*;
 pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
+    use frame_support::weights::WeightToFee;
     use frame_system::pallet_prelude::OriginFor;
 
     #[pallet::pallet]
@@ -102,10 +98,10 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The origin which can add/remove accepted currencies
-        type AcceptedCurrencyOrigin: EnsureOrigin<Self::Origin>;
+        type AcceptedCurrencyOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Multi Currency
         type Currencies: MultiCurrency<Self::AccountId>;
@@ -235,6 +231,7 @@ pub mod pallet {
         /// When currency is set, fixed fee is withdrawn from the account to pay for the currency change
         ///
         /// Emits `CurrencySet` event when successful.
+        #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::set_currency())]
         pub fn set_currency(origin: OriginFor<T>, currency: AssetIdOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -261,6 +258,7 @@ pub mod pallet {
         /// Currency must not be already accepted. Core asset id cannot be explicitly added.
         ///
         /// Emits `CurrencyAdded` event when successful.
+        #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::add_currency())]
         pub fn add_currency(origin: OriginFor<T>, currency: AssetIdOf<T>, price: Price) -> DispatchResult {
             T::AcceptedCurrencyOrigin::ensure_origin(origin)?;
@@ -284,6 +282,7 @@ pub mod pallet {
         /// Core asset cannot be removed.
         ///
         /// Emits `CurrencyRemoved` when successful.
+        #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::remove_currency())]
         pub fn remove_currency(origin: OriginFor<T>, currency: AssetIdOf<T>) -> DispatchResult {
             T::AcceptedCurrencyOrigin::ensure_origin(origin)?;
@@ -328,6 +327,14 @@ where
     }
 }
 
+fn convert_fee_with_price<B>(fee: B, price: FixedU128) -> Option<B>
+where
+    B: FixedPointOperand + Ord + One,
+{
+    // Make sure that the fee is never less than 1
+    price.checked_mul_int(fee).map(|f| f.max(One::one()))
+}
+
 /// Deposits all fees to some account
 pub struct DepositAll<T>(PhantomData<T>);
 
@@ -349,7 +356,7 @@ where
     MC::Balance: FixedPointOperand,
     FR: Get<T::AccountId>,
     DF: DepositFee<T::AccountId, MC::CurrencyId, MC::Balance>,
-    <T as frame_system::Config>::Call: IsSubType<Call<T>>,
+    <T as frame_system::Config>::RuntimeCall: IsSubType<Call<T>>,
     BalanceOf<T>: FixedPointOperand,
 {
     type LiquidityInfo = Option<PaymentInfo<Self::Balance, AssetIdOf<T>, Price>>;
@@ -360,8 +367,8 @@ where
     /// Note: The `fee` already includes the `tip`.
     fn withdraw_fee(
         who: &T::AccountId,
-        call: &T::Call,
-        _info: &DispatchInfoOf<T::Call>,
+        call: &T::RuntimeCall,
+        _info: &DispatchInfoOf<T::RuntimeCall>,
         fee: Self::Balance,
         _tip: Self::Balance,
     ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
@@ -377,9 +384,8 @@ where
         let price = Pallet::<T>::get_currency_price(currency)
             .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
-        let converted_fee = price
-            .checked_mul_int(fee)
-            .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+        let converted_fee =
+            convert_fee_with_price(fee, price).ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
         match MC::withdraw(currency.into(), who, converted_fee) {
             Ok(()) => {
@@ -399,8 +405,8 @@ where
     /// Note: The `fee` already includes the `tip`.
     fn correct_and_deposit_fee(
         who: &T::AccountId,
-        _dispatch_info: &DispatchInfoOf<T::Call>,
-        _post_info: &PostDispatchInfoOf<T::Call>,
+        _dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
+        _post_info: &PostDispatchInfoOf<T::RuntimeCall>,
         corrected_fee: Self::Balance,
         tip: Self::Balance,
         already_withdrawn: Self::LiquidityInfo,
@@ -418,8 +424,7 @@ where
                 ),
                 PaymentInfo::NonNative(paid_fee, currency, price) => {
                     // calculate corrected_fee in the non-native currency
-                    let converted_corrected_fee = price
-                        .checked_mul_int(corrected_fee)
+                    let converted_corrected_fee = convert_fee_with_price(corrected_fee, price)
                         .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
                     let refund = paid_fee.saturating_sub(converted_corrected_fee);
                     let converted_tip = price

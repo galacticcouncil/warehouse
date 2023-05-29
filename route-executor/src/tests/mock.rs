@@ -65,8 +65,8 @@ impl system::Config for Test {
     type BaseCallFilter = Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -74,7 +74,7 @@ impl system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -97,19 +97,17 @@ parameter_type_with_key! {
 }
 
 impl orml_tokens::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = AssetId;
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = ();
     type MaxLocks = ();
     type DustRemovalWhitelist = Nothing;
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
     type ReserveIdentifier = ();
     type MaxReserves = ();
+    type CurrencyHooks = ();
 }
 
 parameter_types! {
@@ -120,7 +118,7 @@ parameter_types! {
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = frame_system::Pallet<Test>;
@@ -130,7 +128,7 @@ impl pallet_balances::Config for Test {
 }
 
 impl pallet_currencies::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, u32>;
     type GetNativeCurrencyId = NativeCurrencyId;
@@ -145,7 +143,7 @@ parameter_types! {
 }
 
 impl Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type AssetId = AssetId;
     type Balance = Balance;
     type MaxNumberOfTrades = MaxNumberOfTrades;
@@ -304,10 +302,20 @@ macro_rules! impl_fake_executor {
 
                 let amount_out = $sell_calculation_result;
 
-                Currencies::transfer(Origin::signed(ASSET_PAIR_ACCOUNT), ALICE, asset_out, amount_out)
-                    .map_err(|e| ExecutorError::Error(e))?;
-                Currencies::transfer(Origin::signed(ALICE), ASSET_PAIR_ACCOUNT, asset_in, amount_in)
-                    .map_err(|e| ExecutorError::Error(e))?;
+                Currencies::transfer(
+                    RuntimeOrigin::signed(ASSET_PAIR_ACCOUNT),
+                    ALICE,
+                    asset_out,
+                    amount_out,
+                )
+                .map_err(|e| ExecutorError::Error(e))?;
+                Currencies::transfer(
+                    RuntimeOrigin::signed(ALICE),
+                    ASSET_PAIR_ACCOUNT,
+                    asset_in,
+                    amount_in,
+                )
+                .map_err(|e| ExecutorError::Error(e))?;
 
                 Ok(())
             }
@@ -330,10 +338,20 @@ macro_rules! impl_fake_executor {
 
                 let amount_in = $buy_calculation_result;
 
-                Currencies::transfer(Origin::signed(ASSET_PAIR_ACCOUNT), ALICE, asset_out, amount_out)
-                    .map_err(|e| ExecutorError::Error(e))?;
-                Currencies::transfer(Origin::signed(ALICE), ASSET_PAIR_ACCOUNT, asset_in, amount_in)
-                    .map_err(|e| ExecutorError::Error(e))?;
+                Currencies::transfer(
+                    RuntimeOrigin::signed(ASSET_PAIR_ACCOUNT),
+                    ALICE,
+                    asset_out,
+                    amount_out,
+                )
+                .map_err(|e| ExecutorError::Error(e))?;
+                Currencies::transfer(
+                    RuntimeOrigin::signed(ALICE),
+                    ASSET_PAIR_ACCOUNT,
+                    asset_in,
+                    amount_in,
+                )
+                .map_err(|e| ExecutorError::Error(e))?;
 
                 Ok(())
             }
@@ -379,6 +397,6 @@ pub fn assert_executed_buy_trades(expected_trades: Vec<(PoolType<AssetId>, Balan
     });
 }
 
-pub fn expect_events(e: Vec<Event>) {
-    test_utils::expect_events::<Event, Test>(e);
+pub fn expect_events(e: Vec<RuntimeEvent>) {
+    test_utils::expect_events::<RuntimeEvent, Test>(e);
 }

@@ -25,7 +25,7 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -42,7 +42,7 @@ fn partial_fill_order_should_work_when_order_is_partially_fillable() {
 
         // Act
         let amount = 5 * ONE;
-        assert_ok!(OTC::partial_fill_order(Origin::signed(BOB), 0, amount));
+        assert_ok!(OTC::partial_fill_order(RuntimeOrigin::signed(BOB), 0, amount));
 
         // Assert
         let expected_amount_out = 25_000_000_000_000_u128;
@@ -87,7 +87,7 @@ fn partial_fill_order_should_throw_error_when_order_is_not_partially_fillable() 
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -105,7 +105,7 @@ fn partial_fill_order_should_throw_error_when_order_is_not_partially_fillable() 
         // Act
         let amount = 5 * ONE;
         assert_noop!(
-            OTC::partial_fill_order(Origin::signed(BOB), 0, amount),
+            OTC::partial_fill_order(RuntimeOrigin::signed(BOB), 0, amount),
             Error::<Test>::OrderNotPartiallyFillable
         );
 
@@ -133,7 +133,7 @@ fn partial_fill_order_should_throw_error_when_fill_is_complete() {
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -151,7 +151,7 @@ fn partial_fill_order_should_throw_error_when_fill_is_complete() {
         // Act
         let amount = 20 * ONE;
         assert_noop!(
-            OTC::partial_fill_order(Origin::signed(BOB), 0, amount),
+            OTC::partial_fill_order(RuntimeOrigin::signed(BOB), 0, amount),
             Error::<Test>::OrderAmountTooSmall
         );
 
@@ -179,7 +179,7 @@ fn partial_fill_order_should_throw_error_when_remaining_amounts_are_too_low() {
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -197,7 +197,7 @@ fn partial_fill_order_should_throw_error_when_remaining_amounts_are_too_low() {
         // Act
         let amount = 16 * ONE;
         assert_noop!(
-            OTC::partial_fill_order(Origin::signed(BOB), 0, amount),
+            OTC::partial_fill_order(RuntimeOrigin::signed(BOB), 0, amount),
             Error::<Test>::OrderAmountTooSmall
         );
 
@@ -225,7 +225,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             200 * ONE,
@@ -243,7 +243,7 @@ fn fill_order_should_throw_error_when_insufficient_balance() {
         // Act
         let amount = 110 * ONE;
         assert_noop!(
-            OTC::partial_fill_order(Origin::signed(BOB), 0, amount),
+            OTC::partial_fill_order(RuntimeOrigin::signed(BOB), 0, amount),
             BalanceTooLow::<Test>
         );
 
@@ -271,7 +271,7 @@ fn partial_fill_order_should_throw_error_when_amount_is_larger_than_order() {
     ExtBuilder::default().build().execute_with(|| {
         // Arrange
         assert_ok!(OTC::place_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             DAI,
             HDX,
             20 * ONE,
@@ -289,7 +289,7 @@ fn partial_fill_order_should_throw_error_when_amount_is_larger_than_order() {
         // Act
         let amount = 30 * ONE;
         assert_noop!(
-            OTC::partial_fill_order(Origin::signed(BOB), 0, amount),
+            OTC::partial_fill_order(RuntimeOrigin::signed(BOB), 0, amount),
             Error::<Test>::MathError
         );
 

@@ -119,8 +119,9 @@ use hydradx_traits::{liquidity_mining::PriceAdjustment, pools::DustRemovalAccoun
 use orml_traits::{GetByKey, MultiCurrency};
 use scale_info::TypeInfo;
 use sp_arithmetic::{
+    fixed_point::FixedU128,
     traits::{CheckedAdd, CheckedDiv, CheckedSub},
-    FixedU128, Perquintill,
+    Perquintill,
 };
 use sp_std::{
     convert::{From, Into, TryInto},
@@ -170,7 +171,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config + TypeInfo {
-        type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// Asset type.
         type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaxEncodedLen + Into<u32>;

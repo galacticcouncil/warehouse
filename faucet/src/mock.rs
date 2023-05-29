@@ -54,8 +54,8 @@ impl system::Config for Test {
     type BaseCallFilter = Everything;
     type BlockWeights = ();
     type BlockLength = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -63,7 +63,7 @@ impl system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
@@ -90,23 +90,21 @@ parameter_types! {
 }
 
 impl orml_tokens::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = AssetId;
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = ();
     type MaxLocks = ();
     type DustRemovalWhitelist = Nothing;
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
     type ReserveIdentifier = ();
     type MaxReserves = MaxReserves;
+    type CurrencyHooks = ();
 }
 
 impl Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Currency;
 }
 
@@ -171,6 +169,6 @@ impl ExtBuilder {
     }
 }
 
-pub fn expect_events(e: Vec<Event>) {
-    test_utils::expect_events::<Event, Test>(e)
+pub fn expect_events(e: Vec<RuntimeEvent>) {
+    test_utils::expect_events::<RuntimeEvent, Test>(e)
 }

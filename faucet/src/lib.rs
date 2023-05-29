@@ -18,10 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use frame_support::{
-    ensure,
-    weights::{DispatchClass, Pays},
-};
+use frame_support::ensure;
 use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, MultiCurrencyExtended};
 use sp_std::vec::Vec;
@@ -57,7 +54,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type Currency: MultiCurrencyExtended<Self::AccountId, CurrencyId = AssetId, Balance = Balance, Amount = i128>;
     }
@@ -128,6 +125,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
         pub fn rampage_mint(origin: OriginFor<T>, asset: AssetId, amount: Balance) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -143,6 +141,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
         pub fn mint(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;

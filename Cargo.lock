@@ -2809,21 +2809,6 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "hydra-dx-math"
-version = "7.0.1"
-source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=35e5c0775a07e057ed5247ba96dfa254d691f034#35e5c0775a07e057ed5247ba96dfa254d691f034"
-dependencies = [
- "fixed",
- "num-traits",
- "parity-scale-codec",
- "primitive-types",
- "scale-info",
- "serde",
- "sp-arithmetic",
- "sp-std",
-]
-
-[[package]]
-name = "hydra-dx-math"
 version = "7.1.0"
 source = "git+https://github.com/galacticcouncil/HydraDX-math?rev=380b80b59bbf62abb8848fb8a10bb206861eab41#380b80b59bbf62abb8848fb8a10bb206861eab41"
 dependencies = [
@@ -4873,7 +4858,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
- "hydra-dx-math 7.1.0",
+ "hydra-dx-math",
  "hydradx-traits",
  "orml-traits",
  "parity-scale-codec",
@@ -4895,7 +4880,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
- "hydra-dx-math 7.1.0",
+ "hydra-dx-math",
  "hydradx-traits",
  "log",
  "parity-scale-codec",
@@ -4930,12 +4915,12 @@ dependencies = [
 
 [[package]]
 name = "pallet-liquidity-mining"
-version = "4.2.2"
+version = "4.2.3"
 dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
- "hydra-dx-math 7.0.1",
+ "hydra-dx-math",
  "hydradx-traits",
  "orml-currencies",
  "orml-tokens",
@@ -5082,7 +5067,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hydra-dx-math 7.1.0",
+ "hydra-dx-math",
  "hydradx-traits",
  "orml-tokens",
  "orml-traits",

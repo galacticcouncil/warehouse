@@ -128,6 +128,7 @@ impl<T: Config> SessionManager<T::AccountId> for Pallet<T> {
                         amount,
                         currency,
                     }),
+                    // SBP-M3+ review: is it enough to handle this error only with log?
                     Err(err) => log::warn!(target: "runtime::collator-rewards", "Error reward collators: {:?}", err),
                 }
             }

@@ -1,3 +1,5 @@
+// SBP-M3+ review: missing benchmarking for the pallet.
+
 // This file is part of HydraDX.
 
 // Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
@@ -154,6 +156,7 @@ pub mod pallet {
                 AccountBlacklist::<T>::insert(account_id, ());
             });
 
+            // SBP-M3+ review: how about panics before inserting into `account_blacklist`?
             if self.reward_account.is_none() {
                 panic!("Reward account is not set in genesis config");
             }

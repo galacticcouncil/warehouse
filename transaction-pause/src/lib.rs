@@ -92,6 +92,8 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::pause_transaction())]
+        // SPB-M3+ review: use BoundedVec
+        // This is a security issue
         pub fn pause_transaction(origin: OriginFor<T>, pallet_name: Vec<u8>, function_name: Vec<u8>) -> DispatchResult {
             T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -116,6 +118,7 @@ pub mod pallet {
 
         #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::unpause_transaction())]
+        // SBP-M3+ review: use BoundedVec...
         pub fn unpause_transaction(
             origin: OriginFor<T>,
             pallet_name: Vec<u8>,

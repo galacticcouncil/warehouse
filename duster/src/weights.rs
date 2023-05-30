@@ -35,6 +35,10 @@
 // --output=weights.rs
 // --template=.maintain/pallet-weight-template.hbs
 
+// SBP-M3+ review: are you sure about setting Weight to zero?
+// Each extrinsic takes some computation time and contains some DB read/write.
+// When you do not want to charge for execution you can set Pays::No in extrinsic's Weight spec. 
+
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 #![allow(clippy::unnecessary_cast)]

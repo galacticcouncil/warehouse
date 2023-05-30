@@ -163,6 +163,7 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig {
         fn build(&self) {
+            // SBP-M3+ review: it is better to use `expect` with some error message.
             let pot = <Pallet<T, I>>::pot_account_id().unwrap();
 
             T::NonDustableWhitelistHandler::add_account(&pot).unwrap();

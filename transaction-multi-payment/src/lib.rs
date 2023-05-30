@@ -1,3 +1,5 @@
+// SBP-M3 review: missing benchmarks.
+
 // This file is part of Basilisk-node.
 
 // Copyright (C) 2020-2022  Intergalactic, Limited (GIB).
@@ -54,6 +56,7 @@ type AssetIdOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_syst
 type BalanceOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 
 /// Spot price type
+// SBP-M3+ review: why not configured in Config?
 pub type Price = FixedU128;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.

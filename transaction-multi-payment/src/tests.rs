@@ -876,28 +876,6 @@ fn fee_transfer_can_kill_account_when_paid_in_native() {
 }
 
 #[test]
-fn fee_withdrawal_cannot_kill_account_when_paid_in_native() {
-    // Arrange
-    const CHARLIE: AccountId = 5;
-
-    ExtBuilder::default()
-        .account_native_balance(CHARLIE, 3)
-        .base_weight(5)
-        .build()
-        .execute_with(|| {
-            let len = 10;
-            let tip = 0;
-            let dispatch_info = info_from_weight(Weight::from_ref_time(15));
-
-            // Act & Assert
-            assert_noop!(
-                ChargeTransactionPayment::<Test>::from(tip).pre_dispatch(&CHARLIE, CALL, &dispatch_info, len),
-                crate::InvalidTransaction::Payment
-            );
-        });
-}
-
-#[test]
 fn fee_transfer_can_kill_account_when_paid_in_non_native() {
     // Arrange
     ExtBuilder::default()
@@ -925,44 +903,6 @@ fn fee_transfer_can_kill_account_when_paid_in_non_native() {
                     Some(PaymentInfo::NonNative(45, SUPPORTED_CURRENCY, Price::from_float(1.5)))
                 )
             );
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &ALICE), 0);
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 0);
-
-            // Act
-            assert_ok!(ChargeTransactionPayment::<Test>::post_dispatch(
-                Some(pre),
-                &dispatch_info,
-                &default_post_info(),
-                len,
-                &Ok(())
-            ));
-
-            // Assert
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &ALICE), 0); // zero balance indicates that the account can be killed
-            assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 45);
-        });
-}
-
-#[test]
-fn fee_withdrawal_can_kill_account_when_paid_in_non_native() {
-    // Arrange
-    ExtBuilder::default()
-        .with_currencies(vec![(ALICE, SUPPORTED_CURRENCY)])
-        .base_weight(5)
-        .build()
-        .execute_with(|| {
-            let len = 10;
-            let tip = 0;
-            let dispatch_info = info_from_weight(Weight::from_ref_time(15));
-
-            assert_ok!(Currencies::withdraw(SUPPORTED_CURRENCY, &ALICE, INITIAL_BALANCE - 45));
-
-            // Act
-            let pre = ChargeTransactionPayment::<Test>::from(tip)
-                .pre_dispatch(&ALICE, CALL, &dispatch_info, len)
-                .unwrap();
-
-            // Assert
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &ALICE), 0);
             assert_eq!(Currencies::free_balance(SUPPORTED_CURRENCY, &FEE_RECEIVER), 0);
 

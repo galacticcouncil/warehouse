@@ -1,7 +1,6 @@
 use crate::tests::mock::*;
 use crate::types::{AssetLiquidity, PoolInfo};
 use crate::{assert_balance, Error};
-use hydradx_traits::AccountIdFor;
 
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::Permill;
@@ -51,7 +50,7 @@ fn sell_should_work_when_correct_input_provided() {
 
             let expected = 29_950_934_311_773u128;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+            let pool_account = pool_account(pool_id);
 
             assert_balance!(BOB, asset_a, 170 * ONE);
             assert_balance!(BOB, asset_b, expected);
@@ -105,7 +104,7 @@ fn buy_should_work_when_correct_input_provided() {
 
             let expected_to_sell = 30049242502720u128;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+            let pool_account = pool_account(pool_id);
 
             assert_balance!(BOB, asset_a, 200 * ONE - expected_to_sell);
             assert_balance!(BOB, asset_b, 30 * ONE);
@@ -164,7 +163,7 @@ fn sell_with_fee_should_work_when_correct_input_provided() {
 
             let expected = expected - fee;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+            let pool_account = pool_account(pool_id);
 
             assert_balance!(BOB, asset_a, 170 * ONE);
             assert_balance!(BOB, asset_b, expected);
@@ -222,7 +221,7 @@ fn sell_should_work_when_fee_is_small() {
 
             let expected = expected - fee;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+            let pool_account = pool_account(pool_id);
 
             assert_balance!(BOB, asset_a, 170 * ONE);
             assert_balance!(BOB, asset_b, expected);
@@ -280,7 +279,7 @@ fn buy_should_work_when_fee_is_set() {
 
             let expected_to_sell = expected_to_sell + fee;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+            let pool_account = pool_account(pool_id);
 
             assert_balance!(BOB, asset_a, 200 * ONE - expected_to_sell);
             assert_balance!(BOB, asset_b, 30 * ONE);

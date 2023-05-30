@@ -319,29 +319,27 @@ where
 
 pub struct AccountIdConstructor;
 
-impl AccountIdFor<Vec<u32>> for AccountIdConstructor {
+impl AccountIdFor<u32> for AccountIdConstructor {
     type AccountId = AccountId;
 
-    fn from_assets(assets: &Vec<u32>, _identifier: Option<&[u8]>) -> Self::AccountId {
-        let mut a = assets[0];
-        let mut b = assets[1];
-        if a > b {
-            std::mem::swap(&mut a, &mut b)
-        }
-        (a * 1000 + b) as u64
+    fn from_assets(asset: &u32, _identifier: Option<&[u8]>) -> Self::AccountId {
+        (asset * 1000) as u64
     }
 
-    fn name(assets: &Vec<u32>, identifier: Option<&[u8]>) -> Vec<u8> {
+    fn name(asset: &u32, identifier: Option<&[u8]>) -> Vec<u8> {
         let mut buf: Vec<u8> = if let Some(ident) = identifier {
             ident.to_vec()
         } else {
             vec![]
         };
-        buf.extend_from_slice(&(assets[0]).to_le_bytes());
-        buf.extend_from_slice(&(assets[1]).to_le_bytes());
+        buf.extend_from_slice(&(asset).to_le_bytes());
 
         buf
     }
+}
+
+pub(crate) fn pool_account(asset: u32) -> AccountId {
+    AccountIdConstructor::from_assets(&asset, None)
 }
 
 pub(crate) fn retrieve_current_asset_id() -> AssetId {

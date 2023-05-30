@@ -2,7 +2,6 @@ use crate::tests::mock::*;
 use crate::types::{AssetLiquidity, PoolInfo};
 use crate::{assert_balance, Error};
 use frame_support::{assert_noop, assert_ok};
-use hydradx_traits::AccountIdFor;
 use sp_runtime::Permill;
 
 #[test]
@@ -35,7 +34,7 @@ fn add_initial_liquidity_should_work_when_called_first_time() {
 
             let initial_liquidity_amount = 100 * ONE;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+            let pool_account = pool_account(pool_id);
 
             assert_ok!(Stableswap::add_liquidity(
                 RuntimeOrigin::signed(BOB),
@@ -90,7 +89,7 @@ fn add_initial_liquidity_should_fail_when_lp_has_insufficient_balance() {
 
             let initial_liquidity_amount = 100 * ONE;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+            let pool_account = pool_account(pool_id);
 
             assert_noop!(
                 Stableswap::add_liquidity(
@@ -159,7 +158,7 @@ fn add_liquidity_should_work_when_initial_liquidity_has_been_provided() {
 
             let amount_added = 100 * ONE;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+            let pool_account = pool_account(pool_id);
 
             assert_ok!(Stableswap::add_liquidity(
                 RuntimeOrigin::signed(BOB),
@@ -226,7 +225,7 @@ fn add_liquidity_should_work_when_order_is_not_sorted() {
 
             let amount_added = 100 * ONE;
 
-            let pool_account = AccountIdConstructor::from_assets(&vec![asset_a, asset_b], None);
+            let pool_account = pool_account(pool_id);
 
             assert_ok!(Stableswap::add_liquidity(
                 RuntimeOrigin::signed(BOB),

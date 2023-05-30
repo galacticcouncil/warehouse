@@ -111,8 +111,8 @@ pub mod pallet {
         /// Multi currency mechanism
         type Currency: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Balance>;
 
-        /// Account ID constructor
-        type ShareAccountId: AccountIdFor<Vec<Self::AssetId>, AccountId = Self::AccountId>;
+        /// Account ID constructor - pool account are derived from unique pool id
+        type ShareAccountId: AccountIdFor<Self::AssetId, AccountId = Self::AccountId>;
 
         /// Asset registry mechanism
         type AssetRegistry: Registry<Self::AssetId, Vec<u8>, Balance, DispatchError>;
@@ -462,8 +462,8 @@ pub mod pallet {
 
             let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
             let asset_idx = pool.find_asset(asset_id).ok_or(Error::<T>::AssetNotInPool)?;
-            let pool_account = pool.pool_account::<T>();
-            let balances = pool.balances::<T>();
+            let pool_account = Self::pool_account(pool_id);
+            let balances = pool.balances::<T>(&pool_account);
             let share_issuance = T::Currency::total_issuance(pool_id);
 
             ensure!(
@@ -542,8 +542,7 @@ pub mod pallet {
 
             ensure!(amount_out >= min_buy_amount, Error::<T>::BuyLimitNotReached);
 
-            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
-            let pool_account = pool.pool_account::<T>();
+            let pool_account = Self::pool_account(pool_id);
 
             T::Currency::transfer(asset_in, &who, &pool_account, amount_in)?;
             T::Currency::transfer(asset_out, &pool_account, &who, amount_out)?;
@@ -599,8 +598,7 @@ pub mod pallet {
 
             let (amount_in, fee_amount) = Self::calculate_in_amount(pool_id, asset_in, asset_out, amount_out)?;
 
-            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
-            let pool_account = pool.pool_account::<T>();
+            let pool_account = Self::pool_account(pool_id);
 
             ensure!(amount_in <= max_sell_amount, Error::<T>::SellLimitExceeded);
 
@@ -666,7 +664,8 @@ impl<T: Config> Pallet<T> {
         let index_in = pool.find_asset(asset_in).ok_or(Error::<T>::AssetNotInPool)?;
         let index_out = pool.find_asset(asset_out).ok_or(Error::<T>::AssetNotInPool)?;
 
-        let balances = pool.balances::<T>();
+        let pool_account = Self::pool_account(pool_id);
+        let balances = pool.balances::<T>(&pool_account);
 
         ensure!(balances[index_in] > Balance::zero(), Error::<T>::InsufficientLiquidity);
         ensure!(balances[index_out] > Balance::zero(), Error::<T>::InsufficientLiquidity);
@@ -693,7 +692,8 @@ impl<T: Config> Pallet<T> {
         let index_in = pool.find_asset(asset_in).ok_or(Error::<T>::AssetNotInPool)?;
         let index_out = pool.find_asset(asset_out).ok_or(Error::<T>::AssetNotInPool)?;
 
-        let balances = pool.balances::<T>();
+        let pool_account = Self::pool_account(pool_id);
+        let balances = pool.balances::<T>(&pool_account);
 
         ensure!(balances[index_out] > amount_out, Error::<T>::InsufficientLiquidity);
         ensure!(balances[index_in] > Balance::zero(), Error::<T>::InsufficientLiquidity);
@@ -777,7 +777,7 @@ impl<T: Config> Pallet<T> {
             added_assets.insert(asset.asset_id, asset.amount);
         }
 
-        let pool_account = pool.pool_account::<T>();
+        let pool_account = Self::pool_account(pool_id);
         let mut initial_reserves = Vec::new();
         let mut updated_reserves = Vec::new();
         for pool_asset in pool.assets.iter() {
@@ -819,5 +819,9 @@ impl<T: Config> Pallet<T> {
 
     fn is_asset_allowed(pool_id: T::AssetId, asset_id: T::AssetId, operation: Tradability) -> bool {
         AssetTradability::<T>::get(pool_id, asset_id).contains(operation)
+    }
+
+    fn pool_account(pool_id: T::AssetId) -> T::AccountId {
+        T::ShareAccountId::from_assets(&pool_id, Some(POOL_IDENTIFIER))
     }
 }
